@@ -54,7 +54,7 @@ arithmetic-shift bit-count integer-length
 
 bitwise-merge 
 bit-set? any-bits-set? all-bits-set?
-first-bit-set
+first-set-bit
 
 extract-bit-field test-bit-field? clear-bit-field 
 replace-bit-field  copy-bit-field
@@ -115,20 +115,38 @@ Trivial, hence not provided
   bitwise-not1 i j	(lambda (i j) (bitwise-not i))
   bitwise-not2 i j	(lambda (i j) (bitwise-not j))
 
-    - These 16 functions are the complete set of binary boolean operators.
-      They operate in a bitwise fashion on their bitstring parameters.
-      I have chosen to provide the full set, barring the last, trivial
-      group of six.
+    - These 16 procedures correspond to the complete set of two-argument
+      boolean functions, that is, the complete set of 
+          bit x bit -> bit
+      functions. For each such function, the corresponding bitwise operator
+      maps that function across a pair of bitstrings in a bit-wise fashion. I
+      have chosen to provide the full set, barring the last, trivial group of
+      six.
+
+      The core idea of this group of functions is this bitwise "lifting"
+      of the set of dyadic boolean functions to bitstring parameters; the
+      variadic generalisations are made where sensible.
 
     - The n-ary functions have these base, nullary cases:
       (bitwise-and)  => -1     (bitwise-ior) =>  0
       (bitwise-nand) =>  0     (bitwise-nor) => -1
       (bitwise-xor)  =>  0     (bitwise-eqv) => -1
 
+    - Note that (bitwise-eqv a b c) does *not* produce a 1 bit
+      everywhere a, b & c all agree. That is, it does *not* produce
+        (bitwise-ior (bitwise-and a b c)
+                     (bitwise-and (bitwise-not a)
+                                  (bitwise-not b)
+                                  (bitwise-not c)))
+      Rather, it produces
+        (bitwise-eqv a (bitwise-eqv b c))
+      or the equivalent
+        (bitwise-eqv (bitwise-eqv a b) c)
+
     - Examples
       (bitwise-ior 3  10)     =>  11
       (bitwise-and 11 26)     =>  10
-      (bitwise-xor 3 10)      =>  10
+      (bitwise-xor 3 10)      =>   9
       (bitwise-eqv 37 12)     => -42
       (bitwise-and 37 12)     =>   4
       (bitwise-nand 11 26 12) =>  -9
