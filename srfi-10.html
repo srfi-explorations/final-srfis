@@ -1,0 +1,283 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI-10 Sharp-Comma External Form: Applying a Value/Code Constructor at Read Time</title>
+  </head>
+
+<BODY>
+<H1>Title</H1>
+<CODE>#,</CODE> External Form: Applying a Value/Code Constructor at Read Time
+
+<H1>Author</H1>
+Oleg Kiselyov
+
+<H1>Related SRFIs</H1>
+
+<P>The proposed read-time constructor applications provide external representations for arbitrary Scheme datatypes, in particular, homogeneous vectors introduced in 
+<A HREF="http://srfi.schemers.org/srfi-4/">SRFI-4</A>, "Homogeneous numeric vector datatypes". The external representation for float vectors was in "minor nonconformance to Standard Scheme." The present SRFI avoids this conflict. This SRFI can also solve a problem of representing a 2D matrix with a zero dimension, mentioned in a SRFI-4 discussion archive. Incidentally, SRFI-4 discussion was the inspiration for the present proposal.
+
+<P>The read-time applications allow a simple implementation for 
+<A HREF="http://srfi.schemers.org/srfi-0/">SRFI-0</A>, "Feature-based conditional expansion construct" (and, consequently, for 
+<A HREF="http://srfi.schemers.org/srfi-7/">SRFI-7</A>, "Feature-based program configuration language").
+
+<P>This SRFI discusses and emulates reader-macros and specific sharpsign forms of <A HREF="http://www.harlequin.com/education/books/HyperSpec/Body/">Common Lisp</A>.
+
+
+<H1>Abstract</H1>
+<P>The present SRFI proposes an extensible external representation of Scheme values: a read-time <I>application</I>. It is similar to Smalltalk's object serialization and <CODE>#.</CODE> and <CODE>#S()</CODE> reader-macros of Common Lisp. The proposed <CODE>#,</CODE> form can  construct arbitrary values at read-time, <I>including</I> S-expressions representing code to be compiled/interpreted. The <CODE>#,</CODE> form can be used to denote values that do not have convenient printed representation, as well for conditional code compilation.
+
+
+<H1>Issues</H1>
+
+<H1>Rationale</H1>
+
+<P>
+External representations of booleans, numbers, lists, vectors, strings  are codified in RnRS. Every Scheme reader has an in-born knowledge how to parse the corresponding strings and build Scheme values they represent. The set of these built-in constructors is however fixed, and not amenable. This SRFI proposes to lift this limitation, to allow printed representation and serialization for ports, structures, wills, semaphores and other datatypes present in many Scheme systems as well as datatypes that may be introduced in future SRFIs.
+It has to be stressed however that proposed read-time applications can denote not only structural, record and esoteric data but standard Scheme values as well, whose canonical representation is cumbersome, dependent on external circumstances or otherwise unsuitable. In addition, the proposed <CODE>#,</CODE> form can be used for conditional compilation.
+<P>
+In Smalltalk, any object that defines a <CODE>writeOn:</CODE> method may be asked to externalize itself. The result is a string that spells out a particular invocation of object's constructor. Evaluation of this string by an interpreter recreates the original object. Common Lisp defines a similar <CODE>#.</CODE> facility to compute values at read-time. This is especially relevant to objects that otherwise do not have a convenient printed representation.  Common Lisp also has a <CODE>#S()</CODE> notation to construct specifically structural values by applying a pre-defined standard constructor at read time.
+<P>
+This SRFI introduces a <CODE>#,</CODE> notation -- a read-time application. 
+Read-time application is weaker than a generic read-time evaluation, and therefore less expensive. The <CODE>#,</CODE> notation is also less dangerous as the user can explicitly control which particular computations  are permitted for a particular reader; unbridled evaluations of arbitrary code while reading data thus can be avoided. The <CODE>#,</CODE> notation is more generic than <CODE>#S()</CODE> as the former can compute values other than instances of structural datatypes,  in particular, compute-once constants (e.g., <CODE>pi</CODE>, <CODE>log 2</CODE>), compiler-options-dependent data, or uninterned symbols.  Furthermore, <CODE>#,</CODE> can construct values - S-expressions representing code to be compiled/interpreted, which enables conditional compilation.
+<P>
+For objects whose external representation is given by a <CODE>#,</CODE> notation, there should be a mechanism for writing or pretty printing these objects that maintains write/read invariance. The sharing of information between a reader and a writer is however  beyond the scope of the present proposal. Reader-constructors introduced in the present SRFI can be used to this end: for example, whenever one declares a new object (record), he can instantiate a specific writer together with the corresponding reader-constructor. The procedures to do the former should be specified, but in other SRFIs. 
+
+
+<H3>Comparisons</H3>
+
+<P>Read-time application mechanism defined in this SRFI is rather close to Lisp reader's macro functions. Unlike Common Lisp, however, a reader-constructor is not allowed to read from the input stream on its own. It may only build values from other values, which must have already been read and internalized. A reader-constructor must always return one value; it may not return "nothing". It may however throw an exception or simply return an "inappropriate" value such as <CODE>#f</CODE>, which will be caught later. Unlike compile-time function applications (that is, macro-expansions), a read-time application has no "second pass". 
+<P>
+Common Lisp defines an external form <CODE>#.obj</CODE>, which instructs the Lisp reader to evaluate <CODE>obj</CODE> right after the reader parsed it. While <CODE>#.</CODE> is a general-purpose read-evaluator:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<CODE>#.obj === (eval obj)</CODE><BR>
+<CODE>#,</CODE>  is merely an application:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<CODE>#,obj === (apply (lookup (car obj)) (cdr obj))</CODE><BR>
+and <CODE>obj</CODE> must be an external representation of a list. Example 5 below  illustrates the difference.
+
+<P>Read-time applications are further restricted to only those procedures that have been specifically declared for that purpose (via <CODE>define-reader-ctor</CODE>). The user thus has a fine-grained control over which functions are being applied at read time. Performing arbitrary computations at read time is a security concern: for example, when an application server reads data from a request pipe, it does not want unexpected functions with potentially dangerous side-effects to be invoked.  In Common Lisp one can avoid this undesirable behavior -- in an all-or-nothing-fashion -- by setting a distinguished global variable  <CODE>*read-eval*</CODE> to <CODE>nil</CODE>. This however will globally turn off evaluation of all <CODE>#.</CODE> forms, even those which are deemed safe and appropriate. Registration of reader-constructors required in this SRFI enables therefore a fine-grained control over read-time computations.
+Furthermore, the reference implementation of this SRFI registers reader-constructors in a readtable. Different invocations of the reader may execute or flag read-time applications differently depending on a readtable in effect. 
+
+<P>Common Lisp defines a <CODE>#S(typename . data)</CODE> notation that constructs values at read-time yet requires prior registration of constructors. It happens  only to be used for structures. This SRFI generalizes this notation, enabling read-time applications to compute arbitrary values, including S-expressions intended to be compiled/interpreted. 
+
+
+<H3>SRFI-0 and <CODE>#+</CODE>/<CODE>#-</CODE> "clones" as read-time applications</H3>
+
+<P>A "Feature-based conditional expansion construct" introduced in SRFI-0 can easily be implemented as a read-time application.  It immediately follows that a "Feature-based program configuration language", SRFI-7, can be considered a read-time application as well. The <CODE>cond-expand</CODE> form implemented in this SRFI is more generic as <CODE>cond-expand</CODE> is no longer required to be a top-level program expression. This form can therefore be used to emulate "Feature Expressions" of Common Lisp: <CODE>#+</CODE> and <CODE>#-</CODE> reader macros. 
+
+
+<H1>Specification</H1>
+<P>
+A read-time application occurs whenever a Scheme reader comes across the following sequence of characters in its input stream:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<CODE>#,(tag arg1 ...)</CODE><BR>
+<P>A <CODE>tag</CODE> must be an (external representation of an) identifier, and <CODE>arg1</CODE> etc. are external representations of some values, which may be read-time applications as well.
+<P>
+Upon encountering an <CODE>#,</CODE> external form, the <I>read</I> procedure should look up a reader-constructor associated with the <CODE>tag</CODE>, read the arguments <CODE>arg1</CODE>... and apply the constructor to the arguments. The result of the application is taken to be the value that corresponds to the <CODE>#,</CODE> external form.
+<P>It is an error if the sequence of characters <CODE>#,</CODE> in reader's input stream is not immediately followed by an S-expression. It is also an error if a reader-constructor associated with the <CODE>tag</CODE> cannot be located.
+<P>
+There must be a way to declare an association between a symbolic tag and the corresponding constructor-procedure. Regular <CODE>define</CODE> introduces an association between an identifier and a procedure applied at run time; <CODE>define-macro</CODE> or <CODE>define-syntax</CODE> introduce bindings for procedures applicable at compile time. Thus <CODE>define-reader-ctor</CODE> literally suggest itself as a form to introduce a constructor to apply at read time:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;procedure: <CODE>define-reader-ctor SYMBOL PROC</CODE>
+
+
+
+<H2>Examples</H2>
+
+<H3>Example 1</H3>
+
+<P>Alternative printed representations for standard Scheme datatypes and other <I>values</I>
+<PRE>
+   (define-reader-ctor 'list list) 
+   (with-input-from-string "#,(list 1 2 #f \"4 5\")" read) ==&gt; (1 2 #f "4 5")
+
+   (define-reader-ctor '+ +)
+   (with-input-from-string "#,(+ 1 2)" read) ==&gt; 3
+</PRE>
+
+<H3>Example 2</H3>
+
+Readable representations for structures (records)
+<PRE>
+   (define-reader-ctor 'my-vector
+     (lambda x (apply vector (cons 'my-vector-tag x))))
+   (with-input-from-string "#,(my-vector (my-vector 1 2))" read) ==&gt;
+       a vector whose second element is a list of a symbol my-vector,
+       number 1, and number 2.
+   (with-input-from-string "#,(my-vector #,(my-vector 1 2))" read) ==&gt;
+       a vector whose second element is a my-vector constructed from
+       numbers 1 and 2.
+   (with-input-from-string "#,(my-vector #,(my-vector #,(+ 9 -4)))" read) ==&gt;
+       '#(my-vector-tag #(my-vector-tag 5))
+</PRE>
+
+<H3>Example 3</H3>
+Representing uniform vectors (per SRFI-4) in the <CODE>#,</CODE> notation
+<PRE>
+   (define-reader-ctor 'f32 f32vector)
+   (with-input-from-string "#,(f32 1.0 2.0 3.0)" read) ==&gt;
+       a uniform f32 vector with three elements
+</PRE>
+
+<H3>Example 4</H3>
+External representations for 'complex' datatypes, eg, <I>ports</I>
+<PRE>
+   (define-reader-ctor 'file open-input-file)
+   (with-input-from-string "#,(file \"/tmp/a\")"
+     (lambda () (read-char (read)))
+</PRE>
+will return the first character of the file "<CODE>/tmp/a</CODE>"
+
+<H3>Example 5</H3>
+Differences between Common Lisp's <CODE>#.</CODE> and the proposed <CODE>#,</CODE>
+<PRE>
+   (with-input-from-string "#,(+ 1 (+ 2 3))" read) ==&gt;
+       error: can't add number 1 and a list '(+ 2 3)
+   (with-input-from-string "#,(+ 1 #,(+ 2 3))" read) ==&gt; 6
+</PRE>
+In contrast, in Common Lisp
+<PRE>
+   (with-input-from-string (is "#.(+ 1 (+ 2 3))") (read is))  ==&gt; 6
+</PRE>
+
+<H3>Example 6</H3>
+Loading of a file containing a read-time application: assuming a file "<CODE>foo.scm</CODE>" contains
+<PRE>
+   (define (temp-proc)
+     (let ((v '#,(f32 1.0 2.0 3.0))) (f32vector-ref v 1)))
+</PRE>
+then
+<PRE>
+   (define-reader-ctor 'f32 f32vector)
+   (load "foo.scm")
+   (pp temp-proc) ==&gt; 
+       (lambda () (let ((v '#f32(1. 2. 3.))) (f32vector-ref v 1))) 
+   (temp-proc) ==&gt; 2.0
+</PRE>
+
+
+<H3>Example 7</H3>
+In a <CODE>#,(tag arg...)</CODE> form, the tag itself may be a read-time application
+<PRE>
+   (define-reader-ctor 'plus-or-list
+     (let ((flag #t))
+       (lambda () (begin0 (if flag '+ 'list) (set! flag (not flag))))))
+   Reading "#,(#,(plus-or-list) 1 2)" ==&gt; 3
+   Reading "#,(#,(plus-or-list) 1 2)" ==&gt; (1 2)
+   Reading "#,(#,(plus-or-list) 1 2)" ==&gt; 3
+</PRE>
+
+That is, <I>sometimes</I> "<CODE>#,(#,(plus-or-list) 1 2)</CODE>" reads as number 3, and some other times it reads as a list of two numbers. This is an example of  an "ambivalent reader".
+
+<H3>Example 8</H3>
+<CODE>cond-expand</CODE> construct of SRFI-0 as a read-time application:
+<PRE>
+printing cond-expanded code from SRFI-0, example 1...
+   #,(cond-expand
+       ((and srfi-1 srfi-10) (write 1))
+        ((or srfi-1 srfi-10) (write 2))
+        (else))
+
+   when features (srfi-1) are defined: (begin (write 2))
+   when features (srfi-10) are defined: (begin (write 2))
+   when features (srfi-1 srfi-10) are defined: (begin (write 1))
+   when features (srfi-2) are defined: (begin)
+
+cond-expanding code from SRFI-0, example 2...
+
+   #,(cond-expand
+       (command-line
+          (define (program-name) (car (argv)))))
+   (pp program-name)
+
+   when features (command-line) are defined: (lambda () (car (argv)))
+   when features (srfi-10 command-line) are defined: (lambda () (car (argv)))
+   when features (srfi-10) are defined: *** ERROR IN 
+       "read-apply.scm"@140.24 -- Unfulfilled cond-expand
+</PRE>
+
+<H3>Example 9</H3>
+
+Emulating <CODE>#+</CODE> and <CODE>#-</CODE> of Common Lisp, specifically, examples of feature expressions from Section 24.1.2.1.1 of
+ANSI Common Lisp standard, X3.226.
+<PRE>
+interpreting a string: 
+   (cons #,(cond-expand (lispm "Spice") (spice "foo")
+     ((not (or lispm spice)) 7)) 'x)
+
+   when features (spice perq) are defined: ("foo" . x)
+   when features (lispm) are defined: ("Spice" . x)
+   when features (srfi-10) are defined: (7 . x)
+
+reading a string: 
+   '#,(cond-expand ((or spice lispm) (let ((a 3) (b 3)) (foo a))) 
+        (else (let ((a 3)) (foo a))))
+
+   when features (spice perq) are defined:
+       (begin (let ((a 3) (b 3)) (foo a)))
+   when features (lispm) are defined:
+       (begin (let ((a 3) (b 3)) (foo a)))
+   when features (srfi-10) are defined:
+       (begin (let ((a 3)) (foo a)))
+</PRE>
+
+<H1>Implementation</H1>
+
+<P>The full implementation and the validation code are available at
+<BLOCKQUOTE><A HREF="http://pobox.com/~oleg/ftp/Scheme/read-apply.scm">http://pobox.com/~oleg/ftp/Scheme/read-apply.scm</A><BR>
+<A HREF="http://pobox.com/~oleg/ftp/Scheme/vread-apply.scm">http://pobox.com/~oleg/ftp/Scheme/vread-apply.scm</A>
+</BLOCKQUOTE>
+The title comments in the validation code explain how to run it. That code also checks that syntax and semantic errors in <CODE>#,</CODE> forms are correctly detected and reported.
+<P>
+Currently, read-time applications are implemented by a transient, run-time, localized subversion of a Gambit reader -- interposing on one of its functions. This approach can easily be extended to other Scheme systems. The goal of the present implementation was to interfere as little as possible into reader's code, and by all means avoid rebuilding of the entire Gambit system.
+<P>
+In true Lisp spirit, Gambit Scheme system collects various parameters pertaining to parsing of input (e.g., the list of named character entries: <CODE>#\tab</CODE>, etc) in a special structure: a readtable. The last slot in a readtable is a table of character-handlers. The latter are called when a specific character (eg., <CODE>#\#</CODE>, <CODE>#\(</CODE>, <CODE>#\\</CODE> ) is encountered in reader's stream. The handler is to process that (and perhaps a few following characters) and to return the corresponding Scheme object. This reader-ctor implementation replaces a sharp-handler with a modified version that detects and processes a <CODE>#,</CODE> character combination. 
+<P>
+One also has to decide where to store associations of tags with reader-ctor procedures. The most appropriate place is a readtable. In the proper implementation, the readtable structure ought to have a dedicated slot for reader-ctor associations. However, extending readtable changes its size, which will require complete rebuilding of the Gambit system. This was unacceptable. Therefore, the present implementation hides the reader-ctor table inside the sharp-handler itself. The latter is the table's sole consumer anyway. While the original sharp-handler was a regular procedure, the new handler is a closure. Obviously we need a way to add new associations to the reader-ctor table hidden inside the closure. The Gambit reader always calls a sharp-handler with two arguments. The modified handler takes two more <I>optional</I> arguments, to maintain the reader-ctor table. Adding optional arguments does <I>not</I> alter the original interface between the reader and a character-handler;!
+!
+!
+ this extension can be considered a sort of "derivation" or "inheritance".  
+<P>
+The subversion of the Gambit reader occurs only when <CODE>define-reader-ctor</CODE> is first called. Just loading or including of <CODE>read-apply.scm</CODE> per se does not alter any of Gambit reader's data or structures. The reader-ctor patch is therefore lightweight, transient and transparent. 
+
+<P>The remaining question is how and when to define reader-constructors.
+If <CODE>define-reader-ctor</CODE> is a regular function, declaration of a new reader-constructor will affect the Scheme reader only when the code 
+has been completely read, (byte)compiled and is being executed. We would like to be able to extend the Scheme reader while it still reads the code. Fortunately, there are several ways to affect a compiler/interpreter while it scans the code. For example, <CODE>define-macro</CODE> or <CODE>define-syntax</CODE> "extend" a Scheme compiler at compile time. So do command-line switches and pragmas, which are present in many systems.  In addition, Scheme implementations often permit customization via profile forms, which may also be specified on command line. See <CODE>vcond-expand.scm</CODE> below for an example.
+
+<P>Implementation of the <CODE>cond-expand</CODE> form of SRFI-0 as a read-time application and the validation code are available at
+<BLOCKQUOTE>	<A HREF="http://pobox.com/~oleg/ftp/Scheme/cond-expand.scm">http://pobox.com/~oleg/ftp/Scheme/cond-expand.scm</A><BR>
+	<A HREF="http://pobox.com/~oleg/ftp/Scheme/vcond-expand.scm">http://pobox.com/~oleg/ftp/Scheme/vcond-expand.scm</A>
+</BLOCKQUOTE><P>
+The implementation is directly based on a grammar given in SRFI-0. We assume that "feature identifiers" in effect are contained in a list <CODE>ALL-FEATURES</CODE>. This list should either be pre-defined in a Scheme system, or otherwise defined prior to reading the code in question. For example one may use various switches, profiles, .rc files, or similar initialization code. The reader-ctor code hopefully demonstrates that the changes to the reader required to implement <CODE>cond-expand</CODE> are minor and straightforward -- contrary to what SRFI-0 assumed.
+
+
+<H1>Copyright</H1>
+Copyright (C) Oleg Kiselyov (1999). All Rights Reserved. 
+<P>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<P>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<P>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+    <HR>
+<P><ADDRESS>Author: <A href="mailto:oleg@pobox.com">Oleg Kiselyov</A> oleg@pobox.com, oleg@acm.org, oleg@computer.org</ADDRESS>
+<P><ADDRESS>Editor: <A href="mailto:srfi-editors@schemers.org">Shriram 
+Krishnamurthi</A></ADDRESS>
+<!-- Created:  Sunday, July 25, 1999  15:21:07 PDT  -->
+<P>Last modified:  Thursday, September 9, 1999  13:00 CST
+</BODY>
+</HTML>
