@@ -7,6 +7,7 @@
 <body>
 
 <H1>Title</H1>
+
 Generalized <code>set!</code>
 
 <H1>Author</H1>
@@ -14,6 +15,7 @@ Generalized <code>set!</code>
 Per Bothner
 
 <H1>Status</H1>
+
 This SRFI is currently in ``draft'' status.  To see an explanation of each status that a SRFI can hold, see <A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
 It will remain in draft status until 2000/03/17, or as amended.
 To provide input on this SRFI, please <code><A
@@ -22,12 +24,15 @@ HREF="mailto:srfi-17@srfi.schemers.org">mail to
 <P><UL>
 <LI>Received: 1999/12/08
 <LI>Draft: 2000/01/16-2000/03/17
+<LI>Revised: 2000/04/28
 </UL>
 
 <H1>Abstract</H1>
 
-This is a proposal to allow "functions that reference a location"
-to be used as the first operand of <code>set!</code>.
+This is a proposal to allow procedure calls that evaluate
+to the "value of a location" to be used to <em>set</em>
+the value of the location, when used as the first
+operand of <code>set!</code>.
 For example:
 <pre>
 (set! (car x) (car y))
@@ -48,17 +53,13 @@ compile-time recognition of special "location-producing" functions;
 this does not seem to be in the "spirit of Scheme".
 <p>
 This SRFI proposes an extension of <code>set!</code>
-so that it provides similar functionality as Common Lisps's <code>setf</code>,
-but in the "functional (first-class)" manner.
-Actually, various alternatives are discussed, with the hope
-that we can agree on a specific consensus.
-
-<H1>Issues</H1>
-
-See <a href="#issue">below</a>.
+so that it provides similar functionality as Common Lisp's <code>setf</code>,
+except that the updater is associated with a procedure value,
+rather than a name.
 
 <H1>Rationale</H1>
-<p>There is ample precedent for general "lvalues" on the
+
+There is ample precedent for general "lvalues" on the
 left-hand side of an assignment.  This includes most statically
 typed languages, and many dynamically typed languages (including APL
 and Common Lisp).  That suggests this is a natural idiom for people.
@@ -83,9 +84,14 @@ assignment) refers to its actual location.  Sticking to this model
 for general "lvalue expressions" in <code>set!</code> means
 that "evaluation" must be done differently from normal
 evaluation when in an "lvalue context".  That is what this proposal does.
+<p>
+This is a controversial issue. This srfi does not wish to imply that
+all Scheme implementations should support this feature; it only
+requests that implementations that <em>do</em> implement
+generalized <code>set!</code> should be compatible with this srfi.
 
 <H1>Specification</H1>
-<p>
+
 The special form <code>set!</code> is extended so the first operand
 can be a procedure application, and not just a variable.
 The procedure is typically one that extracts a component from
@@ -106,58 +112,34 @@ must have a corresponding "setter" procedure.
 The builtin procedure <code>setter</code> takes a procedure and returns the
 corresponding setter procedure.
 <p>
-<a name="issue"></a>
 We define:
 <pre>
 (set! (proc arg ...) value)
 </pre>
-as (Alternative 1):
+as:
 <pre>
 ((setter proc) arg ... value)
 </pre>
-or (Alternative 2):
-<pre>
-((setter proc) value arg ...)
-</pre>
-<p>
-We have two reasonable definitions.  It is not clear
-which is best.
-<ul>
-<li>Alternative 1 is probably more natural.  It matches
+<p><strong>Note:</strong>
+This definition matches
 the existing Scheme convention for setter procedures, where
 the new value is given last.  For example we can define
 <code>(setter car)</code> to be <code>set-car!</code>.
-It also has the minor advantage of preserving evaluation
-order, which makes things a little easier for Schemes
-that do define the evaluation order.
-<li>
-Alternative 2 works much better when you consider
+An alternative definition would be:
+<pre>
+((setter proc) value arg ...) ;; Not the actual definition.
+</pre>
+This definition would work better when you consider
 procedures that take a variable number of arguments.
 This is because it is straight-forward to add one extra
 initial fixed argument, but if you add an extra fixed
 argument to the end of an argument list that has
-a "rest" parameter, then things get more messy:
-You have to extract the new value from the <em>end</em>
-of the rest list, and the copy the list except for the
-final parameter.  You get a similar problem for
-procedures that have optional arguments, which some
-Scheme implementation support, and which a number
-of builtin Scheme procedures take.
-Also, <code>syntax-rules</code> can easily handle
-the rewrite for Alternative 1, but not alternative 2.
-Common Lisp <code>setf</code> is defined this way.
-</ul>
-<p>
-It is not clear-cut which alternative makes most sense.
-Kawa implemented Alternative 2;  then Guile implemented
-Alternative 1.  Alternative 2 is cleaner for implementors
-and when dealing with varargs procedures;  alternative 1
-is more intuitive, and has the big advantage that many
-existing functions already have proper setters.
-My tentative recommendation is alternative 1.
+a "rest" parameter, then things get more messy.
+However, consistency with the existing new-value-last convention
+seems more valuable.
 
 <h2>Standard setters</h2>
-<p>
+
 The following standard procedures have pre-defined setters:
 <pre>
 (set! (car x) v) == (set-car! x v)
@@ -182,7 +164,7 @@ variable-length mutable strings.)
 -->
 
 <h2>Setting setters;  properties</h2>
-<p>
+
 A setter procedure is a special case of the concept of procedures having
 associated <dfn>properties</dfn>.  Other properties might include
 the procedures's name or usage documentation.
@@ -209,14 +191,14 @@ for the <code>setter</code> property.  This is defined such that:
 </pre>
 sets the setter procedure associated with <var>proc</var>
 to <var>setter</var>.
-For example, assuming the Alternative 1 above, we can assume
+For example, we can assume
 <pre>
 (set! (setter car) set-car!)
 </pre>
 has been executed by the Scheme prologue.
 
 <h2>Efficiency Issues</h2>
-<p>
+
 If <code>(set! (foo ..) ...)</code> is to be the preferred idiom,
 we want to make  <code>((setter foo) ...)</code> as efficient
 as <code>(set-foo! ...)</code>.
@@ -224,18 +206,21 @@ This is only possible when the compiler knows both what function
 the symbol <code>foo</code> is bound to, <em>and</em> the setter
 associated with that function.  Scheme (as opposed to Common Lisp)
 does not say anything about a compiler or what it can inline,
-so we cannot say much here.
-<p>
-However, I do suggest a rule that that once a <code>setter</code>
-has been specified for a procedure, then changing the <code>setter</code>
-property to something else is undefined.  
-This would allow a compiler to optimize
-<code>setter</code> calls to the same extent that resolve (or inline)
-calls to specific functions.
-I see no use for being able to change
-the setter property once set, except perhaps for debugging.
-<p>
-An alternative might be to use a functional interface
+so we cannot say much here.  A compiler that does whole-program
+analysis can safely inline calls using a variable bound unchangably
+to a known procedure; it can make the same deduction if the
+procedure's setter is set.  If separate compilation is supported,
+then a compiler cannot safely make such deductions for either
+plain calls or setter calls, without extra information, such as
+a module system, compiler switches, or other non-standard declarations.
+Thus my belief is that this srfi does not inherently make efficient
+compilation more difficult.  However, the next section does define
+a way to inherently tie a setter to a procedure, which does reduce
+the problem of inlining generalized <code>set!</code> to the
+standard inlining problem.
+
+<h2><code>getter-with-setter</code></h2>
+<p>The function <code>getter-with-setter</code> can be used
 to define a procedure with associated properties. 
 Specifically:
 <pre>
@@ -249,20 +234,25 @@ the setter of the resulting compound.
 For example, we could define:
 <pre>
 (define car (getter-with-setter %primitive-car %primitive-set-car!))
-(define set-car! (setter car))
+(define set-car! %primitive-set-car!)
 </pre>
 The advantage of this approach that whenever a compiler can inline
 <code>car</code>, it can also inline <code>(setter car)</code>.
 
-
 <H1>Implementation</H1>
-<p>
 
-<a href="srfi-17-twobit.scm">Here</a> is a sample implementation for
-Alternative 1 for Twobit.
+<a href="srfi-17-twobit.scm">Here</a> is a sample implementation
+for Twobit.
+<p>Here is a sample definition of  <code>getter-with-setter</code>:
+<pre>
+(define (getter-with-setter get set)
+  (let ((proc (lambda args (apply get args))))
+    (set! (setter proc) set)
+    proc))
+</pre>
 
 <H1>Copyright</H1>
-Copyright (C) Per Bothner (1999). All Rights Reserved. 
+Copyright (C) Per Bothner (1999, 2000). All Rights Reserved. 
 <p>
 This document and translations of it may be copied and furnished to
 others, and derivative works that comment on or otherwise explain it
@@ -291,7 +281,7 @@ PARTICULAR PURPOSE.
     <address>Editor: <a href="mailto:srfi-editors@schemers.org">Mike Sperber</a></address>
 <!-- Created: Wed Nov 10 03:14:43 PST 1999 -->
 <!-- hhmts start -->
-Last modified: Mon Feb 21 08:50:35 MET 2000
+Last modified: Sun May  7 16:17:15 MST 2000
 <!-- hhmts end -->
   </body>
 </html>
