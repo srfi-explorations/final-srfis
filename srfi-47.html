@@ -1,0 +1,541 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+  <head>
+    <title>SRFI 47: Array</title>
+  </head>
+
+  <body>
+
+<H1>Title</H1>
+
+Array
+
+<H1>Author</H1>
+
+Aubrey Jaffer and Radey Shouman
+
+    <H1>Status</H1>
+    
+    This SRFI is currently in ``draft'' status.  To see an explanation
+    of each status that a SRFI can hold, see
+    <A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+    It will remain in draft status until 2004/01/15, or as amended.
+    To provide input on this SRFI, please
+    <code><A HREF="mailto:srfi-47@srfi.schemers.org">mail to
+	&lt;srfi-47@srfi.schemers.org&gt;</A></code>.  See
+    <A HREF=../srfi-list-subscribe.html>instructions here</A>
+    to subscribe to the list.  You can access previous messages via
+    <A HREF=mail-archive/maillist.html>the archive of the mailing list</A>. 
+    <P><UL>
+      <LI>Received: 2003/11/11
+      <LI>Draft: 2003/11/11-2004/02/11
+    </UL>
+
+<H1>Abstract</H1>
+
+"slib/array.scm" synthesizes array ideas from Common-Lisp and Alan
+Bawden with uniform vector ideas from SRFI-4 and SCM.  The result
+highly integrates uniform and heterogeneous arrays into Scheme.
+<p>
+
+<H1>Issues</H1>
+
+The Scheme reports mention hardly any specific precisions for numbers.
+Uniform arrays necessarily must have finite precision.  We have
+followed Feeley's SRFI-4 lead for uniform-type names, though without
+the <code>"vector"</code> suffix.  In the syntax for array constants,
+putting (optional rank and) <samp>`A'</samp> between the
+<samp>#</samp> and the type name echoes Common-Lisp array syntax; and
+is compatible to Common-Lisp for heterogeneous arrays.
+
+<H1>Rationale</H1>
+
+<UL>
+  <LI>Strings and Vectors are Arrays.<p>
+
+  <LI>Array procedures are compatible with Common-Lisp arrays except
+      for keyword arguments to <CODE>make-array</CODE>.<p>
+
+  <LI><code>make-shared-array</code> creates arrays which overlay a
+      subsection of a given array.<p>
+
+  <LI>The prototype argument to <CODE>make-array</CODE> seamlessly
+      supports as many uniform array types as an implementation
+      provides, defaulting to arrays built on vectors (and
+      strings).<p>
+
+  <LI>Byte arrays can be implemented independently of strings.<p>
+
+</UL>
+
+"Array" implements a richer set of features than SRFI-25, with more
+compatibility with Common-Lisp.  The <code>make-array</code> procedure
+is incompatible between the two SRFIs.
+<p>
+"Array" incorporates all the uniform vector types from SFRI-4
+"Homogeneous numeric vector datatypes", and adds complex types
+composed of two 32-bit or two 64-bit floating-point numbers, and a
+uniform boolean array type.
+Multi-dimensional arrays subsume homogeneous vectors as the
+one-dimensional case, obviating the need for SRFI-4.
+<p>
+Implementations are required to define all of the prototype
+procedures.  Those which the platform supports will have
+platform-dependent definitions; the others will be defined identically
+to the next larger prototype implemented; defaulting to
+<code>vector</code> if there are none.  All implementations must
+support the string array type using a string.
+<p>
+This arrangement has platforms supporting uniform array types using
+them, with less capable platforms using vectors; both from the same
+source code.
+<p>
+
+<H1>Specification</H1>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>array?</B> <I>obj</I>
+<DD><A NAME="IDX1049"></A>
+
+
+<P>
+Returns <CODE>#t</CODE> if the <VAR>obj</VAR> is an array, and <CODE>#f</CODE> if not.
+</DL>
+<EM>Note:</EM> Arrays are not disjoint from other Scheme types.  Strings
+and vectors also satisfy <CODE>array?</CODE>.  A disjoint array predicate can
+be written:
+
+
+
+<PRE>
+(define (strict-array? obj)
+  (and (array? obj) (not (string? obj)) (not (vector? obj))))
+</PRE>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>array=?</B> <I>array1 array2</I>
+<DD><A NAME="IDX1050"></A>
+
+
+<P>
+Returns <CODE>#t</CODE> if <VAR>array1</VAR> and <VAR>array2</VAR> have the same rank and shape and the
+corresponding elements of <VAR>array1</VAR> and <VAR>array2</VAR> are <CODE>equal?</CODE>.
+
+
+
+<PRE>
+(array=? (make-array '#(foo) 3 3)
+         (make-array '#(foo) '(0 2) '(0 2)))
+  =&gt; #t
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>make-array</B> <I>prototype bound1 bound2 ...</I>
+<DD><A NAME="IDX1051"></A>
+
+
+<P>
+Creates and returns an array of type <VAR>prototype</VAR> with dimensions <VAR>bound1</VAR>, <VAR>bound2</VAR>,
+... and filled with elements from <VAR>prototype</VAR>.  <VAR>prototype</VAR> must be an array,
+vector, or string.  The implementation-dependent type of the returned
+array will be the same as the type of <VAR>prototype</VAR>; except if that would be a
+vector or string with non-zero origin, in which case some variety of
+array will be returned.
+
+
+<P>
+If the <VAR>prototype</VAR> has no elements, then the initial contents of the returned
+array are unspecified.  Otherwise, the returned array will be filled
+with the element at the origin of <VAR>prototype</VAR>.
+</DL>
+<P>
+These functions return a uniform array prototype enclosing the
+optional argument (which must be of the correct type).  If the
+uniform-array type is supported by the implementation, then it is
+returned; promoting to the next larger precision type; resorting
+finally to vector.
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>ac64</B> <I>z</I>
+<DD><A NAME="IDX1053"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>ac64</B>
+<DD><A NAME="IDX1054"></A>
+Returns a high-precision complex uniform-array prototype.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>ac32</B> <I>z</I>
+<DD><A NAME="IDX1055"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>ac32</B>
+<DD><A NAME="IDX1056"></A>
+Returns a complex uniform-array prototype.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>ar64</B> <I>x</I>
+<DD><A NAME="IDX1057"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>ar64</B>
+<DD><A NAME="IDX1058"></A>
+Returns a high-precision real uniform-array prototype.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>ar32</B> <I>x</I>
+<DD><A NAME="IDX1059"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>ar32</B>
+<DD><A NAME="IDX1060"></A>
+Returns a real uniform-array prototype.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>as64</B> <I>n</I>
+<DD><A NAME="IDX1061"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>as64</B>
+<DD><A NAME="IDX1062"></A>
+Returns an exact signed integer uniform-array prototype with at least
+64 bits of precision.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>as32</B> <I>n</I>
+<DD><A NAME="IDX1063"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>as32</B>
+<DD><A NAME="IDX1064"></A>
+Returns an exact signed integer uniform-array prototype with at least
+32 bits of precision.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>as16</B> <I>n</I>
+<DD><A NAME="IDX1065"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>as16</B>
+<DD><A NAME="IDX1066"></A>
+Returns an exact signed integer uniform-array prototype with at least
+16 bits of precision.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>as8</B> <I>n</I>
+<DD><A NAME="IDX1067"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>as8</B>
+<DD><A NAME="IDX1068"></A>
+Returns an exact signed integer uniform-array prototype with at least
+8 bits of precision.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>au64</B> <I>k</I>
+<DD><A NAME="IDX1069"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>au64</B>
+<DD><A NAME="IDX1070"></A>
+Returns an exact non-negative integer uniform-array prototype with at
+least 64 bits of precision.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>au32</B> <I>k</I>
+<DD><A NAME="IDX1071"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>au32</B>
+<DD><A NAME="IDX1072"></A>
+Returns an exact non-negative integer uniform-array prototype with at
+least 32 bits of precision.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>au16</B> <I>k</I>
+<DD><A NAME="IDX1073"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>au16</B>
+<DD><A NAME="IDX1074"></A>
+Returns an exact non-negative integer uniform-array prototype with at
+least 16 bits of precision.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>au8</B> <I>k</I>
+<DD><A NAME="IDX1075"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>au8</B>
+<DD><A NAME="IDX1076"></A>
+Returns an exact non-negative integer uniform-array prototype with at
+least 8 bits of precision.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>at1</B> <I>bool</I>
+<DD><A NAME="IDX1077"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>at1</B>
+<DD><A NAME="IDX1078"></A>
+Returns a boolean uniform-array prototype.
+</DL>
+When constructing an array, <VAR>bound</VAR> is either an inclusive range of
+indices expressed as a two element list, or an upper bound expressed as
+a single integer.  So
+
+
+
+<PRE>
+(make-array '#(foo) 3 3) == (make-array '#(foo) '(0 2) '(0 2))
+</PRE>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>make-shared-array</B> <I>array mapper bound1 bound2 ...</I>
+<DD><A NAME="IDX1079"></A>
+
+
+<P>
+<CODE>make-shared-array</CODE> can be used to create shared subarrays of other
+arrays.  The <VAR>mapper</VAR> is a function that translates coordinates in
+the new array into coordinates in the old array.  A <VAR>mapper</VAR> must be
+linear, and its range must stay within the bounds of the old array, but
+it can be otherwise arbitrary.  A simple example:
+
+
+
+<PRE>
+(define fred (make-array '#(#f) 8 8))
+(define freds-diagonal
+  (make-shared-array fred (lambda (i) (list i i)) 8))
+(array-set! freds-diagonal 'foo 3)
+(array-ref fred 3 3)
+   =&gt; FOO
+(define freds-center
+  (make-shared-array fred (lambda (i j) (list (+ 3 i) (+ 3 j)))
+                     2 2))
+(array-ref freds-center 0 0)
+   =&gt; FOO
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>array-rank</B> <I>obj</I>
+<DD><A NAME="IDX1080"></A>
+
+
+<P>
+Returns the number of dimensions of <VAR>obj</VAR>.  If <VAR>obj</VAR> is not an array, 0 is
+returned.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>array-shape</B> <I>array</I>
+<DD><A NAME="IDX1081"></A>
+
+
+<P>
+Returns a list of inclusive bounds.
+
+
+
+<PRE>
+(array-shape (make-array '#() 3 5))
+   =&gt; ((0 2) (0 4))
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>array-dimensions</B> <I>array</I>
+<DD><A NAME="IDX1082"></A>
+
+
+<P>
+<CODE>array-dimensions</CODE> is similar to <CODE>array-shape</CODE> but replaces
+elements with a 0 minimum with one greater than the maximum.
+
+
+
+<PRE>
+(array-dimensions (make-array '#() 3 5))
+   =&gt; (3 5)
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>array-in-bounds?</B> <I>array index1 index2 ...</I>
+<DD><A NAME="IDX1083"></A>
+
+
+<P>
+Returns <CODE>#t</CODE> if its arguments would be acceptable to
+<CODE>array-ref</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>array-ref</B> <I>array index1 index2 ...</I>
+<DD><A NAME="IDX1084"></A>
+
+
+<P>
+Returns the (<VAR>index1</VAR>, <VAR>index2</VAR>, ...) element of <VAR>array</VAR>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Procedure:</U> <B>array-set!</B> <I>array obj index1 index2 ...</I>
+<DD><A NAME="IDX1085"></A>
+
+
+<P>
+Stores <VAR>obj</VAR> in the (<VAR>index1</VAR>, <VAR>index2</VAR>, ...) element of <VAR>array</VAR>.  The value returned
+by <CODE>array-set!</CODE> is unspecified.
+</DL>
+
+<H2>Syntax</H2>
+
+The procedures specified above are independent of syntactic support
+for array constants.
+<P>
+A syntax for arrays is the list decomposition of an array with a
+prefix according to the type of the array.  The rank digit `<I>n</I>'
+is optional for rank 1 arrays.
+<P>
+<PRE>
+prototype       element type                    prefix         prefix
+procedure                                       rank = 1       rank = <I>n</I>
+=========       ============                    ========       ========
+vector          conventional vector             #A             #<i>n</i>A
+ac64            complex (double precision)      #Ac64          #<i>n</i>Ac64
+ac32            complex (single precision)      #Ac32          #<i>n</i>Ac32
+ar64            double (double precision)       #Ar64          #<i>n</i>Ar64
+ar32            float (single precision)        #Ar32          #<i>n</i>Ar32
+as64            signed integer (64-bit)         #As64          #<i>n</i>As64
+as32            signed integer (32-bit)         #As32          #<i>n</i>As32
+as16            signed integer (16-bit)         #As16          #<i>n</i>As16
+as8             signed integer (8-bit)          #As8           #<i>n</i>As8
+au64            unsigned integer (64-bit)       #Au64          #<i>n</i>Au64
+au32            unsigned integer (32-bit)       #Au32          #<i>n</i>Au32
+au16            unsigned integer (16-bit)       #Au16          #<i>n</i>Au16
+au8             unsigned integer (8-bit)        #Au8           #<i>n</i>Au8
+string          char (string)                   #A\            #<i>n</i>A\
+at1             boolean (bit-vector)            #At            #<i>n</i>At
+</PRE>
+
+
+<H1>Implementation</H1>
+
+<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/array.scm?rev=1.20&#38;content-type=text/vnd.viewcvs-markup">slib/array.scm</A>
+implements array procedures for R4RS or R5RS compliant Scheme
+implementations with <DFN>records</DFN> as implemented by
+<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/record.scm?rev=1.6&#38;content-type=text/vnd.viewcvs-markup">slib/record.scm</A>
+or SRFI-9.
+<P>
+Arrays in the SCM Scheme implementation have the syntax described.
+<p>
+
+<H1>Copyright</H1>
+Copyright (C) Aubrey Jaffer (2003). All Rights Reserved.
+<p>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<p>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<p>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+
+    <hr>
+    <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Dave Mason</a></address>
+<!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
+<!-- hhmts start -->
+Last modified: Tue Nov 11 20:43:35 GMT 2003
+<!-- hhmts end -->
+  </body>
+</html>
+
+
