@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <html>
-  <head><title>SRFI 2: LAND*: an AND with local bindings, a guarded LET* special form</title></head>
+  <head><title>SRFI 2: AND-LET*: an AND with local bindings, a guarded LET* special form</title></head>
 
 <body>
 <H1>Title</H1>
 
-LAND*: an AND with local bindings, a guarded LET* special form
+AND-LET*: an AND with local bindings, a guarded LET* special form
 
 <H1>Author</H1>
 
@@ -19,16 +19,17 @@ HREF="mailto:srfi-2@srfi.schemers.org">mail to
 &lt;srfi-2@srfi.schemers.org&gt;</A></code>.  See <A HREF=../srfi-list-subscribe.html>instructions here</A> to subscribe to the list.  You can access previous messages via <A HREF=mail-archive/maillist.html>the archive of the mailing list</A>.
 <P><UL>
 <LI>Received: 1998/12/28
-<LI>Draft: 1998/12/28-1999/02/22
+<LI>Revised: 1999/02/09
+<LI>Draft: 1998/12/28-1999/02/28
 </UL>
 
 <H1>Abstract</H1>
 
-<P>Like an ordinary AND, a LAND* special form evaluates its arguments --
+<P>Like an ordinary AND, an AND-LET* special form evaluates its arguments --
 expressions -- one after another in order, till the first one that
 yields #f. Unlike AND, however, a non-#f result of one expression can
 be bound to a fresh variable and used in the subsequent expressions.
-LAND* is a cross-breed between LET* and AND.
+AND-LET* is a cross-breed between LET* and AND.
 
 <H1>Rationale</H1>
 
@@ -42,29 +43,29 @@ value E1 has returned. Chances are it took a lot of work to evaluate
 E1, and the produced result (a number, a vector, a string, etc) may be
 of value to E2. Alas, the AND form merely checks that the result is
 not an #f, and throws it away. If E2 needs it, it has to compute that
-value anew. This proposed LAND* special form lets constituent
+value anew. This proposed AND-LET* special form lets constituent
 expressions get hold of the results of already evaluated expressions,
 without re-doing their work.
 
-<P>LAND* can be thought of as a combination of LET* and AND, or a
-generalization of COND's send operator =&gt;. A LAND* form can also be
+<P>AND-LET* can be thought of as a combination of LET* and AND, or a
+generalization of COND's send operator =&gt;. An AND-LET* form can also be
 considered a sequence of guarded expressions. In a regular program,
 forms may produce results, bind them to variables and let other forms
-use these results. LAND* differs in that it checks to make sure that
+use these results. AND-LET* differs in that it checks to make sure that
 every produced result "makes sense" (that is, not an #f). The first
 "failure" triggers the guard and aborts the rest of the sequence
 (which presumably would not make any sense to execute anyway).
 
 Examples:
 <PRE>
-(LAND* ((my-list (compute-list)) ((not (null? my-list))))
-       (do-something my-list))
+(AND-LET* ((my-list (compute-list)) ((not (null? my-list))))
+          (do-something my-list))
 
 (define (look-up key alist)
-  (land* ((x (assq key alist))) (cdr x)))
+  (and-let* ((x (assq key alist))) (cdr x)))
 
 (or
-  (land* ((c (read-char))
+  (and-let* ((c (read-char))
     ((not (eof-object? c))))
     (string-set! some-str i c)  
     (set! i (+ 1 i)))
@@ -75,26 +76,26 @@ Examples:
                         ;   token1 ::= 'YY' 'MM' 'J'
                         ;   token2 ::= 'GG' 'gg' "/"
 (define (parse-full-timestamp token1 token2)
-  (LAND* (((= 5 (string-length token1)))
-          ((= 5 (string-length token2)))
-          (timestamp
-            (OS:string-&gt;time "%m/%d/%y %H:%M"
-              (string
-                (string-ref token1 2) (string-ref token1 3) #\/
-                (string-ref token1 0) (string-ref token1 1) #\/
-                (case (string-ref token1 4)
-                  ((#\8 #\9) #\9) (else #\0))
-                (string-ref token1 4) #\space
-                (string-ref token2 0) (string-ref token2 1) #\:
-                (string-ref token2 2) (string-ref token2 3))))
-          ((positive? timestamp)))
-        timestamp))
+  (AND-LET* (((= 5 (string-length token1)))
+             ((= 5 (string-length token2)))
+             (timestamp
+               (OS:string-&gt;time "%m/%d/%y %H:%M"
+                 (string
+                   (string-ref token1 2) (string-ref token1 3) #\/
+                   (string-ref token1 0) (string-ref token1 1) #\/
+                   (case (string-ref token1 4)
+                     ((#\8 #\9) #\9) (else #\0))
+                   (string-ref token1 4) #\space
+                   (string-ref token2 0) (string-ref token2 1) #\:
+                   (string-ref token2 2) (string-ref token2 3))))
+             ((positive? timestamp)))
+           timestamp))
 </PRE>
 
 <P>
-LAND* is also similar to an "anaphoric AND" LISP macro [Rob Warnock,
+AND-LET* is also similar to an "anaphoric AND" LISP macro [Rob Warnock,
 comp.lang.scheme, 26 Feb 1998 09:06:43 GMT, Message-ID:
-6d3bb3$3804h@fido.asd.sgi.com]. LAND* allows however more than one
+6d3bb3$3804h@fido.asd.sgi.com]. AND-LET* allows however more than one
 intermediate result, each of which continues to be bound through the
 rest of the form.
 
@@ -104,7 +105,7 @@ rest of the form.
 <H2>Syntax and Informal Semantics</H2>
 
 <PRE>
-LAND* (CLAWS) BODY
+AND-LET* (CLAWS) BODY
 
 CLAWS ::= '() | (cons CLAW CLAWS)
 CLAW  ::=  (VARIABLE EXPRESSION) | (EXPRESSION) |
@@ -114,7 +115,7 @@ CLAW  ::=  (VARIABLE EXPRESSION) | (EXPRESSION) |
 <UL>
 <LI>The CLAWS are evaluated in the strict left-to-right order
 <LI>For each CLAW, the EXPRESSION part is evaluated first (or BOUND-VARIABLE is looked up)
-<LI>If the result is #f, LAND* immediately returns #f
+<LI>If the result is #f, AND-LET* immediately returns #f
 <LI>Otherwise, if  the CLAW is of the form (VARIABLE EXPRESSION)
 the EXPRESSION's value is bound to a freshly made VARIABLE
 <LI>The VARIABLE is available for the rest of the CLAWS , and the BODY
@@ -124,13 +125,13 @@ the EXPRESSION's value is bound to a freshly made VARIABLE
 <H2>Formal (Denotational) Semantics</H2>
 
 <PRE>
-eval[ (LAND* (CLAW1 ...) BODY), env] =
+eval[ (AND-LET* (CLAW1 ...) BODY), env] =
    eval_claw[ CLAW1, env ] andalso
-   eval[ (LAND* ( ...) BODY), ext_claw_env[CLAW1, env]]
+   eval[ (AND-LET* ( ...) BODY), ext_claw_env[CLAW1, env]]
 
-eval[ (LAND* (CLAW) ), env] = eval_claw[ CLAW, env ]
-eval[ (LAND* () FORM1 ...), env] = eval[ (BEGIN FORM1 ...), env ]
-eval[ (LAND* () ), env] = #t
+eval[ (AND-LET* (CLAW) ), env] = eval_claw[ CLAW, env ]
+eval[ (AND-LET* () FORM1 ...), env] = eval[ (BEGIN FORM1 ...), env ]
+eval[ (AND-LET* () ), env] = #t
 
 eval_claw[ BOUND-VARIABLE, env ] =
    eval[ BOUND-VARIABLE, env ]
@@ -153,10 +154,10 @@ ext_claw_env[ (VARIABLE EXPRESSION), env ] =
 <A href="http://pobox.com/~oleg/ftp/Scheme/vland.scm">
 http://pobox.com/~oleg/ftp/Scheme/vland.scm</A>).
 
-<P>This is an implementation of LAND* as a (Gambit) low-level macro that
-re-writes LAND* as a "tree" of AND and LET forms. A validation code is
+<P>This is an implementation of AND-LET* as a (Gambit) low-level macro that
+re-writes AND-LET* as a "tree" of AND and LET forms. A validation code is
 also presented, which verifies not only that everything works as
-expected, but also that LAND* finds syntax errors where expected.
+expected, but also that AND-LET* finds syntax errors where expected.
 
 <H1>Copyright</H1>
 Copyright (C) Oleg Kiselyov (1998). All Rights Reserved. 
