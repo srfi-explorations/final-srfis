@@ -1,0 +1,1920 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 53: Syntactic Computations with computation-rules</title>
+  </head>
+
+  <body>
+
+    <H1>Title</H1>
+
+    Syntactic computations with computation-rules
+
+    <H1>Author</H1>
+    
+    Andre van Tonder
+    
+    <H1>Status</H1>
+
+    This SRFI is currently in ``draft'' status.  To see an explanation
+    of each status that a SRFI can hold, see <A
+    HREF="http://srfi.schemers.org/srfi-process.html">here</A>.  It
+    will remain in draft status until 2004/05/16, or as amended.
+
+    To provide input on this SRFI, please <code><A
+    HREF="mailto:srfi-53@srfi.schemers.org">mail to
+    &lt;srfi-53@srfi.schemers.org&gt;</A></code>.  See <A
+    HREF="../srfi-list-subscribe.html">instructions here</A> to
+    subscribe to the list.  You can access previous messages via <A
+    HREF="mail-archive/maillist.html">the archive of the mailing
+    list</A>.
+
+    <p>
+    <ul>
+      <li>Received: 2004/03/16
+      <li>Draft: 2004/03/16-2004/05/16
+    </ul>
+    
+    <H1>Abstract</H1>
+
+This SRFI provides a portable framework for 
+writing complex high-level macros that perform nontrivial 
+computations during expansion.  
+
+
+    <H1>Rationale</H1>
+    
+Since R5RS [1], Schemers have had at their disposal an elegant, standardized way of 
+writing high-level hygienic macros using <code>syntax-rules</code>.
+
+<p>
+The <code>syntax-rules</code> system is designed for ease of use in writing 
+simple macros "by example".  As for more complex macros, it was 
+shown by Hilsdale and Friedman [2] that
+<code>syntax-rules</code> can express macro transformations that perform 
+arbitrary computations over expression shapes.  Their technique involves
+writing syntax transformations in continuation-passing style.   
+
+<p>
+To the average programmer, nontrivial continuation-style macros are
+hard to write, read and maintain.   Because of this, 
+<code>syntax-rules</code> is not generally used
+for nontrivial applications.
+
+<p>
+In this SRFI we provide a portable framework for writing macros that perform 
+nontrivial syntactic computations in a more direct style, liberating the 
+programmer from dealing with the administrative details involved in  
+continuation-passing style.  
+The framework is built using <code>syntax-rules</code> and still uses 
+continuation-passing under the hood, but this fact is hidden from the
+programmer.  The interface is monadic and has aspects in common 
+with <code>syntax-case</code>.
+
+<p>  
+
+
+
+<H1>Examples</H1>
+
+Here we list only a few simple examples to point out a few features of this
+SRFI.  A more 
+useful and complex example (implementing records with labeled fields) 
+will be sketched after the specification below.  
+
+<p>
+Let's define a simple computation to append two s-expressions:
+<pre>
+  (define-syntax-computation syntax-append
+    (computation-rules ()
+      ((syntax-append () y)      (syntax-return y))
+      ((syntax-append (h . t) y) (syntax-do (rest <- (syntax-append t y))
+                                            (syntax-return (h . rest))))))
+</pre>
+This is very similar to the way one would define this function in ordinary 
+Scheme.  On the right hand side of each rule, we provide a
+syntax computation.  In the first 
+case, we simply return the second argument.  In the second case, we use
+<code>syntax-do</code> (which is analogous to the Scheme <code>let*</code>)
+to perform an intermediate computation <code>(syntax-append t y)</code> and bind the
+resulting syntax to <code>rest</code>, which is then 
+inserted in the final result.  We can now
+run the computation as follows:
+<pre>
+  (syntax-run (syntax-append (list 1 2) (3 4 5)))  ;==> (1 2 3 4 5)
+</pre>
+
+We can have more than one intermediate computation,
+for example:
+<pre>
+  (define-syntax-computation syntax-map
+    (computation-rules ()
+      ((syntax-map f ())      (syntax-return ()))
+      ((syntax-map f (h . t)) (syntax-do (x <- (f h))
+                                         (y <- (syntax-map f t))
+                                         (syntax-return (x . y))))))
+
+  (syntax-inspect (syntax-map syntax-atom? (1 x (d e))))  ;==> (#t #t #f)
+</pre> 
+The form <code>syntax-inspect</code> here just returns the expanded
+s-expression quoted.  The computation <code>syntax-atom?</code> is 
+provided as part of the SRFI.  
+
+<p>
+For defining local bindings, we
+may use <code>let-syntax-computation</code> and  
+<code>letrec-syntax-computation</code>.  For 
+example:
+<pre>
+  (define-syntax-computation syntax-reverse
+    (computation-rules ()
+      ((syntax-reverse s)                 
+       (letrec-syntax-computation
+           ((syntax-reverse*
+             (computation-rules ()
+               ((syntax-reverse* () accum) (syntax-return accum))
+               ((syntax-reverse* (h . t) accum)
+                (syntax-reverse* t (h . accum))))))
+         (syntax-reverse* s ())))))
+
+  (syntax-inspect (syntax-map syntax-reverse ((1 2) (3 4))))  ;==>  ((2 1) (4 3))
+</pre>
+
+We also have the ability to declare anonymous computations, for example:
+<pre>
+  (syntax-inspect ((computation-rules ()
+                     ((_ x) (syntax-return (x x))))
+                   1))
+     ;==> (1 1)
+
+  (syntax-inspect (syntax-map 
+                     (computation-rules ()
+                       ((_ x) (syntax-return (x x))))
+                     (1 2 3)))
+
+      ;==> ((1 1) (2 2) (3 3))
+</pre>
+In addition, we have forms for testing whether a piece of syntax is 
+atomic, a symbol, as well as conditionals and forms for pattern matching.
+Here is an example of their use:
+<pre>
+  (define-syntax-computation syntax-eq?
+    (computation-rules ()
+      ((syntax-eq? x y)
+       (syntax-if (syntax-symbol? x)
+                  (let-syntax-computation 
+                      ((test (computation-rules (x)
+                               ((test x)     (syntax-return #t))
+                               ((test non-x) (syntax-return #f)))))
+                    (test y))
+                  (syntax-if (syntax-atom? x)   
+                             (syntax-match* y
+                               (x     (syntax-return #t))
+                               (non-x (syntax-return #f)))
+                             (syntax-return #f))))))
+
+  (syntax-run (syntax-eq? x x))   ;==> #t
+  (syntax-run (syntax-eq? x y))   ;==> #f
+</pre>
+
+As part of the library, we provide some useful list primitives (such 
+as <code>syntax-foldl</code>, as well as primitives for capturing and
+invoking continutations.  For example,
+<pre>
+  (define-syntax-computation all-true?
+    (computation-rules ()
+      ((all-true? ls)
+       (syntax-let/cc break
+         (syntax-foldl (computation-rules ()
+                         ((_ #f seed) (syntax-invoke/c break (syntax-return #f)))
+                         ((_ #t seed) (syntax-return #t)))
+                       #t
+                       ls)))))
+
+  (syntax-run (all-true? (#t #f #t #t)))
+</pre>
+Here <code>syntax-foldl</code> iterates over a list from left to right.
+Very much as in ordinary Scheme, we can break out of the loop by 
+capturing the current syntactic continuation before beginning the iteration,
+and then invoking that continuation when we want to break out.   
+
+ 
+
+<H1>Organization of the interface</H1>
+ 
+As shown by Moggi, Wadler and others [4, 5], 
+the notion of a monad unifies diverse notions of 
+computation.  Syntactic computations are no exception, and we have
+therefore chosen to organize the core interface around a small set
+of monadic primitives, using notation similar to that of Haskell.
+These primitives are easy to use, have analogues in the popular
+<code>syntax-case</code> system [3], and require no knowledge of monads
+from the programmer.  
+
+<p>
+The basic primitives are 
+<b>
+<pre>    syntax-return
+    syntax-do
+    syntax-run
+</pre></b>
+The first of these, <code>syntax-return</code>, simply makes a 
+trivial computation out of a piece of syntax and is analogous 
+to the <code>syntax-case: syntax</code> primitive [3].  The
+second, <code>syntax-do</code>, sequences a set of computations and
+is analogous to the <code>syntax-case: with-syntax</code>
+primitive.  The third of these, <code>syntax-run</code>, is used
+to perform a syntactic computation, giving as a result a piece of 
+syntax.
+
+<p>
+Here is a simple comparison for those familiar with <code>syntax-case</code>:
+
+<pre>
+(define-syntax test                              (define-syntax-computation test
+  (lambda (stx)                                     (computation-rules ()
+    (syntax-case stx ()
+      ((test var)                                     ((test var)
+       (with-syntax                                    (syntax-do 
+           ((body (syntax (cons var var))))              (body <- (syntax-return (cons var var)))                                                    
+         (syntax                                         (syntax-return 
+           (let ((var 1)) body)))))))                      (let ((var 1)) body))))))
+
+(test x)    ;==> (1 . 1)                         (syntax-run (test x))  ;==> (1 . 1)
+</pre>
+ 
+Specific to the syntax computation monad are the further primitives
+<b><pre>    syntax-let/cc
+    syntax-invoke/c
+    syntax-root/c 
+</pre></b>
+used for capturing the current syntactic continuation, invoking
+a computation with a supplied continuation, and for creating a 
+trivial (root) continuation.  
+ 
+
+
+<H1>Specification</H1>
+
+The SRFI describes a set of core forms, and a set of derived forms
+that are definable in terms of the core forms.  
+<p>
+The core forms are:
+
+<b><pre>    syntax-run
+    syntax-inspect
+    syntax-return 
+    syntax-do 
+    define-syntax-computation
+    let-syntax-computation
+    letrec-syntax-computation
+    computation-rules
+    syntax-let/cc
+    syntax-invoke/c
+    syntax-root/c 
+</pre></b>
+
+The derived forms are:
+<b>
+<pre>
+    syntax-error
+    syntax-if
+    syntax-if*
+    syntax-match
+    syntax-match*
+    syntax-eq?
+    syntax-symbol?
+    syntax-atom?
+    syntax-append
+    syntax-map
+    syntax-reverse
+    syntax-foldl
+    syntax-foldr
+    syntax-temporaries
+</pre></b>
+
+
+
+<h2>Core forms</h2>
+
+The following forms should be provided.  The semantics, which is informally
+described here, should conform to that of the reference implementation below:
+<ul>
+<li>
+<b><pre>
+(syntax-run computation)
+</pre></b>
+Performs a syntactic computation and returns the resulting syntax.
+
+<br>
+<br>
+<li>
+<b><pre>(syntax-inspect computation)</pre></b>
+Performs a syntactic computation and returns the resulting syntax as a 
+quoted s-expression.
+
+<br>
+<br>  
+<li>
+<b><pre>
+(syntax-return stx) 
+</pre></b>
+Creates a syntactic computation which, when performed, will return the syntax <code>stx</code>.
+<p>
+<b>Example:</b>
+<pre>
+(syntax-inspect (syntax-return (car z))     ;==> (car z)
+</pre>
+
+<li>
+<b><pre>
+(syntax-do (x <- computation) . body)
+</pre></b>
+Creates a syntactic computation which, when executed, will first perform 
+the computation on the right hand side of the arrow, substitue the 
+resulting syntax for all non-shadowed occurrences of <code>x</code> in the body, and then 
+perform the computation <code>(syntax-do . body*)</code> where <code>body*</code> is the 
+result of the substitution.  The degenerate case <code>(syntax-do computation)</code> is equivalent to <code>computation</code>.
+<p>
+<b>Example:</b>
+<pre>
+(syntax-inspect (syntax-do (x <- (syntax-return 1))
+                           (y <- (syntax-return 2))
+                           (syntax-return (x y))))
+       ;==>  (1 2)
+</pre>
+
+<li>
+<b>
+<pre>
+(define-syntax-computation name
+   (computation-rules (literal ...)
+     ((name . pattern) computation)
+     ...))
+</pre>    
+</b>
+Analogous to syntax-rules, this binds a sequence of 
+patterns of the form <code>(name . pattern)</code> to syntax computations.      
+
+<p>
+<b>Examples:</b>
+<pre>
+(define-syntax-computation syntax-atom?
+  (computation-rules ()
+    ((syntax-atom? (x . y))  (syntax-return #f))
+    ((syntax-atom? #(x ...)) (syntax-return #f))
+    ((syntax-atom? x)        (syntax-return #t))))
+
+(define-syntax-computation syntax-map
+  (computation-rules ()
+    ((syntax-map f ())      (syntax-return ()))
+    ((syntax-map f (h . t)) (syntax-do (x <- (f h))
+                                       (y <- (syntax-map f t))
+                                       (syntax-return (x . y))))))
+
+(syntax-run (syntax-atom? x))          ;==> #t
+(syntax-run (syntax-atom? (1 . 2)))    ;==> #f
+
+(syntax-inspect (syntax-map syntax-atom? (x y (z u) v)))  ;==> (#t #t #f #t)
+</pre>
+
+<li><b><pre>(let-syntax-computation ((name
+                           (computation-rules (lit ...)
+                              ((name . pattern) computation)
+                              ...))
+                        ...)
+   computation*)
+</pre></b>
+Analogous to let-syntax, this constructs a computation that binds a sequence of patterns of the form <code>(name . pattern)</code> 
+to syntax computations.  Each binding
+has the body <code>computation*</code> as its region.  
+
+<p>
+<b>Example:</b>
+
+<pre>
+(syntax-run
+ (let-syntax-computation
+     ((atom? (computation-rules ()
+               ((atom? (x . y)) (syntax-return #f))
+               ((atom? x)       (syntax-return #t)))))
+   (atom? (x y))))
+                   ;==> #f
+</pre>
+
+
+<li><b><pre>(letrec-syntax-computation ((name
+                              (computation-rules (lit ...)
+                                ((name . pattern) computation)
+                                ...))
+                              ...)
+  computation*)
+</pre></b>
+Analogous to letrec-syntax, this constructs a computation that binds a sequence of patterns of the form <code>(name . pattern)</code> to syntax computations.
+Each binding has as its region all the computations on the right hand sides of the bindings as well
+as the body <code>computation*</code>.  
+
+<p><b>Example:</b>
+
+<pre>
+(define-syntax-computation syntax-reverse
+  (computation-rules ()
+    ((syntax-reverse s)                 
+     (letrec-syntax-computation
+         ((syntax-reverse*
+           (computation-rules ()
+             ((syntax-reverse* () accum)      (syntax-return accum))
+             ((syntax-reverse* (h . t) accum) (syntax-reverse* t (h . accum))))))
+       (syntax-reverse* s ())))))
+
+(syntax-run (syntax-reverse (1 2 3 5 list)))    ;==> (5 3 2 1)
+</pre>
+
+<li><b><pre>(computation-rules literals
+  ((_ . pat) computation)
+  ...)
+</pre></b>
+Declares an anonymous computation.  
+<p>
+<b>Examples:</b>
+
+<pre>
+(syntax-inspect ((computation-rules ()
+                   ((_ x) (syntax-return (x x))))
+                 hello))                             ;==> (hello hello)
+
+(syntax-inspect (syntax-map 
+                   (computation-rules ()
+                     ((_ x) (syntax-return (x x))))
+                   (1 2 3)))                         ;==> ((1 1) (2 2) (3 3))
+
+(syntax-inspect
+  ((computation-rules ()
+     ((_ x) ((computation-rules ()
+               ((_ x) (syntax-return #t))
+               ((_ y) (syntax-return #f)))
+             foo)))
+  symbol))                                           ;==> #t
+</pre>
+
+
+<li><b><pre>(syntax-let/cc k computation)</pre></b>
+
+Constructs a computation that binds the current syntactic continuation to <code>k</code> in the body of 
+<code>computation</code>. 
+
+<p>
+
+<li><b><pre>(syntax-invoke/c k computation)</pre></b>
+
+Constructs a computation that discards the current syntactic continuation, performing 
+<code>computation</code> in the context of the supplied continuation <code>k</code>.
+<p>
+<b>Example:</b>
+
+<pre>
+(define-syntax-computation syntax-foldl
+  (computation-rules ()
+    ((syntax-foldl f seed ())
+     (syntax-return seed))
+    ((syntax-foldl f seed (h . t))
+     (syntax-do (x <- (f h seed))
+                (syntax-foldl f x t)))))
+
+(define-syntax-computation all-true?
+  (computation-rules ()
+    ((all-true? ls)
+     (syntax-let/cc break
+       (syntax-foldl (computation-rules ()
+                       ((_ #f seed) (syntax-invoke/c break (syntax-return #f)))
+                       ((_ #t seed) (syntax-return #t)))
+                     #t
+                     ls)))))
+
+(syntax-run (all-true? (#t #f #t #t)))    ;==> #f
+</pre>
+
+
+<li><b><pre>(syntax-root/c)</pre></b>
+
+A syntactic computation that returns the root continuation.  Useful 
+for escaping from the computation altogether.
+
+<p>
+<b>Example:</b>
+
+<pre>
+(define-syntax-computation first 
+  (computation-rules ()
+    ((first (h . t)) (syntax-return h))
+    ((first other)   (syntax-do (quit <- (syntax-root/c))
+                                (syntax-invoke/c quit
+                                   (syntax-return "First of non-pair"))))))
+
+
+(syntax-inspect (syntax-map first ((a b) (c d))))   ;==> (a c)
+(syntax-inspect (syntax-map first (a (b c))))       ;==> "First of non-pair"    
+</pre>
+
+</ul>
+
+<h2>Derived forms</h2>
+
+The following forms should be provided.  The semantics, which is informally
+described here, should conform to that of the reference implementation below:
+<ul>
+<li>
+<b><pre>(syntax-error . args)</pre></b>
+
+When performed, aborts the computation and forces a syntax error, 
+displaying the arguments.
+<p>
+<b>Example:</b>
+<pre>
+(define-syntax-computation first 
+  (computation-rules ()
+    ((first (h . t)) (syntax-return h))
+    ((first other)   (syntax-error "First of non-pair " other))))
+
+(syntax-inspect (syntax-map first (a (b c))))    
+
+            ;==> error: bad syntax in: (error "First of non-pair " a)
+</pre>
+
+
+<li>
+<b><pre>(syntax-if* stx computation1 computation2)</pre></b>
+
+When performed, if the syntax <code>stx</code> is <code>#f</code>, 
+performs <code>computation2</code>.  Otherwise
+performs <code>computation1</code>.
+
+<p>
+<b>Example:</b>
+<pre>
+(syntax-run (syntax-if* #f
+			(syntax-return 1)
+			(syntax-return 2)))   ;==> 2
+</pre>
+
+<li><b><pre>(syntax-if computation1 computation2 computation3)</pre></b>
+
+When performed, first performs <code>computation1</code>.  If the 
+resulting syntax is <code>#f</code>, performs <code>computation3</code>.  Otherwise
+performs <code>computation2</code>.
+
+<p>
+<b>Examples:</b>
+<pre>
+(syntax-run (syntax-if (syntax-return #f)
+                       (syntax-return 1)
+                       (syntax-return 2)))   ;==> 2
+</pre>
+
+
+
+<li>
+<b><pre>(syntax-match* stx (pattern computation) ...)</pre></b>
+
+Matches syntax <code>stx</code> against a sequence of 
+patterns.  If a match is found, 
+ performs the corresponding computation.  Equivalent to 
+<pre>
+(let-syntax-computation
+         ((f (computation-rules ()
+               ((f pattern) computation)
+               ...)))
+       (f s)))))
+</pre>
+
+<p>
+<b>Example:</b>
+<pre>
+(syntax-inspect (syntax-match* (a b c)
+                  ((h . t) (syntax-return t))
+                  (other   (syntax-error "Not a list"))))  ;==> (b c)
+</pre>
+
+<li>
+<b><pre>(syntax-match computation (pattern computation*) ...)</pre></b>
+
+Performs <code>computation</code>.  Matches the resulting syntax 
+against a sequence of patterns.  If a match is found, 
+performs the corresponding computation.  Equivalent to 
+<pre>
+(syntax-do (stx <- computation)
+           (syntax-match* stx (pattern computation*) ...)))
+</pre>
+
+<p>
+<b>Example:</b>
+<pre>
+(syntax-inspect (syntax-match* (syntax-return (a b c))
+                  ((h . t) (syntax-return t))
+                  (other   (syntax-error "Not a list"))))  ;==> (b c)
+</pre>
+
+<li>
+<b><pre>(syntax-eq? stx stx*)</pre></b>
+
+Tests for equality of two atoms, which can be symbols or literals.  
+If equal, returns <code>#t</code>.
+If not equal or if at least one of the arguments is not an atom, returns <code>#f</code>.
+Its behavior should be equivalent to the following:
+
+<pre>
+(define-syntax-computation syntax-eq?
+  (computation-rules ()
+    ((syntax-eq? x y)
+     (syntax-if (syntax-symbol? x)
+                (let-syntax-computation 
+                    ((test (computation-rules (x)
+                             ((test x)     (syntax-return #t))
+                             ((test non-x) (syntax-return #f)))))
+                  (test y))
+                (syntax-if (syntax-atom? x)   
+                           (syntax-match* y
+                             (x     (syntax-return #t))
+                             (non-x (syntax-return #f)))
+                           (syntax-return #f))))))
+</pre>
+
+<p>
+<b>Examples:</b>
+<pre>
+(syntax-run (syntax-eq? x x))               ;==> #t
+(syntax-run (syntax-eq? x y))               ;==> #f
+(syntax-run (syntax-eq? #t #t))             ;==> #t
+(syntax-run (syntax-eq? (x . y) (x . y)))   ;==> #f
+</pre>
+
+<li>
+<b><pre>(syntax-symbol? stx)</pre></b>
+
+Tests whether <code>stx</code> is a symbol.  Its behavior should 
+be equivalent to   
+
+<pre>
+(define-syntax-computation syntax-symbol?
+  (computation-rules ()
+    ((syntax-symbol? (x . y))  (syntax-return #f))
+    ((syntax-symbol? #(x ...)) (syntax-return #f))
+    ((syntax-symbol? x)
+     (let-syntax-computation
+         ((test (computation-rules ()
+                  ((test x) (syntax-return #t))
+                  ((test y) (syntax-return #f)))))
+       (test foo)))))
+</pre>
+
+<p>
+<b>Examples:</b>
+<pre>
+(syntax-run (syntax-symbol? x))      ;==> #t
+(syntax-run (syntax-symbol? 1))      ;==> #f
+(syntax-run (syntax-symbol? (x y)))  ;==> #f
+</pre>
+
+<li>
+<b><pre>(syntax-atom? stx)</pre></b>
+
+Tests whether <code>stx</code> is an atom.  Its behavior should 
+be equivalent to   
+
+<pre>
+(define-syntax-computation syntax-atom?
+  (computation-rules ()
+    ((syntax-atom? (x . y))  (syntax-return #f))
+    ((syntax-atom? #(x ...)) (syntax-return #f))
+    ((syntax-atom? x)        (syntax-return #t))))
+</pre>
+
+<p>
+<b>Examples:</b>
+<pre>
+(syntax-run (syntax-atom? x))      ;==> #t
+(syntax-run (syntax-atom? (x y)))  ;==> #f
+</pre>
+
+<li>
+<b><pre>(syntax-append stx stx*)</pre></b>
+
+Appends its two arguments.  Its behavior should 
+be equivalent to   
+
+<pre>
+(define-syntax-computation syntax-append
+  (computation-rules ()
+    ((syntax-append () y)      (syntax-return y))
+    ((syntax-append (h . t) y) (syntax-do (rest <- (syntax-append t y))
+                                          (syntax-return (h . rest))))))
+</pre>
+
+<p>
+<b>Example:</b>
+<pre>
+(syntax-run (syntax-append (list 1 2) (4 5 7)))   ;==> (1 2 4 5 7)
+</pre>
+
+<li>
+<b><pre>(syntax-map f stx)</pre></b>
+
+Returns a syntax list, the elements of which are obtained by 
+applying the computation <code>f</code> (which may be anonymous) 
+to each element of <code>stx</code>
+regarded as a list.  Its behavior should 
+be equivalent to   
+
+<pre>
+(define-syntax-computation syntax-map
+  (computation-rules ()
+    ((syntax-map f ())      (syntax-return ()))
+    ((syntax-map f (h . t)) (syntax-do (x <- (f h))
+                                       (y <- (syntax-map f t))
+                                       (syntax-return (x . y))))))
+</pre>
+
+<p>
+<b>Examples:</b>
+<pre>
+(syntax-inspect (syntax-map syntax-reverse
+                            ((1 2) (3 4))))   ;==> ((2 1) (4 3))
+
+(syntax-inspect (syntax-map 
+                   (computation-rules ()
+                     ((_ x) (syntax-return (x x))))
+                   (1 2 3)))
+                                              ;==> ((1 1) (2 2) (3 3))
+</pre>
+
+<li>
+<b><pre>(syntax-reverse stx)</pre></b>
+
+Reverses <code>stx</code> regarded as a list.  Its behavior should 
+be equivalent to   
+
+<pre>
+(define-syntax-computation syntax-reverse
+  (computation-rules ()
+    ((syntax-reverse s)                 
+     (letrec-syntax-computation
+         ((syntax-reverse*
+           (computation-rules ()
+             ((syntax-reverse* () accum) (syntax-return accum))
+             ((syntax-reverse* (h . t) accum)
+              (syntax-reverse* t (h . accum))))))
+       (syntax-reverse* s ())))))
+</pre>
+
+<p>
+<b>Example:</b>
+<pre>
+(syntax-run (syntax-reverse (1 2 3 5 list)))  ;==> (5 3 2 1)
+</pre>
+
+<li>
+<b><pre>(syntax-foldl f seed lst)</pre></b>
+
+A syntactic version of the list <code>foldl</code> operation.
+Applies the binary computation <code>f</code>
+to each element of <code>lst</code> from left to right starting 
+from <code>seed</code>. 
+Its behavior should be equivalent to   
+
+<pre>
+(define-syntax-computation syntax-foldl
+  (computation-rules ()
+    ((syntax-foldl f seed ())
+     (syntax-return seed))
+    ((syntax-foldl f seed (h . t))
+     (syntax-do (x <- (f h seed))
+                (syntax-foldl f x t)))))
+</pre>
+
+<p>
+<b>Example:</b>
+<pre>
+(syntax-inspect (syntax-foldl syntax-append
+                              ()
+                              ((1 2) (3 4))))  ;==> (3 4 1 2)
+</pre>
+
+<li>
+<b><pre>(syntax-foldr f seed lst)</pre></b>
+
+A syntactic version of the list <code>foldr</code> operation.
+Applies the binary computation <code>f</code>
+to each element of <code>lst</code> from right to left starting 
+from <code>seed</code>. 
+Its behavior should be equivalent to   
+
+<pre>
+(define-syntax-computation syntax-foldr
+  (computation-rules ()
+    ((syntax-foldr f seed ())
+     (syntax-return seed))
+    ((syntax-foldr f seed (h . t))
+     (syntax-do (seed* <- (syntax-foldr f seed t))
+                (f h seed*)))))
+</pre>
+
+<p>
+<b>Example:</b>
+<pre>
+(syntax-inspect (syntax-foldr syntax-append
+                              ()
+                              ((1 2) (3 4))))  ;==> (1 2 3 4)
+</pre>
+
+
+<li>
+<b><pre>(syntax-temporaries stx)</pre></b>
+
+Returns a list of unique identifiers, one for each element 
+of <code>stx</code> regarded as a list.
+One possible definition is    
+
+<pre>
+(define-syntax-computation syntax-temporaries
+  (computation-rules ()
+    ((syntax-temporaries lst)      (syntax-temporaries lst ()))
+    ((syntax-temporaries () temps) (syntax-return temps))
+    ((syntax-temporaries (h . t) temps)
+     (syntax-temporaries t (temp . temps)))))
+</pre>
+
+<p>
+<b>Example:</b>
+<pre>
+(syntax-inspect (syntax-temporaries (x y z)))  ;==> (temp~1 temp~2 temp~3)
+</pre>
+
+
+</ul>
+
+
+<H1>Extended example</H1>
+
+After the implementation below, we provide a more complex example
+implementing records with labeled fields featuring
+<ul>
+<li>Constructors by label with compile-time resolution of labels
+<li>Pattern matching with compile-time resolution of labels
+</ul>
+Here we just point out some highlights. 
+
+<p>
+First, records are implemented as lists via the following definitions
+<pre>
+  (define-syntax define-record
+    (syntax-rules ()
+      ((define-record name (make-name label ...))
+       (begin 
+         (define (make-name label ...)
+           (list 'name label ...))
+         (define-syntax-computation name
+           (computation-rules ()
+             ((name) (syntax-return (make-name (label ...))))))))))
+
+  (define-record test (make-test x y))
+
+  (define testing (make-test 8 9))
+
+  testing  ;==> (8 9)
+</pre>
+In the above, note that when defining the record type, we are binding the
+name, in this case <code>test</code>, to a syntax computation which, when 
+invoked,
+will return a descriptor containing the name of the constructor, in this
+case <code>make-test</code>, and the labels, in this case <code>x</code>
+and <code>y</code>.  This descriptor will be used for compile-time
+resolution of labels in <code>match-record</code> expressions.
+
+<p>
+For the matcher, we would like the expression
+<pre>
+  (match-record testing
+    (test (= y u) (= x v)) (list u v))           ;==> (9 8)
+</pre>
+to expand at compile-time to
+<pre>
+  (if (and (pair? testing)
+           (eq? (car testing) 'test))
+      (let ((fields (cdr testing)))
+        (let ((v (car fields))
+              (fields+ (cdr fields)))
+          (let ((u (car fields+))
+                (fields+ (cdr fields+)))
+            (list u v))))
+      (error "Record type does not match"))      ;==> (9 8)
+</pre>
+where the fields are extracted in the correct order from the 
+list.  
+To do this, let's first define 
+<pre>
+  (define-syntax match-record
+    (syntax-rules ()
+      ((match-record val (name (= label var) ...) . body)
+       (if (and (pair? val)
+                (eq? (car val) 'name))
+           (let ((fields (cdr val)))
+             (syntax-run
+               (syntax-match (name)
+                 ((make-name labels)   
+                  (match-fields fields
+                                labels
+                                ((= label var) ...)
+                                ((= label var) ...)
+                                body)))))
+           (error "Record type does not match")))))
+</pre>
+As promised, this macro extracts the descriptor information bound to the record
+name <code>test</code>, and then calls the workhorse, <code>match-fields</code>, 
+which will extract the fields from the argument in the order they were listed 
+in the original definition of the record type.  Notice that to perform a syntax
+computation from an ordinary <code>syntax-rules</code> macro, we needed
+to use <code>syntax-run</code>.
+
+<pre>
+  (define-syntax-computation match-fields
+    (computation-rules ()
+      ((match-fields fields labels () () body)
+       (syntax-return (begin .  body)))
+      ((match-fields fields (label* . labels*) () bindings body) 
+       (syntax-do (rest <- (match-fields fields+ 
+                                         labels*
+                                         bindings
+                                         bindings
+                                         body))
+                  (syntax-return 
+                    (let ((fields+ (cdr fields)))
+                      rest))))
+      ((match-fields fields () ((= label var) . binds) bindings body)
+       (syntax-error "No field" label "in record"))
+      ((match-fields fields
+                     (label* . labels*)
+                     ((= label var) . binds)
+                     bindings
+                     body)
+       (syntax-if (syntax-eq? label label*)  
+                  (syntax-do
+                    (new-bindings <- (remove-bind label* bindings))
+                    (rest <- (match-fields fields+ 
+                                           labels*
+                                           new-bindings
+                                           new-bindings
+                                           body))
+                    (syntax-return
+                      (let ((var     (car fields))
+                            (fields+ (cdr fields)))
+                        rest)))
+                  (match-fields fields 
+                                (label* . labels*)
+                                binds
+                                bindings
+                                body)))))
+</pre>
+For each label in the descriptor, this macro scans through 
+the bindings supplied in the <code>match-record</code> expression.
+If a match is found, the corresponding variable is bound to the 
+datum at that point in the list.  If not, we simply advance to the
+next label and the <code>cdr</code> of the list.  
+
+<p>
+Notice how we are able to construct an s-expression piecemeal, in 
+this case by binding part of it to <code>rest</code> and then 
+inserting into the final expression.  Also, notice that we can 
+provide quite detailed syntax error messages.
+
+<p>
+The above macro uses the following simple helper computation to remove
+a binding from a list of bindings:
+<pre>
+  (define-syntax-computation remove-bind
+    (computation-rules () 
+      ((remove-bind label* ())
+       (syntax-return ()))
+      ((remove-bind label* ((= label value) . bindings))
+       (syntax-if (syntax-eq? label label*)
+                  (syntax-return bindings)
+                  (syntax-do (rest <- (remove-bind label* bindings))
+                             (syntax-return ((= label value) . rest)))))))
+</pre>
+
+
+<H1>Implementation</H1>
+
+The reference implementation uses the macro 
+mechanism of R5RS.
+It does not use any other SRFI or any library.
+
+<p>
+The implementation makes extensive use of 
+techniques collected and published by Oleg Kiselyov and Al
+Petrofsky.  Many of these are published on comp.lang.scheme, but see
+in particular [6] for the original version of one of the workhorses
+of the current implementation: syntax-rules level ??!lambda and 
+??!apply.
+
+<p>
+A collection of tests and examples is provided. 
+These check some special cases of the mechanism defined
+in this SRFI.  
+Passing the tests does not mean a correct implementation.
+
+
+<h2>
+Reference implementation
+</h2>
+
+<pre>
+;====================================================================
+; Andre van Tonder 2004.
+
+;--------------------------------------------------------------------
+; First define some workhorses.  These are not part of the interface.
+
+; Syntax-apply adapted from original by Oleg Kiselyov.
+; Extended to do shadowing of syntax-do bound variables.
+
+(define-syntax syntax-apply
+  (syntax-rules (syntax-lambda)
+    ((syntax-apply (syntax-lambda (bound-var . bound-vars) body) 
+                   oval . ovals)
+     (letrec-syntax
+	 ((subs
+	   (syntax-rules (bound-var syntax-lambda syntax-do <-)
+	     ((_ val k bound-var)
+	      (appl k val))
+	     ((_ val k (syntax-lambda bvars int-body))
+	      (subs-in-lambda val bvars (k bvars) int-body))
+             ((_ val k (syntax-do (bvar <- comp) . comps)) 
+	      (subs-in-do val (bvar) (k bvar comp) (syntax-do . comps)))
+             ((_ val k (syntax-do k* (bvar <- comp) . comps)) 
+	      (subs-in-do val (bvar) (k k* bvar comp) (syntax-do . comps)))
+	     ((_ val k (x))	 
+	      (subs val (recon-pair val k ()) x))
+	     ((_ val k (x . y))
+	      (subs val (subsed-cdr val k x) y))
+	     ((_ val k x)	 
+	      (appl k x))))
+	  (subsed-cdr		 
+	   (syntax-rules ()      
+	     ((_ new-y val k x)
+	      (subs val (recon-pair val k new-y) x))))
+	  (recon-pair		 
+	   (syntax-rules ()
+	     ((_ new-x val k new-y)
+	      (appl k (new-x . new-y)))))
+	  (subs-in-lambda  
+	   (syntax-rules (bound-var)
+	     ((_ val () kp  int-body)
+	      (subs val (recon-l kp) int-body))
+             ((_ val (bound-var . obvars) (k bvars) int-body)
+	      (appl k (syntax-lambda bvars int-body)))
+             ((_ val (obvar . obvars) kp int-body)
+	      (subs-in-lambda val obvars kp int-body))))
+          (recon-l	 
+	   (syntax-rules ()
+	     ((_ result (k bvars))
+	      (appl k (syntax-lambda bvars result)))))
+          (subs-in-do
+           (syntax-rules (bound-var)
+             ((_ val () kp comp*)
+              (subs val (subs-in-do* val kp) comp*))
+             ((_ val (bound-var) (k bvar comp) comp*)
+              (subs val (recon-do k bvar comp*) comp))
+             ((_ val (bound-var) (k k* bvar comp) comp*)
+              (subs val (recon-do val k k* bvar comp*) comp))
+             ((_ val (obvar) kp comp*)
+              (subs-in-do val () kp comp*))))
+          (subs-in-do*
+           (syntax-rules ()
+             ((_ comp* val (k bvar comp))
+              (subs val (recon-do k bvar comp*) comp))
+             ((_ comp* val (k k* bvar comp))
+              (subs val (recon-do val k k* bvar comp*) comp))))
+          (recon-do
+           (syntax-rules ()
+             ((_ comp k bvar comp*)
+              (appl k (syntax-do (bvar <- comp) comp*)))
+             ((_ comp val k k* bvar comp*)
+              (appl k (syntax-do k* (bvar <- comp) comp*)))))
+	  (appl		    
+	   (syntax-rules ()
+             ((_ (f . args) result)
+              (f result . args))))
+	  (finish
+	   (syntax-rules ()
+	     ((_ exp () ())
+	      exp)
+	     ((_ exps rem-bvars rem-ovals)
+	      (syntax-apply (syntax-lambda rem-bvars exps) . rem-ovals)))))
+       (subs oval (finish bound-vars ovals) body)))))
+
+; Alpha-renaming of syntax-level lambda expressions.
+; Necessary to avoid accidental capture in cases like
+;
+; (define-syntax testing
+;   (syntax-rules ()
+;     ((testing a) (syntax-apply (syntax-lambda (x) '(x a)) 1))))
+;
+; (testing x)  ;==> (1 1) instead of (1 x)
+;                 
+; (define-syntax testing
+;   (syntax-rules ()
+;     ((testing a) (syntax-lambda-k
+;                   (syntax-apply 1)
+;                   (x) '(x a)))))
+;
+; (testing x) ;==> (1 x)
+;
+; Main reason for this is to obviate the need to indicate syntactic
+; variables with special identifiers, e.g. (??! x) as done by Oleg. 
+
+(define-syntax syntax-lambda-k
+  (syntax-rules ()
+    ((syntax-lambda-k (form . args) (x) exp)
+     (let-syntax ((replace
+                   (syntax-rules ()
+                     ((replace x)
+                      (form (syntax-lambda (x) exp) . args)))))
+       (replace temp)))))
+
+;=====================================================================
+; The core forms:
+; Only those listed in the SRFI specification are part of the
+; interface.  The rest should be hidden by a module system.
+
+(define-syntax define-syntax-computation
+  (syntax-rules (computation-rules)
+    ((define-syntax-computation name
+       (computation-rules (lit ...)
+         ((*name . pat) computation)
+         ...))
+     (define-syntax name 
+       (syntax-rules (lit ...)
+         ((*name k . pat) (syntax-bind k computation))
+         ...)))))
+
+(define-syntax let-syntax-computation
+  (syntax-rules (computation-rules)
+    ((let-syntax-computation k ((name
+                                 (computation-rules (lit ...)
+                                   ((*name . pat) computation)
+                                   ...))
+                                ...)
+       computation*)
+     (let-syntax ((name 
+                   (syntax-rules (lit ...)
+                     ((*name k* . pat) (syntax-bind k* computation))
+                     ...))
+                  ...)
+       (syntax-bind k computation*)))))
+
+(define-syntax letrec-syntax-computation
+  (syntax-rules (computation-rules)
+    ((letrec-syntax-computation k ((name
+                                    (computation-rules (lit ...)
+                                      ((*name . pat) computation)
+                                      ...))
+                                   ...)
+       computation*)
+     (letrec-syntax ((name 
+                      (syntax-rules (lit ...)
+                        ((*name k* . pat) (syntax-bind k* computation))
+                        ...))
+                     ...)
+       (syntax-bind k computation*)))))
+
+(define-syntax syntax-bind
+  (syntax-rules ()
+    ((syntax-bind k ((computation-rules lits . body) . args))
+     (syntax-call k (computation-rules lits . body) . args))
+    ((syntax-bind k (form . body)) (form k . body))))
+
+(define-syntax syntax-let/cc
+  (syntax-rules ()
+    ((syntax-let/cc k k* computation)
+     (syntax-lambda-k (syntax-apply k)
+                      (k*) (syntax-bind k computation)))))
+
+(define-syntax syntax-invoke/c
+  (syntax-rules ()
+    ((syntax-invoke/c k continuation computation)
+     (syntax-bind continuation computation))))
+
+(define-syntax syntax-root/c
+  (syntax-rules ()
+    ((syntax-root/c k)
+     (let-syntax ((return
+                   (syntax-rules ()
+                     ((return x k*) (syntax-return k* x)))))
+       (syntax-lambda-k (return k)
+                        (x) x)))))
+
+(define-syntax syntax-return
+  (syntax-rules ()
+    ((syntax-return k exp) (syntax-apply k exp))))
+
+(define-syntax syntax-do
+  (syntax-rules (<-)
+    ((syntax-do k computation)
+     (syntax-bind k computation))
+    ((syntax-do k (x <- computation) . computations)
+     (syntax-lambda-k (syntax-bind computation)
+                      (x) (syntax-do k . computations)))))
+
+(define-syntax syntax-run
+  (syntax-rules ()
+    ((syntax-run computation)
+     (syntax-lambda-k (syntax-bind computation)
+                      (x) x))))
+
+(define-syntax syntax-inspect
+  (syntax-rules ()
+    ((syntax-inspect computation)
+     (syntax-lambda-k (syntax-bind computation)
+                      (x) 'x))))
+
+(define-syntax-computation syntax-call
+  (computation-rules (computation-rules _)
+    ((syntax-call (computation-rules lits
+                    ((_ . pat) computation)
+                    ...)
+                  . exps)
+     (let-syntax-computation
+         ((f (computation-rules lits
+               ((f . pat) computation)
+               ...)))
+       (f . exps)))
+    ((syntax-call (computation-rules . rest) . exps)
+     (syntax-error (syntax-call (computation-rules . rest) . exps)))
+    ((syntax-call f . exps)
+     (f . exps))))
+
+;=================================================================
+; The derived forms:
+
+(define-syntax-computation syntax-error
+  (computation-rules ()
+    ((syntax-error . args)
+     (syntax-do (quit <- (syntax-root/c))
+                (syntax-invoke/c quit
+                  (syntax-return              
+                   (let-syntax
+                       ((error
+                         (syntax-rules (key)
+                           ((error key) unreached))))
+                     (error . args))))))))
+
+; Adapted from Hilsdale and Friedman
+
+(define-syntax-computation syntax-eq?
+  (computation-rules ()
+    ((syntax-eq? x y)
+     (syntax-if (syntax-symbol? x)
+                (let-syntax-computation 
+                    ((test (computation-rules (x)
+                             ((test x)     (syntax-return #t))
+                             ((test non-x) (syntax-return #f)))))
+                  (test y))
+                (syntax-if (syntax-atom? x)   
+                           (syntax-match* y
+                             (x     (syntax-return #t))
+                             (non-x (syntax-return #f)))
+                           (syntax-return #f))))))
+
+; Adapted from Oleg Kiselyov 
+
+(define-syntax-computation syntax-symbol?
+  (computation-rules ()
+    ((syntax-symbol? (x . y))  (syntax-return #f))
+    ((syntax-symbol? #(x ...)) (syntax-return #f))
+    ((syntax-symbol? x)
+     (let-syntax-computation
+         ((test (computation-rules ()
+                  ((test x) (syntax-return #t))
+                  ((test y) (syntax-return #f)))))
+       (test foo)))))
+
+(define-syntax-computation syntax-atom?
+  (computation-rules ()
+    ((syntax-atom? (x . y))  (syntax-return #f))
+    ((syntax-atom? #(x ...)) (syntax-return #f))
+    ((syntax-atom? x)        (syntax-return #t))))
+   
+(define-syntax-computation syntax-if
+  (computation-rules ()
+    ((syntax-if sc x y) 
+     (syntax-do (s <- sc)
+                (syntax-if* s x y)))))
+
+(define-syntax-computation syntax-if*
+  (computation-rules ()
+    ((syntax-if* #f x y) y) 
+    ((syntax-if* truish x y) x)))
+
+(define-syntax-computation syntax-match
+  (computation-rules ()
+    ((syntax-match sc (pat computation) ...)
+     (syntax-do (s <- sc)
+                (syntax-match* s (pat computation) ...)))))
+                
+(define-syntax-computation syntax-match*
+  (computation-rules ()
+    ((syntax-match* s (pat computation) ...)
+     (let-syntax-computation
+         ((f (computation-rules ()
+               ((f pat) computation)
+               ...)))
+       (f s)))))
+
+(define-syntax-computation syntax-temporaries
+  (computation-rules ()
+    ((syntax-temporaries lst)      (syntax-temporaries lst ()))
+    ((syntax-temporaries () temps) (syntax-return temps))
+    ((syntax-temporaries (h . t) temps)
+     (syntax-temporaries t (temp . temps)))))
+
+(define-syntax-computation syntax-append
+  (computation-rules ()
+    ((syntax-append () y)      (syntax-return y))
+    ((syntax-append (h . t) y) (syntax-do (rest <- (syntax-append t y))
+                                          (syntax-return (h . rest))))))
+
+(define-syntax-computation syntax-map
+  (computation-rules ()
+    ((syntax-map f ())      (syntax-return ()))
+    ((syntax-map f (h . t)) (syntax-do (x <- (f h))
+                                       (y <- (syntax-map f t))
+                                       (syntax-return (x . y))))))
+
+(define-syntax-computation syntax-reverse
+  (computation-rules ()
+    ((syntax-reverse s)                 
+     (letrec-syntax-computation
+         ((syntax-reverse*
+           (computation-rules ()
+             ((syntax-reverse* () accum) (syntax-return accum))
+             ((syntax-reverse* (h . t) accum)
+              (syntax-reverse* t (h . accum))))))
+       (syntax-reverse* s ())))))
+
+(define-syntax-computation syntax-foldl
+  (computation-rules ()
+    ((syntax-foldl f seed ())
+     (syntax-return seed))
+    ((syntax-foldl f seed (h . t))
+     (syntax-do (x <- (f h seed))
+                (syntax-foldl f x t)))))
+
+(define-syntax-computation syntax-foldr
+  (computation-rules ()
+    ((syntax-foldr f seed ())
+     (syntax-return seed))
+    ((syntax-foldr f seed (h . t))
+     (syntax-do (seed* <- (syntax-foldr f seed t))
+                (f h seed*)))))
+</pre>
+
+<h1>Test suite</h1>
+<pre>
+;==============================================================
+; Tests:
+
+; Test proper shadowing, etc. in syntax-do. 
+
+(syntax-run (syntax-do (x <- (syntax-return 1))
+                       (syntax-return x)))              ;==> 1
+
+(syntax-run (syntax-do (x <- (syntax-return 1))
+                       (syntax-do (x <- (syntax-return 2))
+                                  (syntax-return x))))  ;==> 2
+
+(syntax-run (syntax-do (x <- (syntax-return 1))
+                       (x <- (syntax-return 2))
+                       (syntax-return x)))              ;==> 2
+
+(syntax-run (syntax-do (x <- (syntax-return 1))
+                       (syntax-do (y <- (syntax-return x))
+                                  (syntax-return y))))  ;==> 1
+
+(syntax-run (syntax-do (x <- (syntax-return 1))
+                       (y <- (syntax-return x))
+                       (syntax-return y)))              ;==> 1
+
+(syntax-inspect (syntax-do (x <- (syntax-return 1))
+                           (y <- (syntax-return 2))
+                           (syntax-return (x y))))      ;==> (1 2)
+       ;==>  (1 2)
+
+(syntax-run (syntax-do (x <- (syntax-return 1))
+                       (syntax-do (y <- (syntax-return 2))
+                                  (syntax-return x))))  ;==> 1
+
+; Notice the scopings here - syntax-do can be flattened without
+; changing the semantics:
+
+(syntax-inspect (syntax-if (syntax-do (x <- (syntax-return #t))
+                                      (syntax-return x))
+                           (syntax-return x)
+                           (syntax-return 2)))          ;==> #t 
+                    ;==> #t
+
+(syntax-inspect (syntax-do (x <- (syntax-do (y <- (syntax-return 1))
+                                            (syntax-return 2)))
+                           (syntax-return y)))          ;==> 1
+
+
+(syntax-inspect (syntax-if (syntax-do (x <- (syntax-return #t))
+                                      (syntax-return x))
+                           (syntax-return x)
+                           (syntax-return 2)))          ;==> #t
+
+; Test correct binding of colored identifiers.
+; The behavior of the following:
+
+(define-syntax-computation test
+  (computation-rules ()
+    ((test exp var)
+     (syntax-do (new-var <- (syntax-return var))
+                (syntax-return    
+                  (let ((new-var 1)) exp))))))
+
+(syntax-run (test x x))   ;==> 1
+
+; is the same as with-syntax: 
+
+; (define-syntax test
+;   (lambda (stx)
+;     (syntax-case stx ()
+;       ((test exp var)
+;        (with-syntax ((new-var (syntax var)))
+;          (syntax
+;             (let ((new-var 1)) var)))))))
+;
+; (test x x)  ;==> 1
+
+; Also,
+
+(define-syntax-computation test
+  (computation-rules ()
+    ((test var)
+     (syntax-do (body <- (syntax-return (cons var var)))
+                (syntax-return    
+                  (let ((var 1)) body))))))
+
+(syntax-run (test x))    ;==> (1 . 1)
+
+; is the same as with-syntax: 
+
+; (define-syntax test
+;   (lambda (stx)
+;     (syntax-case stx ()
+;       ((test var)
+;        (with-syntax ((body (syntax (cons var var))))
+;          (syntax
+;             (let ((var 1)) body)))))))
+
+; (test x)
+
+; Another test of hygiene, here with an anonymous computation.
+; The inner x should not capture the outer x:
+
+(define-syntax-computation test
+  (computation-rules ()
+    ((test a) ((computation-rules ()
+                 ((_ x) (syntax-return '(x a))))
+               1))))
+
+(syntax-run (test x))   ;==> (1 x)
+
+; A simple use of an anonymous computation
+
+(syntax-inspect ((computation-rules ()
+                   ((_ x) (syntax-return (x x))))
+                 1))                               ;==> (1 1)
+
+; Anonymous computations - note the scoping here - this
+; tests whether the argument is a symbol
+
+(syntax-inspect
+ ((computation-rules ()
+    ((_ x) ((computation-rules ()
+              ((_ x) (syntax-return #t))
+              ((_ y) (syntax-return #f)))
+            foo)))
+  symbol))                                         ;==> #t
+
+; Computation-rules does introduce a new color scope
+
+(syntax-inspect ((computation-rules ()
+                   ((_ a) (syntax-do (x <- (syntax-return 1))
+                                     (syntax-return (x a)))))
+                 x))
+
+       ;==> (1 x)
+
+; Simple test of let-syntax-computation:
+
+(syntax-run
+ (let-syntax-computation
+   ((atom?
+     (computation-rules ()
+       ((atom? (x . y))        (syntax-return #f))
+;      ((atom? #(x (... ...))) (syntax-return #f))    ; non-standard
+       ((atom? x)              (syntax-return #t)))))
+   (atom? (x y))))
+                                       ;==> #f
+
+(syntax-run (syntax-atom? x))          ;==> #t
+(syntax-run (syntax-atom? (1 . 2)))    ;==> #f
+
+; Simple tests of list primitives
+
+(syntax-run (syntax-append (list 1 2) (4 5 7)))  ;==> (1 2 4 5 7)
+
+(syntax-run (syntax-reverse (1 2 3 5 list)))     ;==> (5 3 2 1)
+
+; syntax-eq?
+
+(syntax-run (syntax-eq? x x))              ;==> #t
+(syntax-run (syntax-eq? x y))              ;==> #f
+(syntax-run (syntax-eq? x 1))              ;==> #f
+(syntax-run (syntax-eq? #t x))             ;==> #f
+(syntax-run (syntax-eq? #t #t))            ;==> #t
+(syntax-run (syntax-eq? (x . y) (x . y)))  ;==> #f
+
+; conditionals:
+
+(syntax-run (syntax-if (syntax-return #f)
+                       (syntax-return 1)
+                       (syntax-return 2)))  ;==> 2
+
+(syntax-run (syntax-if (syntax-eq? x x)
+                       (syntax-return 1)
+                       (syntax-return 2)))  ;==> 1
+
+(syntax-inspect (syntax-match* (a b c)
+                  ((h . t) (syntax-return t))
+                  (other   (syntax-error "Not a list"))))  ;==> (b c)
+
+; Temporaries
+
+(syntax-inspect (syntax-temporaries (x y z)))  ;==> (temp~1 temp~2 temp~3) 
+
+; Predicates
+
+(syntax-run (syntax-symbol? x))     ;==> #t
+(syntax-run (syntax-symbol? 1))     ;==> #f
+(syntax-run (syntax-symbol? (x y))) ;==> #f
+
+(syntax-run (syntax-atom? 1))        ;==> #t
+(syntax-run (syntax-atom? (1 . 2)))  ;==> #f
+
+; Using first-order computations 
+
+(syntax-inspect (syntax-map syntax-atom? (x y (z u) v))) ;==>  (#t #t #f #t)
+
+(syntax-inspect (syntax-map syntax-reverse ((1 2) (3 4))))
+
+                           ;==>  ((2 1) (4 3))
+
+(syntax-inspect (syntax-map 
+                   (computation-rules ()
+                     ((_ x) (syntax-return (x x))))
+                   (1 2 3)))                        ;==> ((1 1) (2 2) (3 3))
+
+(syntax-inspect (syntax-map syntax-reverse
+                            ((1 2) (3 4))))   ;==> ((2 1) (4 3))
+
+(syntax-inspect (syntax-foldl syntax-append
+                              ()
+                              ((1 2) (3 4)))) ;==> (3 4 1 2)
+
+(syntax-inspect (syntax-foldr syntax-append
+                              ()
+                              ((1 2) (3 4)))) ;==> (1 2 3 4)
+
+; Capturing and invoking continuations to break loop
+
+(define-syntax-computation all-true?
+  (computation-rules ()
+    ((all-true? ls)
+     (syntax-let/cc break
+       (syntax-foldl (computation-rules ()
+                       ((_ #f seed) (syntax-invoke/c break
+                                      (syntax-return #f)))
+                       ((_ #t seed) (syntax-return #t)))
+                     #t
+                     ls)))))
+
+(syntax-run (all-true? (#t #f #t #t)))  ;==> #f
+
+; Using root-continuation to escape altogether
+
+(define-syntax-computation first 
+  (computation-rules ()
+    ((first (h . t)) (syntax-return h))
+    ((first other)   (syntax-do (quit <- (syntax-root/c))
+                                (syntax-invoke/c quit
+                                   (syntax-return "First of non-pair"))))))
+
+(syntax-inspect (syntax-map first ((a b) (c d))))   ;==> (a c)
+(syntax-inspect (syntax-map first (a (b c))))       ;==> "First of non-pair"
+
+; Using syntax-error
+
+(define-syntax-computation first 
+  (computation-rules ()
+    ((first (h . t)) (syntax-return h))
+    ((first other)   (syntax-error "First of non-pair " other))))
+
+
+(syntax-inspect (syntax-map first ((a b) (c d))))   ;==> (a c)
+(syntax-inspect (syntax-map first (a (b c))))
+
+               ;==> error: bad syntax in: (error "First of non-pair " a) 
+</pre>
+
+<h1>Example - records with labeled fields</h1>
+<pre>
+;======================================================================
+; More complex example:
+; Records with labeled fields implementing:
+;    - Compile-time constructing by label
+;    - Compile-time matching by label
+
+(define-syntax define-record
+  (syntax-rules ()
+    ((define-record name (make-name label ...))
+     (begin 
+       (define (make-name label ...)
+         (list 'name label ...))
+       (define-syntax-computation name
+         (computation-rules ()
+           ((name) (syntax-return (make-name (label ...))))))))))
+
+(define-syntax make-record
+  (syntax-rules (=)
+    ((make-record name (= label value) ...)
+     (syntax-run 
+       (syntax-match (name)
+         ((make-name labels) (populate make-name
+                                       labels 
+                                       ((= label value) ...)
+                                       ((= label value) ...)
+                                       ())))))))
+
+(define-syntax-computation populate
+  (computation-rules (=)
+    ((populate make-name () () bindings (value* ...))
+     (syntax-return (make-name value* ...)))
+    ((populate make-name (label* . labels*) () bindings values*)
+     (syntax-error "No binding for" label* "in" make-name bindings))
+    ((populate make-name () ((= label value) . rest) bindings values*)
+     (syntax-error "Wrong label" label "in" make-name bindings))
+    ((populate make-name
+               (label* . labels*) 
+               ((= label value) . binds) 
+               bindings
+               (value* ...))
+     (syntax-if (syntax-eq? label label*)
+                (syntax-do (new-bindings <- (remove-bind label* bindings))
+                           (populate make-name
+                                     labels*
+                                     new-bindings
+                                     new-bindings
+                                     (value* ... value)))
+                (populate make-name
+                          (label* . labels*)
+                          binds
+                          bindings
+                          (value* ...))))))
+
+(define-syntax-computation remove-bind
+  (computation-rules () 
+    ((remove-bind label* ())
+     (syntax-return ()))
+    ((remove-bind label* ((= label value) . bindings))
+     (syntax-if (syntax-eq? label label*)
+                (syntax-return bindings)
+                (syntax-do (rest <- (remove-bind label* bindings))
+                           (syntax-return ((= label value) . rest)))))))
+
+(define-syntax match-record
+  (syntax-rules ()
+    ((match-record val (name (= label var) ...) . body)
+     (if (and (pair? val)
+              (eq? (car val) 'name))
+         (let ((fields (cdr val)))
+           (syntax-run
+             (syntax-match (name)
+               ((make-name labels)   
+                (match-fields fields
+                              labels
+                              ((= label var) ...)
+                              ((= label var) ...)
+                              body)))))
+         (error "Record type does not match")))))
+
+(define-syntax-computation match-fields
+  (computation-rules ()
+    ((match-fields fields labels () () body)
+     (syntax-return (begin .  body)))
+    ((match-fields fields (label* . labels*) () bindings body) 
+     (syntax-do (rest <- (match-fields fields+ 
+                                       labels*
+                                       bindings
+                                       bindings
+                                       body))
+                (syntax-return 
+                  (let ((fields+ (cdr fields)))
+                    rest))))
+    ((match-fields fields () ((= label var) . binds) bindings body)
+     (syntax-error "No field" label "in record"))
+    ((match-fields fields
+                   (label* . labels*)
+                   ((= label var) . binds)
+                   bindings
+                   body)
+     (syntax-if (syntax-eq? label label*)  
+                (syntax-do
+                  (new-bindings <- (remove-bind label* bindings))
+                  (rest <- (match-fields fields+ 
+                                          labels*
+                                          new-bindings
+                                          new-bindings
+                                          body))
+                  (syntax-return
+                     (let ((var     (car fields))
+                           (fields+ (cdr fields)))
+                       rest)))
+                (match-fields fields 
+                              (label* . labels*)
+                              binds
+                              bindings
+                              body)))))
+
+;---------------------------------------------------------------
+; Tests:
+
+(define-record test (make-test x y))
+
+; Now the following:
+
+(make-record test (= y 5) (= x 6))   ;==> (test 6 5)
+
+; expands at compile-time to
+
+(make-test 6 5)                      ;==>  ;==> (test 6 5)
+
+(make-record test (= x 5) (= y 6))   ;==> (test 5 6)
+
+(make-record test (= y (make-record test (= x 1) (= y 2)))
+                  (= x 7))
+                                     ;==> (test 7 (test 1 2))
+
+(make-record test (= y 5) (= x 6) (= w 1))
+
+     ;==> error: bad syntax in: (error "Wrong label" w "in" make-test ((= w 1)))
+
+(define testing (make-test 8 9))
+
+; Now the following:
+
+(match-record testing
+  (test (= y u) (= x v)) (list u v))           ;==> (9 8)
+
+; expands at compile-time to: 
+
+(if (and (pair?  testing)
+         (eq? (car testing) 'test))
+    (let ((fields (cdr testing)))
+      (let ((v (car fields))
+            (fields+ (cdr fields)))
+        (let ((u (car fields+))
+              (fields+ (cdr fields+)))
+          (list u v))))
+    (error "Record type does not match"))      ;==> (9 8)
+
+(match-record testing
+  (test (= x u)) u)                            ;==> 8
+
+(match-record testing
+  (test (= y u)) u)                            ;==> 9
+
+(match-record testing
+  (test (= x u) (= y v)) (list u v))           ;==> (8 9)
+
+(match-record testing
+  (test (= y u) (= x v) (= z w)) (cons u v))
+
+          ;==>  error: bad syntax in: (error "No field" z "in record")
+
+; Check that make-record can be used in other macros without confusion:
+
+(define-syntax test-compose
+  (syntax-rules (x y)
+    ((test-compose v w) (make-record test (= x v) (= y w)))))
+
+
+(make-record test (= y 1) (= x (test-compose 7 7)))
+
+               ;==> (test (test 7 7) 1)
+
+(test-compose (make-record test (= x 5) (= y 7)) 4)
+
+               ;==>  (test (test 5 7) 4)
+
+(test-compose (test-compose 3 4) 5)  ;==> (test (test 3 4) 5)
+</pre>
+
+    <H1>References</H1>
+
+
+<p>
+<pre>
+[1]
+  Richard Kelsey, William Clinger, and Jonathon Rees (editors).
+  The Revised^5 Report on the Algorithmic Language Scheme
+  Higher-Order and Symbolic Computation, Vol. 11, No. 1, September,
+    1998, and ACM SIGPLAN Notices, Vol. 33, No. 9, October, 1998.
+  http://www.schemers.org/Documents/Standards/R5RS/
+
+[2]
+  Erik Hilsdale and Daniel P. Friedman.
+  Writing Macros in Continuation-Passing Style
+  Scheme and Functional Programming 2000, September, 2000.
+  http://www.ccs.neu.edu/home/matthias/Scheme2000/hilsdale.ps
+
+[3]
+  R. Kent Dybvig.
+  Writing Hygienic Macros in Scheme with SYNTAX-CASE.
+  Technical Report 356, Indiana University, Bloomington, Indiana, June
+    1992.
+  http://citeseer.nj.nec.om/dybvig92writing.html
+
+[4]
+  E. Moggi,
+  Notions of Computation and Monads,
+  Information and Computation 93 (1) 1991. 
+
+[5]
+  Philip Wadler,
+  Monads for Functional Programming,
+  In M. Broy, editor, Marktoberdorf Summer School on Program Design Calculi, 
+  Springer Verlag, NATO ASI Series F: Computer and systems sciences, 
+  Volume 118, August 1992. 
+  Also in J. Jeuring and E. Meijer, editors, Advanced Functional Programming, 
+  Springer Verlag, LNCS 925, 1995. Some errata fixed August 2001.
+
+[6]
+  Oleg Kiselyov,
+  Syntax-rule-level ??!lambda and ??!apply,
+  http://okmij.org/ftp/Scheme/macros.html#Macro-lambda
+  
+</pre>
+
+
+
+
+
+
+    <H1>Copyright</H1>
+
+Copyright (C) Andre van Tonder (2004). All Rights Reserved. 
+<p>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<p>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<p>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+    <hr>
+    <address>Author: <a href="mailto:andre@het.brown.edu">Andre van Tonder</a></address>
+    <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">David Van Horn</a></address>
+<!-- Created: Fri Sep 19 17:55:00 EST 2002 -->
+<!-- hhmts start -->
+Last modified: Tue Dec 30 11:21:21 CST 2003
+<!-- hhmts end -->
+  </body>
+</html>
