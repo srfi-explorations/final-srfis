@@ -1,0 +1,493 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 12: Exception Handling</title>
+  </head>
+
+  <body>
+
+<H1>Title</H1>
+
+Exception Handling
+
+<H1>Authors</H1>
+
+William Clinger, R. Kent Dybvig, Matthew Flatt, and Marc Feeley
+
+<H1>Status</H1>
+This SRFI is currently in ``draft'' status.  To see an explanation of each status that a SRFI can hold, see <A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+It will remain in draft status until 1999/12/09, or as amended.
+To provide input on this SRFI, please <code><A
+HREF="mailto:srfi-12@srfi.schemers.org">mail to
+&lt;srfi-12@srfi.schemers.org&gt;</A></code>.  See <A HREF=../srfi-list-subscribe.html>instructions here</A> to subscribe to the list.  You can access previous messages via <A HREF=mail-archive/maillist.html>the archive of the mailing list</A>.
+<P><UL>
+<LI>Received: 1999/10/08</LI>
+<LI>Draft: 1999/10/10-1999/12/09</LI>
+</UL>
+
+<H1>Abstract</H1>
+
+The SRFI defines exception-handling constructs for Scheme, including
+<UL>
+
+ <LI> the CURRENT-EXCEPTION-HANDLER procedure for obtaining the
+ current exception-handling procedure,
+
+ <LI> the WITH-EXCEPTION-HANDLER procedure and HANDLE-EXCEPTIONS form
+ for installing an exception-handling procedure,
+
+ <LI> the ABORT and SIGNAL procedures for raising exceptions, and
+
+ <LI> constructs for creating and inspecting <EM>condition</EM>
+ values, which encapsulate information about an exception.
+
+</UL>
+
+<P>
+
+This SRFI requires a Scheme implementation to raise an exception
+whenever an error is to be signaled or whenever the system determines
+that evaluation cannot proceed in a manner consistent with the
+semantics of Scheme. However, this SRFI does not define the
+information to be supplied by an implementation for each possible kind
+of exception; such a specification is left open for future SRFIs.
+
+
+<H1>Issues</H1>
+
+None.<P>
+
+
+<H1>Rationale</H1>
+
+The goals of the exception mechanism are
+
+<UL>
+
+ <LI> to support programs that catch and handle exceptions raised by a
+ Scheme implementation,
+
+ <LI> to help programmers to share code that relies on exception
+ handling, and
+
+ <LI> to be easily added to most existing Scheme systems.
+
+</UL>
+
+To this end, the SRFI defines an exception system whose essence can be
+implemented with CALL-WITH-CURRENT-CONTINUATION. The SRFI also defines
+a minimal set of constructs for creating and inspecting condition
+values, which will allow programmers to at least catch primitive
+exceptions and log exception messages, and to create new libraries
+that take advantage of exception handling.
+
+
+<H1>Specification</H1>
+
+A Scheme implementation ("the system") raises an exception whenever an
+error is to be signaled or whenever the system determines that
+evaluation cannot proceed in a manner consistent with the semantics of
+Scheme. A program may also explicitly raise an exception.
+
+<P>
+
+Whenever the system raises an exception, it invokes the current
+exception handler with a condition object (encapsulating information
+about the exception) as its only argument. Any procedure accepting one
+argument may serve as an exception handler.  When a program explicitly
+raises an exception, it may supply any object to the exception
+handler.
+
+<P>
+
+An exception is either continuable or non-continuable. When the
+current exception handler is invoked for a continuable exception, the
+continuation uses the handler's result(s) in an exception-specific way
+to continue. When an exception handler is invoked for a
+non-continuable exception, the continuation raises a non-continuable
+exception indicating that the exception handler returned.
+
+<P>
+
+The initial current exception handler is implementation-dependent.
+
+
+<H2>Exception Handlers</H2>
+
+(CURRENT-EXCEPTION-HANDLER)                               &nbsp;&nbsp;<b>[procedure]</b>
+
+<P>
+
+Returns the current exception handler.
+
+<P>
+
+(WITH-EXCEPTION-HANDLER <I>handler</I> <I>thunk</I>)           &nbsp;&nbsp;<b>[procedure]</b>
+
+<P>
+
+Returns the result(s) of invoking <I>thunk</I>. The <I>handler</I> procedure is
+installed as the current exception handler in the dynamic context of
+invoking <I>thunk</I>.
+
+<P>
+
+Example:
+
+<PRE>
+  (call-with-current-continuation
+   (lambda (k)
+    (WITH-EXCEPTION-HANDLER (lambda (x) (k '()))
+                            (lambda () (car '())))))
+  ; = '()
+</PRE>
+
+<P>
+
+(HANDLE-EXCEPTIONS <I>var</I> <I>handle-expr</I> <I>expr1</I> <I>expr2</I> ...)  &nbsp;&nbsp;<b>[syntax]</b>
+
+<P>
+
+Evaluates the body expressions <I>expr1</I>, <I>expr2</I>, ... in sequence
+with an exception handler constructed from <I>var</I> and
+<I>handle-expr</I>. Assuming no exception is raised, the result(s) of
+the last body expression is(are) the result(s) of the
+HANDLE-EXCEPTIONS expression.
+
+<P>
+
+The exception handler created by HANDLE-EXCEPTIONS restores the
+dynamic context (continuation, exception handler, etc.) of the
+HANDLE-EXCEPTIONS expression, and then evaluates <I>handle-expr</I> with
+<I>var</I> bound to the value provided to the handler.
+
+<P>
+
+Examples:
+<PRE>
+  (HANDLE-EXCEPTIONS exn
+                     (begin
+                       (display "Went wrong")
+                       (newline))
+   (car '()))
+  ; displays "Went wrong"
+
+  (HANDLE-EXCEPTIONS exn 
+                     (cond
+                      ((eq? exn 'one) 1)
+                      (else (ABORT exn)))
+    (case (random-number)
+     [(0) 'zero]
+     [(1) (ABORT 'one)]
+     [else (ABORT "Something else")]))
+  ; = 'zero, 1, or (ABORT "Something else")
+</PRE>
+
+<P>
+
+The HANDLE-EXCEPTIONS form can be implemented with DEFINE-SYNTAX as
+shown in the Implementation section of this SRFI.
+
+<H2>Raising Exceptions</H2>
+
+(ABORT <I>obj</I>)                                             &nbsp;&nbsp;<b>[procedure]</b>
+
+<P>
+
+Raises a non-continuable exception represented by <I>obj</I>. The ABORT
+procedure can be implemented as follows:
+
+<PRE>
+ (define (abort obj)
+   ((current-exception-handler) obj)
+   (abort (make-property-condition
+            'exn
+            'message
+            "Exception handler returned")))
+</PRE>
+
+The ABORT procedure does not ensure that its argument is a condition.
+If its argument is a condition, ABORT does not ensure that the
+condition indicates a non-continuable exception.
+
+<P>
+
+(SIGNAL <I>obj</I>)                                            &nbsp;&nbsp;<b>[procedure]</b>
+
+<P>
+
+Raises a continuable exception represented by <I>obj</I>. The SIGNAL
+procedure can be implemented as follows:
+
+<PRE>
+ (define (signal exn)
+  ((current-exception-handler) exn))
+</PRE>
+
+The SIGNAL procedure does not ensure that its argument is a condition.
+If its argument is a condition, SIGNAL does not ensure that the
+condition indicates a continuable exception.
+
+<P>
+
+<H2>Condition Objects</H2>
+
+<P>
+
+(CONDITION? <I>obj</I>)                                          &nbsp;&nbsp;<b>[procedure]</b>
+
+<P>
+
+Returns #t if <I>obj</I> is a condition, otherwise returns #f.  If any
+of the predicates listed in Section 3.2 of the R5RS is true of <I>obj</I>,
+then CONDITION? is false of <I>obj</I>.
+
+<P>
+
+Rationale:  Any Scheme object may be passed to an exception handler.
+This would cause ambiguity if conditions were not disjoint from all
+of Scheme's standard types.
+
+<P>
+
+(MAKE-PROPERTY-CONDITION <I>kind-key</I> <I>prop-key</I> <I>value</I> ...) &nbsp;&nbsp;<b>[procedure]</b>
+
+<P>
+
+This procedure accepts any even number of arguments after
+<I>kind-key</I>, which are regarded as a sequence of alternating
+<I>prop-key</I> and <I>value</I> objects.  Each <I>prop-key</I> is
+regarded as the name of a property, and each <I>value</I> is regarded
+as the value associated with the <I>key</I> that precedes it.  Returns
+a <I>kind-key</I> condition that associates the given <I>prop-key</I>s
+with the given <I>value</I>s.
+
+<P>
+
+(MAKE-COMPOSITE-CONDITION <I>condition</I> ...)              &nbsp;&nbsp;<b>[procedure]</b>
+
+<P>
+
+Returns a newly-allocated condition whose components correspond to the
+the given <I>condition</I>s. A predicate created by
+CONDITION-PREDICATE returns true for the new condition if and only if
+it returns true for one or more of its component conditions.
+
+<P>
+
+(CONDITION-PREDICATE <I>kind-key</I>)                        &nbsp;&nbsp;<b>[procedure]</b>
+
+<P>
+
+Returns a predicate that can be called with any object as its argument.
+Given a condition that was created by MAKE-PROPERTY-CONDITION, the
+predicate returns #t if and only if <I>kind-key</I> is EQV? to the
+kind key that was passed to MAKE-PROPERTY-CONDITION.  Given a
+composite condition created with MAKE-COMPOSITE-CONDITION, the
+predicate returns #t if and only if the predicate returns #t for at
+least one of its components.
+
+<P>
+
+(CONDITION-PROPERTY-ACCESSOR <I>kind-key</I> <I>prop-key</I>)     &nbsp;&nbsp;<b>[procedure]</b>
+
+<P>
+
+Returns a procedure that can be called with any condition that
+satisfies (CONDITION-PREDICATE <I>kind-key</I>).  Given a condition
+that was created by MAKE-PROPERTY-CONDITION and <I>kind-key</I>, the
+procedure returns the value that is associated with <I>prop-key</I>.
+Given a composite condition created with MAKE-COMPOSITE-CONDITION, the
+procedure returns the value that is associated with <I>prop-key</I> in
+one of the components that satisfies (CONDITION-PREDICATE
+<I>kind-key</I>).
+
+<PRE>
+    (let* ((cs-key (list 'color-scheme))
+           (bg-key (list 'background))
+           (color-scheme? (condition-predicate cs-key))
+           (color-scheme-background 
+            (condition-property-accessor cs-key bg-key))
+           (condition1 (make-property-condition cs-key bg-key 'green))
+           (condition2 (make-property-condition cs-key bg-key 'blue))
+           (condition3 (make-composite-condition condition1 condition2)))
+      (and (color-scheme? condition1)
+           (color-scheme? condition2)
+           (color-scheme? condition3)
+           (color-scheme-background condition3)))
+    ; = 'green or 'blue
+</PRE>
+
+<H3>Standard Condition Kind and Property</H3>
+
+When the system raises an exception, the condition it passes to the
+exception handler must include the <TT>'exn</TT> kind with the
+<TT>'message</TT> property.
+
+Thus, if <I>exn</I> is a condition representing a system
+exception, then
+<PRE>
+ ((condition-property-accessor 'exn 'message) <I>exn</I>)
+</PRE>
+extracts the error message from <I>exn</I>.
+
+Example:
+
+<PRE>
+  (HANDLE-EXCEPTIONS exn 
+                     (begin
+                       (display "Went wrong: ")
+                       (display
+                        ((condition-property-accessor 'exn 'message) exn))
+                       (newline))
+   (car '()))
+  ; displays something like "Went wrong: can't take car of nil"
+</PRE>
+
+
+<H1>Implementation</H1>
+
+This SRFI cannot be fully implemented in R5RS because it requires
+special support from the system, which must 1) call the current
+exception handler for any system error, 2) define the initial
+exception handler, and 3) provide a class of condition values disjoint
+from other Scheme values. However, the functionality can be roughly
+implemented as follows for a single-threaded system. (For simplicity,
+we assume that none of the variables defined below will be redefined
+by a program.)
+
+<PRE>
+ (define *current-exn-handler* ...) ; implementation-dependent
+
+ (define (CURRENT-EXCEPTION-HANDLER)
+   *current-exn-handler*)
+
+ (define (WITH-EXCEPTION-HANDLER handler thunk)
+   (let ((old #f))
+    (dynamic-wind
+     (lambda () 
+       (set! old *current-exn-handler*)
+       (set! *current-exn-handler* handler))
+     thunk
+     (lambda ()
+       (set! *current-exn-handler* old)))))
+
+ (define (ABORT obj)
+    ((CURRENT-EXCEPTION-HANDLER) obj)
+    (ABORT (make-property-condition
+            'exn
+            'message
+            "Exception handler returned")))
+
+ (define (SIGNAL exn)
+  ((CURRENT-EXCEPTION-HANDLER) exn))
+
+ (define-syntax HANDLE-EXCEPTIONS
+   (syntax-rules ()
+     ((_ var handle-body e1 e2 ...)
+      ((call-with-current-continuation
+         (lambda (k)
+           (with-exception-handler
+            (lambda (var)
+              (k (lambda () handle-body)))
+            (lambda ()
+              (call-with-values
+               (lambda () e1 e2 ...)
+               (lambda args (k (lambda () (apply values args)))))))))))))
+
+ ; The following is an approximate implementation of conditions that uses lists,
+ ; instead of a disjoint class of values
+
+ (define (CONDITION? obj)
+   ; A condition is represented as a pair where the first value of the
+   ; pair is this function. A program could forge conditions, and they're
+   ; not disjoint from Scheme pairs.
+   (and (pair? obj)
+        (eq? CONDITION? (car obj))))
+
+ (define (MAKE-PROPERTY-CONDITION kind-key . prop-vals)
+   (cons CONDITION? (list (cons kind-key prop-vals))))
+
+ (define (MAKE-COMPOSITE-CONDITION . conditions)
+   (cons CONDITION? (apply append
+                           (map cdr conditions))))
+
+ (define (CONDITION-PREDICATE kind-key)
+   (lambda (exn)
+     (if (CONDITION? exn)
+         (assq kind-key (cdr exn))
+         #f)))
+
+ (define (CONDITION-PROPERTY-ACCESSOR kind-key prop-key)
+   (lambda (exn)
+     (let ((p ((CONDITION-PREDICATE kind-key) exn)))
+       ; either cadr or cdr could fail; should check arguments for
+       ; better error reporting:
+       (cadr (memq prop-key (cdr p))))))
+</PRE>
+
+<H2>More Examples</H2>
+
+<PRE>
+ (define (try-car v)
+  (let ((orig (current-exception-handler)))
+    (WITH-EXCEPTION-HANDLER
+     (lambda (exn)
+       (orig (make-composite-condition
+              (make-property-condition
+               'not-a-pair
+               'value
+               v)
+              exn)))
+     (lambda () (car v)))))
+
+ (try-car '(1))
+ ; = 1
+
+ (HANDLE-EXCEPTIONS exn
+                    (if ((condition-predicate 'not-a-pair) exn)
+                        (begin
+                         (display "Not a pair: ")
+                         (display
+                          ((condition-property-accessor 'not-a-pair 'value) exn))
+                         (newline))
+                        (ABORT exn))
+   (try-car 0))
+ ; displays "Not a pair: 0"
+</PRE>
+
+<H1>Copyright</H1>
+Copyright (C) William Clinger, R. Kent Dybvig, Matthew Flatt, and Marc Feeley (1999). All Rights Reserved. 
+<p>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<p>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<p>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+
+    <hr>
+    <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Dave Mason</a></address>
+<!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
+<!-- hhmts start -->
+Last modified: Sat Oct  9 17:39:38 EDT 1999
+<!-- hhmts end -->
+  </body>
+</html>
