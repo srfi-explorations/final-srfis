@@ -38,6 +38,7 @@ archive of the mailing list</A>.
   <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-58/srfi-58.html?rev=1.7">2005/01/05</A></LI>
   <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-58/srfi-58.html?rev=1.8">2005/01/07</A></LI>
   <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-58/srfi-58.html?rev=1.10">2005/01/17</A></LI>
+  <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-58/srfi-58.html?rev=1.11">2005/01/24</A></LI>
 </UL>
 
 <H1>Abstract</H1>
@@ -47,60 +48,62 @@ and its successor
 <A HREF="http://srfi.schemers.org/srfi-63/srfi-63.html">SRFI-63</A>
 provide both homogeneous numeric and heterogeneous multidimensional
 arrays which subsume Scheme vectors.  The notation presented here
-builds upon Common-Lisp array sytnax to represent heterogeneous and
+builds upon Common-Lisp array sytnax to represent heterogeneous
+arrays; and introduces a new Scheme-based notation for denoting
 homogeneous numeric arrays.
 <P>
 
 <H1>Issues</H1>
 
-<TABLE ALIGN=CENTER BORDER=1>
-<CAPTION>Original Proposal</CAPTION>
-<TR><TH>prototype<BR>procedure
-    <TH>exactness
-    <TH>element type
-    <TD ALIGN=CENTER><B>prefix</B><BR>(rank = <I>n</I>)
-<TR><TD><CODE>vector</CODE><TD>       <TD>any                               <TD><CODE>#<i>n</i>A   </CODE>
-<TR><TD><CODE>ac64  </CODE><TD>inexact<TD>IEEE 64.bit floating point complex<TD><CODE>#<i>n</i>Ac64</CODE>
-<TR><TD><CODE>ac32  </CODE><TD>inexact<TD>IEEE 32.bit floating point complex<TD><CODE>#<i>n</i>Ac32</CODE>
-<TR><TD><CODE>ar64  </CODE><TD>inexact<TD>IEEE 64.bit floating point real   <TD><CODE>#<i>n</i>Ar64</CODE>
-<TR><TD><CODE>ar32  </CODE><TD>inexact<TD>IEEE 32.bit floating point real   <TD><CODE>#<i>n</i>Ar32</CODE>
-<TR><TD><CODE>as64  </CODE><TD>exact  <TD>64.bit integer                    <TD><CODE>#<i>n</i>As64</CODE>
-<TR><TD><CODE>as32  </CODE><TD>exact  <TD>32.bit integer                    <TD><CODE>#<i>n</i>As32</CODE>
-<TR><TD><CODE>as16  </CODE><TD>exact  <TD>16.bit integer                    <TD><CODE>#<i>n</i>As16</CODE>
-<TR><TD><CODE>as8   </CODE><TD>exact  <TD>8.bit integer                     <TD><CODE>#<i>n</i>As8 </CODE>
-<TR><TD><CODE>au64  </CODE><TD>exact  <TD>64.bit nonnegative integer        <TD><CODE>#<i>n</i>Au64</CODE>
-<TR><TD><CODE>au32  </CODE><TD>exact  <TD>32.bit nonnegative integer        <TD><CODE>#<i>n</i>Au32</CODE>
-<TR><TD><CODE>au16  </CODE><TD>exact  <TD>16.bit nonnegative integer        <TD><CODE>#<i>n</i>Au16</CODE>
-<TR><TD><CODE>au8   </CODE><TD>exact  <TD>8.bit nonnegative integer         <TD><CODE>#<i>n</i>Au8 </CODE>
-<TR><TD><CODE>string</CODE><TD>       <TD>char                              <TD><CODE>#<i>n</i>A\  </CODE>
-<TR><TD><CODE>at1   </CODE><TD>       <TD>bool                              <TD><CODE>#<i>n</i>At  </CODE>
-</TABLE>
-<P>
+<!-- <TABLE ALIGN=CENTER BORDER=1> -->
+<!-- <CAPTION>Original Proposal</CAPTION> -->
+<!-- <TR><TH>prototype<BR>procedure -->
+<!--     <TH>exactness -->
+<!--     <TH>element type -->
+<!--     <TD ALIGN=CENTER><B>prefix</B><BR>(rank = <I>n</I>) -->
+<!-- <TR><TD><CODE>vector</CODE><TD>       <TD>any                               <TD><CODE>#<i>n</i>A   </CODE> -->
+<!-- <TR><TD><CODE>ac64  </CODE><TD>inexact<TD>IEEE 64.bit floating point complex<TD><CODE>#<i>n</i>Ac64</CODE> -->
+<!-- <TR><TD><CODE>ac32  </CODE><TD>inexact<TD>IEEE 32.bit floating point complex<TD><CODE>#<i>n</i>Ac32</CODE> -->
+<!-- <TR><TD><CODE>ar64  </CODE><TD>inexact<TD>IEEE 64.bit floating point real   <TD><CODE>#<i>n</i>Ar64</CODE> -->
+<!-- <TR><TD><CODE>ar32  </CODE><TD>inexact<TD>IEEE 32.bit floating point real   <TD><CODE>#<i>n</i>Ar32</CODE> -->
+<!-- <TR><TD><CODE>as64  </CODE><TD>exact  <TD>64.bit integer                    <TD><CODE>#<i>n</i>As64</CODE> -->
+<!-- <TR><TD><CODE>as32  </CODE><TD>exact  <TD>32.bit integer                    <TD><CODE>#<i>n</i>As32</CODE> -->
+<!-- <TR><TD><CODE>as16  </CODE><TD>exact  <TD>16.bit integer                    <TD><CODE>#<i>n</i>As16</CODE> -->
+<!-- <TR><TD><CODE>as8   </CODE><TD>exact  <TD>8.bit integer                     <TD><CODE>#<i>n</i>As8 </CODE> -->
+<!-- <TR><TD><CODE>au64  </CODE><TD>exact  <TD>64.bit nonnegative integer        <TD><CODE>#<i>n</i>Au64</CODE> -->
+<!-- <TR><TD><CODE>au32  </CODE><TD>exact  <TD>32.bit nonnegative integer        <TD><CODE>#<i>n</i>Au32</CODE> -->
+<!-- <TR><TD><CODE>au16  </CODE><TD>exact  <TD>16.bit nonnegative integer        <TD><CODE>#<i>n</i>Au16</CODE> -->
+<!-- <TR><TD><CODE>au8   </CODE><TD>exact  <TD>8.bit nonnegative integer         <TD><CODE>#<i>n</i>Au8 </CODE> -->
+<!-- <TR><TD><CODE>string</CODE><TD>       <TD>char                              <TD><CODE>#<i>n</i>A\  </CODE> -->
+<!-- <TR><TD><CODE>at1   </CODE><TD>       <TD>bool                              <TD><CODE>#<i>n</i>At  </CODE> -->
+<!-- </TABLE> -->
+<!-- <P> -->
 
 <UL>
-<LI>The original proposal allowed the "<CODE>1</CODE>" in the
-    "<CODE>#1A</CODE>" prefix to be elided.  That exception has been
-    removed.
-<P>
-<LI>In discussions on the
+<!-- <LI>The original proposal allowed the "<CODE>1</CODE>" in the -->
+<!--     "<CODE>#1A</CODE>" prefix to be elided.  That exception has been -->
+<!--     removed. -->
+<!-- <P> -->
+<!-- <LI>In discussions on the -->
 
-<A HREF="http://srfi.schemers.org/srfi-58/mail-archive/threads.html">
-SRFI-58 mailing list</A>, the abbreviations for the original uniform
-array types were criticized for being cryptic.  Abbreviations for
-<DFN>signed</DFN> and <DFN>unsigned</DFN> were used, even though those
-terms are absent from R4RS and R5RS!
-<P>
-Type names from Scheme foreign-function and foreign-data interfaces
-were suggested; but these names are confusing or even misleading to
-those unfamiliar with C or Java.
-<P>
-The Scheme reports are amply descriptive using their succinct
-vocabulary; so I rewrote this SRFI to use Scheme terminology.
-<P>
-The results in <A HREF="#Table-1">Table-1</A> are compact, mnemonic,
-and do not reach outside of the Scheme language, except for <B>Z</B>
-for the integers.
-<P>
+<!-- <A HREF="http://srfi.schemers.org/srfi-58/mail-archive/threads.html"> -->
+<!-- SRFI-58 mailing list</A>, the abbreviations for the original uniform -->
+<!-- array types were criticized for being cryptic.  Abbreviations for -->
+<!-- <DFN>signed</DFN> and <DFN>unsigned</DFN> were used, even though those -->
+<!-- terms are absent from R4RS and R5RS! -->
+<!-- <P> -->
+<!-- Type names from Scheme foreign-function and foreign-data interfaces -->
+<!-- were suggested; but these names are confusing or even misleading to -->
+<!-- those unfamiliar with C or Java. -->
+<!-- <P> -->
+<!-- The Scheme reports are amply descriptive using their succinct -->
+<!-- vocabulary; so I rewrote this SRFI to use Scheme terminology. -->
+<!-- <P> -->
+<!-- The results in <A HREF="#Table-1">Table-1</A> are compact, mnemonic, -->
+<!-- and do not reach outside of the Scheme language, except for <B>Z</B> -->
+<!-- for the integers. -->
+<!-- <P> -->
+
 <LI>Common Lisp has a compact notation for rank 1 boolean arrays:
     "<CODE>#*</CODE>" followed by a sequence of ones and zeros;
     "<CODE>1</CODE>" for "<CODE>#t</CODE>", "<CODE>0</CODE>" for
@@ -180,14 +183,27 @@ ways.
 Both rank and dimensions can be supplied on opposite sides of
 <CODE>A</CODE>.
 <P>
-The array-prototype-procedures of <A
-HREF="http://srfi.schemers.org/srfi-63/srfi-63.html">SRFI-63</A> and
-aliases for the array-prototype-procedures of <A
-HREF="http://srfi.schemers.org/srfi-47/srfi-47.html">SRFI-47</A> are
-defined whose identifiers are the <CODE>#<I>n</I>A:<I>typename</I></CODE>
-prefix sans the <CODE>#<I>n</I></CODE>.  Having the
-array-prototype-procedure names match the array prefixes reduces the
-memory load for users.
+<H2>Homogeneous Numeric Arrays</H2>
+
+<A HREF="http://srfi.schemers.org/srfi-63/srfi-63.html">SRFI-63</A>
+introduces homogeneous arrays.  This SRFI introduces denotations for
+homogeneous arrays following the rank and/or dimensions; and separated
+from them by a colon (<CODE>:</CODE>).
+<P>
+The names of the array-prototype-procedures of
+<A HREF="http://srfi.schemers.org/srfi-63/srfi-63.html">SRFI-63</A>
+and aliases for the array-prototype-procedures of
+<A HREF="http://srfi.schemers.org/srfi-47/srfi-47.html">SRFI-47</A>
+match these type denotations with <CODE>A</CODE> prepended.  Having
+the array-prototype-procedure names match the array type denotations
+reduces the memory load for users.
+<P>
+All implementations must accept all the type denotations, but need not
+implement all the homogeneous array types.  Those homogeneous types
+which an implementation doesn't support it stores in next best
+homogeneous array type, defaulting to heterogeneous arrays in the
+worst case.  The rules for casting unsupported types are given in
+<A HREF="http://srfi.schemers.org/srfi-63/srfi-63.html#Prototype Procedures">SRFI-63</A>.
 <P>
 <!-- <BLOCKQUOTE> -->
 <!-- <H3>SRFI-47 Clarification</H3> -->
