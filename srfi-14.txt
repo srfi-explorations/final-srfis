@@ -76,8 +76,8 @@ char-set-for-each char-set-map
 
 char-set-copy
 
-char-set  chars->char-set  string->char-set 
-char-set! chars->char-set! string->char-set!
+char-set  list->char-set  string->char-set 
+char-set! list->char-set! string->char-set!
     
 predicate->char-set  ucs-range->char-set  ->char-set
 predicate->char-set! ucs-range->char-set! ->char-set!
@@ -156,10 +156,28 @@ side-effected parameters passed to these functions --- there's no linear
 type checker or run-time mechanism for detecting violations. (But
 sophisticated programming environments, such as DrScheme, might help.)
 
+In the following procedure specifications:
+    - A CS parameter is a character set.
+
+    - An S parameter is a string.
+
+    - A CHAR parameter is a character.
+
+    - A CHAR-LIST parameter is a list of characters.
+
+    - A PRED paramter is a unary character predicate procedure, returning 
+      a true/false value when applied to a character.
+
+    - An OBJ parameter may be any value at all.
+
+Passing values to procedures with these parameters that do not satisfy these
+types is an error.
+
+
 ** General procedures
 =====================
-char-set? x -> boolean
-    Is the object X a character set?
+char-set? obj -> boolean
+    Is the object OBJ a character set?
 
 char-set= cs1 cs2 ... -> boolean
     Are the character sets equal?
@@ -225,7 +243,7 @@ char-set-unfold! f p g seed base-cs   -> char-set
     implementation may be more efficient):
 
     (define (char-set-unfold p f g seed base-cs) 
-      (char-set-unfold! p f g (char-set-copy base-cs) seed))
+      (char-set-unfold! p f g seed (char-set-copy base-cs)))
 
     (define (char-set-unfold! p f g seed base-cs)
       (let lp ((seed seed) (cs base-cs))
@@ -248,9 +266,9 @@ char-set-for-each proc cs -> unspecific
     set is not specified, and may even change from one procedure application
     to another.
 
-char-set-map proc char-set -> char-set
+char-set-map proc cs -> char-set
   PROC is a char->char procedure. Apply it to all the characters in
-  the char-set argument, and collect the results into a new character set.
+  the char-set CS, and collect the results into a new character set.
 
   Essentially lifts PROC from a char->char procedure to a char-set -> char-set
   procedure.
@@ -272,9 +290,10 @@ char-set-copy cs -> char-set
 char-set char1 ... -> char-set
     Return a character set containing the given characters.
 
-chars->char-set  chars [base-cs] -> char-set
-chars->char-set! chars  base-cs  -> char-set
-    Return a character set containing the characters in the list CHARS.
+list->char-set  char-list [base-cs] -> char-set
+list->char-set! char-list  base-cs  -> char-set
+    Return a character set containing the characters in the list of
+    characters CHAR-LIST.
 
     If character set BASE-CS is provided, the characters from CHAR
     are added to it. CHARS->CHAR-SET! is allowed, but not required,
@@ -368,17 +387,17 @@ char-set-count pred cs -> integer
     Apply PRED to the chars of character set CS, and return the number
     of chars that caused the predicate to return true.
 
-char-set-members char-set -> character-list
-    This procedure returns a list of the members of CHAR-SET.
+char-set-members cs -> character-list
+    This procedure returns a list of the members of character set CS.
 
-char-set-contains? char-set char -> boolean
-    This procedure tests CHAR for membership in set char-set.
+char-set-contains? cs char -> boolean
+    This procedure tests CHAR for membership in character set CS.
 
     The MIT Scheme character set package called this procedure
     CHAR-SET-MEMBER?, but the argument order isn't consistent with the name.
 
 char-set-every pred cs -> boolean
-char-set-any pred cs -> object
+char-set-any   pred cs -> object
     The CHAR-SET-EVERY procedure returns true if predicate PRED
     returns true of every character in the character set CS.
 
