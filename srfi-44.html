@@ -7,6 +7,7 @@
     <title>SRFI 44: Collections</title>
   </head>
   <body>
+
     <H1>Title</H1>
     Collections 
 
@@ -33,6 +34,7 @@
       <li>Draft: 2003/04/28-2003/07/28
       <li>Revised: 2003/07/02
       <li>Revised: 2003/07/24
+      <li>Revised: 2003/08/10
     </ul></p>
 
     <h1>Abstract</h1>
@@ -45,17 +47,17 @@
       and functions for inter-datastructure cooperation. Finally, a
       concrete specification of a compliant set of operators for
       the standard Scheme heterogenous datastructures (lists and
-      vectors) and for the homogenous Scheme string is provided.
+      vectors) and for the homogeneous Scheme string is provided.
     </p>
 
     <h1>Issues</h1>
 
     <p>
       Several functions in this SRFI are required to take arbitrary
-      collections or major collection subtypes as input.&nbsp;
-      This&nbsp; requires that the function in question be able to
-      determine the specific type of the collection and dispatch to
-      an appropriate implementation.
+      collections or major collection subtypes as input. This
+      requires that the function in question be able to determine
+      the specific type of the collection and dispatch to an
+      appropriate implementation.
     </p>
     <p>
       As standard Scheme lacks the ability to automatically
@@ -63,11 +65,24 @@
       of arguments, it difficult to devise a portable
       implementation of this SRFI which allows arbitrary future
       collections. It is expected that Scheme system implementors
-      will take advantage of generic function or object-oriented
-      features of their systems to implement this SRFI efficiently.
-      At the same time it is hoped that a future SRFI will specify
-      a mechanism which will allow a portable and efficient
-      implementation of collections to exist.
+      will take advantage of generic function, module system, or
+      object-oriented features of their systems to implement this
+      SRFI efficiently. At the same time it is hoped that a future
+      SRFI will specify a mechanism which will allow a portable and
+      efficient implementation of collections to exist. The
+      reference implementation in this SRFI compromises by using
+      the portable Tiny-CLOS object system as a framework for
+      collection-function dispatch.
+    </p>
+    <p>
+      It should finally be noted that this SRFI does <i>not</i>
+      require that all function calls to collection supertypes
+      remain capable of dynamic dispatch. If a compiler or
+      optimizer can infer the types of a collection function's
+      arguments, or a user provides hints to that effect, it is
+      permitted to monomorphize the call. That is, to statically
+      compile a more specific but semantically equivalent
+      collection function in place.
     </p>
 
     <h1>Rationale</h1>
@@ -102,10 +117,10 @@
       rationale for this paradigm is to support a diverse variety
       of collections whose contents may reside in memory, slow
       secondary storage, over networks, or as results of
-      computational processes.&nbsp; The folding enumerator allows
-      for precise control over the resources of the underlying
+      computational processes. The folding enumerator allows for
+      precise control over the resources of the underlying
       collection, while still providing flexible generic access to
-      collections.&nbsp;
+      collections.
     </p>
     <p>
       Allowing stepwise enumeration over a collection, as opposed
@@ -119,1093 +134,1628 @@
       performed, it may be much more feasible to allow the
       enumerator to fetch each row one at a time, saving both
       memory and delay in transfering the results to the Scheme
-      program.&nbsp; Additionally, the enumerator may cooperate
-      much more cleanly with a garbage collector as references to
-      each value retrieved can be discarded after processing,
-      allowing the garbage collector to free large values
-      immediately if the Scheme program does not itself capture a
-      reference to the collection value.&nbsp; Finally, the
-      enumeration protocol described allows for early termination
-      by the accessing function, which may obviate the need to
-      transfer many unaccessed future elements.
+      program. Additionally, the enumerator may cooperate much more
+      cleanly with a garbage collector as references to each value
+      retrieved can be discarded after processing, allowing the
+      garbage collector to free large values immediately if the
+      Scheme program does not itself capture a reference to the
+      collection value. Finally, the enumeration protocol described
+      allows for early termination by the accessing function, which
+      may obviate the need to transfer many unaccessed future
+      elements.
     </p>
 
     <h1>Specification</h1>
 
-    <h2>
-      Collections Hierarchy
-    </h2>
-    <center>
-      <table>
-        <tbody>
-          <tr>
-            <td>
-              <pre>
-                   Collection<br>                        |<br>         +--------+---------+-----------------+<br>         |        |         |                 |<br>        Bag      Set    Dictionary    Ordered Collection<br>         |                                    |<br>      Sequence               +----------------+------------+<br>         |                   |                |            |<br> Flexible Sequenece  Ordered Dictionary  Ordered Bag   Ordered Set<br>   
-              </pre>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </center>
-    <p>
-      This SRFI first defines hierarchy of possible datastructure
-      types. Each subtype inherits the behavior and functionality
-      of it's parent. Any collection may be immutable or fixed
-      sized.
-    </p>
     <blockquote>
-      <h4>
-        Collection or Ordered Collection
-      </h4>
-      <p>
-        The base type. All collections have a concept of size and
-        emptiness, and it is possible to perform a left folding
-        enumeration over the values of any collection.<br>
-        The ordered counterpart of any collection shares all the
-        properties of an ordinary collection, with the additional
-        ability of performing a right folding. While each
-        collection type may be ordered or unordered, the set of
-        ordered collections is <i>not</i> a distinct set of types.
-      </p>
-      <h4>
-        Bag
-      </h4>
-      <p>
-        A bag is a collection of possibly ordered, possibly unique
-        values. Given a bag, it is only possible to determine if it
-        contains or does not contain any of a given value.
-      </p>
-      <h4>
-        Set
-      </h4>
-      <p>
-        A set is a collection of unique values. Similar to but
-        distinct from a bag, it is only possible to determine if a
-        set contains or does not contain a given value. Unlike a
-        bag, only one of any value can exist in the collection at a
-        time. Removing one value from the set means that the set no
-        longer contains the value at all.
-      </p>
-      <h4>
-        Sequence
-      </h4>
-      <p>
-        A sequence extends a bag with the ability to access and
-        replace its members using a non-negative exact integer.
-        Sequences are <i>stable.</i> That is, if no mutation
-        operation occurs on a sequence, its elements must remain in
-        the same order according to their previously observed
-        indices. When values are added to a base Sequence, they may
-        be added anywhere in the sequence. Sequences may or may not
-        allow multiple instances of a value.
-      </p>
-      <h4>
-        Flexible Sequence
-      </h4>
-      <p>
-        A flexible sequence is a datastructure that allows new
-        values to be added and old values removed at any position
-        in the sequence, as specified by the programmer.
-      </p>
-      <h4>
-        Dictionary
-      </h4>
-      <p>
-        A dictionary maps an arbitrary value called a <i>key</i> to
-        another arbitrary value. Dictionaries may or may not
-        contain multiple mappings for a given key.
-      </p>
+      <h2>
+        Collections Hierarchy
+      </h2>
+      <blockquote>
+        <center>
+          <table>
+            <tbody>
+              <tr>
+                <td>
+                  <pre>
+              Collection                        
+                  |         
+         +--------+---------+
+         |        |         |                 
+        Bag      Set    Dictionary    
+         |
+      Sequence              
+         |   
+ Flexible Sequence  
+</pre>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </center>
+        <p>
+          This SRFI first defines hierarchy of possible
+          datastructure types. Each subtype inherits the behavior
+          and functionality of it's parent. Any collection may be
+          immutable or fixed sized.
+        </p>
+        <blockquote>
+          <h4>
+            Collection
+          </h4>
+          <p>
+            The base type. All collections have a concept of size
+            and emptiness, and it is possible to perform a left
+            folding enumeration over the values of any collection.
+          </p>
+          <h4>
+            Bag
+          </h4>
+          <p>
+            A bag is a collection of possibly ordered, possibly
+            unique values. Given a bag, it is only possible to
+            determine if it contains or does not contain any of a
+            given value.
+          </p>
+          <h4>
+            Set
+          </h4>
+          <p>
+            A set is a collection of unique values. Similar to but
+            distinct from a bag, it is only possible to determine
+            if a set contains or does not contain a given value.
+            Unlike a bag, only one of any value can exist in the
+            collection at a time. Removing one value from the set
+            means that the set no longer contains the value at all.
+          </p>
+          <h4>
+            Sequence
+          </h4>
+          <p>
+            A sequence extends a bag with the ability to access and
+            replace its members using a non-negative exact integer.
+            Sequences are <i>stable.</i> That is, if no mutation
+            operation occurs on a sequence, its elements must
+            remain in the same order according to their previously
+            observed indices. When values are added to a base
+            Sequence, they may be added anywhere in the sequence.
+            Sequences may or may not allow multiple instances of a
+            value.
+          </p>
+          <h4>
+            Flexible Sequence
+          </h4>
+          <p>
+            A flexible sequence is a datastructure that allows new
+            values to be added and old values removed at any
+            position in the sequence, as specified by the
+            programmer.
+          </p>
+          <h4>
+            Dictionary
+          </h4>
+          <p>
+            A dictionary maps an arbitrary value called a
+            <i>key</i> to another arbitrary value. Dictionaries may
+            or may not contain multiple mappings for a given key.
+          </p>
+        </blockquote>
+      </blockquote>
+      <h2>
+        Collection Attributes
+      </h2>
+      <blockquote>
+        <p>
+          In addition to the type hierarchy which dictates the
+          available functions for a given collection, collections
+          also may posses one of two (in this SRFI) attributes
+          which specify whether certain global functions are well
+          defined for the collection. Attributes may also add
+          additional parameters to the collection's constructor.
+        </p>
+        <p>
+          This SRFI specifies two such attributes,
+          <i>orderedness</i> and <i>mutability.</i>
+        </p>
+        <h3>
+          Ordered Collections
+        </h3>
+        <p>
+          Ordered collections maintain an ordering to their values
+          (or in the case of dictionaries, their keys). The
+          collection left fold is guaranteed to enumerate over the
+          collections values/keys in increasing value precedence as
+          defined by the collection's <i>ordering function</i>.
+        </p>
+        <p>
+          Ordered collections can be operated on by the right
+          folding enumerator, which behaves similarly to the left
+          fold, but enumerates in reverse order, that is,
+          decreasing value precedence as defined by the ordering
+          function.
+        </p>
+        <h3>
+          Mutable Collections
+        </h3>
+        <p>
+          This SRFI's API is accommodating to purely functional and
+          linear-updating collections by default. Some collections
+          may be <i>purely mutable</i>. That is, updates are done
+          purely through side effects within the collection. In
+          such a collection,
+        </p>
+        <pre>
+(eq? &lt;input collection&gt; (update-procedure  &lt;input collection&gt;))
+</pre>will always return <tt>#t</tt>. Much Scheme code is often
+written to such mutable collections (hash tables are an example).
+It is not possible to support these collections with the
+linear-update procedures defined later in this SRFI, as it would
+require significant changes to such code and could be expensive in
+terms of unnecessarily allocated storage. <br>
+        <br>
+         
+        <p>
+          For these reasons, <i>mutability</i> is an additional
+          attribute that may be held by a collection. When so held,
+          an additional set of update procedures, symmetric to the
+          linear-update procedures are available which are
+          guaranteed to be defined over a mutable collection, but
+          undefined over functional or merely linear-updating
+          collections. Programmers may use these procedures in the
+          usual manner and agnostic to the collection type so long
+          as mutability is checked.
+        </p>
+      </blockquote>
+      <h2>
+        Storage Model
+      </h2>
+      <blockquote>
+        <p>
+          Collection instances, as specified in this SRFI, are
+          treated as first-class values. This means they can be
+          stored in any variable. Collections may be divisible,
+          that is, may be composed as combinations of like-typed
+          collections. This SRFI defines modification operators for
+          both purely functional and any range of mutable
+          datastructures.
+        </p>
+      </blockquote>
+      <h2>
+        Folding Enumerators
+      </h2>
+      <blockquote>
+        <p>
+          Regardless of the collection type, all collections must
+          be supported by the generic folding enumeration
+          procedure, <tt>collection-fold-left</tt>. The collection
+          fold procedure takes a collection and a folding function
+          as arguments, as well as any number of optional seed
+          values. The collection fold procedure then invokes the
+          folding function on a value of the collection and the
+          seeds, and receives from the folding function a
+          <i>proceed</i> value followed by a like number of seed
+          return values. If the proceed value is non-false, the
+          collection fold procedure then invokes the same fold
+          function again with the next collection value and the
+          newly returned seed values. This continues until the
+          elements of the collection are exhausted, or the fold
+          function returns false as the proceed value, at which
+          point the collection fold procedure returns the seed
+          values (if any) returned by the last call to the fold
+          function.
+        </p>
+        <p>
+          In an ordered collection, the collection fold procedure
+          is required to retrieve the values in the order of the
+          underlying ordered collection. In addition, an ordered
+          collection may support <tt>collection-fold-right</tt>
+          which behaves similarly but enumerates the values of the
+          ordered collection in reverse order.
+        </p>
+        <p>
+          Finally, all Dictionary and Sequence datastructures must
+          be supported by <tt>collection-fold-keys-left</tt> which
+          enumerates the Dictionary's keys or the Sequence's
+          indices. If ordered, the collection may be supported by
+          <tt>collection-fold-keys-right</tt>, which again behaves
+          similarly but enumerating over the keys or indices in
+          reverse.
+        </p>
+        <h3>
+          Enumeration Stability
+        </h3>
+        <p>
+          It is undefined in this SRFI whether the process of
+          enumeration over a collection is <i>stable</i>. A stable
+          enumeration will enumerate over the values that exist in
+          a given collection at a certain time. Removing, adding,
+          or changing values from the underlying collection while
+          enumerating will not cause those values to be missing,
+          discovered, or the new value observed respectively in
+          future steps of the enumeration. Modifying a collection
+          while enumerating is permitted to cause an error in
+          either the collection modification or in the enumeration,
+          though this behavior is discouraged.
+        </p>
+        <p>
+          Enumerations must, however, be stable in the absence of
+          updates. That is, once started, an enumeration should
+          touch all values in the collection (in the proper order
+          if ordered) so long as no updates are performed on the
+          underlying collection. Enumerations need not be stable
+          between each other. That is, though an enumeration may be
+          internally stable, a second enumeration need not return
+          the values in the same order, unless the collection is
+          ordered.
+        </p>
+        <p>
+          Note that if a collection is purely functional, it will
+          by definition be stable in the presence of modification,
+          as the modified collection will be space-distinct from
+          the enumerated collection.
+        </p>
+      </blockquote>
+      <h2>
+        Equivalence
+      </h2>
+      <blockquote>
+        <p>
+          Collections are considered equivalent with respect to
+          Scheme's <tt>equal?</tt> operator when they contain a
+          like number of values, and where each value in one
+          collection is <tt>equal?</tt> to a value in the second
+          collection.
+        </p>
+        <p>
+          For sequences, the ordering of the contained values must
+          also be equivalent. For dictionaries, each key in one
+          collection must be equal to the a key compared
+          collection, and the value(s) mapped to by that key must
+          also be equivalent. If the dictionary is ordered, the
+          order of the mappings must also be the same.
+        </p>
+        <p>
+          Equivalence is checked with this SRFI's <tt>*=</tt>
+          operator, described later. Implementations may also
+          extend Scheme's <tt>equal?</tt> and <tt>eqv?</tt>
+          operators to collections, as long as the above semantics
+          hold for <tt>equal?</tt>. In other words,
+        </p>
+        <pre>
+(equal? <i>collection ...</i>)
+        </pre>must return the same value as 
+        <pre>
+(collection= equal? <i>collection ...</i>)
+        </pre>
+      </blockquote><br>
+      <h2>
+        Immutable Collections
+      </h2>
+      <blockquote>
+        <p>
+          Any collection or instance of a collection may be
+          immutable, or made immutable at any point in its
+          lifecycle. It is an error to add, remove, or modify and
+          values or mappings in an immutable collection.
+        </p>
+      </blockquote>
+      <h2>
+        Homogeneity
+      </h2>
+      <blockquote>
+        <p>
+          Collections may be homogeneous (capable of storing values
+          of only one type), though it is anticipated that the
+          majority of collections will be heterogenous. If a
+          collection is homogeneous, it is an error to attempt to
+          store a value or key of the wrong type within it.
+        </p>
+      </blockquote>
+      <h2>
+        Size versus Length
+      </h2>
+      <blockquote>
+        <p>
+          Most collections possess a concept of size. The size of a
+          collection is the number of values or mappings it
+          currently contains. This differs from the concept of
+          length in Scheme datastructures, which corresponds more
+          or less directly to the amount of actual storage in use,
+          in terms of cons cell cars or vector slots. A collection
+          may occupy more physical storage than required to contain
+          its values or mappings. An example might be a hashtable
+          collection, which may at any given time contain numerous
+          unoccupied, discontiguous cells. This matter is confused
+          by the collections specified in this API, whose size and
+          length are the same.
+        </p>
+        <p>
+          A collection may not have such a concept, in which case
+          the <tt>collection-size</tt> function must return
+          <tt>#f</tt>. Infinite collections (such as the collection
+          of natural numbers) or lazy collections (such as a
+          network stream) are examples of size-indeterminate
+          collections.
+        </p>
+      </blockquote>
+      <h2>
+        Ordered Collections
+      </h2>
+      <blockquote>
+        <p>
+          Some collections maintain an ordering. These ordered
+          collections provide the additional property of
+          guaranteeing an enumeration will progress over the
+          collection in a least to greatest value precedence
+          fashion, as defined by the collection's <i>ordering
+          function</i>. An ordered collection's constructor must
+          take such a function as input. An ordering function takes
+          two arguments, and returns a boolean, indicating whether
+          the first value is to take precedence in the collection
+          over the second. As an example, an ordered collection of
+          numbers may use <tt>&lt;</tt> or <tt>&lt;=</tt> to order
+          numeric values added to the collection.
+        </p>
+        <p>
+          In order to ensure a consistent ordering in the
+          collection, the ordering function must return the same
+          result for like inputs over time. In most cases, an
+          ordering function should also treat like values as if
+          tested using <tt>equal?</tt> in order to ensure that
+          duplicate values are stored and retrieved consistently.
+        </p>
+      </blockquote>
+      <h2>
+        Bags, Sets, Dictionaries and Value Equality
+      </h2>
+      <blockquote>
+        <p>
+          Dictionaries store mappings from a keys to values. Bags
+          and Sets store values in an opaque fashion which only
+          indicates the presence or absence of an object. In order
+          to determine whether a given value exists in a set or
+          bag, or whether a given key matches another in a
+          dictionary, these collections must use an <i>equivalence
+          function.</i> Other collections may use equivalence
+          functions for other purposes.
+        </p>
+        <p>
+          Any collection may require or accept an equivalence
+          function in its primary constructor (<tt>make-%</tt>) and
+          in its initializing constructor (<tt>%</tt>). The
+          provided equivalence function must take two values as
+          input and return true if they should be considered
+          equivalent for the purposes of <tt>contains?</tt>, value
+          insertion, removal, and key lookup. If provided, an
+          equivalence function follows an ordering function in an
+          ordered collection, but precedes any other arguments. If
+          not provided, <tt>eqv?</tt> is used as a default
+          equivalence function.
+        </p>
+      </blockquote>
+      <h2>
+        Sequences
+      </h2>
+      <blockquote>
+        <p>
+          A sequence is a collection of values named by a
+          contiguous, zero-based sequence of exact integers. Scheme
+          vectors are a natural example of a sequence. Sequences
+          may or may not be of fixed size. If they are not,
+          sequences allow new values to be added at an undefined
+          point in the sequence, after which some value will exist
+          at the index<br>
+          <tt>(- (collection-size <i>seq</i>) 1)</tt>.
+        </p>
+        <h3>
+          Flexible Sequences
+        </h3>
+        <p>
+          Flexible sequences are sequences which allow insertion of
+          values at arbitrary points in the sequence. Inserting a
+          value at any position except the end of the sequence
+          causes all values with higher indices than the insertion
+          point to <i>shift right</i>, thus having an index
+          increased by one. Similarly, if values are removed from a
+          sequence at any position except the end, all values with
+          higher indices are <i>shifted left</i>, so their former
+          indices are now decreased by one.
+        </p>
+        <h3>
+          Limited Sequences
+        </h3>
+        <p>
+          Limited Sequences are the opposite of flexible sequences.
+          They have a fixed capacity, and thus a fixed maximum
+          size. It may be possible to add and remove values from
+          limited sequences by using a special value to indicate
+          unused slots at the end of a sequence, so limited
+          sequences do not necessarily have fixed size. It is an
+          error to add to a limited sequence that is at its maximum
+          size.
+        </p>
+      </blockquote>
+      <h2>
+        Procedures
+      </h2>
+      <blockquote>
+        <p>
+          Below we describe the naming conventions and semantics of
+          Collections API functions, grouped by collection type. In
+          each function, the name of the collection would replace
+          the percentage mark in the function prototype. Function
+          definitions in sub or sibling collection types absolutely
+          override the same named function in the parent. For
+          example <tt>make-%</tt> in the ordered collection.
+        </p>
+        <p>
+          When <tt>*</tt> is encountered in the definitions below,
+          it is implied that the asterisk is replaced with a
+          function for the specific collection and each of the
+          collections supertypes for which the procedure is
+          defined. For example, if we had a 'list' flexible
+          sequence collection, the functions
+          <tt>list-contains?</tt>,
+          <tt>flexible-sequence-contains?</tt>,
+          <tt>sequence-contains?</tt>, <tt>bag-contains?</tt> must
+          all exist, but <tt>collection-contains?</tt> does not. In
+          addition, it is an error to apply any such function to a
+          collection whose type does not satisfy that implied by
+          the function name.
+        </p>
+        <p>
+          When <tt>%</tt> is encountered in the definitions below,
+          the actual name of the collection is implied. Again,
+          assuming a 'list' flexible sequence, <tt>make-%</tt>
+          implies that the function <tt>make-list</tt> exists.
+          <tt>%</tt> as a return value indicates a collection of
+          that specific type.
+        </p>
+        <p>
+          Note that while ordered collections are visually
+          represented as a distinct type in the tree above,
+          'orderedness' is considered an attribute of the
+          collection, not a distinct set of types.
+        </p>
+        <h3>
+          Functional, Linear Update, and Purely Mutable Collections
+        </h3>
+        <p>
+          Functions in this SRFI which modify a collection are
+          provided in two flavors. Both <i>must</i> be implemented
+          by collections. Purely functional updating functions must
+          not side effect the input collection, but must return a
+          new collection which reflects the update. The returned
+          collection may share structure with the input collection,
+          but the effects of the update must <i>not</i> be
+          reflected in the input collection.
+        </p>
+        <p>
+          Linear update versions of the same update share the name
+          but have the bang (!) character appended. They too return
+          a collection, which is allowed to be the same as and/or
+          share structure with the input collection. However,
+          side-effects to the the input collection are allowed. The
+          caller <i>must</i> use the returned collection to view
+          the effects of the update. The structure of the input
+          collection after the modification is undefined.
+        </p>
+        <p>
+          The final, purely mutable update form is defined only for
+          mutable collections. It is an error to use them on any
+          other collections. They share the name of the functional
+          update procedure but have two bang characters (!!)
+          appended. In this form, the collection is updated as a
+          side effect to the input collection, and the input
+          collection is returned. These functions are represented
+          in the API that follows as [!], indicating the optional
+          second bang is added (<tt>*-update!!</tt>) only for these
+          collections.
+        </p>
+        <p>
+          A collection may naturally be amenable to either purely
+          functional or purely side-effected updates. In the former
+          case, the linear updating version of the procedure may
+          return the purely functionally updated collection. This
+          does not conflict with the definition of the linear
+          update procedure. Conversely, the purely functional
+          updating function can return a distinct collection by
+          cloning a collection which cannot be functionally
+          updated, and performing the side-effecting modifications
+          to the cloned collection.
+        </p>
+        <p>
+          Finally, mutable collections (for which
+          <tt>mutable-collection?</tt> returns a non-false value)
+          add an additional update procedure for each linear-update
+          procedure described, which adds an additional bang (!) to
+          the end of the procedure name. This is represented in
+          this SRFI's API specification as
+          <tt>*-<i>update</i>![!]</tt>.<br>
+           As the case of functionally updating a collection whose
+          structure is functionally updateable can be expensive
+          (due to worst-case need to clone a large collection), the
+          specifications of all collections are highly encouraged
+          to document the nature of their compatibility and
+          efficiency for both the functional and linear updating
+          update functions.
+        </p>
+        <h3>
+          Enumeration
+        </h3>
+        <blockquote>
+          <i>procedure:</i> <b>collection-fold-left</b> collection
+          fold-function seed-value ... <b>=&gt;</b> seed-value
+          ...<br>
+           
+          <blockquote>
+            <i>fold-function</i> is a procedure which accepts one
+            more than the number of seed values. The function
+            accepts a single collection value as its first
+            argument, and the seeds as remaining arguments. It must
+            then return a <i>proceed</i> value, which if false
+            halts the enumeration, as well as an equal numer of
+            returned seed values as arguments. These seed values
+            are then passed to the next call to the fold function
+            on the next collection value.<br>
+            <br>
+             When the collection values are exhausted or a false
+            proceed value is received from the fold function, the
+            enumeration ceases and <tt>collection-fold-left</tt>
+            returns the last set of seed values returned by the
+            fold-function.
+          </blockquote><i>procedure:</i>
+          <b>collection-fold-right</b> collection fold-function
+          seed-value ... <b>=&gt;</b> seed-value ...<br>
+           
+          <blockquote>
+            Behaves like <tt>collection-fold-left</tt>, except that
+            the enumeration proceeds in the reverse direction. This
+            procedure is only defined for sequences and ordered
+            collections.
+          </blockquote><i>procedure:</i>
+          <b>collection-fold-keys-left</b> collection fold-function
+          seed-value ... <b>=&gt;</b> seed-value ...<br>
+           
+          <blockquote>
+            Behaves like <tt>collection-fold-left</tt>, but
+            enumerates over the keys or indices of a dictionary or
+            sequence respectively. This procedure is only defined
+            for sequences and dictionaries.
+          </blockquote><i>procedure:</i>
+          <b>collection-fold-keys-right</b> collection
+          fold-function seed-value ... <b>=&gt;</b> seed-value
+          ...<br>
+           
+          <blockquote>
+            Behaves like <tt>collection-fold-right</tt>, but
+            enumerates in the reverse order over the keys or
+            indices of an ordered dictionary or sequence
+            respectively. This procedure is only defined for
+            sequences and ordered dictionaries.
+          </blockquote>
+        </blockquote>
+        <h3>
+          Collections
+        </h3>
+        <blockquote>
+          <p>
+            <i>procedure:</i> <b>collection?</b> value <b>=&gt;
+            value</b>
+          </p>
+          <blockquote>
+            Returns a non-false value if the provided value is a
+            collection.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>collection-name</b> collection
+            <b>=&gt; symbol ('%)</b>
+          </p>
+          <blockquote>
+            Returns the collection name of the provided collection.
+            The name is a symbol containing the type name of the
+            specific collection. A collection whose constructor is
+            make-list, for example, would have 'list returned from
+            <tt>collection-name</tt>
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>%?</b> value <b>=&gt; value</b>
+          </p>
+          <blockquote>
+            Returns a non-false value iff the provided value is an
+            instance of the specific collection type.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-size</b> collection <b>=&gt;</b>
+            integer
+          </p>
+          <blockquote>
+            If the collection has a concept of size, this function
+            returns the number of values or mappings in the
+            collection. If it does not, <tt>#f</tt> must be
+            returned.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-count</b> collection
+            value<b>=&gt;</b> integer
+          </p>
+          <blockquote>
+            Counts the number of times <tt>value</tt> occurs in the
+            collection, according to the collection's equivalence
+            function.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-get-left</b> *
+            [default]<b>=&gt;</b> value
+          </p>
+          <blockquote>
+            Returns an unspecified value from the given collection.
+            If the collection is empty, <tt>default</tt> is
+            returned if present, otherwise <tt>#f</tt> is returned.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-get-right</b> * [default]
+            <b>=&gt;</b> value
+          </p>
+          <blockquote>
+            Returns an unspecified value from the given collection.
+            If the collection is empty, <tt>default</tt> is
+            returned if present, otherwise <tt>#f</tt> is returned.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-empty?</b> collection
+            <b>=&gt;</b> boolean
+          </p>
+          <blockquote>
+            Returns true iff the given collection is known to be
+            empty. This function should return false if it is known
+            that there are values within the collection, or if it
+            is unknown whether any values exist.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-&gt;list</b> collection
+            <b>=&gt;</b> list
+          </p>
+          <blockquote>
+            Returns a newly allocated list containing the values of
+            the collection. This be done trivially with
+            enumeration, but an implementation may choose to allow
+            this function to behave more efficiently on certain
+            collections. If the collection is ordered, the list
+            must contain the values of the collection in the same
+            order as a left enumeration.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*=</b> elt= collections ...
+            <b>=&gt;</b> boolean
+          </p>
+          <blockquote>
+            <p>
+              Compares the provided (zero or more) collections for
+              equivalence given the equivalence predicate
+              <tt>elt=</tt>. If fewer than two collections are
+              provided, a non-false value is returned. If all the
+              provided collections contain the same number of
+              values, and the values are equivalent as described in
+              the section "Equivalence" above, a non-false value is
+              returned. If neither condition holds, <tt>#f</tt> is
+              returned.
+            </p>
+            <p>
+              The equivalence predicate <tt>elt=</tt> will be
+              applied to two representative values from pairs of
+              collections at the discretion of the implementor,
+              following the equivalence rules described previously.
+              If false is returned at any point, <tt>*=</tt> must
+              return false.
+            </p>
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>make-% =&gt; %</b>
+          </p>
+          <blockquote>
+            Constructs a % collection.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>%</b> value ... <b>=&gt; %</b>
+          </p>
+          <blockquote>
+            Constructs a % collection with the zero or more values
+            provided as its initial contents.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-copy</b> collection <b>=&gt;
+            collection</b>
+          </p>
+          <blockquote>
+            Creates a new collection whose type and contents are
+            the same as the collection passed as an operand, but
+            which is distinct enough in storage that the new
+            collection cannot be affected by modifications to the
+            input collection and vice versa. This copy is
+            <i>shallow</i>, that is, values are copied to the new
+            collection in a way that preserves object identity.
+          </blockquote>
+        </blockquote>
+        <h3>
+          Ordered Collections
+        </h3>
+        <blockquote>
+          <p>
+            <i>procedure:</i> <b>ordered-collection?</b> value
+            <b>=&gt; value</b>
+          </p>
+          <blockquote>
+            Returns a non-false value if the provided value is an
+            ordered collection.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-get-left</b> *
+            [default]<b>=&gt;</b> value
+          </p>
+          <blockquote>
+            Returns the leftmost (least precedent) value in the
+            ordered collection. If the collection is empty,
+            <tt>default</tt> is returned if present, otherwise
+            <tt>#f</tt> is returned.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-get-right</b> *
+            [default]<b>=&gt;</b> value
+          </p>
+          <blockquote>
+            Returns the rightmost (most precedent) value in the
+            ordered collection. If the collection is empty,
+            <tt>default</tt> is returned if present, otherwise
+            <tt>#f</tt> is returned.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-remove-left</b> * <b>=&gt;</b> *
+            value<br>
+             <i>procedure:</i> <b>*-remove-left![!]</b> *
+            <b>=&gt;</b> * value
+          </p>
+          <blockquote>
+            Removes the leftmost (least precedent) value from the
+            collection, returning two values, the updated
+            collection and the value removed.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-remove-right</b> * <b>=&gt;</b>
+            * value<br>
+             <i>procedure:</i> <b>*-remove-right![!]</b> *
+            <b>=&gt;</b> * value
+          </p>
+          <blockquote>
+            Removes the rightmost (most precedent) value from the
+            collection, returning two values, the updated
+            collection and the value removed.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>make-%</b> ordering-function
+            <b>=&gt; %</b>
+          </p>
+          <blockquote>
+            Constructs a * ordered collection whose ordering is
+            determined by the provided ordering function.
+          </blockquote>
+        </blockquote>
+        <h3>
+          Mutable Collections
+        </h3>
+        <blockquote>
+          <p>
+            <i>procedure:</i> <b>mutable-collection?</b> value
+            <b>=&gt; value</b>
+          </p>
+          <blockquote>
+            Returns a non-false value if the provided value is a
+            mutable collection.
+          </blockquote>
+        </blockquote>
+        <h3>
+          Bags
+        </h3>
+        <blockquote>
+          <p>
+            <i>procedure:</i> <b>bag?</b> value <b>=&gt; value</b>
+          </p>
+          <blockquote>
+            Returns a non-false value if the provided value is a
+            bag.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-contains?</b> bag value
+            <b>=&gt;</b> boolean
+          </p>
+          <blockquote>
+            Returns a non-false value if the bag contains any
+            instances of the given value.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-add</b> bag value <b>=&gt;</b>
+            *<br>
+             <i>procedure:</i> <b>*-add![!]</b> bag value
+            <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Adds a single value to a bag.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-insert-left</b> *
+            value<b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-insert-left![!]</b> *
+            value<b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Adds a value to an unspecified position in the bag. A
+            collection should, if possible, ensure that 
+            <pre>
+      (*-get-left (*-insert-left &lt;bag&gt; &lt;value&gt;)) ;=&gt; &lt;value&gt;
+</pre>
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-insert-right</b> *
+            value<b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-insert-right![!]</b> *
+            value<b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Adds a value to an unspecified position in the bag. A
+            collection should, if possible, ensure that 
+            <pre>
+      (*-get-right (*-insert-right &lt;bag&gt; &lt;value&gt;)) ;=&gt; &lt;value&gt;
+</pre>
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-remove-left</b> * <b>=&gt;</b> *
+            value<br>
+             <i>procedure:</i> <b>*-remove-left![!]</b> value *
+            <b>=&gt;</b> * value
+          </p>
+          <blockquote>
+            Removes an unspecified value from the bag, returning
+            two values, the updated collection and the value
+            removed. A bag should, if possible, preserve the
+            following semantics: 
+            <pre>
+      (let ((col (make-* values ...)))
+        (call-with-values 
+           (lambda ()
+             (*-remove-left (*-add-left * a-value)))
+           (lambda (newcol val)
+             (bag= equal? col newcol)))) ; =&gt; #t
+</pre>
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-remove-right</b> * <b>=&gt;</b>
+            * value<br>
+             <i>procedure:</i> <b>*-remove-right![!]</b> *
+            <b>=&gt;</b> * value
+          </p>
+          <blockquote>
+            Removes an unspecified value from the bag, returning
+            two values, the updated collection and the value
+            removed. A bag should, if possible, preserve the
+            following semantics: 
+            <pre>
+      (let ((col (make-* values ...)))
+        (call-with-values 
+           (lambda ()
+             (*-remove-right (*-add-right * a-value)))
+           (lambda (newcol val)
+             (bag= equal? col newcol)))) ; =&gt; #t
+</pre>
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-remove</b> bag value
+            <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-remove![!]</b> bag value
+            <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Removes a single instance of the given value from the
+            bag.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-remove-any</b> bag value
+            <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-remove-any![!]</b> bag value
+            <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Removes any instances of the given value from the bag.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-add-all</b> dest-bag source-bag
+            <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-add-all![!]</b> dest-bag
+            source-bag <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Adds all the values in the source bag to the
+            destination bag.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-remove-all</b> dest-bag
+            source-bag <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-remove-all![!]</b> dest-bag
+            source-bag <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Removes one instance of each value found in source-bag
+            from dest-bag.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-remove-any-of</b> dest-bag
+            source-bag <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-remove-any-of![!]</b> dest-bag
+            source-bag <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Removes any instances of each value found in source-bag
+            from dest-bag.
+          </blockquote>
+        </blockquote>
+        <h3>
+          Sets
+        </h3>
+        <blockquote>
+          <p>
+            <i>procedure:</i> <b>set?</b> value <b>=&gt;</b>
+            boolean
+          </p>
+          <blockquote>
+            Returns a non-false value if the provided value is a
+            set.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-contains?</b> set value
+            <b>=&gt;</b> boolean
+          </p>
+          <blockquote>
+            Returns a non-false value if the set contains any
+            instances of the given value.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-add</b> set value <b>=&gt;</b>
+            *<br>
+             <i>procedure:</i> <b>*-add![!]</b> set value
+            <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Adds a value to the set.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-remove</b> set value
+            <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-remove![!]</b> set value
+            <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Removes the given value from the set.
+          </blockquote>
+        </blockquote>
+        <h3>
+          Sequences
+        </h3>
+        <blockquote>
+          <p>
+            <i>procedure:</i> <b>sequence?</b> value <b>=&gt;</b>
+            boolean
+          </p>
+          <blockquote>
+            Returns a non-false value if the provided value is a
+            sequence.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-ref</b> sequence integer
+            <b>=&gt;</b> value
+          </p>
+          <blockquote>
+            Returns the value stored in the sequence at the integer
+            index provided. It is an error to reference an index
+            outside the range of the sequence.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-ref/default</b> sequence integer
+            [default] <b>=&gt;</b> value
+          </p>
+          <blockquote>
+            Returns the value stored in the sequence at the integer
+            index provided. Returns the default value if the
+            integer is outside the range of stored values.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-get-left</b> *
+            [default]<b>=&gt;</b> value
+          </p>
+          <blockquote>
+            Returns the value at index 0 in the collection. If no
+            such value exists, <tt>default</tt> is returned if
+            present, otherwise <tt>#f</tt> is returned.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-get-right</b> *
+            [default]<b>=&gt;</b> value
+          </p>
+          <blockquote>
+            Returns the value at index <tt>(- (sequence-size *)
+            1)</tt> in the collection. If no values exist,
+            <tt>default</tt> is returned if present, otherwise
+            <tt>#f</tt> is returned.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-insert-right</b> *
+            value<b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-insert-right![!]</b> *
+            value<b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Adds a value to the end of the sequence.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-set</b> sequence integer value
+            <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-set![!]</b> sequence integer
+            value <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Replaces the value stored in the sequence at the
+            integer index provided with the given value. It is an
+            error to reference an index outside the range of the
+            sequence. It is recommended that the return value of
+            this function be the previous value stored at the given
+            index.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-add</b> sequence value
+            <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-add![!]</b> sequence value
+            <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Adds the given value to the end of the sequence.
+          </blockquote>
+        </blockquote>
+        <h3>
+          Flexible Sequences
+        </h3>
+        <blockquote>
+          <p>
+            <i>procedure:</i> <b>flexible-sequence?</b> value
+            <b>=&gt;</b> boolean
+          </p>
+          <blockquote>
+            Returns a non-false value if the provided value is a
+            flexible sequence.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-insert</b> flexible-sequence
+            index value <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-insert![!]</b>
+            flexible-sequence index value <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Inserts the provided value at the given index in the
+            flexible sequence. If index is not equal to the
+            <tt>collection-size</tt> of the sequence, this will
+            result in the current value at index and subsequent
+            values' indices to increase by one.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-delete</b> flexible-sequence
+            index <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-delete![!]</b>
+            flexible-sequence index <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Deletes the current value at the given index in the
+            flexible sequence. If index is not equal to the
+            <tt>collection-size</tt> - 1 of the sequence, this will
+            result in the subsequent values' indices to decrease by
+            one, filling the newly created gap.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-insert-left</b> *
+            value<b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-insert-left![!]</b> *
+            value<b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Inserts a value into the flexible sequence at position
+            0.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-remove-left</b> * <b>=&gt;</b> *
+            value<br>
+             <i>procedure:</i> <b>*-remove-left![!]</b> value *
+            <b>=&gt;</b> * value
+          </p>
+          <blockquote>
+            Removes the value at position 0 in the flexible
+            sequence, returning two values, the updated collection
+            and the value removed.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-remove-right</b> * <b>=&gt;</b>
+            *<br>
+             <i>procedure:</i> <b>*-remove-right![!]</b> *
+            <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Removes the value at position <tt>(-
+            (flexible-sequence-size *) 1)</tt>, returning two
+            values, the updated collection and the value removed.
+          </blockquote>
+        </blockquote>
+        <h3>
+          Dictionaries
+        </h3>
+        <blockquote>
+          <p>
+            <i>procedure:</i> <b>dict?</b> value <b>=&gt;</b>
+            boolean
+          </p>
+          <blockquote>
+            Returns a non-false value if the provided value is a
+            flexible sequence
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>%</b> [equivalence-function] (key
+            . value) ... <b>=&gt; *</b>
+          </p>
+          <blockquote>
+            Constructs a % dictionary with the zero or more
+            bindings provided as it's initial values. If provided,
+            the keys will be compared with the given equivalence
+            function, otherwise eqv? is used. Each operand after
+            the equivalence function to a dictionary constructor
+            must be a Scheme pair.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-keys-&gt;list</b> dictionary
+            <b>=&gt;</b> list
+          </p>
+          <blockquote>
+            Returns a newly allocated list containing the keys of
+            the dictionary. This can be done trivially with
+            enumeration, but this procedure is provided if an
+            implementation can more efficiently perform this
+            operation directly. If the collection is ordered, the
+            list must contain the values of the collection in the
+            same order as a left enumeration.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-get</b> dictionary key [default]
+            <b>=&gt;</b> value
+          </p>
+          <blockquote>
+            Retrieves the value of the mapping for the given key.
+            If no such mapping exists, the value of
+            <tt>default</tt> is returned, or <tt>#f</tt> if default
+            was not provided.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-put</b> dictionary key value
+            <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-put![!]</b> dictionary key
+            value <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Sets the value the mapping for the given key to the
+            given value.
+          </blockquote>
+          <p>
+            <i>optional-procedure:</i> <b>*-put</b> dictionary key
+            value [default] <b>=&gt;</b> value<br>
+             <i>optional-procedure:</i> <b>*-put![!]</b> dictionary
+            key value [default] <b>=&gt;</b> value
+          </p>
+          <blockquote>
+            Sets the value the mapping for the given key to the
+            given value. If the mapping previously existed, this
+            function returns the previous value of that mapping. If
+            no such mapping existed, the value of default is
+            returned, or <tt>#f</tt> if no default value was
+            provided. It is preferred that dictionary collections
+            implement this form of <tt>dict-put!</tt> over the
+            previous one if it is feasible.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-update</b> dictionary key func
+            [default] <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-update!</b> dictionary key func
+            [default] <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Updates the value of the dictionary entry mapped by
+            <tt>key</tt> to the results of applying the single
+            argument function <tt>func</tt> to the previous value.
+            If no such previous value existed, the value of
+            <tt>default</tt> is provided to the function, otherwise
+            <tt>#f</tt> is passed.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-remove</b> dictionary key
+            <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-remove![!]</b> dictionary key
+            <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Removes an existing mapping for the given key. If there
+            was no such mapping, this call does nothing.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-remove-any</b> dictionary key
+            <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-remove-any![!]</b> dictionary
+            key <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Removes any existing mappings for the given key. If
+            there weren't any such mappings, this call does
+            nothing. This procedure must be defined only if the
+            dictionary supports multiple mappings per key.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-remove-all</b> dictionary bag
+            <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-remove-all![!]</b> dictionary
+            bag <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Removes one instance of each mapping from keys found in
+            the given bag.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-remove-any-of</b> dictionary bag
+            <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-remove-any-of![!]</b>
+            dictionary bag <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Removes any instances of mappings from keys found in
+            bag from the dictionary.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-add-all</b> dest-dict
+            source-dict <b>=&gt;</b> *<br>
+             <i>procedure:</i> <b>*-add-all![!]</b> dest-dict
+            source-dict <b>=&gt;</b> *
+          </p>
+          <blockquote>
+            Adds all the mappings in the source dictionary to the
+            destination dictionary.
+          </blockquote>
+        </blockquote>
+      </blockquote>
+      <h2>
+        Scheme Collections
+      </h2>
+      <blockquote>
+        <p>
+          This SRFI additionally specifies a Collections API for
+          the Scheme list, the derived association list, the vector
+          and string types.
+        </p>
+        <h4>
+          Scheme Lists
+        </h4>
+        <blockquote>
+          <p>
+            Scheme List collections are flexible sequences. In the
+            reference implementation provided by this SRFI, lists
+            have an unstable enumeration.
+          </p>
+          <p>
+            <i>procedure:</i> <b>make-list</b> [size [default]]
+            <b>=&gt;</b> list
+          </p>
+          <blockquote>
+            Creates a new list. If size is provided, it will start
+            out with size instances of the value given as default.
+            If default is not provided, the contents of the list
+            are undefined.
+          </blockquote><i>procedure:</i> <b>list</b> value ...
+          =&gt; list<br>
+          <br>
+           
+          <p>
+            <i>procedure:</i> <b>list-name</b> list <b>=&gt;</b>
+            'list
+          </p>
+          <p>
+            <i>procedure:</i> <b>list-copy</b> list <b>=&gt;</b>
+            list
+          </p>
+          <p>
+            <i>procedure:</i> <b>list?</b> value =&gt; boolean
+          </p>
+          <p>
+            <i>procedure:</i> <b>list-contains?</b> list value
+            =&gt; boolean
+          </p>
+          <p>
+            <i>procedure:</i> <b>list-get-left</b> list [default]
+            =&gt; value<br>
+             <i>procedure:</i> <b>list-get-right</b> list [default]
+            =&gt; value
+          </p>
+          <p>
+            <i>procedure:</i> <b>list-count</b> list value =&gt;
+            integer
+          </p>
+          <p>
+            <i>procedure:</i> <b>list=</b> elt= list1 list2 =&gt;
+            boolean
+          </p>
+          <p>
+            <i>procedure:</i> <b>list-add</b> list value =&gt;
+            list<br>
+             <i>procedure:</i> <b>list-add![!]</b> list value =&gt;
+            list
+          </p>
+          <p>
+            <i>procedure:</i> <b>list-insert-left</b> list value
+            =&gt; list<br>
+             <i>procedure:</i> <b>list-insert-left![!]</b> list
+            value =&gt; list<br>
+             <i>procedure:</i> <b>list-insert-right</b> list value
+            =&gt; list<br>
+             <i>procedure:</i> <b>list-insert-right![!]</b> list
+            value =&gt; list
+          </p>
+          <p>
+            <i>procedure:</i> <b>list-remove</b> list value =&gt;
+            list<br>
+             <i>procedure:</i> <b>list-remove![!]</b> list value
+            =&gt; list
+          </p>
+          <p>
+            <i>procedure:</i> <b>list-remove-left</b> list value
+            =&gt; list value<br>
+            a <i>procedure:</i> <b>list-remove-left![!]</b> list
+            value =&gt; list value<br>
+             <i>procedure:</i> <b>list-remove-right</b> list value
+            =&gt; list value<br>
+             <i>procedure:</i> <b>list-remove-right![!]</b> list
+            value =&gt; list value
+          </p>
+          <p>
+            <i>procedure:</i> <b>list-remove-any</b> list value
+            =&gt; list<br>
+             <i>procedure:</i> <b>list-remove-any![!]</b> list
+            value =&gt; list
+          </p>
+          <p>
+            <i>procedure:</i> <b>list-add-all</b> list bag =&gt;
+            list<br>
+             <i>procedure:</i> <b>list-add-all![!]</b> list bag
+            =&gt; list
+          </p>
+          <p>
+            <i>procedure:</i> <b>list-remove-all</b> list bag =&gt;
+            list<br>
+             <i>procedure:</i> <b>list-remove-all![!]</b> list bag
+            =&gt; list
+          </p>
+          <p>
+            <i>procedure:</i> <b>list-remove-any-of</b> list bag
+            =&gt; list<br>
+             <i>procedure:</i> <b>list-remove-any-of![!]</b> list
+            bag =&gt; list
+          </p>
+          <p>
+            <i>procedure:</i> <b>list-insert</b> list bag =&gt;
+            list<br>
+             <i>procedure:</i> <b>list-insert![!]</b> list bag
+            =&gt; list
+          </p>
+          <p>
+            <i>procedure:</i> <b>list-delete</b> list index =&gt;
+            list<br>
+             <i>procedure:</i> <b>list-delete![!]</b> list index
+            =&gt; list
+          </p>
+        </blockquote>
+        <h4>
+          Scheme Association Lists
+        </h4>
+        <blockquote>
+          <p>
+            Scheme association lists are dictionaries. In the
+            reference implementation provided by this SRFI, alists
+            have an unstable enumeration. It is difficult to fully
+            map the collections API onto alists, as they are Scheme
+            lists. Difficulty would be encountered in adding to an
+            empty alist, as mutation of the variable holding the
+            Scheme empty-list would be required. For this reason
+            alists produced by this SRFI have a placeholder value
+            at the front of the list so that its contents can
+            always be side-effected and to store metadata about the
+            alist.
+          </p>
+          <p>
+            <i>procedure:</i> <b>make-alist</b>
+            [equivalence-function] =&gt; alist<br>
+             <i>procedure:</i> <b>alist</b> [equivalence-function]
+            (key . value) ... =&gt; alist
+          </p>
+          <p>
+            <i>procedure:</i> <b>alist-name</b> alist <b>=&gt;</b>
+            'alist
+          </p>
+          <p>
+            <i>procedure:</i> <b>alist-copy</b> alist =&gt; alist
+          </p>
+          <p>
+            <i>procedure:</i> <b>alist?</b> value =&gt; boolean
+          </p>
+          <p>
+            <i>procedure:</i> <b>alist-count</b> alist value =&gt;
+            integer<br>
+             <i>procedure:</i> <b>alist-count-keys</b> alist value
+            =&gt; integer
+          </p>
+          <p>
+            <i>procedure:</i> <b>alist=</b> elt= alist1 alist2
+            =&gt; boolean
+          </p>
+          <p>
+            <i>procedure:</i> <b>alist-keys-&gt;list</b> value
+            =&gt; scheme-list
+          </p>
+          <p>
+            <i>procedure:</i> <b>alist-get</b> alist value =&gt;
+            value
+          </p>
+          <p>
+            <i>procedure:</i> <b>alist-get-left</b> alist [default]
+            =&gt; value<br>
+             <i>procedure:</i> <b>alist-get-right</b> alist
+            [default] =&gt; value
+          </p>
+          <p>
+            <i>procedure:</i> <b>alist-put</b> alist value value
+            =&gt; alist<br>
+             <i>procedure:</i> <b>alist-put!</b> alist value value
+            =&gt; alist<br>
+             <i>procedure:</i> <b>alist-update</b> alist value func
+            [default]=&gt; alist<br>
+             <i>procedure:</i> <b>alist-update!</b> alist value
+            func [default]=&gt; alist
+          </p>
+          <p>
+            <i>procedure:</i> <b>alist-remove</b> alist value =&gt;
+            alist<br>
+             <i>procedure:</i> <b>alist-remove!</b> alist value
+            =&gt; alist
+          </p>
+          <p>
+            <i>procedure:</i> <b>alist-remove-any</b> alist value
+            =&gt; alist<br>
+             <i>procedure:</i> <b>alist-remove-any!</b> alist value
+            =&gt; alist
+          </p>
+          <p>
+            <i>procedure:</i> <b>alist-remove-all</b> alist bag
+            =&gt; alist<br>
+             <i>procedure:</i> <b>alist-remove-all!</b> alist bag
+            =&gt; alist
+          </p>
+          <p>
+            <i>procedure:</i> <b>alist-remove-any-of</b> alist bag
+            =&gt; alist<br>
+             <i>procedure:</i> <b>alist-remove-any-of!</b> alist
+            bag =&gt; alist
+          </p>
+          <p>
+            <i>procedure:</i> <b>alist-add-all</b> alist dict =&gt;
+            alist<br>
+             <i>procedure:</i> <b>alist-add-all!</b> alist dict
+            =&gt; alist
+          </p>
+        </blockquote>
+        <h4>
+          Scheme Vectors
+        </h4>
+        <blockquote>
+          <p>
+            Scheme Vectors are limited sequences. In the reference
+            implementation provided by this SRFI, vectors have an
+            unstable enumeration.
+          </p>
+          <p>
+            <i>procedure:</i> <b>make-vector</b> size [default]
+            <b>=&gt;</b> list
+          </p>
+          <blockquote>
+            Creates a new vector with the provided size. If default
+            is not provided, the contents of the vector are
+            undefined.
+          </blockquote><i>procedure:</i> <b>vector</b> value ...
+          =&gt; vector<br>
+          <br>
+           
+          <p>
+            <i>procedure:</i> <b>vector-name</b> list <b>=&gt;</b>
+            'vector
+          </p>
+          <p>
+            <i>procedure:</i> <b>vector-copy</b> vector =&gt;
+            vector
+          </p>
+          <p>
+            <i>procedure:</i> <b>vector?</b> value =&gt; boolean
+          </p>
+          <p>
+            <i>procedure:</i> <b>vector-contains?</b> value =&gt;
+            boolean
+          </p>
+          <p>
+            <i>procedure:</i> <b>vector-count</b> vector value
+            =&gt; integer
+          </p>
+          <p>
+            <i>procedure:</i> <b>vector-get-left</b> vector
+            [default] =&gt; value<br>
+             <i>procedure:</i> <b>vector-get-right</b> vector
+            [default] =&gt; value
+          </p>
+          <p>
+            <i>procedure:</i> <b>vector=</b> elt= vector1 vector2
+            =&gt; boolean
+          </p>
+        </blockquote>
+        <h4>
+          Scheme Strings
+        </h4>
+        <blockquote>
+          <p>
+            Scheme strings are limited homogeneous sequences which
+            can only store characters. In the reference
+            implementation provided by this SRFI, strings have an
+            unstable enumeration.
+          </p>
+          <p>
+            <i>procedure:</i> <b>make-string</b> size
+            [default-character] =&gt; string<br>
+             <i>procedure:</i> <b>string</b> character ... =&gt;
+            string
+          </p>
+          <p>
+            <i>procedure:</i> <b>string-name</b> string
+            <b>=&gt;</b> 'string
+          </p>
+          <p>
+            <i>procedure:</i> <b>string-copy</b> string =&gt;
+            string
+          </p>
+          <p>
+            <i>procedure:</i> <b>string?</b> value =&gt; boolean
+          </p>
+          <p>
+            <i>procedure:</i> <b>string-contains?</b> character
+            =&gt; boolean
+          </p>
+          <p>
+            <i>procedure:</i> <b>string-count</b> string character
+            =&gt; integer
+          </p>
+          <p>
+            <i>procedure:</i> <b>string-get-left</b> string
+            [default] =&gt; value<br>
+             <i>procedure:</i> <b>string-get-right</b> string
+            [default] =&gt; value
+          </p>
+          <p>
+            <i>procedure:</i> <b>string=</b> elt= string1 string2
+            =&gt; boolean
+          </p>
+        </blockquote>
+      </blockquote>
     </blockquote>
-    <h2>
-      Storage Model
-    </h2>Collection instances, as specified in this SRFI, are
-    treated as first-class values. This means they can be stored in
-    any variable.&nbsp; Collections may be divisible, that is, may
-    be composed as combinations of like-typed collections.&nbsp;
-    This SRFI defines modification operators for both purely
-    functional and any range of mutable datastructures.&nbsp; <br>
-    <h2>
-      Folding Enumerators
-    </h2>
-    <p>
-      Regardless of the collection type, all collections must be
-      supported by the generic folding enumeration procedure,
-      <span style=
-      "font-family: monospace;">collection-fold-left</span><i>.</i>&nbsp;
-      The collection fold procedure takes a collection and a
-      folding function as arguments, as well as any number of
-      optional seed values.&nbsp; The collection fold procedure
-      then invokes the folding function on a value of the
-      collection and the seeds, and receives from the folding
-      function a <span style="font-style: italic;">proceed</span>
-      value followed by a like number of seed return values.&nbsp;
-      If the termination value is non-false, the collection fold
-      procedure then invokes the same fold function again with the
-      next collection value and the newly returned seed
-      values.&nbsp; This continues until the elements of the
-      collection are exhausted, or the fold function returns false
-      as the proceed value, at which point the collection fold
-      procedure returns the seed values (if any) returned by the
-      last call to the fold function.
-    </p>
-    <p>
-      In an ordered collection, the collection fold procedure is
-      required to retrieve the values in the order of the
-      underlying ordered collection. In addition, an ordered
-      collection may support <span style=
-      "font-family: monospace;">collection-fold-right</span> which
-      behaves similarly but enumerates the values of the ordered
-      collection in reverse order.
-    </p>
-    <p>
-      Finally, all Dictionary and Sequence datastructures must be
-      supported by <span style=
-      "font-family: monospace;">collection-keys-fold-left</span>
-      which enumerates the Dictionary's keys or the Sequence's
-      indices.&nbsp; If ordered, the collection may be supported by
-      <span style=
-      "font-family: monospace;">collection-keys-fold-right,</span>
-      which again behaves similarly but enumerating over the keys
-      or indices in reverse.
-    </p>
-    <h3>
-      Enumeration Stability
-    </h3>
-    <p>
-      It is undefined in this SRFI whether the process of
-      enumeration over a collection is <i>stable</i>.&nbsp; A
-      stable enumeration will enumerate over the values that exist
-      in a given collection at a certain time.&nbsp; Removing,
-      adding, or changing values from the underlying collection
-      while enumerating will not cause those values to be missing,
-      discovered, or the new value observed respectively in future
-      steps of the enumeration.&nbsp; Modifying a collection while
-      enumerating is permitted to cause an error in either the
-      collection modification or in the enumeration, though this
-      behavior is discouraged.
-    </p>
-    <p>
-      Note that if a collection is purely functional, it will by
-      definition be stable in enumeration, as the modified
-      collection will be space-distinct from the enumerated
-      collection.
-    </p>
-    <h2>
-      Equivalence
-    </h2>
-    <p>
-      Collections are considered equivalent with respect to Scheme's
-      <tt>equal?</tt> operator when they contain a like
-      number of values, and where each value in one collection 
-      is <tt>equal?</tt> to a value in the second
-      collection.
-    <p>
-      For sequences, the ordering of the contained values must also
-      be equivalent.  For dictionaries, each key in one collection 
-      must be equal to the a key compared collection, and the value(s)
-      mapped to by that key must also be equivalent.  If the
-      dictionary is ordered, the order of the mappings must also
-      be the same.
-    <p>
-      Equivalence is checked with this SRFI's <tt>*=</tt>
-      operator, described later.  Implementations may also extend
-      Scheme's <tt>equal?</tt> and <tt>eqv?</tt> 
-      operators to collections, as long as the above semantics hold
-      for <tt>equal?</tt>.  In other words,
-      <tt>(equal? <i>collection ...</i>)</tt> must return the same value as
-      <tt>(collection= equal? <i>collection ...</i>)</tt>.
-    <h2>
-      Immutable Collections
-    </h2>
-    <p>
-      Any collection or instance of a collection may be immutable,
-      or made immutable at any point in its lifecycle. It is an
-      error to add, remove, or modify and values or mappings in an
-      immutable collection.
-    </p>
-    <h2>
-      Homogeneity
-    </h2>
-    <p>
-      Collections may be homogenous (capable of storing values of
-      only one type), though it is anticipated that the majority of
-      collections will be heterogenous. If a collection is
-      homogenous, it is an error to attempt to store a value or key
-      of the wrong type within it.
-    </p>
-    <h2>
-      Size versus Length
-    </h2>
-    <p>
-      Most collections possess a concept of size. The size of a
-      collection is the number of values or mappings it currently
-      contains. This differs from the concept of length in Scheme
-      datastructures, which corresponds more or less directly to
-      the amount of actual storage in use, in terms of cons cell
-      cars or vector slots. A collection may occupy more physical
-      storage than required to contain its values or mappings. An
-      example might be a hashtable collection, which may at any
-      given time contain numerous unoccupied, discontiguous cells.
-      This matter is confused by the collections specified in this
-      API, whose size and length are the same.
-    </p>
-    <p>
-      A collection may not have such a concept, in which case the
-      <tt>collection-size</tt> function must return <tt>#f</tt>.
-      Infinite collections (such as the collection of natural
-      numbers) or lazy collections (such as a network stream) are
-      examples of size-indeterminate collections.
-    </p>
-    <h2>
-      Ordered Collections
-    </h2>
-    <p>
-      Some collections maintain an ordering. These ordered
-      collections provide the additional property of guaranteeing
-      an enumeration will progress over the collection in a least
-      to greatest value precedence fashion, as defined by the
-      collection's <i>ordering function</i>. An ordered
-      collection's constructor must take such a function as input.
-      An ordering function takes two arguments, and returns a
-      boolean, indicating whether the first value is to take
-      precedence in the collection over the second. As an example,
-      an ordered collection of numbers may use <tt>&lt;</tt> or
-      <tt>&lt;=</tt> to order numeric values added to the
-      collection.
-    </p>
-    <p>
-      In order to ensure a consistent ordering in the collection,
-      the ordering function must return the same result for like
-      inputs over time. In most cases, an ordering function should
-      also treat like values as if tested using <tt>equal?</tt> in
-      order to ensure that duplicate values are stored and
-      retrieved consistently.
-    </p>
-    <h2>
-      Dictionaries and Value Equality
-    </h2>
-    <p>
-      Dictionaries store mappings from a keys to values. In order
-      to determine whether a given key matches another (eg. for
-      retrieving values by key), the dictionary must use an
-      <i>equivalence function.</i> Any collection may require or
-      accept an equivalence function in its primary constructor
-      (<tt>make-%</tt>) and in its initializing constructor
-      (<tt>%</tt>). The provided equivalence function must take two
-      values as input and return true if they should be considered
-      equivalent for the purposes of <tt>contains?</tt> or key
-      lookup. If provided, an equivalence function follows an
-      ordering function in an ordered collection, but precedes any
-      other arguments. If not provided, <tt>eqv?</tt> is used as a
-      default equivalence function.
-    </p>
-    <h2>
-      Sequences
-    </h2>
-    <p>
-      A sequence is a collection of values named by a contiguous,
-      zero-based sequence of exact integers. Scheme vectors are a
-      natural example of a sequence. Sequences may or may not be of
-      fixed size. If they are not, sequences allow new values to be
-      added at an undefined point in the sequence, after which some
-      value will exist at the index <tt>(- (collection-size
-      <i>seq</i>) 1)</tt>.
-    </p>
-    <h3>
-      Flexible Sequences
-    </h3>
-    <p>
-      Flexible sequences are sequences which allow insertion of
-      values at arbitrary points in the sequence. Inserting a value
-      at any position except the end of the sequence causes all
-      values with higher indices than the insertion point to
-      <i>shift right</i>, thus having an index increased by one.
-      Similarly, if values are removed from a sequence at any
-      position except the end, all values with higher indices are
-      <i>shifted left</i>, so their former indices are now
-      decreased by one.
-    </p>
-    <h3>
-      Limited Sequences
-    </h3>
-    <p>
-      Limited Sequences are the opposite of flexible sequences.
-      They have a fixed capacity, and thus a fixed maximum size. It
-      may be possible to add and remove values from limited
-      sequences by using a special value to indicate unused slots
-      at the end of a sequence, so limited sequences do not
-      necessarily have fixed size. It is an error to add to a
-      limited sequence that is at its maximum size.
-    </p>
-    <h2>
-      Procedures
-    </h2>
-    <p>
-      Below we describe the naming conventions and semantics of
-      Collections API functions, grouped by collection type. In
-      each function, the name of the collection would replace the
-      percentage mark in the function prototype. Function
-      definitions in sub or sibling collection types absolutely
-      override the same named function in the parent. For example
-      <tt>make-%</tt> in the ordered collection.
-    </p>
-    <p>
-      When <tt>*</tt> is encountered in the definitions below, it
-      is implied that the asterisk is replaced with a function for
-      the specific collection and each of the collections
-      supertypes for which the procedure is defined. For example,
-      if we had a 'list' flexible sequence collection, the
-      functions
-      <tt>list-contains?</tt>,<tt>flexible-sequence-contains?</tt>,<tt>
-      sequence-contains?</tt>,<tt>bag-contains?</tt> must all
-      exist, but <tt>collection-contains?</tt> does not. In
-      addition, it is an error to apply any such function to a
-      collection whose type does not satisfy that implied by the
-      function name.
-    </p>
-    <p>
-      When <tt>%</tt> is encountered in the definitions below, the
-      actual name of the collection is implied. Again, assuming a
-      'list' flexible sequence, <tt>make-%</tt> implies that the
-      function <tt>make-list</tt> exists. <tt>%</tt> as a return
-      value indicates a collection of that specific type.
-    </p>
-    <p>
-      Note that while ordered collections are visually represented
-      as a distinct type in the tree above, 'orderedness' is
-      considered an attribute of the collection, not a distinct set
-      of types.
-    </p>
-    <h2>
-      Functional vs Linear Update
-    </h2>Functions in this SRFI which modify a collection are
-    provided in two flavors.&nbsp; Both <span style=
-    "font-style: italic;">must</span> be implemented by
-    collections.&nbsp; Purely functional updating functions must
-    not side effect the input collection, but must return a new
-    collection which reflects the update.&nbsp; The returned
-    collection may share structure with the input collection, but
-    must be distinct with respect to <span style=
-    "font-family: monospace;">eq?</span> to the input collection,
-    and the effects of the update must <span style=
-    "font-style: italic;">not</span> be reflected in the input
-    collection.<br>
-    <br>
-    Linear update versions of the same update share the name but
-    have the bang (!) character appended.&nbsp; They too return a
-    collection, which is allowed to be the same as and/or share
-    structure with the input collection.&nbsp; However,
-    side-effects to the the input collection are allowed.&nbsp; The
-    caller <span style="font-style: italic;">must</span> use the
-    returned collection to view the effects of the update.&nbsp;
-    The structure of the input collection after the modification is
-    undefined.<br>
-    <br>
-    A collection may naturally be ammenable to either purely
-    functional or purely side-effected updates.&nbsp; In the former
-    case, the linear updating version of the procedure may return
-    the purely functionally updated collection.&nbsp; This does not
-    conflict with the definition of the linear update
-    procedure.&nbsp; Conversely, the purely functional updating
-    function can return a distinct collection by cloning a
-    collection which cannot be functionally updated, and performing
-    the side-effecting modifications to the cloned
-    collection.&nbsp; <br>
-    <br>
-    As the case of functionally updating a collection whose
-    structure is functionally updatable can be expensive (due to
-    worst-case need to clone a large collection), the
-    specifications of all collections are highly encouraged to
-    document the nature of their compatability and efficiency for
-    both the functional and linear updating update functions.<br>
-    <h3>
-      Enumeration
-    </h3><i>procedure:</i> <b>collection-fold-left</b> collection
-    fold-function seed-value ... <b>=&gt;</b> seed-value ...<br>
-    <blockquote>
-      <span style="font-style: italic;">fold-function</span> is a
-      procedure which accepts one more than the number of seed
-      values.&nbsp; The function accepts a single collection value
-      as its first argument, and the seeds as remaining
-      arguments.&nbsp; It must then return a
-                  <span style="font-style: italic;">proceed</span>
-                  value, which if false halts the enumeration, as
-                  well as an equal numer of returned seed values as
-                  arguments.&nbsp; These seed values are then
-                  passed to the next call to the fold function on
-                  the next collection value.<br>
-      <br>
-      When the collection values are exhausted or a false proceed
-      value is received from the fold function, the enumeration
-      ceases and <span style=
-      "font-family: monospace;">collection-fold-left</span> returns
-      the last set of seed values returned by the fold-function.
-    </blockquote><i>procedure:</i> <b>collection-fold-right</b>
-    collection fold-function seed-value ... <b>=&gt;</b> seed-value
-    ...<br>
-    <blockquote>
-      Behaves like <span style=
-      "font-family: monospace;">collection-fold-left</span>, except
-      that the enumeration proceeds in the reverse direction.&nbsp;
-      This procedure is only defined for sequences and ordered
-      collections.
-    </blockquote><i>procedure:</i> <b>collection-keys-fold-left</b>
-    collection fold-function seed-value ... <b>=&gt;</b> seed-value
-    ...<br>
-    <blockquote>
-      Behaves like <span style=
-      "font-family: monospace;">collection-fold-left</span>, but
-      enumerates over the keys or indices of a dictionary or
-      sequence respectively.&nbsp; This procedure is only defined
-      for sequences and dictionaries.
-    </blockquote><i>procedure:</i>
-    <b>collection-keys-fold-right</b> collection fold-function
-    seed-value ... <b>=&gt;</b> seed-value ...<br>
-    <blockquote>
-      Behaves like <span style=
-      "font-family: monospace;">collection-fold-right</span>, but
-      enumerates in the reverse order over the keys or indices of
-      an ordered dictionary or sequence respectively.&nbsp; This
-      procedure is only defined for sequences and ordered
-      dictionaries.
-    </blockquote>
-    <h3>
-      Collections
-    </h3>
-    <p>
-      <i>procedure:</i> <b>collection?</b> value <b>=&gt; value</b>
-    </p>
-    <blockquote>
-      Returns a non-false value if the provided value is a
-      collection.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>%?</b> value <b>=&gt; value</b>
-    </p>
-    <blockquote>
-      Returns a non-false value iff the provided value is an
-      instance of the specific collection type.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-size</b> collection <b>=&gt;</b>
-      integer
-    </p>
-    <blockquote>
-      If the collection has a concept of size, this function
-      returns the number of values or mappings in the collection.
-      If it does not, <tt>#f</tt> must be returned.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-empty?</b> collection <b>=&gt;</b>
-      boolean
-    </p>
-    <blockquote>
-      Returns true iff the given collection is known to be empty.
-      This function should return false if it is known that there
-      are values within the collection, or if it is unknown whether
-      any values exist.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-values</b> collection <b>=&gt;</b>
-      list
-    </p>
-    <blockquote>
-      Returns all the values in the collection as a list. This be
-      done trivially with enumeration, but an implementation may
-      choose to allow this function to behave more efficiently on
-      certain collections.
-    </blockquote>
-    <p>
-     <i>procedure:</i> <b>*=</b> elt= collections ... <b>=&gt;</b> boolean
-    </p>
-    <blockquote>
-     <p>
-      Compares the provided (zero or more) collections for equivalence
-      given the equivalence predicate <tt>elt=</tt>.  If
-      fewer than two collections are provided, a non-false value is
-      returned. If all the provided collections contain the
-      same number of values, and the values are equivalent as
-      described in the section "Equivalence" above, a non-false value
-      is returned.  If neither condition holds,
-      <tt>#f</tt> is returned.
-     <p>
-      The equivalence predicate <tt>elt=</tt> will be applied to 
-      two representative values from pairs of collections at the
-      discretion of the implementor, following the equivalence rules
-      described previously.  If false is returned at any point, 
-      <tt>*=</tt> must return false.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>make-% =&gt; %</b>
-    </p>
-    <blockquote>
-      Constructs a % collection.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>%</b> value ... <b>=&gt; %</b>
-    </p>
-    <blockquote>
-      Constructs a % collection with the zero or more values
-      provided as its initial contents.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-copy</b> collection <b>=&gt; collection</b>
-    </p>
-    <blockquote>   
-      Creates a new collection whose type and contents are the same as the 
-      collection passed as an operand, but which is distinct enough
-      in storage that the new collection cannot be affected by 
-      modifications to the input collection and vice versa.  This copy
-      is <i>shallow</i>, that is, values are copied to the new collection in
-      a way that preserves object identity.
-    </blockquote> 
-    <h3>
-      Ordered Collections
-    </h3>
-    <p>
-      <i>procedure:</i> <b>ordered-collection?</b> value <b>=&gt;
-      value</b>
-    </p>
-    <blockquote>
-      Returns a non-false value if the provided value is an ordered
-      collection.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>make-%</b> ordering-function <b>=&gt;
-      %</b>
-    </p>
-    <blockquote>
-      Constructs a * ordered collection whose ordering is
-      determined by the provided ordering function.
-    </blockquote>
-    <h3>
-      Bags
-    </h3>
-    <p>
-      <i>procedure:</i> <b>bag?</b> value <b>=&gt; value</b>
-    </p>
-    <blockquote>
-      Returns a non-false value if the provided value is a bag.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-contains?</b> bag value <b>=&gt;</b>
-      boolean
-    </p>
-    <blockquote>
-      Returns a non-false value if the bag contains any instances
-      of the given value.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-add</b> bag value <b>=&gt;</b> *<br>
-      <i>procedure:</i> <b>*-add!</b> bag value <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Adds a single value to a bag.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-remove</b> bag value <b>=&gt;</b>
-      *<br>
-      <i>procedure:</i> <b>*-remove!</b> bag value <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Removes a single instance of the given value from the bag.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-remove-any</b> bag value <b>=&gt;</b>
-      *<br>
-      <i>procedure:</i> <b>*-remove-any!</b> bag value <b>=&gt;</b>
-      *
-    </p>
-    <blockquote>
-      Removes any instances of the given value from the bag.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-add-all</b> dest-bag source-bag
-      <b>=&gt;</b> *<br>
-      <i>procedure:</i> <b>*-add-all!</b> dest-bag source-bag
-      <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Adds all the values in the source bag to the destination bag.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-remove-all</b> dest-bag source-bag
-      <b>=&gt;</b> *<br>
-      <i>procedure:</i> <b>*-remove-all!</b> dest-bag source-bag
-      <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Removes one instance of each value found in source-bag from
-      dest-bag.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-remove-any-of</b> dest-bag source-bag
-      <b>=&gt;</b> *<br>
-      <i>procedure:</i> <b>*-remove-any-of!</b> dest-bag source-bag
-      <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Removes any instances of each value found in source-bag from
-      dest-bag.
-    </blockquote>
-    <h3>
-      Sets
-    </h3>
-    <p>
-      <i>procedure:</i> <b>set?</b> value <b>=&gt;</b> boolean
-    </p>
-    <blockquote>
-      Returns a non-false value if the provided value is a set.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-contains?</b> set value <b>=&gt;</b>
-      boolean
-    </p>
-    <blockquote>
-      Returns a non-false value if the set contains any instances
-      of the given value.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-add</b> set value <b>=&gt;</b> *<br>
-      <i>procedure:</i> <b>*-add!</b> set value <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Adds a value to the set.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-remove</b> set value <b>=&gt;</b>
-      *<br>
-      <i>procedure:</i> <b>*-remove!</b> set value <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Removes the given value from the set.
-    </blockquote>
-    <h3>
-      Sequences
-    </h3>
-    <p>
-      <i>procedure:</i> <b>sequence?</b> value <b>=&gt;</b> boolean
-    </p>
-    <blockquote>
-      Returns a non-false value if the provided value is a
-      sequence.
-    </blockquote><br>
-    <i>procedure:</i> <b>*-ref</b> sequence integer <b>=&gt;</b>
-    boolean 
-    <blockquote>
-      Returns the value stored in the sequence at the integer index
-      provided. It is an error to reference an index outside the
-      range of the sequence.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-set</b> sequence integer value
-      <b>=&gt;</b> *<br>
-      <i>procedure:</i> <b>*-set!</b> sequence integer value
-      <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Replaces the value stored in the sequence at the integer
-      index provided with the given value. It is an error to
-      reference an index outside the range of the sequence. It is
-      recommended that the return value of this function be the
-      previous value stored at the given index.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-add</b> sequence value <b>=&gt;</b>
-      *<br>
-      <i>procedure:</i> <b>*-add!</b> sequence value <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Adds the given value to the end of the sequence.
-    </blockquote>
-    <h3>
-      Flexible Sequences
-    </h3>
-    <p>
-      <i>procedure:</i> <b>flexible-sequence?</b> value
-      <b>=&gt;</b> boolean
-    </p>
-    <blockquote>
-      Returns a non-false value if the provided value is a flexible
-      sequence.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-insert</b> flexible-sequence index
-      value <b>=&gt;</b> *<br>
-      <i>procedure:</i> <b>*-insert!</b> flexible-sequence index
-      value <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Inserts the provided value at the given index in the flexible
-      sequence. If index is not equal to the
-      <tt>collection-size</tt> of the sequence, this will result in
-      the current value at index and subsequent values' indices to
-      increase by one.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-delete</b> flexible-sequence index
-      <b>=&gt;</b> *<br>
-      <i>procedure:</i> <b>*-delete!</b> flexible-sequence index
-      <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Deletes the current value at the given index in the flexible
-      sequence. If index is not equal to the
-      <tt>collection-size</tt> - 1 of the sequence, this will
-      result in the subsequent values' indices to decrease by one,
-      filling the newly created gap.
-    </blockquote>
-    <h3>
-      Dictionaries
-    </h3>
-    <p>
-      <i>procedure:</i> <b>dict?</b> value <b>=&gt;</b> boolean
-    </p>
-    <blockquote>
-      Returns a non-false value if the provided value is a flexible
-      sequence
-    </blockquote>
-    <p>
-      <i>optional-procedure:</i> <b>make-%</b>
-      [equivalence-function] <b>=&gt; %</b>
-    </p>
-    <blockquote>
-      Constructs a % dictionary whose equivalence function is that
-      provided. If not provided, eqv? is used.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>%</b> [equivalence-function] (key .
-      value) ... <b>=&gt; *</b>
-    </p>
-    <blockquote>
-      Constructs a % dictionary with the zero or more bindings
-      provided as it's initial values. If provided, the keys will
-      be compared with the given equivalence function, otherwise
-      eqv? is used. Each operand after the equivalence function to
-      a dictionary constructor must be a Scheme pair.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-keys</b> dictionary <b>=&gt;</b> list
-    </p>
-    <blockquote>
-      Returns all the keys in the dictionary as a list. This can be
-      done trivially with enumeration, but this procedure is
-      provided if an implementation can more efficiently perform
-      this operation directly.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-get</b> dictionary key [default]
-      <b>=&gt;</b> value
-    </p>
-    <blockquote>
-      Retrieves the value of the mapping for the given key. If no
-      such mapping exists, the value of <tt>default</tt> is
-      returned, or <tt>#f</tt> if default was not provided.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-put</b> dictionary key value
-      <b>=&gt;</b> *<br>
-      <i>procedure:</i> <b>*-put!</b> dictionary key value
-      <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Sets the value the mapping for the given key to the given
-      value.
-    </blockquote>
-    <p>
-      <i>optional-procedure:</i> <b>*-put</b> dictionary key value
-      [default] <b>=&gt;</b> value<br>
-      <i>optional-procedure:</i> <b>*-put!</b> dictionary key value
-      [default] <b>=&gt;</b> value
-    </p>
-    <blockquote>
-      Sets the value the mapping for the given key to the given
-      value. If the mapping previously existed, this function
-      returns the previous value of that mapping. If no such
-      mapping existed, the value of default is returned, or
-      <tt>#f</tt> if no default value was provided. It is preferred
-      that dictionary collections implement this form of
-      <tt>dict-put!</tt> over the previous one if it is feasible.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-update</b> dictionary key func
-      [default] <b>=&gt;</b> *<br>
-      <i>procedure:</i> <b>*-update!</b> dictionary key func
-      [default] <b>=&gt;</b> *<br>
-    </p>
-    <blockquote>
-      Updates the value of the dictionary entry mapped by <tt>key</tt> 
-      to the results of applying the single argument function <tt>func</tt>
-      to the previous value.  If no such previous value existed, the 
-      value of <tt>default</tt> is provided to the function, otherwise
-      <tt>#f</tt> is passed.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-remove</b> dictionary key <b>=&gt;</b>
-      *<br>
-      <i>procedure:</i> <b>*-remove!</b> dictionary key
-      <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Removes an existing mapping for the given key. If there was
-      no such mapping, this call does nothing.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-remove-any</b> dictionary key
-      <b>=&gt;</b> *<br>
-      <i>procedure:</i> <b>*-remove-any!</b> dictionary key
-      <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Removes any existing mappings for the given key. If there
-      weren'y any such mappings, this call does nothing. This
-      procedure must be defined only if the dictionary supports
-      multiple mappings per key.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-remove-all</b> dictionary bag
-      <b>=&gt;</b> *<br>
-      <i>procedure:</i> <b>*-remove-all!</b> dictionary bag
-      <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Removes one instance of each mapping from keys found in the
-      given bag.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-remove-any-of</b> dictionary bag
-      <b>=&gt;</b> *<br>
-      <i>procedure:</i> <b>*-remove-any-of!</b> dictionary bag
-      <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Removes any instances of mappings from keys found in bag from
-      the dictionary.
-    </blockquote>
-    <p>
-      <i>procedure:</i> <b>*-add-all</b> dest-dict source-dict
-      <b>=&gt;</b> *<br>
-      <i>procedure:</i> <b>*-add-all!</b> dest-dict source-dict
-      <b>=&gt;</b> *
-    </p>
-    <blockquote>
-      Adds all the mappings in the source dictionary to the
-      destination dictionary.
-    </blockquote>
-    <h2>
-      Scheme Collections
-    </h2>
-    <p>
-      This SRFI aditionally specifies a Collections API for the
-      Scheme list, the derived association list, the vector and
-      string types.
-    </p>
-    <h4>
-      Scheme Lists
-    </h4>
-    <p>
-      Scheme List collections are flexible sequences. In the
-      reference implementation provided by this SRFI, lists have an
-      unstable enumeration.
-    </p>
-    <p>
-      <i>procedure:</i> <b>make-list</b> [size [default]]
-      <b>=&gt;</b> list
-    </p>
-    <blockquote>
-      Creates a new list. If size is provided, it will start out
-      with size instances of the value given as default. If default
-      is not provided, the contents of the list are undefined.
-    </blockquote><i>procedure:</i> <b>list</b> value ... =&gt;
-    list<br>
-    <br>
-    <p>
-      <i>procedure:</i> <b>list-copy</b> list
-      <b>=&gt;</b> list
-    </p>
-    <p>
-      <i>procedure:</i> <b>list?</b> value =&gt; boolean
-    </p>
-    <p>
-      <i>procedure:</i> <b>list-contains?</b> list value =&gt;
-      boolean
-    </p>
-    <p>
-      <i>procedure:</i> <b>list=</b> elt= list1 list2 =&gt;
-      boolean
-    </p>
-    <p>
-      <i>procedure:</i> <b>list-add</b> list value =&gt; list<br>
-      <i>procedure:</i> <b>list-add!</b> list value =&gt; list
-    </p>
-    <p>
-      <i>procedure:</i> <b>list-remove</b> list value =&gt; list<br>
-      <i>procedure:</i> <b>list-remove!</b> list value =&gt; list
-    </p>
-    <p>
-      <i>procedure:</i> <b>list-remove-any</b> list value =&gt;
-      list<br>
-      <i>procedure:</i> <b>list-remove-any!</b> list value =&gt; list
-    </p>
-    <p>
-      <i>procedure:</i> <b>list-add-all</b> list bag =&gt; list<br>
-      <i>procedure:</i> <b>list-add-all!</b> list bag =&gt; list
-    </p>
-    <p>
-      <i>procedure:</i> <b>list-remove-all</b> list bag =&gt; list<br>
-      <i>procedure:</i> <b>list-remove-all!</b> list bag =&gt; list
-    </p>
-    <p>
-      <i>procedure:</i> <b>list-remove-any-of</b> list bag =&gt;
-      list<br>
-      <i>procedure:</i> <b>list-remove-any-of!</b> list bag =&gt; list
-    </p>
-    <p>
-      <i>procedure:</i> <b>list-insert</b> list bag =&gt; list<br>
-      <i>procedure:</i> <b>list-insert!</b> list bag =&gt; list
-    </p>
-    <p>
-      <i>procedure:</i> <b>list-delete</b> list index =&gt; list<br>
-      <i>procedure:</i> <b>list-delete!</b> list index =&gt; list
-    </p>
-    <h4>
-      Scheme Association Lists
-    </h4>
-    <p>
-      Scheme association lists are dictionaries. In the reference
-      implementation provided by this SRFI, alists have an unstable
-      enumeration. It is difficult to fully map the collections API
-      onto alists, as they are Scheme lists. Difficulty would be
-      encountered in adding to an empty alist, as side-effection of
-      the variable holding the Scheme empty-list would be required.
-      For this reason alists produced by this SRFI have a
-      placeholder value at the front of the list so that its
-      contents can always be side-effected.
-    </p>
-    <p>
-      <i>procedure:</i> <b>make-alist</b> [equivalence-function]
-      =&gt; alist<br>
-      <i>procedure:</i> <b>alist</b> [equivalence-function] (key .
-      value) ... =&gt; alist
-    </p>
-    <p>
-      <i>procedure:</i> <b>alist-copy</b> alist
-      =&gt; alist<br>
-    </p>
-    <p>
-      <i>procedure:</i> <b>alist?</b> value =&gt; boolean
-    </p>
-    <p>
-      <i>procedure:</i> <b>alist=</b> elt= alist1 alist2 =&gt;
-      boolean
-    </p>
-    <p>
-      <i>procedure:</i> <b>alist-keys</b> value =&gt; scheme-list
-    </p>
-    <p>
-      <i>procedure:</i> <b>alist-get</b> alist value =&gt; value
-    </p>
-    <p>
-      <i>procedure:</i> <b>alist-put</b> alist value value =&gt;
-      alist<br>
-      <i>procedure:</i> <b>alist-put!</b> alist value value =&gt; alist<br>
-      <i>procedure:</i> <b>alist-update</b> alist value func [default]=&gt; alist<br>
-      <i>procedure:</i> <b>alist-update!</b> alist value func [default]=&gt; alist
-    </p>
-    <p>
-      <i>procedure:</i> <b>alist-remove</b> alist value =&gt; alist<br>
-      <i>procedure:</i> <b>alist-remove!</b> alist value =&gt; alist
-    </p>
-    <p>
-      <i>procedure:</i> <b>alist-remove-any</b> alist value =&gt;
-      alist<br>
-      <i>procedure:</i> <b>alist-remove-any!</b> alist value =&gt;
-      alist
-    </p>
-    <p>
-      <i>procedure:</i> <b>alist-remove-all</b> alist bag =&gt;
-      alist<br>
-      <i>procedure:</i> <b>alist-remove-all!</b> alist bag =&gt; alist
-    </p>
-    <p>
-      <i>procedure:</i> <b>alist-remove-any-of</b> alist bag =&gt;
-      alist<br>
-      <i>procedure:</i> <b>alist-remove-any-of!</b> alist bag =&gt;
-      alist
-    </p>
-    <p>
-      <i>procedure:</i> <b>alist-add-all</b> alist dict =&gt; alist<br>
-      <i>procedure:</i> <b>alist-add-all!</b> alist dict =&gt; alist
-    </p>
-    <h4>
-      Scheme Vectors
-    </h4>
-    <p>
-      Scheme Vectors are limited sequences. In the reference
-      implementation provided by this SRFI, vectors have an
-      unstable enumeration.
-    </p>
-    <p>
-      <i>procedure:</i> <b>make-vector</b> size [default]
-      <b>=&gt;</b> list
-    </p>
-    <blockquote>
-      Creates a new vector with the provided size. If default is
-      not provided, the contents of the vector are undefined.
-    </blockquote><i>procedure:</i> <b>vector</b> value ... =&gt;
-    vector <br>
-    <br>
-    <p>
-      <i>procedure:</i> <b>vector-copy</b> vector
-      =&gt; vector<br>
-    </p>
-    <p>
-      <i>procedure:</i> <b>vector?</b> value =&gt; boolean
-    </p>
-    <p>
-      <i>procedure:</i> <b>vector-contains?</b> value =&gt; boolean
-    </p>
-    <p>
-      <i>procedure:</i> <b>vector=</b> elt= vector1 vector2 =&gt; boolean
-    </p>     
-    <h4>
-      Scheme Strings
-    </h4>
-    <p>
-      Scheme strings are limited homogenous sequences which can
-      only store characters. In the reference implementation
-      provided by this SRFI, strings have an unstable enumeration.
-    </p>
-    <p>
-      <i>procedure:</i> <b>make-string</b> size [default-character]
-      =&gt; string<br>
-      <i>procedure:</i> <b>string</b> character ... =&gt; string
-    </p>
-    <p>
-      <i>procedure:</i> <b>string-copy</b> string
-      =&gt; string<br>
-    <p>
-      <i>procedure:</i> <b>string?</b> value =&gt; boolean
-    </p>
-    <p>
-      <i>procedure:</i> <b>string-contains?</b> character =&gt;
-      boolean
-    </p>
-    <p>
-      <i>procedure:</i> <b>string=</b> elt= string1 string2 =&gt; boolean
-    </p>         
-
-    <h1>References</h1>
-
-    <p>
-      The Dylan Reference Guide. <a href=
-      "http://www.gwydiondylan.org/drm/">http://www.gwydiondylan.org/drm/</a><br>
-
-      The Java Collections Framework. <a href=
-      "http://java.sun.com/products/jdk/1.2/docs/guide/collections/">
-      http://java.sun.com/products/jdk/1.2/docs/guide/collections/</a>
-    </p>
 
     <h1>Implementation</h1>
 
@@ -1213,8 +1763,10 @@
       This SRFI behaves more as a meta-SRFI for future SRFIs to
       define concrete collection types. However, a reference
       implementation for the collections wrapper around the common
-      Scheme types is provided in <a href=
-      "http://www.bloodandcoffee.net/campbell/code/srfi-44.scm">srfi-44.scm</a>.
+      Scheme types is provided in the archive <a href=
+      "http://www.bloodandcoffee.net/campbell/code/srfi-44.tar.gz">srfi-44.tar.gz</a>.
+      It requires SRFI's 1 (list-lib), 23 (error), and the
+      Tiny-CLOS portable object system to provide type dispatch.
     </p>
 
     <h1>Copyright</h1>
@@ -1256,6 +1808,6 @@
     <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Francisco Solsona</a></address>
     <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
     <!-- hhmts start --><!-- hhmts end -->
-    Last modified: Thu Mar 20 21:10 CST 2003
+    Last modified: Tue Jul 29 12:10 CST 2003
   </body>
 </html>
