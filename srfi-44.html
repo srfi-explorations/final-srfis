@@ -1,4 +1,5 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
 <html>
 <head>
   <meta content=
@@ -9,14 +10,13 @@
 </head>
 
 <body>
-
   <H1>Title</H1>
 
-    Collections
+Collections
 
   <H1>Author</H1>
 
-    Scott G. Miller
+Scott G. Miller
 
     <H1>Status</H1> 
 
@@ -35,22 +35,23 @@
 
 
     <p><ul>
-      <li>Received: 2003/04/23
-      <li>Draft: 2003/04/28-2003/07/28
-      <li>Revised: 2003/07/02
-      <li>Revised: 2003/07/24
-      <li>Revised: 2003/08/10
-      <li>Revised: 2003/08/19
-      <li>Revised: 2003/08/27
-      <li>Revised: 2003/09/11
-      <li>Revised: 2003/10/07
-      <li>Revised: 2003/10/08
-      <li>Revised: 2003/11/24
+      <li>Received: 2003/04/23</li>
+      <li>Draft: 2003/04/28-2003/07/28</li>
+      <li>Revised: 2003/07/02</li>
+      <li>Revised: 2003/07/24</li>
+      <li>Revised: 2003/08/10</li>
+      <li>Revised: 2003/08/19</li>
+      <li>Revised: 2003/08/27</li>
+      <li>Revised: 2003/09/11</li>
+      <li>Revised: 2003/10/07</li>
+      <li>Revised: 2003/10/08</li>
+      <li>Revised: 2003/11/24</li>
+      <li>Revised: 2003/11/28</li>
     </ul></p>
+
 
   <H1>Abstract</H1>
 
-    
   <p>A Collections API which defines a common naming scheme and set
   of operations for creating, accessing, and manipulating common
   datastructures in Scheme. The API defines accessors, a common
@@ -321,7 +322,7 @@
 
     <p>In addition to the conceptual type hierarchy which dictates
     the available functions for a given collection, collections
-    also may possess any of three (in this SRFI) attributes which
+    also may possess any of four (in this SRFI) attributes which
     specify whether certain global functions are well defined for
     the collection. Attributes may also specify additional
     parameters to the collection's constructor.</p>
@@ -354,8 +355,11 @@
       non-sequences as well, for example to implement a queue
       datastructure as a bag.</p>
 
-      <p>Directional collections provides</p>
-
+      <p>The collection left fold operator must enumerate
+      over the values of a directional collection from left to right
+      order as defined by the directional collection, and the right
+      fold must correspondingly enumerate from right to left.
+      </p>
       <p>A collection cannot be both ordered and directional
       simultaneously. The left and right accessors of ordered
       collections access least-precedent and most-precedent values,
@@ -445,8 +449,9 @@ unnecessarily allocated storage.<br>
     in this SRFI. Concrete collection types can inherit from an
     abstract type or other concrete types, but abstract types may
     not inherit their interface from a concrete type. For example,
-    a new hash-table map type will be a <tt>hash-table?</tt>, and a
-    <tt>map?</tt> but cannot also be an <tt>alist-map?</tt>.</p>
+    a new dictionary abstract type may yield <tt>#t</tt> when 
+    applied from <tt>dictionary??</tt>, and 
+    <tt>map?</tt> but must not for <tt>alist-map?</tt>.</p>
 
     <h2><a name="foldingenums">Folding Enumerators</a></h2>
 
@@ -473,10 +478,11 @@ unnecessarily allocated storage.<br>
     is required to apply the values in the order of the underlying
     ordered collection. In addition, an ordered collection must
     apply the values in the reverse order as the left fold when
-    enumerated by <tt>collection-fold-right</tt>. Likewise, the
-    left fold procedure must proceed through the values of a
-    sequence in increasing index order, while the right fold
-    proceeds in decreasing index order.<br>
+    enumerated by <tt>collection-fold-right</tt>.  The
+    left fold procedure must proceed left to right 
+    through the values of a directional collection such as a sequence
+    (increasing index order), while the right fold
+    proceeds right to left (decreasing index order.)  <br>
     <br>
 
     <p>Finally, all Map and Sequence datastructures must be
@@ -573,7 +579,7 @@ return false.<br>
     or mappings. An example might be a hashtable collection, which
     may at any given time contain numerous unoccupied,
     discontiguous cells. This matter is confused by the collections
-    specified in this API, whose size and length may be the
+    specified in this API, whose size and length are the
     same.</p>
 
     <p>Put another way, <tt>collection-size</tt> should return the
@@ -678,8 +684,8 @@ return false.<br>
     <p>A sequence is a directional collection of values named by a
     contiguous sequence of exact integers in the range
     [0,<tt>(collection-size sequence)</tt>). Scheme vectors are a
-    natural example of a sequence. Sequences may or may not be of
-    fixed size. If they are not, sequences allow new values to be
+    natural example of a sequence. Sequences may or may not be limited.
+    If they are not, sequences allow new values to be
     added at an undefined point in the sequence, after which some
     value will exist at the index <tt>(- (collection-size
     <i>sequence</i>) 1)</tt>.</p>
@@ -738,13 +744,14 @@ return false.<br>
     actual name of the collection is implied. Again, assuming a
     'list' flexible sequence, <tt>make-%</tt> implies that the
     function <tt>make-list</tt> exists. <tt>%</tt> as a return
-    value indicates a collection of that specific type.</p>
+    value from a constructor indicates a collection of that specific type.</p>
 
     <p>Encountering <tt>%</tt> as a return type indicates that a
     collection of the same type as the input is returned.</p>
 
     <p>Occasionally an operator will be specified in a collection
-    subtype which was already defined in a supertype or by an
+    subtype which was already defined with the same signature
+    in a supertype or by an
     attribute which the collection subtype is known to support.
     This is done to clarify the semantics of the operator as
     defined for that specific subtype.</p>
@@ -1308,7 +1315,7 @@ return false.<br>
         Returns a non-false value if the input set is a subset
         (that is, equal to or a strict subset of) the remaining
         sets. If only the input set is provided, a non-false value
-        is returned, otherwise the set is compared tested to be a
+        is returned, otherwise the set is tested to be a
         subset of each remaining set in left to right order. As
         soon as the set is not a subset of any one argument,
         <tt>#f</tt> is returned.
@@ -1455,8 +1462,7 @@ return false.<br>
         Replaces the value stored in the input sequence at the
         exact integer index provided with the given value. It is an
         error to reference an index outside the range of the
-        sequence. It is recommended that the return value of this
-        function be the previous value stored at the given index.
+        sequence.
       </blockquote>
 
       <p><i>procedure:</i> <b>*-add</b> * value <b>=&gt;</b> %<br>
@@ -1464,6 +1470,37 @@ return false.<br>
 
       <blockquote>
         Adds the given value to the end of the input sequence.
+      </blockquote>
+
+      <p><i>procedure:</i> <b>*-replace-from</b> * dest-start source-sequence [source-start [source-end]]
+      <b>=&gt;</b> %<br>
+      <i>procedure:</i> <b>*-replace-from!</b> * dest-start source-sequence [source-start [source-end]]
+      <b>=&gt;</b> %<br>
+      </p>
+
+      <blockquote>
+        Replaces several values in the input sequence with values from
+	from the source sequence.  <tt>dest-start</tt>
+	is the exact integer first index in the input sequence which
+	will be replaced by the copied values.  
+	<tt>source-start</tt> is the exact
+	integer index which starts the subsequence of values which 
+	will be copied over the input sequence.  If omitted, it
+	defaults to 0.  If provided, <tt>source-end</tt>
+	specifies the first index above <tt>source-start</tt> which is
+	not copied.  If omitted, it's value defaults to
+	<tt>(sequence-size source-sequence)</tt>.  
+	In either case, <tt>(- source-end source-start)</tt> values
+	will be copied.  It is an error if the number of values being 
+	copied to the <tt>dest-start</tt> and subsequent indices
+	exceeds the size of the input sequence.
+	In short, this function proceeds to replace the values of
+	the input sequence from indices <tt>[dest-start, (dest-start +
+	count))</tt> with values from the source sequence from indices
+	<tt>[source-start, source-end)</tt>, where count is
+	<tt>(- source-end source-start)</tt>.
+        This copy is <i>shallow</i>, that is, values are copied to
+        the input sequence in a way that preserves object identity.
       </blockquote>
 
       <p><i>procedure:</i> <b>*-copy</b> * [start [end]]
@@ -2007,6 +2044,13 @@ return false.<br>
         <i>procedure:</i> <b>list-delete-all-from!</b> list bag
         <b>=&gt;</b> list</p>
 
+        <p><i>procedure:</i> <b>list-replace-from</b> dest-start
+        source-list [source-start [source-end]]
+        <b>=&gt;</b> list<br>
+        <i>procedure:</i> <b>list-replace-from!</b>  dest-start
+        source-list [source-start [source-end]]
+        <b>=&gt;</b> list</p>
+	
         <p><i>procedure:</i> <b>list-clear</b> list <b>=&gt;</b>
         list<br>
         <i>procedure:</i> <b>list-clear!</b> list <b>=&gt;</b>
@@ -2187,6 +2231,13 @@ return false.<br>
         <i>procedure:</i> <b>vector-set!</b> vector index value
         <b>=&gt;</b> vector</p>
 
+        <p><i>procedure:</i> <b>vector-replace-from</b> dest-start
+        source-vector [source-start [source-end]]
+        <b>=&gt;</b> vector<br>
+        <i>procedure:</i> <b>vector-replace-from!</b>  dest-start
+        source-vector [source-start [source-end]]
+        <b>=&gt;</b> vector</p>
+
         <p><i>procedure:</i> <b>vector=</b> elt= vectors ...
         <b>=&gt;</b> boolean</p>
 
@@ -2244,6 +2295,13 @@ return false.<br>
         <p><i>procedure:</i> <b>string-set</b> string index
         character <b>=&gt;</b> string<br>
         <i>procedure:</i> <b>string-set!</b> string index character
+        <b>=&gt;</b> string</p>
+
+        <p><i>procedure:</i> <b>string-replace-from</b> dest-start
+        source-string [source-start [source-end]]
+        <b>=&gt;</b> string<br>
+        <i>procedure:</i> <b>string-replace-from!</b>  dest-start
+        source-string [source-start [source-end]]
         <b>=&gt;</b> string</p>
 
         <p><i>procedure:</i> <b>string=</b> elt= strings ...
@@ -2314,7 +2372,7 @@ return false.<br>
       returns the number of bytes a multi-byte string occupies.</p>
     </blockquote>
 
-    <h1><a name="implementation">Implementation</a></h1>
+    <H1><a name="implementation">Implementation</a></H1>
 
     <p>This SRFI behaves more as a meta-SRFI for future SRFIs to
     define concrete collection types. However, a reference
@@ -2324,7 +2382,7 @@ return false.<br>
     It requires SRFI's 1 (list-lib), 23 (error), and the Tiny-CLOS
     portable object system to provide type dispatch.</p>
 
-    <h1><a name="futurework">Future Work</a></h1>
+    <H1><a name="futurework">Future Work</a></H1>
 
     <p>This SRFI does not specify any concrete collections beyond
     those which already exist in Scheme. Obvious future work
@@ -2364,7 +2422,7 @@ return false.<br>
     Future work may take up these issues and devote the proper time
     which they deserve.</p>
 
-    <h1><a name="references">References</a></h1>
+    <H1><a name="references">References</a></H1>
 
     <p>Much of this design is influenced by other languages
     collection interfaces. Below are links to other languages'
@@ -2434,13 +2492,14 @@ return false.<br>
     BUT NOT LIMITED TO ANY WARRANTY THAT THE USE OF THE INFORMATION
     HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED WARRANTIES
     OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.</p>
-
     <hr>
+
     <address>Author: <a href="mailto:scgmille@freenetproject.org">Scott G. Miller</a></address>
     <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Francisco Solsona</a></address>
     <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
-    <!-- hhmts start --><!-- hhmts end -->
-    Last modified: Wed Nov 19 15:51 CST 2003
+    <!-- hhmts start -->
+Last modified: Fri Nov 28 18:44:08 CST 2003
+<!-- hhmts end -->
   </blockquote>
 </body>
 </html>
