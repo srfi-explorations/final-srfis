@@ -12,7 +12,7 @@ Array
 
 <H1>Author</H1>
 
-Aubrey Jaffer and Radey Shouman
+Aubrey Jaffer
 
     <H1>Status</H1>
     
@@ -33,7 +33,7 @@ Aubrey Jaffer and Radey Shouman
 
 <H1>Abstract</H1>
 
-"<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/array.scm?rev=1.20&#38;content-type=text/vnd.viewcvs-markup">slib/array.scm</A>"
+"<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/array.scm?rev=1.23&#38;content-type=text/vnd.viewcvs-markup">slib/array.scm</A>"
 synthesizes array ideas from Common-Lisp and Alan
 Bawden with homogeneous vector ideas from
 <A HREF="http://srfi.schemers.org/srfi-4">SRFI-4</A> and
@@ -45,9 +45,9 @@ into Scheme.
 <H1>Issues</H1>
 
 The Scheme reports mention hardly any specific precisions for numbers.
-Uniform arrays necessarily must have finite precision.  We have
-followed Feeley's <A HREF="http://srfi.schemers.org/srfi-4">SRFI-4</A>
-lead for homogeneous-type precisions and names, although without the
+Uniform arrays necessarily must have finite precision.  I followed
+Feeley's <A HREF="http://srfi.schemers.org/srfi-4">SRFI-4</A> lead for
+homogeneous-type precisions and names, although without the
 <CODE>"vector"</CODE> suffixes.
 <P>
 I have renamed the array creation procedure to
@@ -60,6 +60,17 @@ same-named procedure in
 <A HREF="http://srfi.schemers.org/srfi-25">SRFI-25</A>.
 Type dispatch on the first argument to <CODE>array-set!</CODE> could
 support both SRFIs simultaneously.
+<P>
+An attraction of this order can be seen in the uniformity of argument
+order for SRFI-47's procedures:
+<P>
+<PRE>
+        (create-array  proto        bound1 bound2 ...)
+   (make-shared-array  array mapper bound1 bound2 ...)
+          (array-set!  array obj    index1 index2 ...)
+    (array-in-bounds?  array        index1 index2 ...)
+           (array-ref  array        index1 index2 ...)
+</PRE>
 <P>
 All the procedures except <CODE>create-array</CODE> and
 <CODE>array=?</CODE> originate from Alan Bawden's "array.scm".
@@ -74,7 +85,7 @@ In response to comments, I have removed the array read-syntax from
 SRFI-47.  The remaining package of procedures is completely portable
 to R4RS and R5RS Schemes as implemented by
 
-<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/array.scm?rev=1.20&#38;content-type=text/vnd.viewcvs-markup">slib/array.scm</A>.
+<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/array.scm?rev=1.23&#38;content-type=text/vnd.viewcvs-markup">slib/array.scm</A>.
 <P>
 
 <H1>Rationale</H1>
@@ -174,10 +185,9 @@ be written:
 
 
 <P>
-Returns <CODE>#t</CODE> if <VAR>array1</VAR> and <VAR>array2</VAR> have the same rank and shape and the
-corresponding elements of <VAR>array1</VAR> and <VAR>array2</VAR> are <CODE>equal?</CODE>.
-
-
+Returns <CODE>#t</CODE> if <VAR>array1</VAR> and <VAR>array2</VAR>
+have the same rank and dimensions and the corresponding elements of
+<VAR>array1</VAR> and <VAR>array2</VAR> are <CODE>equal?</CODE>.
 
 <PRE>
 (array=? (create-array '#(foo) 3 3)
@@ -189,23 +199,27 @@ corresponding elements of <VAR>array1</VAR> and <VAR>array2</VAR> are <CODE>equa
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>create-array</B> <I>prototype bound1 bound2 ...</I>
+<DT><U>Function:</U> <B>create-array</B> <I>prototype k1 k2 ...</I>
 <DD><A NAME="IDX1051"></A>
 
 
 <P>
-Creates and returns an array of type <VAR>prototype</VAR> with dimensions <VAR>bound1</VAR>, <VAR>bound2</VAR>,
-... and filled with elements from <VAR>prototype</VAR>.  <VAR>prototype</VAR> must be an array,
+Creates and returns an array of type <VAR>prototype</VAR> with
+dimensions <VAR>k1</VAR>, <VAR>k2</VAR>, ... and filled with elements
+from <VAR>prototype</VAR>.  <VAR>prototype</VAR> must be an array,
 vector, or string.  The implementation-dependent type of the returned
-array will be the same as the type of <VAR>prototype</VAR>; except if that would be a
-vector or string with non-zero origin, in which case some variety of
-array will be returned.
-
-
+array will be the same as the type of <VAR>prototype</VAR>.  except if
+that would be a vector or string with more than one dimension, in
+which case some variety of array will be returned.
 <P>
-If the <VAR>prototype</VAR> has no elements, then the initial contents of the returned
-array are unspecified.  Otherwise, the returned array will be filled
-with the element at the origin of <VAR>prototype</VAR>.
+If the <VAR>prototype</VAR> has no elements, then the initial contents
+of the returned array are unspecified.  Otherwise, the returned array
+will be filled with the element at the origin of <VAR>prototype</VAR>.
+<P>
+<PRE>
+(create-array '#(foo) 2 3) =&gt; #2A((foo foo foo) (foo foo foo))
+</PRE>
+
 </DL>
 <P>
 These functions return a prototypical uniform-array enclosing the
@@ -390,19 +404,10 @@ least 8 bits of precision.
 <DD><A NAME="IDX1078"></A>
 Returns a boolean uniform-array prototype.
 </DL>
-When constructing an array, <VAR>bound</VAR> is either an inclusive range of
-indices expressed as a two element list, or an upper bound expressed as
-a single integer.  So
-
-
-
-<PRE>
-(create-array '#(foo) 3 3) == (create-array '#(foo) '(0 2) '(0 2))
-</PRE>
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>make-shared-array</B> <I>array mapper bound1 bound2 ...</I>
+<DT><U>Function:</U> <B>make-shared-array</B> <I>array mapper k1 k2 ...</I>
 <DD><A NAME="IDX1079"></A>
 
 
@@ -445,31 +450,12 @@ returned.
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>array-shape</B> <I>array</I>
-<DD><A NAME="IDX1081"></A>
-
-
-<P>
-Returns a list of inclusive bounds.
-
-
-
-<PRE>
-(array-shape (create-array '#() 3 5))
-   =&gt; ((0 2) (0 4))
-</PRE>
-
-</DL>
-
-<P>
-<DL>
 <DT><U>Function:</U> <B>array-dimensions</B> <I>array</I>
 <DD><A NAME="IDX1082"></A>
 
 
 <P>
-<CODE>array-dimensions</CODE> is similar to <CODE>array-shape</CODE> but replaces
-elements with a 0 minimum with one greater than the maximum.
+Returns a list of dimensions.
 
 
 
@@ -558,7 +544,7 @@ by <CODE>array-set!</CODE> is unspecified.
 
 <H1>Implementation</H1>
 
-<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/array.scm?rev=1.20&#38;content-type=text/vnd.viewcvs-markup">slib/array.scm</A>
+<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/array.scm?rev=1.23&#38;content-type=text/vnd.viewcvs-markup">slib/array.scm</A>
 implements array procedures for R4RS or R5RS compliant Scheme
 implementations with <DFN>records</DFN> as implemented by
 <A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/record.scm?rev=1.6&#38;content-type=text/vnd.viewcvs-markup">slib/record.scm</A>
@@ -602,5 +588,6 @@ Last modified: Thu Nov 20 20:49:09 GMT 2003<A    HREF="http://validator.w3.org/c
 <!-- hhmts end -->
   </body>
 </html>
+
 
 
