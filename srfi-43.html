@@ -563,6 +563,18 @@ HREF="mailto:srfi-43@srfi.schemers.org">mail to
         Examples:
         <br>
         <br>
+        <code class="example-call">
+          (vector-unfold (&lambda; (i x) (values x (- x 1)))
+          <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                         10 0)
+        </code>
+        <br>
+        <code class="example-value">
+          #(0 -1 -2 -3 -4 -5 -6 -7 -8 -8)
+        </code>
+        <br>
+        <br>
         Construct a vector of the sequence of integers in the range
         [0,<tt><i>n</i></tt>).
         <br>
@@ -571,25 +583,18 @@ HREF="mailto:srfi-43@srfi.schemers.org">mail to
         </code>
         <br>
         <code class="example-value">
-          #(0 1 2 3 &middot;&middot;&middot;)
+          #(0 1 2 &middot;&middot;&middot; <i>n-2</i> <i>n-1</i>)
         </code>
+        <br>
+        <br>
+        Copy <tt><i>vector</i></tt>.
         <br>
         <br>
         <code class="example-call">
-
-        </code>
-        <br>
-        <code class="example-value">
-          
-        </code>
-        <br>
-        <br>
-        <code class="example-call">
-          
-        </code>
-        <br>
-        <code class="example-value">
-          
+          (vector-unfold (&lambda; (i) (vector-ref <i>vector</i> i))
+          <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                         (vector-length <i>vector</i>))
         </code>
         <br>
         <br>
@@ -611,30 +616,27 @@ HREF="mailto:srfi-43@srfi.schemers.org">mail to
         Examples:
         <br>
         <br>
-        <code class="example-call">
-          
-        </code>
-        <br>
-        <code class="example-value">
-          
-        </code>
+        Construct a vector in reverse of the integers in the range
+        [0,<tt><i>n</i></tt>).
         <br>
         <br>
         <code class="example-call">
-          
+          (vector-unfold-right values <i>n</i>)
         </code>
         <br>
         <code class="example-value">
-          
+          #(<i>n-1</i> <i>n-2</i> &middot;&middot;&middot; 2 1 0)
         </code>
+        <br>
+        <br>
+        Reverse <tt><i>vector</i></tt>.
         <br>
         <br>
         <code class="example-call">
-          
-        </code>
-        <br>
-        <code class="example-value">
-          
+          (vector-unfold-right (&lambda; (i) (vector-ref <i>vector</i> i))
+          <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                               (vector-length <i>vector</i>))
         </code>
         <br>
         <br>
