@@ -1,0 +1,281 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+  <head>
+    <title>SRFI 31: A generalised A. Church procedure form</title>
+  </head>
+
+  <body>
+
+    <H1>Title</H1> 
+
+    A generalised A. Church procedure form
+
+    <H1>Version</H1> 
+
+    Thu May 23 18:14:42  2002
+
+    <H1>Author</H1> 
+
+    Mirko Luedde
+
+
+    <H1>Satus</H1>
+
+    This SRFI is currently in ``draft'' status. To see an explanation of
+    each status that a SRFI can hold, see <a href="http://srfi.schemers.org/srfi-process.html">here</a>.  It will
+    remain in draft until 2002-08-24, or as amended.  to provide input on
+    this SRFI, please
+    <a href="mailto:srfi-31@srfi.schemers.org">
+      mail to <code>srfi-31@srfi.schemers.org</code></a>.
+    See <a href="http://srfi.schemers.org/srfi-list-subscribe.html">
+      instructions here</a> to subscribe to the list.  You can access
+    previous messages via
+    <a href="http://srfi.schemers.org/srfi-31/mail-archive/maillist.html">
+      the archive of the mailing list</a>.
+    
+    <UL>
+      <LI>Draft: 2002/05/24-2002/08/24</LI>
+    </UL>
+
+
+    <H1>Abstract</H1> 
+
+    We propose the implementation of a new special form called
+    <code>procedure</code>. This form allows the simple and stateless
+    construction of recursive procedures. It extends the A. Church
+    form <code>lambda</code> in that it allows recursive definitions
+    without the need of using further special forms like
+    <code>let</code>, <code>letrec</code> or complicated expressions
+    like the H. B. Curry combinator. Unlike <code>define</code>, the
+    form <code>procedure</code> does not introduce a variable binding
+    in its scope.
+
+    <H1>Issues</H1> 
+
+    No issues are anticipated.
+
+    <H1>Rationale</H1> 
+
+    <h2>General</h2> 
+
+    Among the prominent features of the Scheme programming language
+    are the following.
+
+    <ol>
+
+      <li>it has simple syntax;</li>
+      
+      <li>it encourages recursive procedure definitions (e.g. by ensuring
+	memory-efficient tail-recursion);</li>
+
+      <li>it supports stateless ("functional") programming.</li>
+
+    </ol>
+
+    Therefore Scheme is particularly suited for research and teaching in
+    the context of recursive functions and algorithms. Nevertheless Scheme
+    does not provide a syntax for procedure definitions
+
+    <ol>
+
+      <li>with reasonably simple syntax,</li>
+
+      <li>allowing general recursion</li>
+
+      <li>in a stateless way.</li>
+
+    </ol>
+
+    <h2>Example</h2> 
+
+    Let us look at the factorial function. In mathematical notation this
+    function would be expressed as
+
+<pre> 
+(F : N |--> 1, if N = 0; 
+            N * F(N - 1), otherwise).
+</pre>
+
+    We investigate some approaches to express this function in Scheme.
+
+    <ol>
+
+      <li> The simplest way perhaps is as follows (not tail recursive,
+      for the sake of simplicity).
+
+<pre>
+(define (F N) 
+  (if (zero? N) 1 
+    (* N (F (- N 1)))))
+</pre>
+
+	This Scheme expression is a more or less straightforward
+	translation from the mathematical mixed infix/prefix notation
+	to a pure prefix notation. But there is a difference in
+	meaning. The mathematical expression is nothing but a name for
+	the factorial. Hence the following is a legitimate
+	mathematical assertion: <em>the function (F : N |--> 1, if N =
+	0; N * F(N – 1), otherwise) is not polynomially bounded.</em>
+	On the other hand, the Scheme expression does not denote the
+	factorial. It may not occur in a context where a name of the
+	factorial is required. Instead it is a command that introduces
+	the name <code>F</code> for the factorial. So a change of
+	state is involved by binding the factorial function to the
+	variable <code>F</code>.
+
+      </li>
+
+      <li> Here are some possibilities for implementing the factorial
+      in a stateless way.
+
+<pre>
+(letrec ( (G (lambda (N) 
+	       (if (zero? N) 1 
+		 (* N (G (- N 1)))))) )
+	G)
+</pre>
+
+<pre>
+(lambda (N) 
+  (let G ( (m N) ) 
+       (if (zero? m) 1 
+	 (* m (G (- m 1))))))
+</pre>
+
+	These expressions do define the factorial anonymously, not
+	binding it to a variable.  But they seem to be more remote
+	from the mathematical notation than the <code>define</code>
+	form. Furthermore, they necessitate introducing the special
+	forms <code>letrec</code>, respectively, <code>let</code>.
+
+      </li>
+
+      <li> If we want to avoid <code>letrec</code> and
+      <code>let</code> using solely <code>lambda</code>, we have to
+      make use of the H. B. Curry combinator, which does not help us
+      keeping the syntax simple.  </li>
+
+    </ol>
+
+    <h2>Proposal</h2> 
+
+    Thus, we propose to write simply
+
+<pre>
+(procedure (F N) 
+	   (if (zero? N) 1 
+	     (* N (F (- N 1)))))
+</pre>
+
+    with the same semantics as the <code>define</code> expression
+    above, except for the external binding of the procedure to the
+    variable <code>F</code>. The variable <code>F</code> is bound
+    inside the expression in the same way as is the argument variable
+    <code>N</code>.
+
+    As another example, we could also define the factorial in a tail
+    recursive way.
+
+<pre>
+(procedure (F N)
+ ((procedure (G K L)
+   (if (zero? K) L
+    (G (- K 1) (* K L)))) N 1))
+</pre>
+Note that also here no variable bindings are involved.
+
+    <H1>Specification</H1>
+
+    <h2>Syntax</h2> 
+
+    <ol>
+
+      <li><code>&lt;procedure expression&gt;: (procedure (&lt;tag&gt;
+	  . &lt;variable-list&gt;) &lt;body&gt;)</code></li>
+
+      <li><code>&lt;tag&gt;</code>: any Scheme symbol.</li>
+
+      <li><code>&lt;variable-list&gt;</code>: any list of Scheme
+	symbols.</li>
+
+      <li><code>&lt;body&gt;</code>: any Scheme expression.</li>
+
+    </ol>
+
+    <h2>Semantics</h2> 
+
+    Let <em>S</em> be a symbol. Let <em>L</em> be a list of symbols.  Let
+    <em>B</em> be an expression.  Let <em>E</em> be an environment in
+    which the expression
+
+    <ul>
+
+      <li><code>(define (<em>S</em> . <em>L</em>) <em>B</em>)</code></li>
+
+    </ul>
+
+    has been evaluated.
+
+    Then in <em>E</em> the expression <em>S</em> is equivalent to the
+    expression
+
+    <ul>
+
+      <li><code>(procedure (<em>S2</em> . <em>L</em>)
+	  <em>B2</em>),</code></li>
+
+    </ul>
+    where <em>S2</em> is a symbol and <em>B2</em> is the substitution of
+    <em>S</em> by <em>S2</em> in <em>B</em>, assuming <em>S</em> is free
+    for <em>S2</em> in <em>B</em>.
+
+    <H1>Implementation</H1>
+
+    An implementation might proceed as follows.
+
+<pre>
+(define-syntax procedure
+  (syntax-rules ()
+    ((_ (TAG . VARIABLE-LIST) BODY)
+     (letrec ( (TAG (lambda VARIABLE-LIST BODY)) )
+       TAG))))
+</pre>
+
+    <H1>Copyright</H1>
+
+    Copyright (C) Dr. Mirko Luedde (2002). All Rights Reserved. 
+
+<p>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+
+<p>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+
+<p>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+    <hr>
+    <address>Author: <a href="mailto:Mirko.Luedde@Computer.Org">Mirko Luedde</a></address>
+    <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Francisco Solsona</a></address>
+
+
+  </body>
+  
+</html>
