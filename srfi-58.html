@@ -47,6 +47,9 @@ uniform-typed arrays.
 Common Lisp has a compact notation for rank 1 boolean arrays:
 <CODE>#*</CODE> followed by a string of ones and zeros; <CODE>1</CODE>
 for <CODE>#t</CODE>, <CODE>0</CODE> for <CODE>#f</CODE>
+<P>
+The first version allowed the <CODE>1</CODE> in the <CODE>#1A</CODE>
+prefix to be elided.  That exception has been removed.
 
 <H1>Rationale</H1>
 
@@ -96,10 +99,10 @@ source code.
 
 <H2>Syntax</H2>
 
-A syntax for arrays is the list-decomposition of an array with a
-prefix according to the type of the array.  The rank digit `<I>n</I>'
-is optional for rank 1 arrays.  The case of characters is not
-significant in the prefix characters.
+A syntax for arrays is the <DFN>list-decomposition</DFN> of an array
+with a prefix according to the type of the array.
+<!-- The rank digit `<I>n</I>' is optional for rank 1 arrays. -->
+The case of characters is not significant in the prefix characters.
 <P>
 Rank 1 character arrays which are not subarrays are
 <CODE>write</CODE>n as Scheme strings; <CODE>display</CODE> treats
@@ -111,30 +114,38 @@ Rank 1 heterogeneous arrays which are not subarrays are
 <P>
 <TABLE BORDER=1>
 <TR><TH>prototype<BR>procedure
+    <TH>exactness
     <TH>element type
-    <TH>prefix<BR>rank = 1
     <TH>prefix<BR>rank = <I>n</I>
-<TR><TD><CODE>vector</CODE><TD>conventional vector     <TD><CODE>#A</CODE><TD><CODE>#<i>n</i>A</CODE>
-<TR><TD><CODE>ac64  </CODE><TD>double-precision complex<TD><CODE>#Ac64</CODE><TD><CODE>#<i>n</i>Ac64</CODE>
-<TR><TD><CODE>ac32  </CODE><TD>single-precision complex<TD><CODE>#Ac32</CODE><TD><CODE>#<i>n</i>Ac32</CODE>
-<TR><TD><CODE>ar64  </CODE><TD>double-precision double <TD><CODE>#Ar64</CODE><TD><CODE>#<i>n</i>Ar64</CODE>
-<TR><TD><CODE>ar32  </CODE><TD>single-precision float  <TD><CODE>#Ar32</CODE><TD><CODE>#<i>n</i>Ar32</CODE>
-<TR><TD><CODE>as64  </CODE><TD>64-bit signed integer   <TD><CODE>#As64</CODE><TD><CODE>#<i>n</i>As64</CODE>
-<TR><TD><CODE>as32  </CODE><TD>32-bit signed integer   <TD><CODE>#As32</CODE><TD><CODE>#<i>n</i>As32</CODE>
-<TR><TD><CODE>as16  </CODE><TD>16-bit signed integer   <TD><CODE>#As16</CODE><TD><CODE>#<i>n</i>As16</CODE>
-<TR><TD><CODE>as8   </CODE><TD>8-bit signed integer    <TD><CODE>#As8</CODE><TD><CODE>#<i>n</i>As8</CODE>
-<TR><TD><CODE>au64  </CODE><TD>64-bit unsigned integer <TD><CODE>#Au64</CODE><TD><CODE>#<i>n</i>Au64</CODE>
-<TR><TD><CODE>au32  </CODE><TD>32-bit unsigned integer <TD><CODE>#Au32</CODE><TD><CODE>#<i>n</i>Au32</CODE>
-<TR><TD><CODE>au16  </CODE><TD>16-bit unsigned integer <TD><CODE>#Au16</CODE><TD><CODE>#<i>n</i>Au16</CODE>
-<TR><TD><CODE>au8   </CODE><TD>8-bit unsigned integer  <TD><CODE>#Au8</CODE><TD><CODE>#<i>n</i>Au8</CODE>
-<TR><TD><CODE>string</CODE><TD>char (string)           <TD><CODE>#A\</CODE><TD><CODE>#<i>n</i>A\</CODE>
-<TR><TD><CODE>at1   </CODE><TD>boolean (bit-vector)    <TD><CODE>#At</CODE><TD><CODE>#<i>n</i>At</CODE>
+<TR><TD><CODE>vector</CODE><TD>       <TD>conventional vector     <TD><CODE>#<i>n</i>A</CODE>
+<TR><TD><CODE>ac64  </CODE><TD>inexact<TD>double-precision complex<TD><CODE>#<i>n</i>Ac64</CODE>
+<TR><TD><CODE>ac32  </CODE><TD>inexact<TD>single-precision complex<TD><CODE>#<i>n</i>Ac32</CODE>
+<TR><TD><CODE>ar64  </CODE><TD>inexact<TD>double-precision real   <TD><CODE>#<i>n</i>Ar64</CODE>
+<TR><TD><CODE>ar32  </CODE><TD>inexact<TD>single-precision real   <TD><CODE>#<i>n</i>Ar32</CODE>
+<TR><TD><CODE>as64  </CODE><TD>exact  <TD>64-bit signed integer   <TD><CODE>#<i>n</i>As64</CODE>
+<TR><TD><CODE>as32  </CODE><TD>exact  <TD>32-bit signed integer   <TD><CODE>#<i>n</i>As32</CODE>
+<TR><TD><CODE>as16  </CODE><TD>exact  <TD>16-bit signed integer   <TD><CODE>#<i>n</i>As16</CODE>
+<TR><TD><CODE>as8   </CODE><TD>exact  <TD>8-bit signed integer    <TD><CODE>#<i>n</i>As8</CODE>
+<TR><TD><CODE>au64  </CODE><TD>exact  <TD>64-bit unsigned integer <TD><CODE>#<i>n</i>Au64</CODE>
+<TR><TD><CODE>au32  </CODE><TD>exact  <TD>32-bit unsigned integer <TD><CODE>#<i>n</i>Au32</CODE>
+<TR><TD><CODE>au16  </CODE><TD>exact  <TD>16-bit unsigned integer <TD><CODE>#<i>n</i>Au16</CODE>
+<TR><TD><CODE>au8   </CODE><TD>exact  <TD>8-bit unsigned integer  <TD><CODE>#<i>n</i>Au8</CODE>
+<TR><TD><CODE>string</CODE><TD>       <TD>char (string)           <TD><CODE>#<i>n</i>A\</CODE>
+<TR><TD><CODE>at1   </CODE><TD>       <TD>boolean (bit-vector)    <TD><CODE>#<i>n</i>At</CODE>
 </TABLE>
 <P>
-A two-by-two array of unsigned 16-bit integers is written:
-
+By <DFN>list-decomposition</DFN> is meant rank nestings of lists of
+the elements where the most nested list has length equal to the last
+dimension of the array and at top level has length equal to the first
+dimension of the array.
+<P>
+A two-by-three array of unsigned 16-bit integers is written:
 <PRE>
-#2au16((0 1) (2 3))
+#2au16((0 1 2) (3 5 4))
+</PRE>
+This array could have been created by <CODE>(make-array (Au16) 2 3)</CODE>.
+<PRE>
+(array-dimensions #2au16((0 1 2) (3 5 4))) ==> (2 3)
 </PRE>
 
 <H1>Implementation</H1>
