@@ -41,10 +41,9 @@ any) effort on the part of Scheme implementors.
 
 <blockquote>
   <p>Accepts a message template (a Scheme String), and process it,
-  replacing any escape sequences in order with the respective
-  values provided after the message template. It is an error if
-  more value-requiring escape sequences exist than the number of
-  values provided.</p>
+  replacing any escape sequences in order with one or more characters,
+  the characters themselves dependent on the semantics of the escape
+  sequence encountered.
 
   <p>An escape sequence is a two character sequence in the string
   where the first character is a tilde '~'. Each escape code's
@@ -58,6 +57,14 @@ any) effort on the part of Scheme implementors.
     <li><tt>~% </tt>A newline is inserted.</li>
     <li><tt>~~ </tt>A tilde '~' is inserted.</li>	
   </ul>
+
+  <p><tt>~a</tt> and <tt>~b</tt>, when encountered, require a corresponding
+  Scheme value to be present after the format string.  The values provided
+  as operands are used by the escape sequences in order.  It is an error
+  if fewer values are provided than escape sequences that require them.
+
+  <p><tt>~%</tt> and <tt>~~</tt> require no corresponding value.
+
 </blockquote>
            
 <h2>Examples</h2>
@@ -72,31 +79,42 @@ any) effort on the part of Scheme implementors.
                
     <H1>Implementation</H1>
     
-    The implementation below requires SRFI-6 (Basic String Ports) 
-    for  its implementation of <tt>format</tt>.
+    The implementation below requires SRFI-6 (Basic string ports) and
+    SRFI-23 (Error reporting mechanism).
     <br>
 
     <pre>
 (define format
-  (letrec ((make-format
-            (lambda (f-l objects sb)
-              (cond ((null? f-l) (get-output-string sb))
-                    ((eq? (car f-l) #\~)
-                     (begin
-		       (case (cadr f-l)
-                         ((#\s) (write (car objects) sb))
-                         ((#\a) (display (car objects) sb))
-                         ((#\%) (display #\newline sb))
-                         ((#\~) (display #\~ sb)))
-                       (make-format (cddr f-l) (if (not (null? objects))
-                                                   (cdr objects) ())
-                                    sb)))
-                    (else (begin
-                            (display (car f-l) sb)
-                            (make-format (cdr f-l) objects sb)))))))
-    (lambda (format-string . objects)
-      (make-format (string->list format-string)
-                   objects (open-output-string)))))
+  (lambda (format-string . objects)
+    (let ((buffer (open-output-string)))
+      (let loop ((format-list (string->list format-string))
+                 (objects objects))
+        (cond ((null? format-list) (get-output-string buffer))
+              ((char=? (car format-list) #\~)
+               (if (null? (cdr format-list))
+                   (error 'format "Incomplete escape sequence")
+                   (case (cadr format-list)
+                     ((#\s)
+                      (if (null? objects)
+                          (error 'format "No value for escape sequence")
+                          (begin
+                            (write (car objects) buffer)
+                            (loop (cddr format-list) (cdr objects)))))
+                     ((#\a)
+                      (if (null? objects)
+                          (error 'format "No value for escape sequence")
+                          (begin
+                            (loop (cddr format-list) (cdr objects)))))
+                     ((#\%)
+                      (display #\newline buffer)
+                      (loop (cddr format-list) objects))
+                     ((#\~)
+                      (display #\~ buffer)
+                      (loop (cddr format-list) objects))
+                     (else
+                      (error 'format "Unrecognized escape sequence")))))
+              (else (display (car format-list) buffer)                        
+                    (loop (cdr format-list) objects)))))))
     </pre>
 
     <H1>Copyright</H1>
