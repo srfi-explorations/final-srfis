@@ -1,0 +1,551 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 65: define-immutable: A Syntax to Define Identifiers With Immutable Values</title>
+  </head>
+
+<body>
+
+<H1>Title</H1>
+
+<tt>define-immutable</tt>: A Syntax to Define Identifiers With Immutable Values
+
+<H1>Author</H1>
+
+Andrew Wilcox
+
+<address>
+<a href="http://andrewwilcox.name">http://andrewwilcox.name/</a>
+</address>
+
+<h1>Status</h1>
+
+This SRFI is currently in ``draft'' status. To see an explanation of each
+status that a SRFI can hold, see
+<a href="http://srfi.schemers.org/srfi-process.html">here</a>.
+It will remain in draft status until 2005/04/24, or as amended. To
+provide input on this SRFI, please <code>
+<a href="mailto:srfi-65@srfi.schemers.org">mailto:srfi-65@srfi.schemers.org</a></code>.
+See <a href="http://srfi.schemers.org/srfi-list-subscribe.html">instructions
+here</a> to subscribe to the list. You can access previous messages via
+<a href="http://srfi.schemers.org/srfi-65/mail-archive/maillist.html">the
+archive of the mailing list</a>.
+<p>
+<ul>
+  <li>Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-65/srfi-65.html">2005/02/16</a></li>
+  <li>Draft: 2005/02/24 - 2005/04/24</li>
+</ul>
+</p>
+
+<H1>Abstract</H1>
+
+<p>The <tt>define-immutable</tt> form defines an identifier whose
+value never changes.</p>
+
+<p>The expression part of the definition is evaluated lazily: it is
+not evaluated unless and until the identifier is evaluated.  This
+permits an immutable definition to use other definitions in more ways
+than is possible when using <tt>define</tt> in internal
+definitions.</p>
+
+<p>A series of immutable definitions have simple semantics, making them
+easy to program and understand.</p>
+
+<pre>
+    (let ()
+      (define-immutable x (+ z 5))
+      (define-immutable y (/ 100 4))
+      (define-immutable z (add-10 y))
+      (define-immutable add-10 (add-n 10))
+      (define-immutable (add-n n)
+        (lambda (x)
+          (+ n x)))
+      x)
+  =>
+    40
+</pre>
+
+<H1>Issues</H1>
+
+<p>The specification is tight and is easily implemented using
+anonymous modules and <tt>identifier-syntax</tt> from the portable
+syntax-case expander.  However it would be useful to see if
+<tt>define-immutable</tt> can be implemented in other macro and module
+systems.  It might turn out that this SRFI is over-specified, and that
+changing or relaxing the specification might allow
+<tt>define-immutable</tt> to be implemented in a wider variety of
+Scheme implementations.</p>
+
+<p>I welcome suggestions on the proper use of Scheme terminology
+such as "binding", "identifier", "define", "scope", etc.
+
+<p>In the reference implementation, binding an identifier to multiple
+values works perfectly fine:</p>
+
+<pre>
+    (let ()
+      (define-immutable x (values 1 2 3))
+      (call-with-values
+        (lambda () x)
+        (lambda (a b c)
+          (+ a b c))))
+  =>
+    6
+</pre>
+
+<p>Should this behavior be included in the specification?</p>
+
+<H1>Rationale</H1>
+
+<p>In R5RS, the semantics of the standard <tt>define</tt> form when
+used in an internal definition are fairly complicated:</p>
+
+<ul>
+
+<li>A <tt>define</tt> creates a location in which values can be later
+stored with a <tt>set!</tt> form; and,
+
+<li>Evaluates the expression and assigns that value to the location;
+and,
+
+<li>A series of internal definitions are equivalent to a
+<tt>letrec</tt> form.
+
+</ul>
+
+<p>In turn, a <tt>letrec</tt> form <i>first</i> establishes locations
+(a lexical scope) for <i>all</i> the variables (with each bound to
+an undefined value), and <i>then</i> the expressions in <i>all</i> the
+definitions are evaluated and assigned to the variables.</p>
+
+<p>While complicated, these semantics allow a variable created by a
+<tt>define</tt> to be later assigned a new value with <tt>set!</tt>,
+and, at the same time, provides for some ways in which one definition
+may use another.  For example, defined functions may be mutually
+recursive, as seen in this code (adapted from the <tt>letrec</tt>
+example in R5RS):
+
+<pre>
+    ; R5RS
+    (let ()
+      (define (even? n)
+        (if (zero? n) #t (odd? (- n 1))))
+      (define (odd? n)
+        (if (zero? n) #f (even? (- n 1))))
+      (even? 88))
+  =>
+    #t
+</pre>
+
+<p>However, other useful ways in which one definition may refer to
+another are not allowed by a <tt>letrec</tt>:</p>
+
+<pre>
+    ; in R5RS
+    (let ()
+      (define ten 10)
+      (define twenty (+ ten 10))
+      (+ ten twenty))
+  =>
+    Error
+</pre>
+
+<p>A Scheme implementation might choose to have internal definitions
+expand instead into a <tt>letrec*</tt> form
+[<a href="#reference-1">1</a>]. This increases the ways in which one
+definition may refer to another: later definitions of simple values
+may use earlier ones.  Thus,</p>
+
+<pre>
+    ; internal definitions expand into a letrec*
+    (let ()
+      (define ten 10)
+      (define twenty (+ ten 10))
+      (+ ten twenty))
+  =>
+    30
+</pre>
+
+<p>The programmer still needs to analyze the dependencies
+between definitions and place dependent definitions after the ones
+that are made use of.</p>
+
+<pre>
+    ; internal definitions expand into a letrec*
+    (let ()
+      (define twenty (+ ten 10))
+      (define ten 10)
+      (+ ten twenty))
+  =>
+    Error
+</pre>
+
+<p>If the value an identifier doesn't need to change because it is never
+assigned to a <tt>set!</tt> form, we have an opportunity to use
+simpler semantics for defining values, and to expand the ways that one
+definition may use another.</p>
+
+<p>The <tt>define-immutable</tt> special form declares an identifier
+whose value never changes.  To maximize the number of ways that
+immutable definitions can refer to each other, the definition's
+expression is evaluated <i>lazily</i>: it isn't evaluated unless and
+until the identifier itself is used in an expression.</p>
+
+<pre>
+    (let ()
+      (define-immutable (add-n n)
+        (lambda (x)
+          (+ x n)))
+      (define-immutable add-10 (add-n 10))
+      (define-immutable add-20 (add-n 20))
+      (list (add-10 5) (add-20 5)))
+  =>
+    (15 25)
+</pre>
+
+<H1>Specification</H1>
+
+<p>The R5RS <tt>&lt;definition&gt;</tt> production is extended to
+include the <tt>define-immutable</tt> special form.</p>
+
+<pre>
+    &lt;definition&gt; -> ... | &lt;immutable definition&gt;
+    &lt;immutable definition&gt; ->
+      (define-immutable &lt;identifier&gt; &lt;expression&gt;) |
+      (define-immutable (&lt;identifier&gt; . &lt;def formals&gt;) &lt;body&gt;)
+</pre>
+
+<p>The first form</p>
+
+<pre>
+    (define-immutable identifier expression)
+</pre>
+
+<p>is a binding construct which declares <i>identifier</i> to be an
+immutable value.</p>
+
+<p>Evaluating the <i>identifier</i> causes the <i>expression</i>
+to be evaluated, and the value of the <i>identifier</i> is the
+result of evaluating the <i>expression</i>.</p>
+
+<p>The <i>expression</i> is not evaluated unless and until the
+<i>identifier</i> is evaluated, and the <i>expression</i> is
+evaluated only once.</p>
+
+<p>Bindings introduced by <tt>define-immutable</tt> are hygienic, as
+described in R5RS section 4.3.</p>
+
+<p>The second form</p>
+
+<pre>
+    (define-immutable (identifier . formals) body ...)
+</pre>
+
+<p>is an abbreviation for:</p>
+
+<pre>
+    (define-immutable identifier (lambda formals body ...))
+</pre>
+
+<p>Immutable definitions may reference other immutable definitions within the
+same syntactic scope, and in any order:</p>
+
+<pre>
+    (let ()
+      (define-immutable a (+ b 10))
+      (define-immutable b (* 3 5))
+      a)
+  =>
+    25
+</pre>
+
+<p>Both regular definitions (with <tt>define</tt>) and immutable
+definitions may shadow other definitions in an enclosing scope:</p>
+
+<pre>
+    (let ()
+      (define-immutable a 10)
+      (define-immutable b 20)
+      (define c 30)
+      (let ()
+        (define-immutable a 40)
+        (define b 50)
+        (define-immutable c 60)
+        (list a b c)))
+  =>
+    (40 50 60)
+</pre>
+
+<p>However, it is an error for an identifier to have an immutable
+definition when another definition of that same identifier exists in
+the same syntactic scope:</p>
+
+<pre>
+    (let ()
+      (define a 10)
+      (define-immutable a 20)
+      a)
+  =>
+    Error
+
+
+    (let ()
+      (define-immutable a 10)
+      (define a 10)
+      a)
+  =>
+    Error
+
+
+    (let ()
+      (define-immutable a 10)
+      (define-immutable a 20)
+      a)
+  =>
+    Error
+</pre>
+
+<p>If a Scheme implementation provides modules, an identifier defined
+with <tt>define-immutable</tt> should be able to be exported as regular
+variables are.</p>
+
+<H1>Implementation</H1>
+
+<p>The reference implementation uses anonymous modules and
+<tt>identifier-syntax</tt> from the portable syntax-case expander, and
+<tt>delay</tt>, <tt>force</tt>, and <tt>syntax-rules</tt> from
+R5RS.</p>
+
+<pre>
+(define-syntax define-immutable
+  (syntax-rules ()
+
+    ((define-immutable (identifier . formals) body ...)
+     (define-immutable identifier
+       (lambda formals body ...)))
+
+    ((define-immutable identifier expression)
+     (module ((identifier promise))
+       (define promise (delay expression))
+       (define-syntax identifier (identifier-syntax (force promise)))))))
+</pre>
+
+<H2>Test Cases</H2>
+
+<p>These tests check particular details of the the specification.</p>
+
+<pre>
+(define (test title result)
+  (display (if result "yes: " " no: "))
+  (display title)
+  (newline))
+
+(test "later definitions can reference earlier ones"
+  (equal? '(10 20)
+    (let ()
+      (define-immutable a 10)
+      (define-immutable b (+ a 10))
+      (list a b))))
+
+(test "earlier definitions can reference later ones"
+  (equal? '(20 10)
+    (let ()
+      (define-immutable a (+ b 10))
+      (define-immutable b 10)
+      (list a b))))
+
+(test "a definition can reference itself"
+  (equal? 120
+   (let ()
+     (define-immutable factorial
+       (lambda (n)
+         (if (zero? n) 1
+             (* n (factorial (- n 1))))))
+     (factorial 5))))
+
+(test "inner scope definitions shadow outer ones"
+  (equal? '(40 50 60)
+    (let ()
+      (define-immutable a 10)
+      (define-immutable b 20)
+      (define c 30)
+      (let ()
+        (define-immutable a 40)
+        (define b 50)
+        (define-immutable c 60)
+        (list a b c)))))
+
+
+(test "immutable definitions are not evaluated unless used"
+  (equal? 100
+    (let ()
+      (define-immutable a (/ 1 0))
+      100)))
+
+(test "immutable definitions are evaluated only once"
+  (equal? 1
+    (let ((count 0))
+      (define-immutable a
+        (let ()
+          (set! count (+ count 1))
+          100))
+      a
+      a
+      a
+      a
+      count)))
+
+(test "expansion into a lambda form"
+  (equal? 112
+    (let ()
+      (define-immutable x (+ z 77))
+      (define-immutable y (/ 100 4))
+      (define-immutable z (add-10 y))
+      (define-immutable add-10 (add-n 10))
+      (define-immutable (add-n n)
+        (lambda (x)
+          (+ n x)))
+      x)))
+
+(test "bindings introduced by define-immutable are hygienic"
+  (equal? 10
+    (let ()
+      (let-syntax ((define-a
+                     (syntax-rules ()
+                       ((define-a)
+                        (define-immutable a 20)))))
+        (let ((a 10))
+          (define-a)
+          a)))))
+</pre>
+
+<H2>Error Test Cases</H2>
+
+<p>A Scheme implementation is not required to detect errors or provide
+a way of capturing them.  However, for Scheme implementations which do
+detect these errors, the following tests check for some cases of
+invalid syntax.</p>
+
+<pre>
+; (erroneous? thunk) should return #t if calling thunk results in an
+; error, and should return #f if calling thunk returns normally.
+
+; an implementation of erroneous? which uses with-failure-continuation
+(define (erroneous? thunk)
+  (with-failure-continuation
+   (lambda (error continuation)
+     #t)
+   (lambda ()
+     (thunk)
+     #f)))
+
+; an implementation of erroneous? which uses error-handler
+(define (erroneous? thunk)
+  (call-with-current-continuation
+   (lambda (return)
+     (parameterize ((error-handler (lambda (who msg . args)
+                                     (return #t))))
+       (thunk)
+       #f))))
+
+(define (expect-error form)
+  (erroneous? (lambda ()
+                (eval form))))
+
+(test "may not define-immutable the same identifier twice in the same scope"
+  (expect-error
+    '(let ()
+      (define-immutable a 10)
+      (define-immutable a 20)
+      a)))
+
+(test "may not define and define-immutable the same identifier in the same scope"
+  (expect-error
+    '(let ()
+      (define a 10)
+      (define-immutable a 20)
+      a)))
+</pre>
+
+<H2>Syntax-case Module Test Cases</H2>
+
+<p>These tests explore the interaction of <tt>define-immutable</tt> and
+modules from the portable syntax-case implementation.  Naturally they
+are only relevant if the portable syntax-case module system is being
+used.</p>
+
+<pre>
+(test "a define-immutable identifier can be imported from another module"
+  (equal? 123
+    (let ()
+      (module x (a)
+        (define-immutable a 123))
+      (let ()
+        (import x)
+        a))))
+
+(test "a define-immutable identifier can be imported through several modules"
+  (equal? 123
+    (let ()
+      (module x (a)
+        (define-immutable a 123))
+      (module y (a)
+        (import x))
+      (module z (a)
+        (import y))
+      (let ()
+        (import z)
+        a))))
+
+(begin
+  (module m (a b)
+    (define-immutable a 10)
+    (define-immutable b 20))
+  (test "multiple define-immutable exports from a top-level module"
+    (equal? '(10 20)
+      (let ()
+        (import m)
+        (list a b)))))
+</pre>
+
+<H1>Acknowledgments</H1>
+
+My thanks to Jens Axel Søgaard and Marcin 'Qrczak' Kowalczyk for help
+with writing macros with the syntax case expander, and to Michael
+Sperber for explaining the portability issue with R5RS not specifying
+whether or not <tt>define</tt> is a binding form.
+
+<H1>References</H1>
+
+<a name=reference-1>1</a>.
+Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.
+<i>Fixing Letrec: A Faithful Yet Efficient Implementation of Scheme's
+Recursive Binding Construct</i>.
+<a href="http://www.cs.indiana.edu/~dyb/pubs/fixing-letrec.pdf">http://www.cs.indiana.edu/~dyb/pubs/fixing-letrec.pdf</a>
+
+<H1>Copyright</H1>
+Copyright (C) Andrew Wilcox (2005). All Rights Reserved. 
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+<p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+    <hr>
+    <address>Editor: <a
+    href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
+  </body>
+</html>
