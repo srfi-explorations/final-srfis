@@ -8,7 +8,7 @@ Joo ChurlSoo
 
 Related SRFIs
 
-A procedure and 4 macros proposed in this SRFI make a strong combination with
+The procedure and macros proposed in this SRFI make a strong combination with
 RECEIVE (SRFI 8) and LET-VALUES (SRFI 11).
 
 Abstract
@@ -61,22 +61,20 @@ Specification
    element of the <rest-list>, and it uses #f instead of #t, and an absolute
    value instead of a simple value as the value of <args-number-limit>.
 
-(ARG-AND [<caller>] <variable> <expression> ...)
-(ARG-ANDS [<caller>] (<variable> <expression> ...) ...)
+(ARG-AND [<caller>] <variable> <expr> ...)
+(ARG-ANDS [COMMON <caller>] ([<caller>] <variable> <expr> ...) ...)
 
-    * <caller> is a procedure that has each <variable> as an argument.
-    * Each <expression> should contain the corresponding <variable>.
+(ARG-OR [<caller>] <variable> <expr> ...)
+(ARG-ORS [COMMON <caller>] ([<caller>] <variable> <expr> ...) ...)
 
-These macros are the same as AND except that these signal an error in
+    * Each <variable> should be an argument of a procedure.
+    * The <caller> and <expr> are any scheme expressions, but the <expr>
+      should contain the corresponding <variable>.
+
+ARG-AND and ARG-ANDS are the same as AND except that these signal an error in
 case AND returns a false value.
 
-(ARG-OR [<caller>] <variable> <expression> ...)
-(ARG-ORS [<caller>] (<variable> <expression> ...) ...)
-
-    * <caller> is a procedure that has each <variable> as an argument.
-    * Each <expression> should contain the corresponding <variable>.
-
-These macros are the same as OR except that these signal an error in
+ARG-OR and ARG-ORS are the same as OR except that these signal an error in
 case OR returns a true value.
 
 Examples
@@ -86,17 +84,17 @@ rest-list => (x 1)
 (rest-values rest-list 2 '(x y z))	 => x 1
 (rest-values rest-list -2 'y)	         => x 1
 (rest-values caller rest-list 1 '(x y z))
-          => error: too many arguments (x 1) <procedure caller>
+    => error too many arguments (x 1) (<= (length (x 1)) 1) <procedure caller>
 (rest-values caller rest-list 2 (list 'x 'y 'z) (cons "string" string?))
-          => error: incorrect argument 1 <procedure string?> <procedure caller>
+    => error incorrect argument 1 (<procedure string?> 1) <procedure caller>
 (rest-values rest-list '(y z) `(100 . ,number?))
-	  => error: unmatched argument x (y z)
+    => error unmatched argument x (member x (y z))
 (rest-values rest-list #f 'y 100 "string")
-	  => x 1 "string"
+    => x 1 "string"
 (rest-values rest-list #t `(x y z) `(100 . ,number?) `("string" . ,string?))
-          => x 1 "string"
+    => x 1 "string"
 (rest-values rest-list `(x y z) `(100 . ,number?) `("string" . ,string?))
-          => x 1 "string"
+    => x 1 "string"
 
 caller => <procedure caller>
 str    => "string"
@@ -104,16 +102,33 @@ num    => 10
 a      => 20
 b      => 30
 (arg-and num (number? num) (< a num b))
-       => error: incorrect argument 10 num (< a num b)
+       => error incorrect argument 10 num (< a num b)
 (arg-and caller num (number? num) (< a num b))
-       => error: incorrect argument 10 num (< a num b) <procedure caller>
+       => error incorrect argument 10 num (< a num b) <procedure caller>
+(arg-and 'caller num (number? num) (< a num b))
+       => error incorrect argument 10 num (< a num b) caller
+(arg-and `(caller ,str ,num) num (number? num) (< a num b))
+       => error incorrect argument 10 num (< a num b) (caller "string" 10)
+(arg-and "caller: bad argument" num (number? num) (< a num b))
+       => error caller: bad argument 10 num (< a num b)
 (arg-ands (str (string? str) (< (string-length str) 10))
+	  ("caller: bad argument" num (number? num) (< a num b)))
+       => error caller: bad argument 10 num (< a num b)
+(arg-ands ("caller: bad argument" str (string? str) (< (string-length str) 10))
 	  (num (number? num) (< a num b)))
-       => error: incorrect argument 10 num (< a num b)
-(arg-ands caller
+       => error incorrect argument 10 num (< a num b)
+(arg-ands common 'caller
 	  (str (string? str) (< (string-length str) 10))
 	  (num (number? num) (< a num b)))
-       => error: incorrect argument 10 num (< a num b) <procedure caller>
+       => error incorrect argument 10 num (< a num b) caller
+(arg-ands common `(caller ,str ,num)
+	  (str (string? str) (< (string-length str) 10))
+	  ('caller num (number? num) (< a num b)))
+       => error incorrect argument 10 num (< a num b) caller
+(arg-ands common "caller: bad argument"
+	  (str (string? str) (< (string-length str) 10))
+	  ("caller: incorrect argument" num (number? num) (< a num b)))
+       => error caller: incorrect argument 10 num (< a num b)
 
 (define (read-line . p-d)
   (receive (p d) (rest-values p-d 2
@@ -131,7 +146,7 @@ b      => 30
     ...))
 (define (delete x ls . predicate)
   (let ((pred (rest-values delete predicate -1 equal?)))
-    (arg-ands delete
+    (arg-ands common `(delete ,x ,@(cons ls predicate))
 	      (ls (list? ls))
 	      (pred (memq pred (list equal? eqv? eq?))))
     ...))
@@ -139,7 +154,7 @@ b      => 30
 (define (substring str . start-end)
   (let ((str-len (arg-and substring str (string? str) (string-length str))))
     (receive (start end) (rest-values substring start-end -2 0 str-len)
-      (arg-ands substring
+      (arg-ands common substring
 		(start (integer? start) (<= 0 start str-len))
 		(end (integer? end) (<= start end str-len)))
       ...)))
@@ -169,15 +184,16 @@ ERROR (SRFI 23) and TAKE (SRFI 1) are used in implementation of this SRFI.
 		 (or (and (number? d)
 			  (or (and (> rest-length (abs d))
 				   (apply error "too many arguments"
-					  rest caller))
+					  rest `(<= (length ,rest) ,(abs d))
+					  caller))
 			      (and (> (length (cdr default)) (abs d))
 				   (error "too many defaults"
 					  (cdr default)
 					  `(rest-values
 					    ,@(cons rest-list default-list))))
 			      d))
-		     (and (eq? d #t) #t)
-		     (and (eq? d #f) 'false)))))
+		     (and (eq? d #f) 'false)
+		     (eq? d #t)))))
 	 (default (if number (cdr default) default))
 	 (default-length (length default)))
     (if (or (and (number? number) (< number 0))
@@ -185,19 +201,19 @@ ERROR (SRFI 23) and TAKE (SRFI 1) are used in implementation of this SRFI.
 	(apply values (if (> default-length rest-length)
 			  (append rest (list-tail default rest-length))
 			  rest))
-	(begin
-	  (set! number (min rest-length default-length))
+	(let ((number (min rest-length default-length)))
 	  (for-each (lambda (r d)
 		      (cond
 		       ((list? d)
 			(if (not (member r d))
-			    (apply error "unmatched argument" r d caller)))
+			    (apply error "unmatched argument"
+				   r `(member ,r ,d) caller)))
 		       ((pair? d)
 			(let ((p (cdr d)))
 			  (if (procedure? p)
 			      (if (not (p r))
 				  (apply error "incorrect argument"
-					  r p caller))
+					 r `(,p ,r) caller))
 			      (error "incorrect predicate"
 				     p `(rest-values ,@(cons rest-list
 							     default-list))))))
@@ -222,47 +238,98 @@ ERROR (SRFI 23) and TAKE (SRFI 1) are used in implementation of this SRFI.
 (define-syntax arg-and
   (syntax-rules()
     ((arg-and arg (a1 a2 ...) ...)
-     (and (or (a1 a2 ...)
-	      (error "incorrect argument" arg `arg `(a1 a2 ...)))
+     (and (or (symbol? 'arg)
+	      (error "bad syntax" 'arg '(symbol? 'arg)
+		     '(arg-and arg (a1 a2 ...) ...)))
+	  (or (a1 a2 ...)
+	      (error "incorrect argument" arg 'arg '(a1 a2 ...)))
 	  ...))
     ((arg-and caller arg (a1 a2 ...) ...)
-     (and (or (a1 a2 ...)
-	      (error "incorrect argument" arg `arg `(a1 a2 ...) caller))
+     (and (or (symbol? 'arg)
+	      (error "bad syntax" 'arg '(symbol? 'arg)
+		     '(arg-and caller arg (a1 a2 ...) ...)))
+	  (or (a1 a2 ...)
+	      (if (string? caller)
+		  (error caller arg 'arg '(a1 a2 ...))
+		  (error "incorrect argument" arg 'arg '(a1 a2 ...) caller)))
 	  ...))))
 
+;; accessory macro for arg-ands
+(define-syntax caller-arg-and
+  (syntax-rules()
+    ((caller-arg-and caller arg (a1 a2 ...) ...)
+     (and (or (symbol? 'arg)
+	      (error "bad syntax" 'arg '(symbol? 'arg)
+		     '(caller-arg-and caller arg (a1 a2 ...) ...)))
+	  (or (a1 a2 ...)
+	      (if (string? caller)
+		  (error caller arg 'arg '(a1 a2 ...))
+		  (error "incorrect argument" arg 'arg '(a1 a2 ...) caller)))
+	  ...))
+    ((caller-arg-and null caller arg (a1 a2 ...) ...)
+     (and (or (symbol? 'arg)
+	      (error "bad syntax" 'arg '(symbol? 'arg)
+		     '(caller-arg-and caller arg (a1 a2 ...) ...)))
+	  (or (a1 a2 ...)
+	      (if (string? caller)
+		  (error caller arg 'arg '(a1 a2 ...))
+		  (error "incorrect argument" arg 'arg '(a1 a2 ...) caller)))
+	  ...))))
 
 (define-syntax arg-ands
-  (syntax-rules ()
-    ((arg-ands (arg expr ...)  ...)
-     (and (and (or expr (error "incorrect argument" arg `arg `expr))
-	       ...)
-	  ...))
-    ((arg-ands caller (arg expr ...)  ...)
-     (and (and (or expr (error "incorrect argument" arg `arg `expr caller))
-	       ...)
-	  ...))))
+  (syntax-rules (common)
+    ((arg-ands (a1 a2 ...) ...)
+     (and (arg-and a1 a2 ...) ...))
+    ((arg-ands common caller (a1 a2 ...) ...)
+     (and (caller-arg-and caller a1 a2 ...) ...))))
 
 (define-syntax arg-or
-  (syntax-rules ()
+  (syntax-rules()
     ((arg-or arg (a1 a2 ...) ...)
-     (or (and (a1 a2 ...)
-	      (error "incorrect argument" arg `arg `(a1 a2 ...)))
+     (or (and (not (symbol? 'arg))
+	      (error "bad syntax" 'arg '(symbol? 'arg)
+		     '(arg-or arg (a1 a2 ...) ...)))
+	 (and (a1 a2 ...)
+	      (error "incorrect argument" arg 'arg '(a1 a2 ...)))
 	 ...))
     ((arg-or caller arg (a1 a2 ...) ...)
-     (or (and (a1 a2 ...)
-	      (error "incorrect argument" arg `arg `(a1 a2 ...) caller))
+     (or (and (not (symbol? 'arg))
+	      (error "bad syntax" 'arg '(symbol? 'arg)
+		     '(arg-or caller arg (a1 a2 ...) ...)))
+	 (and (a1 a2 ...)
+	      (if (string? caller)
+		  (error caller arg 'arg '(a1 a2 ...))
+		  (error "incorrect argument" arg 'arg '(a1 a2 ...) caller)))
+	 ...))))
+
+;; accessory macro for arg-ors
+(define-syntax caller-arg-or
+  (syntax-rules()
+    ((caller-arg-or caller arg (a1 a2 ...) ...)
+     (or (and (not (symbol? 'arg))
+	      (error "bad syntax" 'arg '(symbol? 'arg)
+		     '(caller-arg-or caller arg (a1 a2 ...) ...)))
+	 (and (a1 a2 ...)
+	      (if (string? caller)
+		  (error caller arg 'arg '(a1 a2 ...))
+		  (error "incorrect argument" arg 'arg '(a1 a2 ...) caller)))
+	 ...))
+    ((caller-arg-or null caller arg (a1 a2 ...) ...)
+     (or (and (not (symbol? 'arg))
+	      (error "bad syntax" 'arg '(symbol? 'arg)
+		     '(caller-arg-or caller arg (a1 a2 ...) ...)))
+	 (and (a1 a2 ...)
+	      (if (string? caller)
+		  (error caller arg 'arg '(a1 a2 ...))
+		  (error "incorrect argument" arg 'arg '(a1 a2 ...) caller)))
 	 ...))))
 
 (define-syntax arg-ors
-  (syntax-rules ()
-    ((arg-ors (arg expr ...) ...)
-     (or (or (and expr (error "incorrect argument" arg `arg `expr))
-	     ...)
-	 ...))
-    ((arg-ors caller (arg expr ...) ...)
-     (or (or (and expr (error "incorrect argument" arg `arg `expr caller))
-	     ...)
-	 ...))))
+  (syntax-rules (common)
+    ((arg-ors (a1 a2 ...) ...)
+     (or (arg-or a1 a2 ...) ...))
+    ((arg-ors common caller (a1 a2 ...) ...)
+     (or (caller-arg-or caller a1 a2 ...) ...))))
 
 Copyright
 
