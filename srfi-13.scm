@@ -1130,7 +1130,7 @@
 ;;; string-index-right string char/char-set/pred [start end]
 ;;; string-skip        string char/char-set/pred [start end]
 ;;; string-skip-right  string char/char-set/pred [start end]
-;;; string-count       char/char-set/pred string [start end]
+;;; string-count       string char/char-set/pred [start end]
 ;;;     There's a lot of replicated code here for efficiency.
 ;;;     For example, the char/char-set/pred discrimination has
 ;;;     been lifted above the inner loop of each proc.
@@ -1220,7 +1220,7 @@
 		       string-skip-right criterion)))))
 
 
-(define (string-count criterion s . maybe-start+end)
+(define (string-count s criterion . maybe-start+end)
   (let-string-start+end (start end) string-count s maybe-start+end
     (cond ((char? criterion)
 	   (do ((i start (+ i 1))
