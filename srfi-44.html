@@ -1,0 +1,1109 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+  <head>
+    <title>SRFI 44: Collections</title>
+  </head>
+
+  <body>
+
+    <H1>Title</H1>
+    Collections 
+
+    <H1>Author</H1>
+    Scott G. Miller 
+
+    <H1>Status</H1> 
+
+    This SRFI is currently in ``draft'' status.  To see an explanation
+    of each status that a SRFI can hold, see <A
+    HREF="http://srfi.schemers.org/srfi-process.html">here</A>.  It
+    will remain in draft status until 2003/07/28, or as amended.
+
+    To provide input on this SRFI, please <code><A
+    HREF="mailto:srfi-44@srfi.schemers.org">mail to
+    &lt;srfi-44@srfi.schemers.org&gt;</A></code>.  See <A
+    HREF="../srfi-list-subscribe.html">instructions here</A> to
+    subscribe to the list.  You can access previous messages via <A
+    HREF="mail-archive/maillist.html">the archive of the mailing
+    list</A>.
+
+    <p><ul>
+      <li>Received: 2003/04/23
+      <li>Draft: 2003/04/28-2003/07/28
+    </ul></p>
+    
+    <H1>Abstract</H1>
+
+    <p>A Collections API which defines a common naming scheme and
+    set of operations for creating, accessing, and manipulating
+    common datastructures in Scheme. The API defines accessors, a
+    common protocol for iteration, and functions for inter-datastructure
+    cooperation.
+    Finally, a concrete specification of a compliant set of
+    operators for the standard Scheme heterogenous datastructures
+    (lists and vectors) and for the homogenous Scheme string is 
+    provided.</p>
+
+    <h1>Issues</h1>
+
+    <p>The iterators defined by this SRFI are opaque state values.
+    As such, it becomes the responsibility of the implementor to
+    determine the type of an iterator and use it appropriately to
+    implement the iterator functions.</p>
+
+    <p>Correspondingly, the functions of each class of collection
+    are required to operate on any collection of that class.</p>
+
+    <p>As Scheme lacks the ability to automatically dispatch on
+    different function behaviors based on the types of arguments,
+    it difficult to devise a portable implementation of this SRFI
+    which allows arbitrary future collections. It is expected that
+    Scheme system implementors will take advantage of generic
+    function or object-oriented features of their systems to
+    implement this SRFI efficiently. At the same time it is hoped
+    that a future SRFI will specify a mechanism which will allow a
+    portable and efficient implementation of collections to
+    exist.</p>
+
+    <h1>Rationale</h1>
+
+    <p>The Scheme language provides two basic datastructures for
+    containing any first-class value. Scheme pairs, and by
+    extension lists, provide a variable sized datastructure with
+    constant time extension and linear time access. Scheme vectors
+    provide a fixed sized datastructure with typically constant
+    time access. From these two datastructures it is possible to
+    build up many other types of datastructures, including hash
+    tables, trees, and sets.</p>
+
+    <p>However, no such datastructures are specified by the Scheme
+    standard, and preceding this SRFI, no attempt has been made to
+    specify a standard API for these most common datastructures. It
+    is anticipated that this will change in the near future. In
+    advance of these specifications, this SRFI will outline a
+    consistent naming scheme and set of operators and semantics
+    that future data structure specifications may follow. The
+    intended result is to allow current and future standard
+    datastructures to look and behave in a predictable fashion, and
+    to allow the values stored in them to be easily and efficiently
+    transfered to and from different datastructures as
+    necessary.</p>
+
+    <p>This SRFI specifies <i>iterators</i> as the primary means of
+    traversing and obtaining all values of a collection. The
+    rationale for this paradigm is to support collections whose
+    elements may not reside in physical memory. Allowing stepwise
+    iteration over a collection, as opposed to a general
+    <tt>collection-&gt;list</tt> function allows a collection to fetch its
+    elements lazily from some slower or more costly storage or retrieval
+    mechanism. The canonical example is a collection whose elements
+    are rows from a complex database query. While it may not be
+    possible to store the entire results of the query in memory on
+    which a <tt>map</tt> or <tt>for-each</tt> operation could be performed, 
+    it may be much more feasible to operate on each row one at a time, 
+    saving both memory and delay in transfering the results to the Scheme
+    program. Additionally, iterators cooperate much more cleanly
+    with a garbage collector as references to each value retrieved
+    are lost as the iterator advances, allowing the garbage
+    collector to free large values immediately if the Scheme
+    program does not itself capture a reference to the previous
+    collection value.  Finally, if an iterator is not used to traverse
+    the entire collection, those elements not reached do not need to
+    be retrieved.</p>
+
+    <p>In addition, iterators allow collections whose values are
+    dynamically generated during iteration, including infinite
+    sequences, streams, and input sources. It is possible, for
+    example, to define a collection representing the even natural
+    numbers, or a collection of the characters on an attached
+    TCP/IP socket.</p>
+
+    <h1>Specification</h1>
+
+    <h2>Collections Hierarchy</h2>
+
+    <center>
+      <table>
+        <tr>
+          <td>
+<pre>
+                   Collection
+                        |
+         +--------+---------+-----------------+
+         |        |         |                 |
+        Bag      Set    Dictionary    Ordered Collection
+         |                                    | 
+      Sequence               +----------------+------------+
+         |                   |                |            |
+ Flexible Sequenece  Ordered Dictionary  Ordered Bag   Ordered Set
+    
+</pre>
+          </td>
+        </tr>
+      </table>
+    </center>
+
+    <p>This SRFI first defines hierarchy of possible datastructure
+    types. Each subtype inherits the behavior and functionality of
+    it's parent. Any collection may be immutable or fixed
+    sized.</p>
+
+    <blockquote>
+      <h4>Collection or Ordered Collection</h4>
+
+      <p>The base type. All collections have a concept of size and
+      emptiness, and for all collections an iterator can be
+      obtained.<br />
+       The ordered counterpart of any collection shares all the
+      properties of an ordinary collection, with the additional
+      ability of obtaining an ordered iterator.  While each collection
+      type may be ordered or unordered, the set of ordered collections
+      is <i>not</i> a distinct set of types.</p>
+
+      <h4>Bag</h4>
+
+      <p>A bag is a collection of possibly ordered, possibly unique
+      values. Given a bag, it is only possible to determine if it
+      contains or does not contain any of a given value.</p>
+
+      <h4>Set</h4>
+
+      <p>A set is a collection of unique values.  Similar to but distinct
+        from a bag, it is  only possible to determine if a set contains or 
+        does not contain a given value. Unlike a bag, only one of any value
+        can exist in the collection at a time. Removing one value
+        from the set means that the set no longer contains the value
+        at all.</p>
+
+      <h4>Sequence</h4>
+
+      <p>A sequence extends a bag with the ability to access and
+      replace its members using a non-negative exact integer.
+      Sequences are <i>stable.</i> That is, if no mutation
+      operation occurs on a sequence, its elements must remain in
+      the same order according to their previously observed
+      indices. When values are added to a base Sequence, they may
+      be added anywhere in the sequence. Sequences may or may not
+      allow multiple instances of a value.</p>
+
+      <h4>Flexible Sequence</h4>
+
+      <p>A flexible sequence is a datastructure that allows new
+      values to be added and old values removed at any position in
+      the sequence, as specified by the programmer.</p>
+
+      <h4>Dictionary</h4>
+
+      <p>A dictionary maps an arbitrary value called a <i>key</i>
+      to another arbitrary value. Dictionaries may or may not
+      contain multiple mappings for a given key.</p>
+    </blockquote>
+
+    <h2>Storage Model</h2>
+    Collection instances, as specified in this SRFI, are treated as
+    first-class opaque values. This means they can be stored in any
+    variable, and should be treated as atomic values. That is,
+    unless otherwise specified by the collection type, a collection
+    and its values are indivisible, and can be changed, extended,
+    or truncated only through mutation. <br />
+     
+
+    <h2>Iterators</h2>
+
+    <p>Regardless of the collection type, all collections must be
+    able to provide an <i>iterator.</i> An iterator is an opaque
+    value that encapsulates the state of a traversal across the
+    values of a collection. When passed as an argument to the
+    iteration functions, the programmer can obtain the value at the
+    current state in iteration, determine if there are further
+    values to reach, and obtain the next iterator, a new state value
+    which is advanced to the next iterator position. Iterators may
+    also be used to side-effect a datastructure. If the iterator
+    supports modification, the programmer may use the iterator to
+    change the value at the current iterator position or remove
+    the current value from the underlying collection.</p>
+
+    <p>An iterator starts on a special position called the
+    iterator-start. It is an error to call <tt>iterator-value</tt>
+    on the iterator-start. In this position, the
+    <tt>iterator-at-start?</tt> predicate will return a non-false
+    value. The programmer may then advance to the first value
+    position with <tt>iterator-next</tt> if
+    <tt>iterator-at-end?</tt> returns false. The programmer can
+    then continue to iterate until <tt>iterator-at-end?</tt>
+    returns a non-false value, indicating he has reached a special
+    iterator-end position, which also has no value. An iterator
+    obtained from an empty collection is both an iterator-start and
+    iterator-end position.  Some iterators may allow the programmer to 
+    retreat to a previous iterator position if it is efficient to do so
+    using the <tt>iterator-previous</tt> function.  The following diagram
+    may help clarify the various positions of iterators:</p>
+    <blockquote>  
+    <blockquote>
+      <pre>
+ iterator-at-start? => #f                                               
+ iterator-at-end? => #f                                                 
+ iterator-value => a value                                              
+                   |                                                     
+                   |                                                     
+  iterator-next -- | ------------------------------------>|
++-----------------+|----------------+--------------  . . . --+---------------+
+|O iterator-start |O iterator-value | iterator-value         | iterator-end O|
++|----------------+-----------------+--------------  . . . --+--------------|+
+ |                  |<-------------------------------- iterator-previous    |
+ |                                                                          |
+ |   iterator-at-start? => #t                    iterator-at-start? => #f   |
+ +-- iterator-at-end? => #f                      iterator-at-end? => #t   --+ 
+     iterator-value => error                     iterator-value => error
+     iterator-previous => error                  iterator-next => error      
+      </pre>
+    </blockquote>
+    </blockquote>
+    <p>In an ordered collection, an iterator is required to
+    retrieve the values in the order of the underlying ordered
+    collection. In addition, an ordered collection may allow a
+    <i>reverse-iterator</i> can be obtained, which iterates over
+    the collections values in reverse order.</p>
+
+    <p>Finally, in a Dictionary datastructure, an iterator must
+    also be available for the keys of the underlying Dictionary
+    collection. If the dictionary is ordered, a reverse key iterator may
+    also be obtainable.</p>
+
+    <p>All iterators that can be obtained from a collection are
+    <i>required</i> to support the <tt>iterator-at-start?,
+    iterator-at-end?, iterator-value</tt>, and
+    <tt>iterator-next</tt> functions. An iterator may choose to
+    support one or both mutating iterator functions. Finally, a
+    collection may make it possible to retrieve more than one
+    iterator type, with different types supporting different
+    subsets of the extended iterator functions. It is an error to
+    call an extended iterator function on an iterator token on
+    which that operation is not supported.</p>
+
+    <h3>Iterator Stability</h3>
+
+    <p>It is undefined in this SRFI whether an iterator obtained
+    from a collection is <i>stable</i>. A stable iterator will
+    return the values in a given collection at the time of the
+    iterators creation. Removing or adding values from the
+    underlying collection will not cause the removed values to
+    disappear from the iterator, or the added values to appear.
+    Adding or removing values from a collection and then accessing
+    an existing stable iterator <i>may</i> be an error.</p>
+
+    <h3>Iterator Mutation</h3>
+
+    <p>An iterator may allow <i>mutation</i> of the underlying
+    collection. Mutating iterators can change the value (or in
+    dictionaries the key) of the underlying collection at the
+    current iterator position, remove the current value or mapping
+    of the iterator, or (in flexible sequences only) insert values  
+    before the current iterator value.
+    </p>
+
+    <h2>Immutable Collections</h2>
+
+    <p>Any collection or instance of a collection may be immutable,
+    or made immutable at any point in its lifecycle. It is an error
+    to add, remove, or modify values or mappings in an
+    immutable collection, either directly or through a mutating
+    iterator.</p>
+
+    <h2>Homogeneity</h2>
+
+    <p>Collections may be homogenous (capable of storing values of
+    only one type), though it is anticipated that the majority of
+    collections will be heterogenous. If a collection is
+    homogenous, it is an error to attempt to store a value or key
+    of the wrong type within it.</p>
+
+    <h2>Size versus Length</h2>
+
+    <p>Most collections possess a concept of size. The size of a
+    collection is the number of values or mappings it currently
+    contains. This differs from the concept of length in Scheme
+    datastructures, which corresponds more or less directly to the
+    amount of actual storage in use, in terms of cons cell cars or
+    vector slots. A collection may occupy more physical storage
+    than required to contain its values or mappings. An example
+    might be a hashtable collection, which may at any given time
+    contain numerous unoccupied, discontiguous cells. This matter
+    is confused by the collections specified in this API, whose
+    size and length are the same.</p>
+
+    <p>A collection may not have such a concept, in which case the
+    <tt>collection-size</tt> function must return <tt>#f</tt>.
+    Infinite collections (such as the collection of natural
+    numbers) or lazy collections (such as a network stream) are
+    examples of size-indeterminate collections.</p>
+
+    <h2>Ordered Collections</h2>
+
+    <p>Some collections maintain an ordering. These ordered
+    collections provide the additional property of guaranteeing an
+    iterator will progress over the collection in a least to
+    greatest value precedence fashion, as defined by the collection's
+    <i>ordering function</i>. An ordered collection's constructor
+    must take such a function as input. An ordering function takes
+    two arguments, and returns a boolean, indicating whether the
+    first value is to take precedence in the collection over the
+    second. As an example, an ordered collection of numbers may use
+    <tt>&lt;</tt> or <tt>&lt;=</tt> to order numeric values added
+    to the collection.</p>
+
+    <p>In order to ensure a consistent ordering in the collection,
+    the ordering function must return the same result for like
+    inputs over time. In most cases, an ordering function should
+    also treat like values as if tested using <tt>equal?</tt> in
+    order to ensure that duplicate values are stored and retrieved
+    consistently.</p>
+
+    <h2>Dictionaries and Value Equality</h2>
+
+    <p>Dictionaries store mappings from a keys to values. In order
+    to determine whether a given key matches another (eg. for
+    retrieving values by key), the dictionary must use an
+    <i>equivalence function.</i> Any collection may require or
+    accept an equivalence function in its primary constructor
+    (<tt>make-%</tt>) and in its initializing constructor (<tt>%</tt>). 
+    The provided equivalence function must take
+    two values as input and return true if they should be
+    considered equivalent for the purposes of <tt>contains?</tt> or
+    key lookup. If provided, an equivalence function follows an
+    ordering function in an ordered collection, but precedes any
+    other arguments. If not provided, <tt>eqv?</tt> is used as a
+    default equivalence function.</p>
+
+    <h2>Sequences</h2>
+
+    <p>A sequence is a collection of values named by a contiguous,
+    zero-based sequence of exact integers. Scheme vectors are a
+    natural example of a sequence. Sequences may or may not be of
+    fixed size. If they are not, sequences allow new values to be
+    added at an undefined point in the sequence, after which some value
+    will exist at the index <tt>(- (collection-size <i>seq</i>) 1)</tt>.
+    </p>
+
+    <h2>Flexible Sequences</h2>
+
+    <p>Flexible sequences are sequences which allow insertion of
+    values at arbitrary points in the sequence. Inserting a value
+    at any position except the end of the sequence causes all
+    values with higher indices than the insertion point to <i>shift
+    right</i>, thus having an index increased by one. Similarly, if
+    values are removed from a sequence at any position except the
+    end, all values with higher indices are <i>shifted left</i>, so
+    their former indices are now decreased by one.</p>
+
+    <h2>Limited Sequences</h2>
+
+    <p>Limited Sequences are the opposite of flexible sequences.
+    They have a fixed capacity, and thus a fixed maximum size. It
+    may be possible to add and remove values from limited sequences
+    by using a special value to indicate unused slots at the end
+    of a sequence, so limited
+    sequences do not necessarily have fixed size. It is an error to
+    add to a limited sequence that is at its maximum size.</p>
+
+    <h2>Procedures</h2>
+
+    <p>Below we describe the naming conventions and semantics of
+      Collections API functions, grouped by collection type. In each
+      function, the name of the collection would replace the asterisk
+      in the function prototype. Function definitions in sub or
+      sibling collection types absolutely override the same named
+      function in the parent. For example <tt>make-%</tt> in the
+      ordered collection. 
+    </p>
+    <p>
+      When <tt>*</tt> is encountered in the definitions
+      below, it is implied that the asterisk is replaced with a
+      function for the specific collection and each of the collections
+      supertypes for which the procedure is defined.  
+      For example, if we had a 'list' flexible sequence 
+      collection, the functions 
+      <tt>list-contains?</tt>, <tt>flexible-sequence-contains?</tt>, 
+      <tt>sequence-contains?</tt>, <tt>bag-contains?</tt> 
+      must all exist, but <tt>collection-contains?</tt> does not.
+      In addition, it is an error to apply any such function to a 
+      collection whose type does not satisfy that implied by the 
+      function name.  
+    </p>
+    <p> 
+      When <tt>%</tt> is encountered in the definitions below, the
+      actual name of the collection is implied.  Again, assuming a
+      'list' flexible sequence, <tt>make-%</tt> implies that the
+      function <tt>make-list</tt> exists.  <tt>%</tt> as a return
+      value indicates a collection of that specific type.
+    </p>
+    <p>
+      Note that while ordered collections are visually represented as
+      a distinct type in the tree above, 'orderedness' is considered
+      an attribute of the collection, not a distinct set of types.
+    </p>
+
+    <h3>Iterators</h3>
+    <i>procedure:</i> <b>iterator?</b> value <b>=&gt;</b> boolean 
+
+    <blockquote>
+      Returns a non-false value if the given value is an iterator.
+    </blockquote>
+    <i>procedure:</i> <b>iterator-at-start?</b> iterator
+    <b>=&gt;</b> boolean 
+
+    <blockquote>
+      Returns a non-false value if the iterator is the special
+      iterator-start position.
+    </blockquote>
+    <i>procedure:</i> <b>iterator-at-end?</b> iterator <b>=&gt;</b>
+    boolean 
+
+    <blockquote>
+      Returns a non-false value if the iterator is the special
+      iterator-end position, indicating there are no further values
+      to consider.
+    </blockquote>
+    <br />
+     <i>procedure:</i> <b>iterator-value</b> iterator <b>=&gt;</b>
+    value 
+
+    <blockquote>
+      Returns the value of the iterator at its current position. It
+      is an error to call this function on an iterator for which
+      either <tt>iterator-at-start?</tt> or
+      <tt>iterator-at-end?</tt> has returned a non-false value.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>iterator-next</b> iterator <b>=&gt;</b>
+    iterator</p>
+
+    <blockquote>
+      Returns a new iterator token for the next iteration position.
+      It is an error to call <tt>iterator-next</tt> on an iterator
+      on which <tt>iterator-at-end?</tt> returned a non-false
+      value.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>iterator-size =&gt;</b> integer</p>
+
+    <blockquote>
+      This procedure returns the number of iteration value
+      remaining, including the current value. This function must
+      return 0 on an iterator on which <tt>iterator-at-end?</tt>
+      has returned a non-false value. If it is not possible to
+      efficiently determine the number of remaining elements, this
+      function may return <tt>#f</tt>.
+    </blockquote>
+
+    <h3>Bidirectional Iterators</h3>
+
+    <p>An iterator may, if it is efficiently faciliated by the
+    underlying collection, allow travel in both directions.</p>
+
+    <p><i>procedure:</i> <b>iterator-previous</b> iterator
+    <b>=&gt;</b> iterator</p>
+
+    <blockquote>
+      Returns the iterator token for the previous iteration
+      position. It is an error to call <tt>iterator-previous</tt>
+      on an iterator on which <tt>iterator-at-start?</tt> returned
+      a non-false value.
+    </blockquote>
+
+    <h3>Mutating Iterators</h3>
+
+    <p><i>procedure:</i> <b>iterator-set-value!</b> iterator value
+    <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Replaces the current value in the underlying collection
+      referenced by the provided iterator with the provided value.
+      It is an error to call this function on an iterator for which
+      either <tt>iterator-at-start?</tt> or
+      <tt>iterator-at-end?</tt> has returned a non-false value.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>iterator-remove-value!</b> iterator
+    <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Removes the current value in the underlying collection
+      referenced by the provided iterator. It is an error to call
+      this function on an iterator for which either
+      <tt>iterator-at-start?</tt> or <tt>iterator-at-end?</tt> has
+      returned a non-false value.
+    </blockquote>
+
+    <h4>Flexible Sequence Mutating Iterators</h4>
+
+    <p><i>procedure:</i> <b>iterator-insert-value!</b> iterator
+    value <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Valid only on iterators obtained from mutable flexible sequences, 
+      this function inserts the
+      given value into the underlying flexible sequence before the value
+      currenty referenced by the iterator. Calling
+      <tt>iterator-insert-value!</tt> on an iterator for which
+      <tt>iterator-at-end?</tt> returns a non-false value results
+      in the value being added to the end of the sequence if the
+      iterator is an ordinary, left-to-right iterator. If it is a
+      reverse iterator, the value is inserted at the beginning of
+      the collection. It is an error to call this function on an
+      iterator on which <tt>iterator-at-start?</tt> has returned a
+      non-false value.
+    </blockquote>
+
+    <h3>Collections</h3>
+
+    <p><i>procedure:</i> <b>collection?</b> value <b>=&gt;
+    value</b></p>
+
+    <blockquote>
+      Returns a non-false value if the provided value is a
+      collection.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>%?</b> value <b>=&gt;
+    value</b></p>
+
+    <blockquote>
+      Returns a non-false value iff the provided value is an
+      instance of the specific collection type.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-size</b> collection
+    <b>=&gt;</b> integer</p>
+
+    <blockquote>
+      If the collection has a concept of size, this function
+      returns the number of values or mappings in the collection.
+      If it does not, <tt>#f</tt> must be returned.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-empty?</b> collection
+    <b>=&gt;</b> boolean</p>
+
+    <blockquote>
+      Returns true iff the given collection is known to be empty.
+      This function should return false if it is known that there
+      are values within the collection, or if it is unknown whether
+      any values exist.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-iterator</b> collection
+    <b>=&gt;</b> iterator</p>
+
+    <blockquote>
+      Returns an iterator token over the values of the given
+      collection. If the collection is ordered, this iterator will
+      iterate in the direction of lesser to greater precedence.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-values</b> collection
+    <b>=&gt;</b> list</p>
+
+    <blockquote>
+      Returns all the values in the collection as a list. This can be
+      done trivially with an iterator, but an implementation may
+      choose to allow this function to behave more efficiently on
+      certain collections.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>make-% =&gt; %</b></p>
+
+    <blockquote>
+      Constructs a * collection.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>%</b> value ... <b>=&gt; %</b></p>
+
+    <blockquote>
+      Constructs a % collection with the zero or more values
+      provided as its initial contents.
+    </blockquote>
+
+    <h3>Ordered Collections</h3>
+
+    <p><i>procedure:</i> <b>ordered-collection?</b> value <b>=&gt;
+    value</b></p>
+
+    <blockquote>
+      Returns a non-false value if the provided value is an ordered
+      collection.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-reverse-iterator</b>
+    collection <b>=&gt;</b> iterator</p>
+
+    <blockquote>
+      Returns an iterator token which procedes from right to left,
+      or from greater to lesser precedence over the values of the
+      given ordered collection.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>make-%</b> ordering-function <b>=&gt;
+    %</b></p>
+
+    <blockquote>
+      Constructs a * ordered collection whose ordering is
+      determined by the provided ordering function.
+    </blockquote>
+
+    <h3>Bags</h3>
+
+    <p><i>procedure:</i> <b>bag?</b> value <b>=&gt; value</b></p>
+
+    <blockquote>
+      Returns a non-false value if the provided value is a bag.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-contains?</b> bag value
+    <b>=&gt;</b> boolean</p>
+
+    <blockquote>
+      Returns a non-false value if the bag contains any instances
+      of the given value.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-add!</b> bag value <b>=&gt;</b>
+    undefined</p>
+
+    <blockquote>
+      Adds a single value to a bag.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-remove!</b> bag value <b>=&gt;</b>
+    undefined</p>
+
+    <blockquote>
+      Removes a single instance of the given value from the bag.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-remove-any!</b> bag value
+    <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Removes any instances of the given value from the bag.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-add-all!</b> dest-bag source-bag
+    <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Adds all the values in the source bag to the destination bag.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-remove-all!</b> dest-bag source-bag
+    <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Removes one instance of each value found in source-bag from
+      dest-bag.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-remove-any-of!</b> dest-bag
+    source-bag <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Removes any instances of each value found in source-bag from
+      dest-bag.
+    </blockquote>
+
+    <h3>Sets</h3>
+
+    <p><i>procedure:</i> <b>set?</b> value <b>=&gt;</b> boolean</p>
+
+    <blockquote>
+      Returns a non-false value if the provided value is a set.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-contains?</b> set value
+    <b>=&gt;</b> boolean</p>
+
+    <blockquote>
+      Returns a non-false value if the set contains any instances
+      of the given value.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-add!</b> set value <b>=&gt;</b>
+    undefined</p>
+
+    <blockquote>
+      Adds a value to the set.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-remove!</b> set value <b>=&gt;</b>
+    undefined</p>
+
+    <blockquote>
+      Removes the given value from the set.
+    </blockquote>
+
+    <h3>Sequences</h3>
+
+    <p><i>procedure:</i> <b>sequence?</b> value <b>=&gt;</b>
+    boolean</p>
+
+    <blockquote>
+      Returns a non-false value if the provided value is a
+      sequence.
+    </blockquote>
+    <br />
+     <i>procedure:</i> <b>*-ref</b> sequence integer
+    <b>=&gt;</b> boolean 
+
+    <blockquote>
+      Returns the value stored in the sequence at the integer index
+      provided. It is an error to reference an index outside the
+      range of the sequence.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-set!</b> sequence integer
+    value <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Replaces the value stored in the sequence at the integer
+      index provided with the given value. It is an error to
+      reference an index outside the range of the sequence. It is
+      recommended that the return value of this function be the
+      previous value stored at the given index.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-add!</b> sequence value
+    <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Adds the given value to the end of the sequence.
+    </blockquote>
+
+    <h3>Flexible Sequences</h3>
+
+    <p><i>procedure:</i> <b>flexible-sequence?</b> value
+    <b>=&gt;</b> boolean</p>
+
+    <blockquote>
+      Returns a non-false value if the provided value is a flexible
+      sequence.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-insert!</b> flexible-sequence
+    index value <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Inserts the provided value at the given index in the flexible
+      sequence. If index is not equal to the
+      <tt>collection-size</tt> of the sequence, this will result in
+      the current value at index and subsequent values' indices to
+      increase by one.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-delete!</b> flexible-sequence
+    index <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Deletes the current value at the given index in the flexible
+      sequence. If index is not equal to the
+      <tt>collection-size</tt> - 1 of the sequence, this will
+      result in the subsequent values' indices to decrease by one,
+      filling the newly created gap.
+    </blockquote>
+
+    <h3>Dictionaries</h3>
+
+    <p><i>procedure:</i> <b>dict?</b> value <b>=&gt;</b>
+    boolean</p>
+
+    <blockquote>
+      Returns a non-false value if the provided value is a flexible
+      sequence
+    </blockquote>
+
+    <p><i>optional-procedure:</i> <b>make-%</b>
+    [equivalence-function] <b>=&gt; %</b></p>
+
+    <blockquote>
+      Constructs a % dictionary whose equivalence function is that
+      provided. If not provided, eqv? is used.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>%</b> [equivalence-function] (key . value) ... <b>=&gt;
+    *</b></p>
+
+    <blockquote>
+      Constructs a % dictionary with the zero or more bindings
+      provided as it's initial values.  If provided, the keys will be
+      compared with the given equivalence function, otherwise eqv? is used.
+      Each operand after the equivalence
+      function to a dictionary
+      constructor must be a Scheme pair.  
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-key-iterator</b> dictionary
+    <b>=&gt; iterator</b></p>
+
+    <blockquote>
+      Returns an iterator which iterates over the keys in the
+      provided dictionary collection. The ordinary iterator
+      function, by contrast, returns an iterator over the values
+      mapped to by the dictionary's keys.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-keys</b> dictionary <b>=&gt;</b>
+    list</p>
+
+    <blockquote>
+      Returns all the keys in the dictionary as a list. This can be
+      done trivially with an iterator, but this procedure is
+      provided if an implementation can more efficiently perform
+      this operation directly.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-get</b> dictionary key [default]
+    <b>=&gt;</b> value</p>
+
+    <blockquote>
+      Retrieves the value of the mapping for the given key. If no
+      such mapping exists, the value of <tt>default</tt> is
+      returned, or <tt>#f</tt> if default was not provided.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-put!</b> dictionary key value
+    <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Sets the value the mapping for the given key to the given
+      value.
+    </blockquote>
+
+    <p><i>optional-procedure:</i> <b>*-put!</b> dictionary key
+    value [default] <b>=&gt;</b> value</p>
+
+    <blockquote>
+      Sets the value the mapping for the given key to the given
+      value. If the mapping previously existed, this function
+      returns the previous value of that mapping. If no such
+      mapping existed, the value of default is returned, or
+      <tt>#f</tt> if no default value was provided. It is preferred
+      that dictionary collections implement this form of
+      <tt>dict-put!</tt> over the previous one if it is feasible.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-remove!</b> dictionary key
+    <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Removes an existing mapping for the given key. If there was
+      no such mapping, this call does nothing.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-remove-any!</b> dictionary key
+    <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Removes any existing mappings for the given key. If there
+      weren'y any such mappings, this call does nothing. This
+      procedure must be defined only if the dictionary supports
+      multiple mappings per key.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-remove-all!</b> dictionary bag
+    <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Removes one instance of each mapping from keys found in the
+      given bag.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-remove-any-of!</b> dictionary bag
+    <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Removes any instances of mappings from keys found in bag from
+      the dictionary.
+    </blockquote>
+
+    <p><i>procedure:</i> <b>*-add-all!</b> dest-dict source-dict
+    <b>=&gt;</b> undefined</p>
+
+    <blockquote>
+      Adds all the mappings in the source dictionary to the
+      destination dictionary.
+    </blockquote>
+
+    <h2>Scheme Collections</h2>
+
+    <p>This SRFI aditionally specifies a Collections API for the
+    Scheme list, the derived association list, the vector and
+    string types.</p>
+
+    <h4>Scheme Lists</h4>
+
+    <p>Scheme List collections are flexible sequences. In the
+    reference implementation provided by this SRFI, lists have an
+    unstable iterator.</p>
+
+    <p><i>procedure:</i> <b>make-list</b> [size [default]]
+    <b>=&gt;</b> list<br />
+    </p>
+
+    <blockquote>
+      Creates a new list. If size is provided, it will start out
+      with size instances of the value given as default. If default
+      is not provided, the contents of the list are undefined.
+    </blockquote>
+    <i>procedure:</i> <b>list</b> value ... =&gt; list<br />
+    <br />
+
+    <p><i>procedure:</i> <b>list?</b> value =&gt; boolean</p>
+    <p><i>procedure:</i> <b>list-iterator</b> value =&gt; iterator</p>
+    <p><i>procedure:</i> <b>list-contains?</b> list value =&gt; boolean</p>
+
+    <p><i>procedure:</i> <b>list-add!</b> list value =&gt; undefined<br>
+    <p><i>procedure:</i> <b>list-remove!</b> list value =&gt; undefined<br>
+    <p><i>procedure:</i> <b>list-remove-any!</b> list value =&gt;
+    undefined</p>
+    <p><i>procedure:</i> <b>list-add-all!</b> list bag =&gt; undefined<br>
+    <p><i>procedure:</i> <b>list-remove-all!</b> list bag =&gt;
+    undefined<br>
+    <p><i>procedure:</i> <b>list-remove-any-of!</b> list bag =&gt;
+    undefined</p>
+
+    <p><i>procedure:</i> <b>list-insert!</b> list bag =&gt;
+    undefined<br>
+    <p><i>procedure:</i> <b>list-delete!</b> list index =&gt; undefined<br>
+
+    <h4>Scheme Association Lists</h4>
+
+    <p>Scheme association lists are dictionaries. In the reference
+    implementation provided by this SRFI, alists have an unstable
+    iterator. It is difficult to fully map the collections API onto
+    alists, as they are Scheme lists. Difficulty would be
+    encountered in adding to an empty alist, as side-effection of
+    the variable holding the Scheme empty-list would be required.
+    For this reason alists produced by this SRFI have a placeholder
+    value at the front of the list so that its contents can always
+    be side-effected.</p>
+
+    <p><i>procedure:</i> <b>make-alist</b> [equivalence-function]
+    =&gt; alist<br />
+     <i>procedure:</i> <b>alist</b> [equivalence-function] (key . value) ... =&gt;
+    alist</p>
+
+    <p><i>procedure:</i> <b>alist?</b> value =&gt; boolean<br />
+    <p><i>procedure:</i> <b>alist-iterator</b> value =&gt; iterator
+    </p>
+
+    <p><i>procedure:</i> <b>alist-key-iterator</b> value =&gt;
+    iterator<br />
+    <p><i>procedure:</i> <b>alist-keys</b> value =&gt; scheme-list<br
+    />
+    <p><i>procedure:</i> <b>alist-get</b> alist value =&gt; value<br />
+    <p><i>procedure:</i> <b>alist-put!</b> alist value value =&gt;
+    undefined<br />
+    <p><i>procedure:</i> <b>alist-remove!</b> alist value =&gt;
+    undefined<br />
+    <p><i>procedure:</i> <b>alist-remove-any!</b> alist value =&gt;
+    undefined<br />
+    <p><i>procedure:</i> <b>alist-remove-all!</b> alist bag =&gt;
+    undefined<br />
+    <p><i>procedure:</i> <b>alist-remove-any-of!</b> alist bag =&gt;
+    undefined<br />
+    <p><i>procedure:</i> <b>alist-add-all!</b> alist dict =&gt;
+    undefined<br />
+    </p>
+
+    <h4>Scheme Vectors</h4>
+
+    <p>Scheme Vectors are limited sequences. In the reference
+    implementation provided by this SRFI, vectors have an unstable
+    iterator.</p>
+
+    <p><i>procedure:</i> <b>make-vector</b> size [default]
+    <b>=&gt;</b> list<br />
+    </p>
+
+    <blockquote>
+      Creates a new vector with the provided size. If default is
+      not provided, the contents of the vector are undefined.
+    </blockquote>
+    <i>procedure:</i> <b>vector</b> value ... =&gt; vector <br />
+    <br />
+     
+
+    <p><i>procedure:</i> <b>vector?</b> value =&gt; boolean<br />
+    </p>
+    <p><i>procedure:</i> <b>vector-iterator</b> value =&gt; iterator</p>
+    <p><i>procedure:</i> <b>vector-contains?</b> value =&gt; boolean</p>
+
+    <h4>Scheme Strings</h4>
+
+    <p>Scheme strings are limited homogenous sequences which can
+    only store characters. In the reference implementation provided
+    by this SRFI, strings have an unstable iterator.</p>
+
+    <p><i>procedure:</i> <b>make-string</b> size
+    [default-character] =&gt; string<br />
+     <i>procedure:</i> <b>string</b> character ... =&gt; string</p>
+
+    <p><i>procedure:</i> <b>string?</b> value =&gt; boolean<br />
+    </p>
+    <p><i>procedure:</i> <b>string-iterator</b> value =&gt; iterator</p>
+    <p><i>procedure:</i> <b>string-contains?</b> character =&gt; boolean</p>
+
+    <h1>References</h1>
+
+    <p>The Dylan Reference Guide. <a href=
+    "http://www.gwydiondylan.org/drm/">http://www.gwydiondylan.org/drm/</a><br />
+
+     The Java Collections Framework. <a href=
+    "http://java.sun.com/products/jdk/1.2/docs/guide/collections/">http://java.sun.com/products/jdk/1.2/docs/guide/collections/</a></p>
+
+    <h1>Implementation</h1>
+
+    <p>This SRFI behaves more as a meta-SRFI for future SRFIs to
+    define concrete collection types. However, a reference
+    implementation for the collections wrapper around the common
+    Scheme types is provided in 
+    <a href="srfi-44.scm">srfi-44.scm</a>.
+
+    <h1>Copyright</h1>
+
+    <p>Copyright (C) Scott G. Miller (2003). All Rights
+    Reserved.</p>
+
+    <p>This document and translations of it may be copied and
+    furnished to others, and derivative works that comment on or
+    otherwise explain it or assist in its implementation may be
+    prepared, copied, published and distributed, in whole or in
+    part, without restriction of any kind, provided that the above
+    copyright notice and this paragraph are included on all such
+    copies and derivative works. However, this document itself may
+    not be modified in any way, such as by removing the copyright
+    notice or references to the Scheme Request For Implementation
+    process or editors, except as needed for the purpose of
+    developing SRFIs in which case the procedures for copyrights
+    defined in the SRFI process must be followed, or as required to
+    translate it into languages other than English.</p>
+
+    <p>The limited permissions granted above are perpetual and will
+    not be revoked by the authors or their successors or
+    assigns.</p>
+
+    <p>This document and the information contained herein is
+    provided on an "AS IS" basis and THE AUTHOR AND THE SRFI
+    EDITORS DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING
+    BUT NOT LIMITED TO ANY WARRANTY THAT THE USE OF THE INFORMATION
+    HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED WARRANTIES
+    OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.</p>
+    <hr />
+
+    <address>Author: <a href="mailto:scgmille@freenetproject.org">Scott G. Miller</a></address>
+    <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Francisco Solsona</a></address>
+    <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
+    <!-- hhmts start --><!-- hhmts end -->
+    Last modified: Thu Mar 20 21:10 CST 2003
+  </body>
+</html>
+
