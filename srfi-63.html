@@ -30,6 +30,7 @@ archive of the mailing list</A>.
 <UL>
   <LI>Received: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-63/srfi-63.html?rev=1.3">2005/01/17</A></LI>
   <LI>Draft: 2005/01/17 - 2005/03/18</LI>
+  <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-63/srfi-63.html?rev=1.4">2005/01/27</A></LI>
 </UL>
 
 <H1>Abstract</H1>
@@ -68,11 +69,11 @@ heterogeneous arrays described here.
 
 <UL>
 <LI>
-I removed character arrays (from SRFI-47) because, as I read R5RS, the
-number of distinct characters an implementation supports need not be
-finite; thus character elements might require an unbounded size of
-representation.
-<P>
+<!-- I removed character arrays (from SRFI-47) because, as I read R5RS, the -->
+<!-- number of distinct characters an implementation supports need not be -->
+<!-- finite; thus character elements might require an unbounded size of -->
+<!-- representation. -->
+<!-- <P> -->
 Character arrays are can be supported based on strings; but they do
 not necessarily have access times comparable to other types of arrays.
 <P>
@@ -92,7 +93,7 @@ not inverses for rank-0 arrays.
 
 Computations have been organized into multidimensional arrays for over
 200 years.  Applications for multi-dimensional arrays continue to
-arise.  Computer graphics and imaging, whether vector or bitmap based,
+arise.  Computer graphics and imaging, whether vector or raster based,
 use arrays.  A general-purpose computer language without
 multidimensional arrays is an oxymoron.
 
@@ -225,6 +226,12 @@ The list-&gt;array is somewhat dissonant:
 
 <H2>Homogeneous Array Types</H2>
 
+All implementations must support Scheme strings as rank 1 character
+arrays.  This requirement mandates that Scheme strings be valid
+arguments to array procedures; their stored representations may be
+different from other character arrays.
+<P>
+
 Although an implementation is required to define all the prototype
 functions, it is not required to support all or even any of the
 homogeneous numeric arrays.  It is assumed that no uniform numeric
@@ -259,7 +266,7 @@ numbers.
 <TR><TD><CODE>A:fixN16b </CODE><TD>exact<TD>16.bit nonnegative binary fixnum
 <TR><TD><CODE>A:fixN8b  </CODE><TD>exact<TD>8.bit  nonnegative binary fixnum
 <TR><TD><CODE>A:bool    </CODE><TD>     <TD>boolean
-<!-- <TR><TD><CODE>string    </CODE><TD>     <TD>char -->
+<TR><TD><CODE>string    </CODE><TD>     <TD>char
 </TABLE>
 <P>
 Decimal flonums are used for financial calculations so that fractional
@@ -309,6 +316,7 @@ errors do not accumulate.  They should be exact numbers.
 
 </UL>
 
+<A NAME="Prototype Procedures"></A>
 <H2>Prototype Procedures</H2>
 
 Implementations are required to define all of the prototype
@@ -423,8 +431,13 @@ arrays can be returned from <CODE>make-shared-array</CODE>.
 Following <A HREF="http://www-2.cs.cmu.edu/Groups/AI/html/hyperspec/HyperSpec/Body/sec_15-1-1-3.html">Common-Lisp</A>'s
 lead, zero-rank arrays have a single element.
 <P>
-Array access time is O(<I>R</I>)+<I>V</I>, where <I>R</I> is the rank
-of the array and <I>V</I> is the vector access time.
+Except for character arrays, array access time is
+O(<I>R</I>)+<I>V</I>, where <I>R</I> is the rank of the array and
+<I>V</I> is the vector access time.
+<P>
+Character array access time is
+O(<I>R</I>)+<I>S</I>, where <I>R</I> is the rank of the array and
+<I>S</I> is the string access time.
 <P>
 
 <H1>Specification</H1>
@@ -1023,7 +1036,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     <ADDRESS>Editor: <A HREF="mailto:srfi-editors@srfi.schemers.org">David Van Horn</A></ADDRESS>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Mon Jan 17 12:56:55 EST 2005
+Last modified: Thu Jan 27 09:30:33 EST 2005
 <!-- hhmts end -->
   </BODY>
 </HTML>
