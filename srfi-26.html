@@ -32,6 +32,7 @@ the archive of the mailing list</a>.
 <UL>
 <LI>Draft: 2002/02/06-2002/04/06 </LI>
 <LI>Revised: 2002/02/15</LI>
+<LI>Revised: 2002/02/28</LI>
 </UL>
 
 
@@ -45,8 +46,52 @@ For example, from the binary operation <code>cons</code>
 one might want to obtain the unary operation 
 <code>(lambda (x) (cons 1 x))</code>.
 This specialization of parameters is also known as
-partial application, operator section and projection.
-<p>
+partial application, operator section and projection.<p>
+
+The mechanism proposed here allows to write this sort
+of specialization in a simple and compact way.
+The mechanism is best explained by a few examples:<p>
+
+<TABLE>
+<TR>
+<TD><code>(cut cons (+ a 1) <>)</code> 
+<TD>is the same as
+<TD><code>(lambda (x2) (cons (+ a 1) x2))</code>
+</TR>
+<TR>
+<TD><code>(cut list 1 <> 3 <> 5)</code> 
+<TD>is the same as
+<TD><code>(lambda (x2 x4) (list 1 x2 3 x4 5))</code>
+</TR>
+<TR>
+<TD><code>(cut list)</code> 
+<TD>is the same as
+<TD><code>(lambda () (list))</code>
+</TR>
+<TR>
+<TD><code>(cut list 1 <> 3 <...>)</code> 
+<TD>is the same as
+<TD><code>(lambda (x2 . xs) (apply list 1 x2 3 xs))</code>
+</TR>
+</TABLE><p>
+
+As you see, the macro <code>cut</code> specializes some of the 
+parameters of its first argument. 
+The parameters that are to show up as formal
+variables of the result are indicated by the symbol <code>&lt;&gt;</code>, 
+pronouced as "slot". In addition, the symbol <code>&lt;...&gt;</code>,
+pronounced as "rest-slot", matches all residual arguments of a variable 
+argument procedure.<p>
+
+The mechanism proposed here allows specializing any subset 
+of the variables of a procedure.
+The result can be of fixed arity or of variable arity.
+The mechanism does not allow permutation, omission, duplication
+or any other processing of the arguments;
+for this it is necessary to write to use a different
+mechanism such as <code>lambda</code>.
+
+<H1>Rationale</H1>
 
 A particularly elegant way to deal with specialization is known 
 as <em>currying</em> (Sch&ouml;nfinkel 1924, Curry 1958).
@@ -56,9 +101,8 @@ function as a unary function mapping its first argument into
 an (<i>n</i>-1)-ary function (which is curried in turn).
 This point of view, apart from its theoretical elegance, 
 allows an extremely compact notation for specializing the 
-first argument of a function:
-In the example above,
-one could simply write <code>(cons 1)</code>.<p>
+first argument of a function.
+In the first example, one could simply write <code>(cons 1)</code>.<p>
 
 Yet, Scheme is not a curried language---the
 number of arguments passed to a procedure must match
@@ -70,104 +114,48 @@ and invent some irrelevant identifiers for its
 formal variables (<code>x</code> in the example).
 For this reason, the mechanism proposed in this SRFI 
 provides a simple and compact notation for specializing
-any subset of the parameters of a procedure.
-Note: <em>The mechanism proposed here is not what
-is usually called "currying"!</em>
-But the "macro that is not curry" is as close to
-currying as it gets, as far as Scheme is concerned.<p>
+any subset of the parameters of a procedure.<p>
 
-The mechanism is best explained by a few examples:<p>
+Note: <em>The mechanism proposed here is not currying!</em><p>
+
+The purpose of the mechanism proposed here is to make the benefits
+of currying available within the programming language Scheme.
+There are two primary benefits of currying in practice:
+Higher-order types are substantially simplified and
+there is a simple notation for specializing parameters.
+The type aspect is irrelevant as has Scheme latent typing.
+The specialization aspect is largly covered with this SRFI.<p>
+
+Here are a few more examples for illustration:
 
 <TABLE>
 <TR>
-<TD><code>(curry cons a <>)</code> 
-<TD>is the same as
-<TD><code>(lambda (x2) (cons a x2))</code>
+<TD><code>(map (cut * 2 <>) '(1 2 3 4))</code> 
 </TR>
 <TR>
-<TD><code>(curry list 1 <> 3 <> 5)</code> 
-<TD>is the same as
-<TD><code>(lambda (x2 x4) (list 1 x2 3 x4 5))</code>
+<TD><code>(map (cut vector-set! x <> 0) indices)</code> 
 </TR>
 <TR>
-<TD><code>(curry list)</code> 
-<TD>is the same as
-<TD><code>(lambda () (list))</code>
+<TD><code>(for-each (cut write <> port) exprs)</code> 
 </TR>
 <TR>
-<TD><code>(curry list 1 <> 3 <...>)</code> 
-<TD>is the same as
-<TD><code>(lambda (x2 . xs) (apply list 1 x2 3 xs))</code>
+<TD><code>(apply + (map (cut if <> 0 1) '(#f #t #t #f)))</code>
 </TR>
-</TABLE><p>
-
-As you see, the macro curry specializes some of the parameters of 
-its first argument. The parameters that are to show up as formal
-variables of the result are indicated by the symbol <code>&lt;&gt;</code>, 
-pronouced as "slot". In addition, the symbol <code>&lt;...&gt;</code>,
-pronounced as "rest-slot", matches all residual arguments of a variable 
-argument procedure.<p>
-
-The mechanism proposed here allows specializing any subset 
-of the variables of a procedure.
-The result can be of fixed arity or of variable arity.
-The mechanism does not allow changing the order in which the 
-arguments are passed to the procedure; 
-for this it is necessary to write down a lambda-expression.
-
-<H1>Rationale</H1>
-
-The purpose of the mechanism proposed here is make the benefits
-of currying available within the programming language Scheme.
-There are two primary benefits of currying in practice:
-Higher order types are substantially simplified and
-there is a simple notation for specializing parameters.
-The type aspect is irrelevant as has Scheme latent typing.
-The specialization aspect is covered with this SRFI.<p>
-
-Why is there no <code>uncurry</code>? 
-The mechanism proposed here is in fact only a specialization of parameters. 
-It does not really do currying in the sense of constructing a procedure
-in one argument that returns a procedure in one argument and so on.
-Hence, the specialized procedure (the result of <code>curry</code>) is
-still a multi-argument procedure by nature---which renders uncurrying 
-pointless.<p>
-
-Why not real currying/uncurrying?
-It is possible in Scheme to implement a macro turning a multi-argument 
-procedure into a nesting of single-argument procedures and back.
-This is what is usually called "currying" and "uncurrying".
-Yet, Scheme remains an inherently uncurried language and is not
-prepared to deal with curried procedures in a convenient way.
-Hence, a "by the book" implementation of currying would only be useful
-if you apply it in the sequence curry, specialize some arguments,
-and uncurry again---which is exactly the purpose of the macro 
-<code>curry</code> specified in this document.
-The only relevant use of currying/uncurrying in Scheme are didactic
-puposes to introduce the concepts of combinatory logic.
-We do not think anybody would like to use both mechanisms at the
-same time.<p>
-
-Why is there another symbol for the rest-slot when lambda-expressions
-use the dotted notation for variable length argument lists?
-The reason is the observation by Stephan Houben that the mechanism
-proposed here can also be implemented as a procedure instead of a macro,
-provided there is no dotted notation. Refer to the implementation
-section below.<p>
+</TABLE>
 
 <H1>Specification</H1>
 
-The formal syntax of a curried expression, in the style of the 
+The formal syntax of a specialized expression, in the style of the 
 <a href="http://www.schemers.org/Documents/Standards/R5RS/"><I>Revised^5 Report on the Algorithmic Language Scheme</I></a>:
 
 <TABLE>
 <TR>
-<TD><code>&lt;curried-expression&gt;</code>
+<TD><code>&lt;cut-expression&gt;</code>
 <TD><code>--></code>
-<TD><TD><code>(curry &lt;proc&gt; &lt;const-or-slot&gt;*)</code>
+<TD><TD><code>(cut &lt;proc&gt; &lt;const-or-slot&gt;*)</code>
 </TR>
 <TR>
-<TD><TD><TD>|<TD><code>(curry &lt;proc&gt; &lt;const-or-slot&gt;* <...>)</code>
+<TD><TD><TD>|<TD><code>(cut &lt;proc&gt; &lt;const-or-slot&gt;* <...>)</code>
 </TR>
 <TR>
 <TD><code>&lt;proc&gt;</code>
@@ -180,12 +168,13 @@ The formal syntax of a curried expression, in the style of the
 <TD><TD><code><></code><TD>; a "slot"
 </TR>
 <TR>
-<TD><TD><TD>|<TD> <code>&lt;expression&gt;</code><TD>; a constant
+<TD><TD><TD>|<TD> <code>&lt;expression&gt;</code><TD>; 
+a constant, not directly dependent on the slots
 </TR>
 </TABLE>
 
-The macro <code>curry</code> transforms a 
-<code>&lt;curried-expression&gt;</code> into a 
+The macro <code>cut</code> transforms a 
+<code>&lt;cut-expression&gt;</code> into a 
 <code>&lt;lambda expression&gt;</code> with as many formal variables
 as there are slots in the list <code>&lt;const-or-slot&gt;*</code>.
 The body of the resulting <code>&lt;lambda expression&gt;</code> calls
@@ -194,45 +183,147 @@ The body of the resulting <code>&lt;lambda expression&gt;</code> calls
 In case there is a rest-slot symbol for the residual arguments 
 of a variable arity procedure, the resulting procedure is also of 
 variable arity and the body calls <code>&lt;proc&gt;</code> with
-all arguments provided to the actual call of the specialized procedure.
+all arguments provided to the actual call of the specialized procedure.<p>
+
+The expressions at the non-slot positions (called "constant" above) and 
+the expression for <code>&lt;proc&gt;</code> are evaluated at the 
+time the specialized procedure is called, <em>not</em> at the time 
+it is constructed.
+This implies, that the meaning of a <code>&lt;cut-expression&gt;</code>
+is in any respect identical to the meaning of the lambda-expression
+it represents.<p>
 
 <H1>Implementation</H1>
 
-The <a href="curry.scm">reference implementation</a> defines 
-the macro <code>curry</code> using macro mechanism of R5RS.
+The following reference implementation defines the macro 
+<code>cut</code> using the macro mechanism of R5RS.
 It does not use any other SRFI or any library.
 The implementation makes use of a local macro of
-the form <code>(curry "loop" params proc args . consts-or-slots)</code>
+the form <code>(cut "loop" params proc args . consts-or-slots)</code>
 which collects the parameters (formals of the result) and
 arguments (values eventually passed to the proc) from the 
 list of constants or slots.
-As macros are hygienic and referentially transparent,
+As macros in R5RS are hygienic and referentially transparent,
 the macro mechanism makes sure the names of the newly
 introduced formal variables are unique and do not clash.
 The template <code>(params ... slot)</code>, see <a href="http://www.schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-10.html#%_sec_7.1.5">Sect. 7.1.5. of R5RS</a>,
 allows to preserve the order of arguments---which would get
-reversed otherwise.<p>
+reversed otherwise.
+Here is the reference implementation:
 
-As Stephan Houben observed (refer to the discussion archive), 
-it is also possible to implement the mechanism proposed in 
-this SRFI without macros.
-The <a href="curry-mf.scm">macro-free implementation</a> defines
-the slot and rest-slot symbol as markers that are recognized
-in the list of constants or slots at the time <code>curry</code>
-is evaluated. The result is then constructed as a procedure which
-first substitutes the actual argument values for the slots and
-then calls the procedure.
-Note that the substitution introduces a certain run-time 
-penalty as it is performed on every invocation of the 
-specialized procedure.
-For this reason, the macro-free implementation should only be
-chosen when macros are not available.<p>
+<code><pre>
+(define-syntax cut
+  (syntax-rules (<> <...>)
+
+    ; construct variable or fixed arity procedure
+    ((cut "loop" (params ...) proc (args ...) <...>)
+     (lambda (params ... . rest-slot) (apply proc args ... rest-slot)))
+    ((cut "loop" (params ...) proc (args ...))
+     (lambda (params ...) (proc args ...)))
+				
+    ; loop over &lt;const-or-slot&gt;*
+    ((cut "loop" (param ...) proc (arg ...) <> . consts-or-slots)
+     (cut "loop" (param ... slot) proc (arg ... slot) . consts-or-slots))
+    ((cut "loop" (param ...) proc (arg ...) const . consts-or-slots)
+     (cut "loop" (param ...) proc (arg ... const) . consts-or-slots))
+
+    ; specified syntax
+    ((cut proc . consts-or-slots)
+     (cut "loop" () proc () . consts-or-slots))))
+</pre></code>
+
+(For those who have technical problems with copy and paste from
+this page: <a href="cut.scm">Here</a> is it in a file, too.)<p>
 
 Finally, there is a small collection of 
 <a href="check.scm">confidence tests</a>.
-The test check some special cases of the mechanism defined
-in this SRFI and signal an error in case something is wrong.
+It checks some special cases of the mechanism defined
+in this SRFI and signals an error in case something is wrong.
 Passing the tests does not mean a correct implementation, though.
+
+<H1>Design Rationale</H1>
+
+<H3>Why not real currying/uncurrying?</H3>
+
+It is possible in Scheme to implement a macro turning a multi-argument 
+procedure into a nesting of single-argument procedures and back.
+These operations are usually called "curry" and "uncurry" in
+other programming languages.
+Yet, Scheme remains an inherently uncurried language and is not
+prepared to deal with curried procedures in a convenient way.
+Hence, a "by the book" implementation of currying would only be useful
+if you apply it in the sequence "curry, specialize some arguments,
+and uncurry again"---which is exactly the purpose of the macro 
+<code>cut</code> specified in this document.
+The primary relevance of currying/uncurrying in Scheme is to
+teach concepts of combinatory logic.<p>
+
+<H3>Why not a more general mechanism, also allowing permutation,
+omission and duplication of arguments?</H3>
+
+The reason is that I, the author of this SRFI, consider more general 
+mechanisms too dangerous to mix them with the mechanism proposed here.
+In particular, as soon as parameters are being rearranged it
+is usually necessary to be aware of the meaning of the parameters;
+unnamed variables can be quite harmful then.
+The mechanism proposed here is designed to prevent this.
+Please refer to the discussion threads
+<a href="http://srfi.schemers.org/srfi-26/mail-archive/msg00018.html">"OK, how about...,"</a> (Alan Bawden),
+<a href="http://srfi.schemers.org/srfi-26/mail-archive/msg00038.html">"is that useful?"</a> (Walter C. Pelissero), and
+<a href="http://srfi.schemers.org/srfi-26/mail-archive/msg00040.html">"l, the ultimate curry that is not curry"</a> (Al Petrofsky).<p>
+
+<H3>Why is the macro called <code>cut</code> and not 
+[<em>enter your favourite here</em>]?</H3>
+
+Well, the original name proposed for this SRFI was <code>curry</code>
+which immediately stirred some emotions as it does not what is
+commonly known as currying.
+Some alternatives have been discussed, such as <code>section</code>,
+<code>specialise</code>, <code>specialize</code>, <code>partial-apply</code>, 
+<code>partial-call</code>, <code>partial-lambda</code>, 
+<code>_j</code>, <code>_i</code>, <code>$</code>,
+<code>&amp;</code>, <code>srfi-26</code>, <code>foobar</code>, 
+<code>xyz</code>, <code>schoenfinkelize</code>, 
+<code>curry-which-isnt-curry</code>, <code>tandoori</code>, 
+and it has also been suggested to pick a five letter symbol uniformly
+at random and fix this as a name.
+To be fair, not all of these name have been put forward as serious proposals,
+some of them were merely to illustrate a point in the discussion.
+In addition, I have played with the game of the name quite a bit 
+and considered other candidates not listed here.
+Despite the fact that the discussion list only represents a highly
+biased random sample of people's opinion (motivation to post a message
+is higher if you disagree, for example) it told me that the SRFI
+could potentially benefit from a different name---however impractical
+it may be to go for unanimous popularity.
+The name <code>cut</code> refers to "operator section", as the
+concept is often called in other programming languages, 
+but I tend to remember it as the acronym for "Curry Upon This" ;-).<p>
+
+<H3>Is it possible to implement the SRFI without macros?</H3>
+
+Not really.
+As Stephan Houben has pointed out during the discussion (refer to
+<a href="http://srfi.schemers.org/srfi-26/mail-archive/msg00008.html">"Implementing it as a procedure"</a>) it is possible to implement a mechanism
+closely related to the one proposed in this SRFI without macros.
+However, the procedural mechanism evaluates the expressions for the 
+"constants" at the time the specialized procedure is being constructed. 
+Refer to Al Petrovsky's posting 
+<a href="http://srfi.schemers.org/srfi-26/mail-archive/msg00048.html">"Problems with "curry"'s formal specification"</a> for details.
+This is in contrast to the specification of the mechanism as
+defined here. Hence, the procedural implementation is not compliant
+to this SRFI. One of the confidence tests checks for this.
+
+<H3>Why is there another symbol for the rest-slot when lambda-expressions
+use the dotted notation for variable length argument lists?</H3>
+There are two reasons.
+The first one is the existence of a procedural implementation
+of a related mechanism (refer to the previous paragraph).
+For a procedure, however, it is not possible to have dotted notation.
+The second reason is the way the hygienic macro mechanism in R5RS
+is defined to deal with dotted notation, as Felix Winkelmann has pointed out.
+Refer to the discussion threads
+<a href="http://srfi.schemers.org/srfi-26/mail-archive/msg00001.html">"Improper lists in macros [WAS: none]"</a>.<p>
 
 <H1>Copyright</H1>
 Copyright (C) Sebastian Egner (2002). All Rights Reserved. 
@@ -265,7 +356,7 @@ PARTICULAR PURPOSE.
     <address>Author: <a href="mailto:sebastian.egner@philips.com">Sebastian Egner</a></address>
 <!-- Created: Mon Feb 4 15:20:00 EST 2002 -->
 <!-- hhmts start -->
-Last modified: Sat Feb 16 16:35:10 MET 2002
+Last modified: Fri Mar  1 09:02:11 MET 2002
 <!-- hhmts end -->
   </body>
 </html>=
