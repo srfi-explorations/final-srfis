@@ -64,7 +64,7 @@ arrays.
 <TR><TD><CODE>au16  </CODE><TD>exact  <TD>16.bit nonnegative integer        <TD><CODE>#<i>n</i>Au16</CODE>
 <TR><TD><CODE>au8   </CODE><TD>exact  <TD>8.bit nonnegative integer         <TD><CODE>#<i>n</i>Au8 </CODE>
 <TR><TD><CODE>string</CODE><TD>       <TD>char                              <TD><CODE>#<i>n</i>A\  </CODE>
-<TR><TD><CODE>at1   </CODE><TD>       <TD>boolean                           <TD><CODE>#<i>n</i>At  </CODE>
+<TR><TD><CODE>at1   </CODE><TD>       <TD>bool                              <TD><CODE>#<i>n</i>At  </CODE>
 </TABLE>
 <P>
 
@@ -86,101 +86,11 @@ were suggested; but these names are confusing or even misleading to
 those unfamiliar with C or Java.
 <P>
 The Scheme reports are amply descriptive using their succinct
-vocabulary; so I rewrote this SRFI to use only Scheme terminology.
-Several correspondents felt the resulting full names of the array
-types were too long:
-<PRE>
-  inexact-IEEE-64-bit-floating-point-complex-array
-  inexact-IEEE-32-bit-floating-point-complex-array
-  inexact-IEEE-64-bit-floating-point-real-array
-  inexact-IEEE-32-bit-floating-point-real-array
-  exact-64-bit-integer-array
-  exact-32-bit-integer-array
-  exact-16-bit-integer-array
-  exact-8-bit-integer-array
-  exact-64-bit-nonnegative-integer-array
-  exact-32-bit-nonnegative-integer-array
-  exact-16-bit-nonnegative-integer-array
-  exact-8-bit-nonnegative-integer-array
-  char-array
-  boolean-array
-  object-array
-</PRE>
-
-Per Bothner suggested that the Common-Lisp "<CODE>#<I>n</I>A</CODE>"
-prefix could be retained while eschewing further abbreviations by
-introducing "<CODE>:</CODE>" into the notation thus
-"<CODE>#<I>n</I>A:<I>typename</I></CODE>".
+vocabulary; so I rewrote this SRFI to use Scheme terminology.
 <P>
-The short <I>typename</I>s are those suggested by Taylor Campbell
-(with the un-Schemely "<CODE>-U</CODE>" and "<CODE>-S</CODE>" replaced
-by "<CODE>+</CODE>" and "<CODE>-</CODE>").  The results in
-<A HREF="#Table-1">Table-1</A> are compact, mnemonic, and do not reach
-outside of the Scheme language.
-<P>
-<LI>The use of
-    <A HREF="http://srfi.schemers.org/srfi-10/srfi-10.html">SRFI-10</A>
-
-    syntax for Arrays was discussed.  The main arguments in favor of
-    SRFI-10 were:
-    <P>
-    <DL>
-    <DT>SRFI-10 is for Scheme extensions, and thus appropriate for
-    SRFI-47 arrays if they are not incorporated into R6RS.
-    <BR><BR>
-    <DD>My efforts are directed toward making multidimensional arrays
-    part of R6RS.  Multidimensional arrays have been an integral part
-    of computing since before electronic computers.  A supposed
-    general-purpose computer language without multidimensional arrays
-    is an oxymoron.
-    <P>
-    <DT>Literal arrays would not be used often enough to warrant a
-    "<CODE>#</CODE>" syntax.
-    <BR><BR>
-    <DD>Vector constants were thought useful enough that the
-    "<CODE>#(</CODE>" syntax was appointed them.  Many of the extant
-    literal vectors (especially nested vectors) could be better
-    expressed as arrays.  Some literal nested lists would also be
-    better suited to arrays.  Bear@sonic.net gives some examples uses
-    for literal arrays:
-
-    <BLOCKQUOTE>
-    Data tables for character properties.  color palettes.  Graphic
-    sprites.  Coordinate transformation matrices.  cellular automata
-    substructures.  Default Window coordinate lists.  Map data.
-    Integrated-circuit diagrams.  Alias tables for character names.
-    Parallel Records.  Tuple aggregates.  Multi-Character tokens for
-    protocol drivers. Image data.  Compiler transition tables. Tax
-    rate tables.  Icons. Lists of countries, states, counties, and
-    municipalities.  Bus routes.  Airline schedules.  Cellular
-    coverage areas.  And the list goes on...  Programs need to be able
-    to dump this information to file in S-expressions and read it
-    back.
-
-    </BLOCKQUOTE>
-    <P>
-    <DT>The proposed "<CODE>#<I>n</I>A</CODE>" syntax consumes too
-    much of the precious "<CODE>#</CODE>" name-space.
-    <BR><BR>
-    <DD>
-    The claim is that SRFI-58 would consume ten characters (the ten
-    decimal digits), far more than the single "(" used for vectors.
-    <P>
-    But this accounting is disingenuous.  It is highly unlikely that a
-    one digit "<CODE>#</CODE>" code, say "<CODE>#5</CODE>" would be
-    registered without including the other digits.  If we consider
-    "<CODE>#</CODE>" followed by digits to be a numeric argument to
-    the character following, then only one letter, "<CODE>A</CODE>",
-    worth of name-space has been allocated.
-    "<CODE>#<I>nnn</I></CODE>" followed by the letters B-Z and
-    punctuation are all available.
-    <P>
-    </DL>
-
-    A choice must be made between SRFI-10 syntax and
-    "<CODE>#<I>n</I>A</CODE>" syntax.
-    I felt the reasons in support of the "<CODE>#<I>n</I>A</CODE>"
-    syntax given in the <CITE>Rationale</CITE> were more compelling.
+The results in <A HREF="#Table-1">Table-1</A> are compact, mnemonic,
+and do not reach outside of the Scheme language, except for <B>Z</B>
+for the integers.
 <P>
 <LI>Common Lisp has a compact notation for rank 1 boolean arrays:
     "<CODE>#*</CODE>" followed by a sequence of ones and zeros;
@@ -214,14 +124,14 @@ outside of the Scheme language.
   "<CODE>#<VAR>n</VAR>A</CODE>" followed by the list-decomposition of
   the array, is the same as the Common-Lisp read-syntax for arrays.<P>
 
-  Why Common-Lisp array syntax?  Per Bothner answers:
-  <UL>
-  <LI>It's terse.<P>
-  <LI>It's stylistically consistent with vector notation:<BR>
-      "<CODE>#(a b c)</CODE>" can be viewed as short-hand for "<CODE>#1a(a b c)</CODE>".<P>
-  <LI>It doesn't require me to write an extra noise keyword.<P>
-  <LI>It's prior art.<P>
-  </UL>
+<!--   Why Common-Lisp array syntax?  Per Bothner answers: -->
+<!--   <UL> -->
+<!--   <LI>It's terse.<P> -->
+<!--   <LI>It's stylistically consistent with vector notation:<BR> -->
+<!--       "<CODE>#(a b c)</CODE>" can be viewed as short-hand for "<CODE>#1a(a b c)</CODE>".<P> -->
+<!--   <LI>It doesn't require me to write an extra noise keyword.<P> -->
+<!--   <LI>It's prior art.<P> -->
+<!--   </UL> -->
 
 </UL>
 
@@ -230,17 +140,38 @@ outside of the Scheme language.
 "Array", incorporates all the uniform vector types from
 
 <A HREF="http://srfi.schemers.org/srfi-4/srfi-4.html">SFRI-4</A>
-"Homogeneous numeric vector datatypes", and adds a boolean array type
-and array types of complex numbers composed of two IEEE 32.bit or two
-IEEE 64.bit floating-point numbers.  Multi-dimensional arrays subsume
-homogeneous vectors as the one-dimensional case, obviating the need
-for SRFI-4.
+"Homogeneous numeric vector datatypes", and adds a boolean array type,
+shorter and longer floating-point numbers, decimal floating-point
+reals, and array types of complex numbers composed of two
+floating-point numbers.  Multi-dimensional arrays subsume homogeneous
+vectors as the one-dimensional case, obviating the need for SRFI-4.
 <P>
 Implementations are required to accept all of the type denotations.
-Those which the platform supports will have platform-dependent
-representations; the others will be represented as the next larger
-uniform-type implemented; defaulting to <CODE>vector</CODE> if there
-are none.
+Uniform types of matching sizes which the platform supports will be
+used; the others will be represented as the next larger format of the
+same type implemented.  If there is no larger format of the same type
+and there is a bignum format for that element type, then the array
+format defaults to <CODE>vector</CODE>; otherwise the largest uniform
+format of that type is used.  This arrangement has platforms
+supporting uniform array types using them, with less capable platforms
+using vectors; both from the same source code.
+<P>
+The rank and dimension of the literal array can be specified several
+ways.
+<UL>
+
+<LI>the rank as a integer between <CODE>#</CODE> and <CODE>A</CODE>;
+
+<LI>the dimensions as integers joined with <CODE>*</CODE> after
+<CODE>A</CODE>; or
+
+<LI>the dimensions as integers joined with <CODE>*</CODE> after
+<CODE>#</CODE>.
+
+</UL>
+<P>
+Both rank and dimensions can be supplied on opposite sides of
+<CODE>A</CODE>.
 <P>
 Aliases for the array-prototype-procedures of SRFI-47 are defined
 whose identifiers are the <CODE>#<I>n</I>A:<I>typename</I></CODE>
@@ -259,10 +190,6 @@ memory load for users.
 <!-- than Scheme strings or other arrays. -->
 <!-- </BLOCKQUOTE> -->
 <!-- <P> -->
-This arrangement has platforms supporting uniform array types using
-them, with less capable platforms using vectors; both from the same
-source code.
-<P>
 
 <H1>Specification</H1>
 
@@ -278,7 +205,8 @@ prefix characters.
 By <DFN>list-decomposition</DFN> is meant rank nestings of lists of
 the elements where the most nested list has length equal to the last
 dimension of the array and at top level has length equal to the first
-dimension of the array.
+dimension of the array.  Vectors may substitute for lists at any
+nesting depth.
 <P>
 Rank 0 arrays have one element; that element appears after the prefix
 (perhaps with intervening whitespace) with no additional parenthesis.
@@ -291,64 +219,107 @@ Rank 0 arrays have one element; that element appears after the prefix
 Rank 1 heterogeneous arrays which are not subarrays
 <CODE>write</CODE> and <CODE>display</CODE> as Scheme vectors.
 <P>
+The prefix syntax is:
+<PRE>
+  array-prefix :: rank `A' [ dimensions ] [ `:' type-specifier ] |
+                       [ `A' ] dimensions [ `:' type-specifier ]
+
+  dimensions :: dimension | dimensions `*' dimension
+
+  dimension :: nonnegative-integer
+
+  rank :: positive-integer
+
+  type-specifier :: `flo' { `c' | `r' } flowidth `b' |
+                    `fix' { `z' | `n' } fixwidth `b' |
+                    `flo' `r' decwidth `d'
+
+  flowidth :: `16' | `32' | `64' | `128'
+
+  fixwidth :: `8' | `16' | `32' | `64'
+
+  decwidth :: `32' | `64' | `128'
+</PRE>
+
+<P>
 <A NAME=Table-1></A>
 <TABLE ALIGN=CENTER BORDER=1>
 <TR><TH>prototype<BR>procedure
     <TH>exactness
     <TH>element type
-    <TD ALIGN=CENTER><B>prefix</B><BR>(rank = <I>n</I>)
-<TR><TD><CODE>vector      </CODE><TD>       <TD>any                               <TD><CODE>#<i>n</i>A           </CODE>
-<TR><TD><CODE>A:complex-64</CODE><TD>inexact<TD>IEEE 64.bit floating point complex<TD><CODE>#<i>n</i>A:complex-64</CODE>
-<TR><TD><CODE>A:complex-32</CODE><TD>inexact<TD>IEEE 32.bit floating point complex<TD><CODE>#<i>n</i>A:complex-32</CODE>
-<TR><TD><CODE>A:real-64   </CODE><TD>inexact<TD>IEEE 64.bit floating point real   <TD><CODE>#<i>n</i>A:real-64   </CODE>
-<TR><TD><CODE>A:real-32   </CODE><TD>inexact<TD>IEEE 32.bit floating point real   <TD><CODE>#<i>n</i>A:real-32   </CODE>
-<TR><TD><CODE>A:integer-64</CODE><TD>exact  <TD>64.bit integer                    <TD><CODE>#<i>n</i>A:integer-64</CODE>
-<TR><TD><CODE>A:integer-32</CODE><TD>exact  <TD>32.bit integer                    <TD><CODE>#<i>n</i>A:integer-32</CODE>
-<TR><TD><CODE>A:integer-16</CODE><TD>exact  <TD>16.bit integer                    <TD><CODE>#<i>n</i>A:integer-16</CODE>
-<TR><TD><CODE>A:integer-8 </CODE><TD>exact  <TD>8.bit integer                     <TD><CODE>#<i>n</i>A:integer-8 </CODE>
-<TR><TD><CODE>A:integer+64</CODE><TD>exact  <TD>64.bit nonnegative integer        <TD><CODE>#<i>n</i>A:integer+64</CODE>
-<TR><TD><CODE>A:integer+32</CODE><TD>exact  <TD>32.bit nonnegative integer        <TD><CODE>#<i>n</i>A:integer+32</CODE>
-<TR><TD><CODE>A:integer+16</CODE><TD>exact  <TD>16.bit nonnegative integer        <TD><CODE>#<i>n</i>A:integer+16</CODE>
-<TR><TD><CODE>A:integer+8 </CODE><TD>exact  <TD>8.bit nonnegative integer         <TD><CODE>#<i>n</i>A:integer+8 </CODE>
-<!-- <TR><TD><CODE>string      </CODE><TD>       <TD>char                              <TD><CODE>#<i>n</i>A:char      </CODE> -->
-<TR><TD><CODE>A:boolean   </CODE><TD>       <TD>boolean                           <TD><CODE>#<i>n</i>A:boolean   </CODE>
+    <TH>type<BR>specifier
+<TR><TD><CODE>vector   </CODE><TD>        <TD>any                          <TD><CODE>        </CODE>
+<TR><TD><CODE>A:floc128b</CODE><TD>inexact<TD>128.bit binary flonum complex<TD><CODE>floc128b</CODE>
+<TR><TD><CODE>A:floc64b </CODE><TD>inexact<TD>64.bit binary flonum complex <TD><CODE>floc64b </CODE>
+<TR><TD><CODE>A:floc32b </CODE><TD>inexact<TD>32.bit binary flonum complex <TD><CODE>floc32b </CODE>
+<TR><TD><CODE>A:floc16b </CODE><TD>inexact<TD>16.bit binary flonum complex <TD><CODE>floc16b </CODE>
+<TR><TD><CODE>A:flor128b</CODE><TD>inexact<TD>128.bit binary flonum real   <TD><CODE>flor128b</CODE>
+<TR><TD><CODE>A:flor64b </CODE><TD>inexact<TD>64.bit binary flonum real    <TD><CODE>flor64b </CODE>
+<TR><TD><CODE>A:flor32b </CODE><TD>inexact<TD>32.bit binary flonum real    <TD><CODE>flor32b </CODE>
+<TR><TD><CODE>A:flor16b </CODE><TD>inexact<TD>16.bit binary flonum real    <TD><CODE>flor16b </CODE>
+<TR>
+<TR><TD><CODE>A:flor128d</CODE><TD>exact  <TD>128.bit decimal flonum real  <TD><CODE>flor128d</CODE>
+<TR><TD><CODE>A:flor64d </CODE><TD>exact  <TD>64.bit decimal flonum real   <TD><CODE>flor64d </CODE>
+<TR><TD><CODE>A:flor32d </CODE><TD>exact  <TD>32.bit decimal flonum real   <TD><CODE>flor32d </CODE>
+<TR>
+<TR><TD><CODE>A:fixz64 </CODE><TD>exact<TD>64.bit binary fixnum            <TD><CODE>fixz64b </CODE>
+<TR><TD><CODE>A:fixz32 </CODE><TD>exact<TD>32.bit binary fixnum            <TD><CODE>fixz32b </CODE>
+<TR><TD><CODE>A:fixz16 </CODE><TD>exact<TD>16.bit binary fixnum            <TD><CODE>fixz16b </CODE>
+<TR><TD><CODE>A:fixz8  </CODE><TD>exact<TD>8.bit  binary fixnum            <TD><CODE>fixz8b  </CODE>
+<TR><TD><CODE>A:fixn64 </CODE><TD>exact<TD>64.bit nonnegative binary fixnum<TD><CODE>fixn64b </CODE>
+<TR><TD><CODE>A:fixn32 </CODE><TD>exact<TD>32.bit nonnegative binary fixnum<TD><CODE>fixn32b </CODE>
+<TR><TD><CODE>A:fixn16 </CODE><TD>exact<TD>16.bit nonnegative binary fixnum<TD><CODE>fixn16b </CODE>
+<TR><TD><CODE>A:fixn8  </CODE><TD>exact<TD>8.bit  nonnegative binary fixnum<TD><CODE>fixn8b  </CODE>
+<TR><TD><CODE>A:bool   </CODE><TD>     <TD>boolean                         <TD><CODE>bool    </CODE>
+<!-- <TR><TD><CODE>string   </CODE><TD>    <TD>char                             <TD><CODE>char   </CODE> -->
 </TABLE>
 <P>
-A two-by-three array of nonnegative 16.bit integers is written:
+A two-by-three array of nonnegative 16.bit integers can be written
+several ways:
+
 <PRE>
-#2A:integer+16((0 1 2) (3 5 4))
+#2A:fixn16b((0 1 2) (3 5 4))
+#2A2*3:fixn16b((0 1 2) (3 5 4))
+#A2*3:fixn16b((0 1 2) (3 5 4))
+#2*3:fixn16b((0 1 2) (3 5 4))
 </PRE>
-Note that this is the external representation of an array, not an
-expression evaluating to a array.  Like vector constants, array
+<P>
+Note that these are external representations of an array, not
+expressions evaluating to arrays.  Like vector constants, array
 constants must be quoted:
 
 <PRE>
-'#2a:INTEGER+16((0 1 2) (3 5 4))
-               ==> #2A:integer+16((0 1 2) (3 5 4))
+'#2a:FIXN16b((0 1 2) (3 5 4))
+               ==> #2A:fixn16b((0 1 2) (3 5 4))
 </PRE>
 <P>
 Rank 0 arrays:
 <PRE>
 #0a sym
-#0A:real-32 237.0
+#0A:flor32b 237.0
 </PRE>
+<P>
 
 <H2>Semantics</H2>
 
 <PRE>
-(array-dimensions '#2A:integer+16((0 1 2) (3 5 4))) ==> (2 3)
+(array-dimensions '#2A:fixn16b((0 1 2) (3 5 4))) ==> (2 3)
 </PRE>
 <P>
 An equivalent array could have been created by
 <PRE>
-(define ra (make-array (A:integer+16) 2 3))
+(define ra (make-array (A:fixn16b) 2 3))
 (array-set! ra 0 0 0)
 (array-set! ra 1 0 1)
 (array-set! ra 2 0 2)
 (array-set! ra 3 1 0)
 (array-set! ra 5 1 1)
 (array-set! ra 4 1 2)
+ra             ==> #2A2*3:fixn32b((0 1 2) (3 5 4))
 </PRE>
+<P>
+In this example, the uniform type returned is wider than requested due
+to implementation restrictions.
 <P>
 Literal array constants are immutable objects.  It is an error to
 attempt to store a new value into a location that is denoted by an
@@ -356,23 +327,32 @@ immutable object.
 
 <P>
 The following equivalences will be defined to alias SRFI-47 names to
-the new ones.  SRFI-47 should be amended or replaced to make these be
-the array-prototype-procedures:
+the new ones.  SRFI-47 should be replaced to make these be the
+array-prototype-procedures:
 
 <PRE>
-(define A:complex-64 ac64)
-(define A:complex-32 ac32)
-(define A:real-64    ar64)
-(define A:real-32    ar32)
-(define A:integer-64 as64)
-(define A:integer-32 as32)
-(define A:integer-16 as16)
-(define A:integer-8  as8)
-(define A:integer+64 au64)
-(define A:integer+32 au32)
-(define A:integer+16 au16)
-(define A:integer+8  au8)
-(define A:boolean    at1)
+(define A:floc128b ac64)
+(define A:floc64b ac64)
+(define A:floc32b ac32)
+(define A:floc16b ac32)
+(define A:flor128b ar64)
+(define A:flor64b ar64)
+(define A:flor32b ar32)
+(define A:flor16b ar32)
+
+(define A:flor128d ac64)
+(define A:flor64d ac64)
+(define A:flor32d ac32)
+
+(define A:fixz64b as64)
+(define A:fixz32b as32)
+(define A:fixz16b as16)
+(define A:fixz8b  as8)
+(define A:fixn64b au64)
+(define A:fixn32b au32)
+(define A:fixn16b au16)
+(define A:fixn8b  au8)
+(define A:bool    at1)
 </PRE>
 <P>
 
@@ -392,21 +372,10 @@ returned by <CODE>read</CODE> into the uniform array of the specified
 type (or the next larger compatible type).
 <P>
 <PRE>
-(define (read:sharp c port read)
-  (case c
-    ((#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9)
-     (let* ((num (read:try-number port c))
-            (c (peek-char port)))
-       (cond ((memv c '(#\a #\A))
-              (read-char port)
-              (read:array num port read))
-             (else (error "syntax? #" num c)))))
-    (else (error "unknown # object" c))))
-
+;;; Read integer up to first non-digit
 (define (read:try-number port . ic)
   (define chr0 (char-&gt;integer #\0))
-  (let loop ((arg (and (not (null? ic))
-                       (- (char-&gt;integer (car ic)) chr0))))
+  (let loop ((arg (and (not (null? ic)) (- (char-&gt;integer (car ic)) chr0))))
     (let ((c (peek-char port)))
       (cond ((eof-object? c) #f)
             ((char-numeric? c)
@@ -414,34 +383,79 @@ type (or the next larger compatible type).
                       (- (char-&gt;integer (read-char port)) chr0))))
             (else arg)))))
 
-(define (read:array rank port reader)   ;ignore reader
+(define (read-array-type port)
   (define (bomb pc wid)
-    (error (string-append "array syntax? #"
-                          (number-&gt;string rank)
-                          "A" (string pc)
-                          (if wid (number-&gt;string wid) ""))))
-  (list-&gt;uniform-array
-   rank
-   (case (char-downcase (peek-char port))
-     ((#\:)
-      (read-char port)
-      (let ((typ (read port)))
-        (case typ
-          ((complex-64) +64.0i)
-          ((complex-32) +32.0i)
-          ((real-64)     64.0)
-          ((real-32)     32.0)
-          ((integer-64) -64)
-          ((integer-32) -32)
-          ((integer-16) -16)
-          ((integer-8)   -8)
-          ((integer+64)  64)
-          ((integer+32)  32)
-          ((integer+16)  16)
-          ((integer+8)    8)
-          ((boolean)     #t))))
-     (else #f))
-   (read port)))
+    (error 'array 'syntax? (symbol-append "#" rank "A" pc wid)))
+  (case (char-downcase (peek-char port))
+    ((#\:) (read-char port)
+     (let ((typ (let loop ((arg '()))
+                  (if (= 4 (length arg))
+                      (string-&gt;symbol (list-&gt;string (reverse arg)))
+                      (let ((c (read-char port)))
+                        (and (not (eof-object? c))
+                             (loop (cons (char-downcase c) arg))))))))
+       (define wid (and typ (not (eq? 'bool typ)) (read:try-number port)))
+       (define (check-suffix chrs)
+         (define chr (read-char port))
+         (if (and (char? chr) (not (memv (char-downcase chr) chrs)))
+             (error 'array-type? (symbol-append ":" typ wid chr))))
+       (define prot (assq typ '((floc (128 . +64.0i)
+                                      (64  . +64.0i)
+                                      (32  . +32.0i)
+                                      (16  . +32.0i))
+                                (flor (128 . 64.0)
+                                      (64  . 64.0)
+                                      (32  . 32.0)
+                                      (16  . 32.0))
+                                (fixz (64 . -64)
+                                      (32 . -32)
+                                      (16 . -16)
+                                      (8  . -8))
+                                (fixn (64 . 64)
+                                      (32 . 32)
+                                      (16 . 16)
+                                      (8  . 8))
+                                (bool . #t))))
+       (if prot (set! prot (cdr prot)))
+       (cond ((pair? prot)
+              (set! prot (assv wid (cdr prot)))
+              (if (pair? prot) (set! prot (cdr prot)))
+              (if wid (check-suffix (if (and (inexact? prot) (real? prot))
+                                        '(#\b #\d)
+                                        '(#\b)))))
+             (prot)
+             (else (check-suffix '())))
+       prot))
+    (else #f)))
+
+;;; We come into read:array with number or #f for RANK.
+(define (read:array rank dims port reader) ;ignore reader
+  (let loop ((dims dims))
+    (define dim (read:try-number port))
+    (if dim
+        (loop (cons dim dims))
+        (case (peek-char port)
+          ((#\*) (read-char port) (loop dims))
+	  ((#\:)
+	   (let ((typ (read-array-type port)))
+	     (list-&gt;uniform-array (or rank (length dims)) typ (read port))))
+          (else
+	   (list-&gt;uniform-array (or rank (length dims)) #f (read port)))))))
+
+(define (read:sharp c port read)
+  (case c
+    ((#\a #\A) (read:array #f '() port read))
+    ((#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9)
+     (let* ((num (read:try-number port c))
+            (chr (peek-char port)))
+       (case chr
+         ((#\a #\A) (read-char port)
+          (read:array num '() port read))
+         ((#\*) (read-char port)
+          (read:array #f (list num) port read))
+         (else
+          (read:array 1 (list num) port read)))))
+    (else (error "unknown # object" c))))
 </PRE>
 <P>
 
@@ -476,7 +490,7 @@ PARTICULAR PURPOSE.
     <ADDRESS>Editor: <A HREF="mailto:srfi-editors@srfi.schemers.org">David Van Horn</A></ADDRESS>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Wed Jan  5 11:47:26 EST 2005
+Last modified: Thu Jan  6 22:53:26 EST 2005
 <!-- hhmts end -->
   </BODY>
 </HTML>
