@@ -3,9 +3,9 @@
 <html>
   <head>
     <META http-equiv=Content-Type content="text/html; charset=windows-1252">
-    <title>SRFI 31: A special form for recursive evaluation</title>
+    <title>SRFI 31: A special form for recursive evaluation</title> 
   </head>
-
+  
   <body>
 
 <H1>Title</H1>
@@ -15,6 +15,10 @@ A special form for recursive evaluation
 <H1>Version</H1> 
 
 <UL>
+
+<LI>
+Sun Jul 7 17:32:18 2002. Corrected a typo in the semantic
+specification. Made minor textual changes.</LI>
 
 <LI>
 Sun Jun 9 17:44:38 2002. Changed title. Generalized semantics and
@@ -34,9 +38,9 @@ srfi-editors@srfi.schemers.org.</LI>
 
 </UL>
 
-<H1>Author</H1>
+<H1>Author</H1> 
 
- Mirko Luedde &lt;<A
+Mirko Luedde &lt;<A
 href="mailto:Mirko.Luedde@Computer.Org">Mirko.Luedde@Computer.Org</A>&gt;
 
 <H1>Status</H1>
@@ -57,24 +61,20 @@ of the mailing list.
   <LI>Draft: 2002/05/24-2002/08/24</LI>
 </UL>
 
-<H1>Abstract</H1>
+<H1>Abstract</H1> 
 
- We propose the implementation of a special form
+We propose the implementation of a special form
 called <CODE>rec</CODE>.  This form is a generalization of the forms
 <CODE>rec</CODE> and <CODE>named-lambda</CODE> of <A
 href="#[Clinger1985]">[Clinger1985]</A>. It allows the simple and
 non-imperative construction of self-referential expressions.  As an
 important special case, it extends the A. Church form
-<CODE>lambda</CODE> in that it allows the direct definition of
+<CODE>lambda</CODE> such that it allows the direct definition of
 recursive procedures without using further special forms like
 <CODE>let</CODE> or <CODE>letrec</CODE>, without using advanced
 constructions like the H. B. Curry combinator and, unlike
-<CODE>define</CODE>, without introducing variable bindings in its
-exterior scope.
-
-<H1>Issues</H1>
-
- No issues are anticipated.
+<CODE>define</CODE>, without introducing variable bindings into the
+external environment.
 
 <H1>Rationale</H1> 
 
@@ -101,7 +101,8 @@ evaluations with the properties of
 
 <OL>
 
-<LI>being as simple and intuitive as possible,</LI>
+<LI>being as simple, intuitive and close to the mathematical standard
+notation as possible,</LI>
 
 <LI>allowing general recursion,</LI>
 
@@ -130,6 +131,10 @@ is a syntactically correct mathematical assertion.
 <PRE>
   The function (F : N |--> 1, if N = 0; N * F(N – 1), otherwise) is
   not polynomially bounded.</PRE>
+
+Note that this assertion does not define a name for the factorial
+function, but rather uses a name of the factorial.  As a result, the
+assertion does not perform a change of state.
 
 <P>We investigate some approaches to express the factorial function in
 Scheme.
@@ -237,8 +242,10 @@ Using this special form, we would denote the factorial simply by
 with similar syntax and semantics as the <CODE>define</CODE>
 expression above. But <CODE>named-lambda</CODE> is non-imperative, it
 does not introduce an external binding of the variable
-<CODE>F</CODE>. The variable <CODE>F</CODE> is confined inside the
-expression in the same way as is the argument variable <CODE>N</CODE>.
+<CODE>F</CODE>. The variable <CODE>F</CODE> is confined (we do not say
+`bound', since in Scheme context this terminology is reserved for
+bindings of variables in environments) inside the expression in the
+same way as is the argument variable <CODE>N</CODE>.
 
 <P>However, this form has been dropped from later versions of the
 Scheme Report. Also it is missing in state-of-the-art implementations
@@ -250,13 +257,12 @@ semantics).
 
 We have seen that sometimes we'd like to define an expression with
 reference to itself.  The <CODE>named-lambda</CODE> form allowed to do
-this in the special case of procedure definitions.  A similar problem
-with self-referential expressions can occur also in different
-contexts.
+this in the case of procedure definitions.  A similar problem with
+self-referential expressions can occur also in different contexts.
 
 <P>E.g., the constant stream of ones can be defined via
 
-<PRE>(define S (cons 1 (delay S)))</PRE>
+<PRE>(define S (cons 1 (delay S))).</PRE>
 
 As in the case of the factorial, we are able to define the recursive
 object at the price of spending an externally bound name. Remedying
@@ -271,7 +277,7 @@ This particular case of the self-referential problem was solved by the
 With the help of this form, a name for the constant stream of ones 
 is given by the expression 
 
-<PRE> (rec S (cons 1 (delay S))) </PRE>
+<PRE>(rec S (cons 1 (delay S))).</PRE>
 
 This expression is non-imperative and does not introduce an external
 variable binding.
@@ -284,11 +290,11 @@ like
 <PRE>
 (rec F (lambda (N) 
                (if (zero? N) 1 
-                 (* N (F (- N 1))))))
+                 (* N (F (- N 1)))))),
 </PRE>
 
-which does not seem quite as simple and intuitive as the mathematical
-notation.
+which again does not seem quite as simple and intuitive as the
+mathematical notation.
 
 <H2>Proposal</H2> 
 
@@ -299,7 +305,7 @@ as in
 <PRE>
 (rec (F N) 
      (if (zero? N) 1 
-       (* N (F (- N 1)))))
+       (* N (F (- N 1))))).
 </PRE>
 
 <H1>Specification</H1>
@@ -315,18 +321,18 @@ as in
 <LI><CODE>&lt;REC-CONSTANT&gt;</CODE>: <CODE>(rec &lt;TAG&gt;
 &lt;EXPRESSION&gt;)</CODE>.</LI>
 
-<LI><CODE>&lt;REC-PROCEDURE&gt;</CODE>: <CODE>(rec
-   (&lt;TAG&gt; . &lt;VARIABLE-LIST&gt;) &lt;BODY&gt;)</CODE>.</LI>
+<LI><CODE>&lt;REC-PROCEDURE&gt;</CODE>: <CODE>(rec (&lt;TAG&gt;
+   . &lt;VARIABLES&gt;) &lt;BODY&gt;)</CODE>.</LI>
 
 <LI><CODE>&lt;TAG&gt;</CODE>: any Scheme symbol.</LI>
 
 <LI><CODE>&lt;EXPRESSION&gt;</CODE>: any Scheme expression.</LI>
 
-<LI><CODE>&lt;VARIABLE-LIST&gt;</CODE>: any list of Scheme
+<LI><CODE>&lt;VARIABLES&gt;</CODE>: any sequence of Scheme
    symbols.</LI>
 
-<LI><CODE>&lt;BODY&gt;</CODE>: any (sequence of) expression(s) that is
-allowed in the body of a lambda expression.</LI>
+<LI><CODE>&lt;BODY&gt;</CODE>: any sequence of expressions that is
+allowed as the body of a lambda expression.</LI>
 
 </OL>
 
@@ -335,16 +341,15 @@ allowed in the body of a lambda expression.</LI>
 <H3><CODE>rec</CODE>-Constants</H3> 
 
 Let <EM>T</EM> be a symbol. Let <EM>X</EM> be an expression.  Let
-<EM>E</EM> be an environment in which the expression
+<EM>E</EM> be an environment in which <EM>T</EM> is bound according to
+the command
 
-<PRE>(define <EM>T</EM> <EM>X</EM>)</PRE>
-
-has been evaluated.
+<PRE>(define <EM>T</EM> <EM>X</EM>).</PRE>
 
 Then in <EM>E</EM> the expression <EM>T</EM> is equivalent to any
 expression
 
-<PRE>(rec <EM>T2</EM> <EM>X2</EM>)</PRE>
+<PRE>(rec <EM>T2</EM> <EM>X2</EM>),</PRE>
 
 where <EM>T2</EM> is a symbol and <EM>X2</EM> is the substitution of
 <EM>T</EM> by <EM>T2</EM> in <EM>X</EM>, assuming <EM>T</EM> is free
@@ -352,18 +357,16 @@ for <EM>T2</EM> in <EM>X</EM>.
 
 <H3><CODE>rec</CODE>-Procedures</H3> 
 
-Let <EM>T</EM> be a symbol. Let <EM>V</EM> be a list of symbols.  Let
-<EM>B</EM> be a body expression.  Let <EM>E</EM> be an environment in
-which the expression
+Let <EM>T</EM> be a symbol. Let <EM>V</EM> be a sequence of symbols.
+Let <EM>B</EM> be a body expression.  Let <EM>E</EM> be an environment
+in which <EM>T</EM> is bound according to the command
 
-<PRE>(define (<EM>T</EM> . <EM>V</EM>) <EM>B</EM>)</PRE>
-
-has been evaluated.
+<PRE>(define (<EM>T</EM> . <EM>V</EM>) <EM>B</EM>).</PRE>
 
 Then in <EM>E</EM> the expression <EM>T</EM> is equivalent to any
 expression
 
-<PRE>(rec (<EM>T2</EM> . <EM>L</EM>) <EM>B2</EM>)</PRE>
+<PRE>(rec (<EM>T2</EM> . <EM>V</EM>) <EM>B2</EM>),</PRE>
 
 where <EM>T2</EM> is a symbol and <EM>B2</EM> is the substitution of
 <EM>T</EM> by <EM>T2</EM> in <EM>B</EM>, assuming <EM>T</EM> is free
@@ -404,15 +407,16 @@ Scheme versions such as <A href="#[KCR1998]">[KCR1998]</A> providing
 <PRE>
 (define-syntax rec
   (syntax-rules ()
-    ((rec (TAG . VARIABLE-LIST) . BODY)
-     (letrec ((TAG (lambda VARIABLE-LIST . BODY))) TAG))
+    ((rec (TAG . VARIABLES) . BODY)
+     (letrec ( (TAG (lambda VARIABLES . BODY)) ) TAG))
     ((rec TAG EXPRESSION)
-     (letrec ((TAG EXPRESSION)) TAG))))
+     (letrec ( (TAG EXPRESSION) ) TAG))))
 </PRE>
 
 <H2>Simple test</H2>
 
-The following session shows an application of the macro.
+The following session shows in which way the macro allows a
+tail-recursive implementation of the factorial function.
 
 <PRE>
 > (define F (rec (F N)
@@ -499,6 +503,6 @@ Luedde</A></ADDRESS>
 href="mailto:srfi-editors@srfi.schemers.org">Francisco
 Solsona</A></ADDRESS>
 
-</body>
+</BODY>
 
-</html>
+</HTML>
