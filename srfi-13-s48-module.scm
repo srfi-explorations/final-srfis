@@ -5,15 +5,6 @@
 ;;; provide a formal description of the external dependencies
 ;;; of the source code.
 
-;;; This SRFI is very close to finalisation, but is still officially in
-;;; draft state. When it is finalised, this text will be removed, and
-;;; the interface & structure names defined herein
-;;;
-;;;     xstring-lib		xstring-lib-internals 
-;;;     xstring-lib-interface	xstring-lib-internals-interface 
-;;;     
-;;; will have the "x" prefixes removed.
-
 ;;; string-lib
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; string-map string-map!
@@ -305,7 +296,7 @@
 ;;; check-substring-spec
 ;;; substring-spec-ok?
 
-(define-interface xstring-lib-internals-interface
+(define-interface string-lib-internals-interface
   (export
    (let-string-start+end :syntax)
    (string-parse-start+end (proc ((procedure :values :values) :string :value)
@@ -328,19 +319,19 @@
 					        :exact-integer :exact-integer)
 				  :vector))
 
-   ;; kmp-step pat rv c i c= p-start -> bool or integer
+   ;; kmp-step pat rv c i c= p-start -> integer
    (kmp-step (proc (:string :vector :char :exact-integer
 			    (proc (:char :char) :boolean)
 			    :exact-integer)
-		   :value))
+		   :exact-integer))
    ))
 
 
-(define-structures ((xstring-lib xstring-lib-interface)
-		    (xstring-lib-internals xstring-lib-internals-interface))
+(define-structures ((string-lib string-lib-interface)
+		    (string-lib-internals string-lib-internals-interface))
   (access scheme)	; Get at R5RS SUBSTRING
   (open receiving	; RECEIVE
-	char-set-package; Various
+	char-set-lib	; Various
 	bitwise		; BITWISE-AND for hashing
 	error-package	; ERROR
 	nlet-opt	; LET-OPTIONALS* :OPTIONAL
@@ -353,7 +344,7 @@
 
 	 ;; These two internal procedures are correctly defined for ASCII or
 	 ;; Latin-1. They are *not* correct for Unicode.
-	 (define (char-cased? c) (char-set-contains? char-set:alphabetic c))
+	 (define (char-cased? c) (char-set-contains? char-set:letter c))
 	 (define (char-titlecase c) (char-upcase c)))
 
-  (files string-lib))
+  (files srfi-13))

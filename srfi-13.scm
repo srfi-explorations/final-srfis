@@ -1,16 +1,10 @@
 ;;; SRFI 13 string library reference implementation		-*- Scheme -*-
-;;; Olin Shivers 5/2000
+;;; Olin Shivers 7/2000
 ;;;
 ;;; Copyright (c) 1988-1994 Massachusetts Institute of Technology.
 ;;; Copyright (c) 1998, 1999, 2000 Olin Shivers. All rights reserved.
 ;;;   The details of the copyrights appear at the end of the file. Short
 ;;;   summary: BSD-style open source.
-
-;;; SRFI DRAFT -- SRFI DRAFT -- SRFI DRAFT -- SRFI DRAFT -- SRFI DRAFT
-;;; This is *draft* code for a SRFI proposal. If you see this notice in 
-;;; production code, you've got obsolete, bad source -- go find the final 
-;;; non-draft code on the Net.
-;;; SRFI DRAFT -- SRFI DRAFT -- SRFI DRAFT -- SRFI DRAFT -- SRFI DRAFT
 
 ;;; Exports:
 ;;; string-map string-map!
@@ -414,9 +408,9 @@
 		   (make-final (lambda (x) "") (procedure? make-final)))
     (let lp ((chunks '())		; Previously filled chunks
 	     (nchars 0)			; Number of chars in CHUNKS
-	     (chunk (make-string 2))	; Current chunk into which we write
-	     (chunk-len 2)
-	     (i 2)			; Number of chars available in CHUNK
+	     (chunk (make-string 40))	; Current chunk into which we write
+	     (chunk-len 40)
+	     (i 40)			; Number of chars available in CHUNK
 	     (seed seed))
       (let lp2 ((i i) (seed seed))	; Fill up CHUNK from right
 	(if (not (p seed))		; to left.
@@ -470,56 +464,56 @@
     (let lp ((i start))
       (if (< i end) (begin (proc i) (lp (+ i 1)))))))
 
-(define (string-every criteria s . maybe-start+end)
+(define (string-every criterion s . maybe-start+end)
   (let-string-start+end (start end) string-every s maybe-start+end
-    (cond ((char? criteria)
+    (cond ((char? criterion)
 	   (let lp ((i start))
 	     (or (>= i end)
-		 (and (char=? criteria (string-ref s i))
+		 (and (char=? criterion (string-ref s i))
 		      (lp (+ i 1))))))
 
-	  ((char-set? criteria)
+	  ((char-set? criterion)
 	   (let lp ((i start))
 	     (or (>= i end)
-		 (and (char-set-contains? criteria (string-ref s i))
+		 (and (char-set-contains? criterion (string-ref s i))
 		      (lp (+ i 1))))))
 
-	  ((procedure? criteria)		; Slightly funky loop so that
+	  ((procedure? criterion)		; Slightly funky loop so that
 	   (or (= start end)			; final (PRED S[END-1]) call
 	       (let lp ((i start))		; is a tail call.
 		 (let ((c (string-ref s i))
 		       (i1 (+ i 1)))
-		   (if (= i1 end) (criteria c)	; Tail call.
-		       (and (criteria c) (lp i1)))))))
+		   (if (= i1 end) (criterion c)	; Tail call.
+		       (and (criterion c) (lp i1)))))))
 
 	  (else (error "Second param is neither char-set, char, or predicate procedure."
-		       string-every criteria)))))
+		       string-every criterion)))))
 
 
-(define (string-any criteria s . maybe-start+end)
+(define (string-any criterion s . maybe-start+end)
   (let-string-start+end (start end) string-any s maybe-start+end
-    (cond ((char? criteria)
+    (cond ((char? criterion)
 	   (let lp ((i start))
 	     (and (< i end)
-		  (or (char=? criteria (string-ref s i))
+		  (or (char=? criterion (string-ref s i))
 		      (lp (+ i 1))))))
 
-	  ((char-set? criteria)
+	  ((char-set? criterion)
 	   (let lp ((i start))
 	     (and (< i end)
-		  (or (char-set-contains? criteria (string-ref s i))
+		  (or (char-set-contains? criterion (string-ref s i))
 		      (lp (+ i 1))))))
 
-	  ((procedure? criteria)		; Slightly funky loop so that
+	  ((procedure? criterion)		; Slightly funky loop so that
 	   (and (< start end)			; final (PRED S[END-1]) call
 		(let lp ((i start))		; is a tail call.
 		  (let ((c (string-ref s i))
 			(i1 (+ i 1)))
-		    (if (= i1 end) (criteria c)	; Tail call
-			(or (criteria c) (lp i1)))))))
+		    (if (= i1 end) (criterion c)	; Tail call
+			(or (criterion c) (lp i1)))))))
 
 	  (else (error "Second param is neither char-set, char, or predicate procedure."
-		       string-any criteria)))))
+		       string-any criterion)))))
 
 
 (define (string-tabulate proc len)
@@ -868,7 +862,12 @@
 
 ;;; Hash
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Compute (c + 37 c + 37^2 c + ...) modulo BOUND.
+;;; Compute (c + 37 c + 37^2 c + ...) modulo BOUND, with sleaze thrown in
+;;; to keep the intermediate values small. (We do the calculation with just
+;;; enough bits to represent BOUND, masking off high bits at each step in
+;;; calculation. If this screws up any important properties of the hash
+;;; function I'd like to hear about it. -Olin)
+;;;
 ;;; If you keep BOUND small enough, the intermediate calculations will 
 ;;; always be fixnums. How small is dependent on the underlying Scheme system; 
 ;;; we use a default BOUND of 2^22 = 4194304, which should hack it in
@@ -893,17 +892,19 @@
 							     (exact? bound)
 							     (<= 0 bound)))
 					 rest)
-    (let-string-start+end (start end) string-hash s rest
-      (%string-hash s char->integer bound start end))))
+    (let ((bound (if (zero? bound) 4194304 bound)))	; 0 means default.
+      (let-string-start+end (start end) string-hash s rest
+        (%string-hash s char->integer bound start end)))))
 
 (define (string-hash-ci s . maybe-bound+start+end)
   (let-optionals* maybe-bound+start+end ((bound 4194304 (and (integer? bound)
 							     (exact? bound)
 							     (<= 0 bound)))
 					 rest)
-    (let-string-start+end (start end) string-hash-ci s rest
-      (%string-hash s (lambda (c) (char->integer (char-downcase c)))
-		    bound start end))))
+    (let ((bound (if (zero? bound) 4194304 bound)))	; 0 means default.
+      (let-string-start+end (start end) string-hash-ci s rest
+        (%string-hash s (lambda (c) (char->integer (char-downcase c)))
+		      bound start end)))))
 
 ;;; Case hacking
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1003,32 +1004,34 @@
     (%substring/shared s 0 (- len n))))
 
 
-(define (string-trim s . criteria+start+end)
-  (let-optionals* criteria+start+end ((criteria char-set:whitespace) rest)
+(define (string-trim s . criterion+start+end)
+  (let-optionals* criterion+start+end ((criterion char-set:whitespace) rest)
     (let-string-start+end (start end) string-trim s rest
-      (cond ((string-skip s criteria start end) =>
+      (cond ((string-skip s criterion start end) =>
 	     (lambda (i) (%substring/shared s i end)))
 	    (else "")))))
 
-(define (string-trim-right s . criteria+start+end)
-  (let-optionals* criteria+start+end ((criteria char-set:whitespace) rest)
+(define (string-trim-right s . criterion+start+end)
+  (let-optionals* criterion+start+end ((criterion char-set:whitespace) rest)
     (let-string-start+end (start end) string-trim-right s rest
-      (cond ((string-skip-right s criteria start end) =>
+      (cond ((string-skip-right s criterion start end) =>
 	     (lambda (i) (%substring/shared s 0 (+ 1 i))))
 	    (else "")))))
 
-(define (string-trim-both s . criteria+start+end)
-  (let-optionals* criteria+start+end ((criteria char-set:whitespace) rest)
+(define (string-trim-both s . criterion+start+end)
+  (let-optionals* criterion+start+end ((criterion char-set:whitespace) rest)
     (let-string-start+end (start end) string-trim-both s rest
-      (cond ((string-skip s criteria start end) =>
+      (cond ((string-skip s criterion start end) =>
 	     (lambda (i)
-	       (%substring/shared s i (+ 1 (string-skip-right s criteria i end)))))
+	       (%substring/shared s i (+ 1 (string-skip-right s criterion i end)))))
 	    (else "")))))
 
 
 (define (string-pad-right s n . char+start+end)
   (let-optionals* char+start+end ((char #\space (char? char)) rest)
     (let-string-start+end (start end) string-pad-right s rest
+      (check-arg (lambda (n) (and (integer? n) (exact? n) (<= 0 n)))
+		 n string-pad-right)
       (let ((len (- end start)))
 	(if (<= n len)
 	    (%substring/shared s start (+ start n))
@@ -1039,6 +1042,8 @@
 (define (string-pad s n . char+start+end)
   (let-optionals* char+start+end ((char #\space (char? char)) rest)
     (let-string-start+end (start end) string-pad s rest
+      (check-arg (lambda (n) (and (integer? n) (exact? n) (<= 0 n)))
+		 n string-pad)
       (let ((len (- end start)))
 	(if (<= n len)
 	    (%substring/shared s (- end n) end)
@@ -1053,30 +1058,30 @@
 ;;; string-delete char/char-set/pred string [start end]
 ;;; string-filter char/char-set/pred string [start end]
 ;;;
-;;; If the criteria is a char or char-set, we scan the string twice with
+;;; If the criterion is a char or char-set, we scan the string twice with
 ;;;   string-fold -- once to determine the length of the result string, 
 ;;;   and once to do the filtered copy.
-;;; If the criteria is a predicate, we don't do this double-scan strategy, 
+;;; If the criterion is a predicate, we don't do this double-scan strategy, 
 ;;;   because the predicate might have side-effects or be very expensive to
 ;;;   compute. So we preallocate a temp buffer pessimistically, and only do
 ;;;   one scan over S. This is likely to be faster and more space-efficient
 ;;;   than consing a list.
 
-(define (string-delete criteria s . maybe-start+end)
+(define (string-delete criterion s . maybe-start+end)
   (let-string-start+end (start end) string-delete s maybe-start+end
-    (if (procedure? criteria)
+    (if (procedure? criterion)
 	(let* ((slen (- end start))
 	       (temp (make-string slen))
 	       (ans-len (string-fold (lambda (c i)
-				       (if (criteria c) i
+				       (if (criterion c) i
 					   (begin (string-set! temp i c)
 						  (+ i 1))))
 				     0 s start end)))
 	  (if (= ans-len slen) temp (substring temp 0 ans-len)))
 
-	(let* ((cset (cond ((char-set? criteria) criteria)
-			   ((char? criteria) (char-set criteria))
-			   (else (error "string-delete criteria not predicate, char or char-set" criteria))))
+	(let* ((cset (cond ((char-set? criterion) criterion)
+			   ((char? criterion) (char-set criterion))
+			   (else (error "string-delete criterion not predicate, char or char-set" criterion))))
 	       (len (string-fold (lambda (c i) (if (char-set-contains? cset c)
 						   i
 						   (+ i 1)))
@@ -1089,22 +1094,22 @@
 		       0 s start end)
 	  ans))))
 
-(define (string-filter criteria s . maybe-start+end)
+(define (string-filter criterion s . maybe-start+end)
   (let-string-start+end (start end) string-filter s maybe-start+end
-    (if (procedure? criteria)
+    (if (procedure? criterion)
 	(let* ((slen (- end start))
 	       (temp (make-string slen))
 	       (ans-len (string-fold (lambda (c i)
-				       (if (criteria c)
+				       (if (criterion c)
 					   (begin (string-set! temp i c)
 						  (+ i 1))
 					   i))
 				     0 s start end)))
 	  (if (= ans-len slen) temp (substring temp 0 ans-len)))
 
-	(let* ((cset (cond ((char-set? criteria) criteria)
-			   ((char? criteria) (char-set criteria))
-			   (else (error "string-delete criteria not predicate, char or char-set" criteria))))
+	(let* ((cset (cond ((char-set? criterion) criterion)
+			   ((char? criterion) (char-set criterion))
+			   (else (error "string-delete criterion not predicate, char or char-set" criterion))))
 
 	       (len (string-fold (lambda (c i) (if (char-set-contains? cset c)
 						   (+ i 1)
@@ -1130,114 +1135,114 @@
 ;;;     For example, the char/char-set/pred discrimination has
 ;;;     been lifted above the inner loop of each proc.
 
-(define (string-index str criteria . maybe-start+end)
+(define (string-index str criterion . maybe-start+end)
   (let-string-start+end (start end) string-index str maybe-start+end
-    (cond ((char? criteria)
+    (cond ((char? criterion)
 	   (let lp ((i start))
 	     (and (< i end)
-		  (if (char=? criteria (string-ref str i)) i
+		  (if (char=? criterion (string-ref str i)) i
 		      (lp (+ i 1))))))
-	  ((char-set? criteria)
+	  ((char-set? criterion)
 	   (let lp ((i start))
 	     (and (< i end)
-		  (if (char-set-contains? criteria (string-ref str i)) i
+		  (if (char-set-contains? criterion (string-ref str i)) i
 		      (lp (+ i 1))))))
-	  ((procedure? criteria)
+	  ((procedure? criterion)
 	   (let lp ((i start))
 	     (and (< i end)
-		  (if (criteria (string-ref str i)) i
+		  (if (criterion (string-ref str i)) i
 		      (lp (+ i 1))))))
 	  (else (error "Second param is neither char-set, char, or predicate procedure."
-		       string-index criteria)))))
+		       string-index criterion)))))
 
-(define (string-index-right str criteria . maybe-start+end)
+(define (string-index-right str criterion . maybe-start+end)
   (let-string-start+end (start end) string-index-right str maybe-start+end
-    (cond ((char? criteria)
+    (cond ((char? criterion)
 	   (let lp ((i (- end 1)))
 	     (and (>= i 0)
-		  (if (char=? criteria (string-ref str i)) i
+		  (if (char=? criterion (string-ref str i)) i
 		      (lp (- i 1))))))
-	  ((char-set? criteria)
+	  ((char-set? criterion)
 	   (let lp ((i (- end 1)))
 	     (and (>= i 0)
-		  (if (char-set-contains? criteria (string-ref str i)) i
+		  (if (char-set-contains? criterion (string-ref str i)) i
 		      (lp (- i 1))))))
-	  ((procedure? criteria)
+	  ((procedure? criterion)
 	   (let lp ((i (- end 1)))
 	     (and (>= i 0)
-		  (if (criteria (string-ref str i)) i
+		  (if (criterion (string-ref str i)) i
 		      (lp (- i 1))))))
 	  (else (error "Second param is neither char-set, char, or predicate procedure."
-		       string-index-right criteria)))))
+		       string-index-right criterion)))))
 
-(define (string-skip str criteria . maybe-start+end)
+(define (string-skip str criterion . maybe-start+end)
   (let-string-start+end (start end) string-skip str maybe-start+end
-    (cond ((char? criteria)
+    (cond ((char? criterion)
 	   (let lp ((i start))
 	     (and (< i end)
-		  (if (char=? criteria (string-ref str i))
+		  (if (char=? criterion (string-ref str i))
 		      (lp (+ i 1))
 		      i))))
-	  ((char-set? criteria)
+	  ((char-set? criterion)
 	   (let lp ((i start))
 	     (and (< i end)
-		  (if (char-set-contains? criteria (string-ref str i))
+		  (if (char-set-contains? criterion (string-ref str i))
 		      (lp (+ i 1))
 		      i))))
-	  ((procedure? criteria)
+	  ((procedure? criterion)
 	   (let lp ((i start))
 	     (and (< i end)
-		  (if (criteria (string-ref str i)) (lp (+ i 1))
+		  (if (criterion (string-ref str i)) (lp (+ i 1))
 		      i))))
 	  (else (error "Second param is neither char-set, char, or predicate procedure."
-		       string-skip criteria)))))
+		       string-skip criterion)))))
 
-(define (string-skip-right str criteria . maybe-start+end)
+(define (string-skip-right str criterion . maybe-start+end)
   (let-string-start+end (start end) string-skip-right str maybe-start+end
-    (cond ((char? criteria)
+    (cond ((char? criterion)
 	   (let lp ((i (- end 1)))
 	     (and (>= i 0)
-		  (if (char=? criteria (string-ref str i))
+		  (if (char=? criterion (string-ref str i))
 		      (lp (- i 1))
 		      i))))
-	  ((char-set? criteria)
+	  ((char-set? criterion)
 	   (let lp ((i (- end 1)))
 	     (and (>= i 0)
-		  (if (char-set-contains? criteria (string-ref str i))
+		  (if (char-set-contains? criterion (string-ref str i))
 		      (lp (- i 1))
 		      i))))
-	  ((procedure? criteria)
+	  ((procedure? criterion)
 	   (let lp ((i (- end 1)))
 	     (and (>= i 0)
-		  (if (criteria (string-ref str i)) (lp (- i 1))
+		  (if (criterion (string-ref str i)) (lp (- i 1))
 		      i))))
-	  (else (error "CRITERIA param is neither char-set or char."
-		       string-skip-right criteria)))))
+	  (else (error "CRITERION param is neither char-set or char."
+		       string-skip-right criterion)))))
 
 
-(define (string-count criteria s . maybe-start+end)
+(define (string-count criterion s . maybe-start+end)
   (let-string-start+end (start end) string-count s maybe-start+end
-    (cond ((char? criteria)
+    (cond ((char? criterion)
 	   (do ((i start (+ i 1))
-		(count 0 (if (char=? criteria (string-ref s i))
+		(count 0 (if (char=? criterion (string-ref s i))
 			     (+ count 1)
 			     count)))
 	       ((>= i end) count)))
 
-	  ((char-set? criteria)
+	  ((char-set? criterion)
 	   (do ((i start (+ i 1))
-		(count 0 (if (char-set-contains? criteria (string-ref s i))
+		(count 0 (if (char-set-contains? criterion (string-ref s i))
 			     (+ count 1)
 			     count)))
 	       ((>= i end) count)))
 
-	  ((procedure? criteria)
+	  ((procedure? criterion)
 	   (do ((i start (+ i 1))
-		(count 0 (if (criteria (string-ref s i)) (+ count 1) count)))
+		(count 0 (if (criterion (string-ref s i)) (+ count 1) count)))
 	       ((>= i end) count)))
 
-	  (else (error "CRITERIA param is neither char-set or char."
-		       string-count criteria)))))
+	  (else (error "CRITERION param is neither char-set or char."
+		       string-count criterion)))))
 
 
 
@@ -1451,8 +1456,11 @@
 		   ((s-start s-end) (lambda (args)
 				      (string-parse-start+end string-kmp-partial-search
 							      s args))))
-    ;; Enough prelude. Here's the actual code.
     (let ((patlen (vector-length rv)))
+      (check-arg (lambda (i) (and (integer? i) (exact? i) (<= 0 i) (< i patlen)))
+		 i string-kmp-partial-search)
+
+      ;; Enough prelude. Here's the actual code.
       (let lp ((si s-start)		; An index into S.
 	       (vi i))			; An index into RV.
 	(cond ((= vi patlen) (- si))	; Win.
