@@ -8,7 +8,7 @@
 
     <H1>Title</H1>
     
-    Nested multi-line Comments
+    Nested Multi-line Comments
     
     <H1>Author</H1>
     
@@ -30,7 +30,8 @@ previous messages via
 the archive of the mailing list</a>.
 
 <UL>
-<LI>Draft: 2002/04/12-2002/06/10</LI>
+      <LI>Draft: 2002/04/12-2002/06/10</LI>
+      <li>Revised: 2002/06/05</li>
 </UL>
 
     <h1>Related SRFIs</h1>
@@ -59,10 +60,10 @@ the archive of the mailing list</a>.
     implementations.</p>
     
     <p>The syntax <code>#|</code> ... <code>|#</code> was chosen
-    because it is already widely used (Chez Scheme, Gamit, MIT Scheme,
-    MzScheme) and since it fits smoothly with R5RS. Nested comments
-    are an important feature for incrementally commenting out
-    code.</p>
+    because it is already widely used (Chez Scheme, Chicken, Gambit-C,
+    Kawa, MIT Scheme, MzScheme and RScheme) and since it fits smoothly
+    with R5RS. Nested comments are an important feature for
+    incrementally commenting out code.</p>
     
     <H1>Specification</H1>
 
@@ -109,82 +110,23 @@ the archive of the mailing list</a>.
     incompatible with existing implementations which allow
     <code>#</code> as legal character within identifiers.</p>
 
-
-
-   <!--   <h1> Derivation</h1> <p>This SRFI is clearly influenced by existing -->
-<!--      implementations and intended to pin down the current state of the -->
-<!--      art.</p> -->
-    
-<!--      <p>The following table explains why the existing implementations -->
-<!--      impose an additional whitespace before the actual start of the -->
-<!--      comment:</p> -->
-<!--      <table> -->
-<!--        <tbody> -->
-<!--  	<tr> -->
-<!--  	  <th>Implementation</th> -->
-<!--  	  <th><code>a#</code></th> -->
-<!--  	  <th><code>a#|b|#</code></th> -->
-<!--  	  <th><code>#|a|#b</code></th> -->
-<!--  	</tr> -->
-<!--  	<tr> -->
-<!--  	  <td>Scheme 48 0.57</td> -->
-<!--  	  <td>Identifier <code>a#</code></td> -->
-<!--  	  <td>Illegal character <code>|</code></td> -->
-<!--  	  <td>Unknown <code>#</code> syntax: <code>#|</code></td> -->
-<!--  	</tr> -->
-<!--  	<tr> -->
-<!--  	  <td>MzScheme version 103</td> -->
-<!--  	  <td>Identifier <code>a#</code></td> -->
-<!--  	  <td>Identifier <code>a#b#</code></td> -->
-<!--  	  <td>Identifier <code>b</code></td> -->
-<!--  	</tr> -->
-<!--  	<tr> -->
-<!--  	  <td>Gambit Version 3.0 (gsi)</td> -->
-<!--  	  <td>Identifier <code>a#</code></td> -->
-<!--  	  <td>Identifier <code>a#</code>,  -->
-<!--  	    Identifier <code>b</code>, Invalid token: <code>#</code></td> -->
-<!--  	  <td>Identifier <code>b</code></td> -->
-<!--  	</tr> -->
-<!--  	<tr> -->
-<!--  	  <td>MIT Scheme Release 7.5.12</td> -->
-<!--  	  <td>Identifier <code>a#</code></td> -->
-<!--  	  <td> -->
-<!--  	    Identifier <code>a#</code>,  -->
-<!--  	    Undefined atom delimiter <code>|</code>, -->
-<!--  	    Identifier <code>b</code>, -->
-<!--  	    Undefined atom delimiter <code>|</code>, -->
-<!--  	    No such reader macro <code>#\Linefeed</code> -->
-<!--  	  </td> -->
-<!--  	  <td>Identifier <code>b</code></td> -->
-<!--  	</tr> -->
-<!--  	<tr> -->
-<!--  	  <td>Chez Scheme (Petite Chez Scheme Version 6.0a)</td> -->
-<!--  	  <td>Identifier <code>a#</code></td> -->
-<!--  	  <td>Identifier <code>a#b#</code></td> -->
-<!--  	  <td>Identifier <code>b</code></td> -->
-<!--  	</tr> -->
-<!--        </tbody> -->
-<!--      </table> -->
-<!--      All Implementations recognize <code>#</code> as legal character -->
-<!--      within identifiers in contrast to the specification in <a -->
-<!--      href="http://www.schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-10.html#%_sec_7.1.1">R5RS, -->
-<!--      Section 7.1.1</a>. Furthermore the table shows that even the -->
-<!--      implementations that already support multi-line comments fail to -->
-<!--      recognize multi-line comments that directly follow -->
-<!--      identifiers. Therefore an additional whitespace is needed to -->
-<!--      separate comments from identifiers. -->
-    
     <H1>Implementation</H1>
     
     <p>The following procedure <code>skip-comment</code> deletes a
-    leading multi-line comment from the input port specified as the
-    argument. </p>
+    leading multi-line comment from the current input port. Its
+    optional argument specifies whether the caller has already removed
+    leading characters of the comment from the current input port. The
+    symbol <code>start</code> means that the caller has removed
+    nothing, <code>read-sharp</code> means that it has removed a sharp
+    and finally <code>read-bar</code> indicates that the caller has
+    removed <code>#|</code>. </p>
 
     <pre>
-(define (skip-comment port)
-  (let lp ((state 'start) (nested-level 0))
+(define (skip-comment! . maybe-start-state)
+  (let lp ((state (if (null? maybe-start-state) 'start (car maybe-start-state))) 
+	   (nested-level 0))
     (define (next-char)
-      (let ((c (read-char port)))
+      (let ((c (read-char)))
 	(if (eof-object? c)
 	    (error "EOF inside block comment -- #| missing a closing |#")
 	    c)))
@@ -196,17 +138,29 @@ the archive of the mailing list</a>.
 		 (else (lp 'start nested-level))))
       ((read-bar) (case (next-char)
 		    ((#\#) (if (> nested-level 1)
-			       (lp 'start (- nested-level 1))
-			       port))
+			       (lp 'start (- nested-level 1))))
 		    (else (lp 'start nested-level))))
       ((read-sharp) (case (next-char)
 		      ((#\|) (lp 'start (+ nested-level 1)))
-		      (else (lp 'start nested-level))))))
+		      (else (lp 'start nested-level)))))))
     </pre>
 
+    <p>A <a href="http://srfi.schemers.org/srfi-22/">SRFI 22</a> script to remove nested multi-line comments is
+    available at 
+      
+      <a
+	 href="remove-srfi30-comments-script.scm">http://srfi.schemers.org/srfi-30/remove-srfi30-comments-script.scm</a>.
+      
+      The script will read a Scheme program containing nested
+      multi-line comments from standard input and emit the same
+      programs with the comments removed to standard output. The
+      script mimics the Scheme 48 reader and uses the
+      <code>error</code> procedure from <a
+      href="http://srfi.schemers.org/srfi-23/">SRFI 23</a>.</p>
+
      <p>A number of Scheme implemenations already support this SRFI:
-     Chez Scheme, Gambit-C, MIT Scheme, MzScheme and RScheme. Bigloo
-     supports multi-line comments via
+     Chez Scheme, Chicken, Gambit-C, Kawa, MIT Scheme, MzScheme and
+     RScheme. Bigloo supports multi-line comments via
      <code>#!</code>/<code>!#</code>. Among the major Scheme
      implementations, Scheme 48 and Guile do not support this SRFI
      yet.</p>
@@ -243,7 +197,7 @@ the archive of the mailing list</a>.
     href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Fri Apr 12 15:28:34 MST 2002
+Last modified: Wed Jun  5 09:22:42 MST 2002
 <!-- hhmts end -->
   </body>
 </html>
