@@ -23,6 +23,7 @@ HREF="mailto:srfi-9@srfi.schemers.org">mail to
 &lt;srfi-9@srfi.schemers.org&gt;</A></code>.  See <A HREF=../srfi-list-subscribe.html>instructions here</A> to subscribe to the list.  You can access previous messages via <A HREF=mail-archive/maillist.html>the archive of the mailing list</A>.
 <P><UL>
 <LI>Received: 1999/07/01
+<LI>Revised: 1999/08/25
 <LI>Draft: 1999/07/07-1999/09/06
 </UL>
 
@@ -46,7 +47,7 @@ Instead, the names of the
  in the source.
 This has the following advantages:
 <UL>
-<LI> It can be defined using a simple <code>SYNTAX-RULES</code> macro
+<LI> It can be defined using a simple <code>SYNTAX-CASE</code> macro
  in Scheme implementations that provide a procedural interface
  for creating record types.
 <LI> It does not restrict users to a particular naming convention.
@@ -75,8 +76,13 @@ The syntax of a record-type definition is:
  &lt;... name&gt;  -&gt; &lt;identifier&gt;
 </PRE> 
 
-Record-type definitions may only occur at top-level (allowing `internal'
-record-type definitions would require a more complex implementation).
+<code>DEFINE-RECORD-TYPE<\code> is generative: 
+each use creates a new record type that is distinct from all existing types,
+including other record types and Scheme's predefined types.
+
+Record-type definitions may only occur at top-level (there are two
+possible semantics for `internal' record-type definitions, generative
+and nongenerative, and no consensus as to which is better).
 
 <P>
 An instance of <code>DEFINE-RECORD-TYPE</code> is equivalent to the following
@@ -106,12 +112,17 @@ definitions:
     
 <LI> Each <code>&lt;modifier name&gt;</code> is a procedure that takes a record
     of type <code>&lt;type name&gt;</code> and a value which becomes the new
-    value of the corresponding field.  It is an error to pass a modifier a first
+    value of the corresponding field; an unspecified value is returned.
+    It is an error to pass a modifier a first
     argument which is not a record of the appropriate type.
 </UL>
 
 <P>
-Records are disjoint from the types listed in Section 3.2 of R5RS.
+Records are disjoint from the types listed in Section 4.2 of R5RS.
+
+<P>
+<code>Set!</code>ing the value of any of these identifiers has no
+ effect on the behavior of any of their original values.
 
 <P>
 The following
@@ -146,7 +157,10 @@ This code is divided into three layers.  In top-down order these are:
 Some Scheme implementations already have something close to this.
 <LI> Vector-like records implemented in R5RS.  This redefines some standard
 Scheme procedures and therefor must be loaded before any other code, including
-part 2 above.
+part 2 above.  Note that these procedures can be used to break the
+record-type abstraction (for example, <code>RECORD-SET!</code> can be used
+to modify the type of a record).  Access to these procedures should be
+restricted.
 </OL>
 
 <H2>Syntax definitions</H2>
@@ -197,7 +211,7 @@ part 2 above.
 ; (&lt;constructor&gt; &lt;initial-value&gt; ...)         -> &lt;record&gt;
 ; (&lt;predicate&gt; &lt;value&gt;)                       -> &lt;boolean&gt;
 ; (&lt;accessor&gt; &lt;record&gt;)                       -> &lt;value&gt;
-; (&lt;modifier&gt; &lt;record&gt; &lt;value&gt;)
+; (&lt;modifier&gt; &lt;record&gt; &lt;value&gt;)         -> &lt;unspecific&gt;
 
 ; Record types are implemented using vector-like records.  The first
 ; slot of each record contains the record's type, which is itself a
@@ -308,7 +322,7 @@ part 2 above.
 ;   (record? &lt;value&gt;)                -> &lt;boolean&gt;
 ;   (make-record &lt;size&gt;)             -> &lt;record&gt;
 ;   (record-ref &lt;record&gt; &lt;index&gt;)    -> &lt;value&gt;
-;   (record-set! &lt;record&gt; &lt;index&gt; &lt;value&gt;)
+;   (record-set! &lt;record&gt; &lt;index&gt; &lt;value&gt;) -> &lt;unspecific&gt;
 ;
 ; These can implemented in R5RS Scheme as vectors with a distinguishing
 ; value at index zero, providing VECTOR? is redefined to be a procedure
