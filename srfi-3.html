@@ -1,0 +1,438 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI-3 List-Set Library</title>
+  </head>
+
+  <body>
+
+<H1>Title</H1>
+
+List-Set Library
+
+<H1>Author</H1>
+
+Olin Shivers
+
+<H1>Status</H1>
+This SRFI is currently in ``draft'' status.  To see an explanation of each status that a SRFI can hold, see <A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+It will remain in draft status until 1999/02/22, or as amended.
+To provide input on this SRFI, please <code><A
+HREF="mailto:srfi-3@srfi.schemers.org">mail to
+&lt;srfi-3@srfi.schemers.org&gt;</A></code>.  See <A HREF=../srfi-list-subscribe.html>instructions here</A> to subscribe to the list.  You can access previous messages via <A HREF=mail-archive/maillist.html>the archive of the mailing list</A>.
+<P><UL>
+<LI>Received: 1998/11/8
+<LI>Draft: 1999/1/12-1999/03/12
+</UL>
+<P>This draft SRFI includes an "Issues" section, whose contents should be
+resolved before this proposal is accepted as a final SRFI.
+
+<H1>Abstract</H1>
+
+<p>
+This SRFI proposes a coherent and comprehensive set of procedures for
+manipulating lists as sets; it is accompanied by a reference implementation
+of the spec. The <a href="srfi-3-reference.scm">reference implementation</a> is
+</p>
+	
+	<ul>
+	  <li>portable</li>
+	  <li>efficient</li>
+	  <li>completely open, public-domain source</li>
+	</ul>
+
+
+<p>
+Be aware that these procedures are inherently O(n^2) in the lengths of
+their parameter lists - serious set operations on large lists should use
+alternate techniques.</p>
+
+<H1>Issues</H1>
+
+<p>
+It may well be the case that the 46 procedures in this library should
+be folded into the general list library I have submitted as a prior SRFI
+proposal. This should be resolved in the course of discussing these two
+SRFIs.
+</p>
+
+<p>
+Should we provide both reliably-destructive and linear-update
+(potentially destructive) procedure variants? It really imposes no
+<em>implementation</em> overhead to do so - typically, one simply
+defines the linear-update name to be either the destructive or purely
+functional procedure. We would need a naming convention for
+linear-update functions - perhaps a terminal <code>+</code>, e.g.
+</p>
+
+<p>
+    <code>UNION</code> <code>UNION!</code> <code>UNION+</code>
+</p>
+
+<p>
+Procedures are, generally speaking, allowed to disorder lists. This
+is in keeping with their interpretation as sets. (The initial list parameter
+of union and adjoin gets special dispensation.)
+</p>
+
+<p> It was too messy to define variants of <code>LSET<=</code> and
+<code>LSET=</code> that are specialised for the usual
+<code>EQ?</code>, <code>EQV?</code> and <code>EQUAL?</code>
+element-equality functions, so I didn't.
+</p>
+
+<H1>Rationale</H1>
+
+<p>
+The procedures in this library have "pure" and "linear update" variants.  A
+"pure" procedure has no side-effects, and in particular does not alter its
+arguments in any way. A "linear update" procedure is allowed - but <em>not</em>
+required - to side-effect its arguments in order to construct its
+result. "Linear update" procedures are typically given names ending with an
+exclamation point. So, for example, if the elements of
+<code>LIST1</code> and <code>LIST2</code> are
+disjoint, then <code>(UNION! LIST1 LIST2)</code> is allowed to construct its result by
+simply using <code>SET-CDR!</code> to set the cdr of the last pair of <code>LIST1</code> to point to
+<code>LIST2</code>, and then returning <code>LIST1</code>. However, <code>UNION!</code> could also elect to perform a
+pure append operation - this is a legal definition of UNION!:
+</p>
+
+<p>
+    <code>(define union! union)</code>
+</p>
+
+<p>
+This is why we do not call these procedures "destructive" - because
+they aren't <em>required</em> to be destructive. They are
+<code>potentially</code> destructive.
+</p>
+
+<p>
+What this means is that you may only apply linear-update procedures to
+values that you know are "dead" - values that will never be used
+again in your program. This must be so, since you can't rely on the
+value passed to a linear-update procedure after that procedure has
+been called. It might be unchanged; it might be altered.
+</p>
+
+<p>
+<a href="#linear-update">Background on linear update.</a>
+
+<H1>Specification</H1>
+
+<p>
+There are 46 procedures - 13 basic procedures, and another 33 which
+are variants specialised to use the primitive element-equality
+procedures <code>EQ?</code>, <code>EQV?</code> and
+<code>EQUAL?</code>.
+</p>
+
+<h2>Procedure List</h2>
+
+<ul>
+<li><code>lset&lt;= = list1 list2 ...</code></li>
+<li><code>lset=  = list1 list2 ...</code></li>
+<li><code>lset-adjoin = list elt1 ...</code></li>
+<li><code>lset-union = list1 ...</code></li>
+<li><code>lset-intersection = list1 list2 ...</code></li>
+<li><code>lset-difference = list1 list2 ...</code></li>
+<li><code>lset-xor = list1 ...</code></li>
+<li><code>lset-diff+intersection = list1 list2 ...</code></li>
+<li><code>lset-union! lset-intersection! lset-difference! </code></li>
+<li><code>lset-xor! lset-diff+intersection!</code></li>
+<li><code>adjoin {,q,v}: list elt1 ...</code></li>
+<li><code>union {,q,v} {,!}: list1 ...</code></li>
+<li><code>intersection {,q,v} {,!}: list1 list2 ...</code></li>
+<li><code>list-difference {,q,v} {,!}: list1 list2 ...</code></li>
+<li><code>list-xor {,q,v} {,!}: list1 ...</code></li>
+<li><code>diff+intersection {,q,v} {,!}: list1 list2 ...</code></li>
+</ul>
+
+<h2>Procedure Specification</h2>
+
+<dl>
+<dt><code>lset&lt;= = list1 list2 ... -> boolean</code></dt>
+<dd>
+      <p>
+    Returns true iff every <code>LISTi</code> is a subset of
+    <code>LISTi</code>+1, using <code>=</code> for the element equality procedure.
+      </p>
+
+      <p>
+    <code>(lset&lt;= eq? '(a) '(a b a) '(a b c c)) => #t</code>
+      </p>
+</dd>
+
+<dt><code>lset= = list1 list2 ... -> boolean</code></dt>
+<dd>
+   <p>
+    Returns true iff every <code>LISTi</code> is set-equal to
+    <code>LISTi</code>+1, using <code>=</code> for the element
+    equality procedure. "Set-equal" simply means that
+    <code>LISTi</code> is a subset of <code>LISTi</code>+1, and
+    <code>LISTi</code>+1 is a subset of <code>LISTi</code>.
+   </p>
+
+      <p>
+    <code>(lset= eq? '(b e a) '(a e b) '(e e b a)) => #t</code>
+	</p>
+
+<dt><code>lset-adjoin = list elt1 ... -> list</code></dt>
+<dd>
+   <p>
+    Adds the <code>ELTi</code> elements not already in the list
+    parameter to the result list. The result shares a common tail with
+    the list parameter.  The new elements are added to the front of
+    the list, but no guarantees are made about their order. The
+    <code>=</code> parameter is an equality procedure used to
+    determine if an <code>ELTi</code> is already a member of
+    <code>LIST</code>.
+      </p>
+
+      <p>
+    The list parameter is always a suffix of the result - even if the list
+    parameter contains repeated elements, these are not reduced.
+	</p>
+   
+      <p>
+    <code>(lset-adjoin eq? '(a b c d c e) 'a 'e 'i 'o 'u) => (u o i a b c d c e)</code>
+	</p>
+      </dd>
+
+<dt><code>lset-union = list1 ... -> list</code></dt>
+<dd>
+ <p>
+    Returns the union of the lists, using <code>=</code> for the element equality
+    procedure. <code>LIST1</code> is a suffix or tail of the result. Elements that are
+    repeated multiple times in a single list parameter may or may not occur
+    multiple times in the result; however, an element that occurs once in
+    more than one list parameter will only appear once in the result.
+  </p>
+
+  <p>
+    Elements introduced by <code>LIST2</code> or following parameters occur in no
+    particular order.
+  </p>
+
+  <p>
+    <code>(lset-union eq? '(a b c d e) '(a e i o u)) => (u o i a b c d e)</code>
+  </p>
+</dd>
+
+<dt><code>lset-intersection = list1 list2 ... -> list</code>
+<dd>
+  <p>
+    Returns the intersection of the lists, using <code>=</code> for
+    the element equality procedure. The result may share a common tail
+    with any of the list parameters. Elements that are repeated
+    multiple times in every list parameter may or may not occur
+    multiple times in the result; however, an element that occurs only
+    once in every list parameter will only appear once in the
+    result. No constraint is placed on the ordering of the elements in
+    the result.
+  </p>
+
+  <p>
+    <code>(lset-intersection eq? '(a b c d e) '(a e i o u)) => (a e)</code>
+  </p>
+</dd>
+
+<dt><code>lset-difference = list1 list2 ... -> list</code></dt>
+<dd>
+  <p>
+    Returns the difference of the lists, using <code>=</code> for the element equality
+    procedure - all the elements of <code>LIST1</code> that do not appear in any of the
+    other <code>LISTi</code> parameters. The result may share a common tail with <code>LIST1</code>.
+    Elements that are repeated multiple times in the <code>LIST1</code> parameter will
+    occur multiple times in the result. No constraint is placed on the ordering
+    of the elements in the result.
+  </p>
+
+  <p>
+    <code>(lset-difference eq? '(a b c d e) '(a e i o u)) => (b c d)</code>
+  </p>
+</dd>
+
+<dt><code>lset-xor = list1 ... -> list</code></dt>
+<dd>
+  <p>
+    Returns the XOR of the lists, using <code>=</code> for the element equality
+    procedure. If there are exactly two lists, this is all the elements
+    that appear in exactly one of the two lists. The operation is associative,
+    and thus extends to the n-ary case - the elements that appear in an
+    odd number of the lists. The result may share a common tail with any of
+    the <code>LISTi</code> parameters.
+  </p>
+
+  <p>
+    A list element that occurs multiple times in a single list
+    parameter may or may not appear multiple times in the result. For
+    example, if <code>LSET-XOR</code> is applied to a single list
+    parameter, it is permitted to return <em>exactly</em> that list
+    for its result. No constraint is placed on the ordering of the
+    elements in the result.
+  </p>
+
+  <p>
+    <code>(lset-xor eq? '(a b c d e) '(a e i o u)) => (d c b i o u)</code>
+  </p>
+</dd>
+
+<dt><code>lset-diff+intersection = list1 list2 ... -> [list list]</code></dt>
+<dd>
+  <p>
+    Returns two values - the difference and the union of the lists.
+    Is equivalent to 
+   </p>
+
+<pre><code>
+(values (lset-difference = list1 list2 ...)
+        (lset-intersection = list1 list2 ...))
+</code></pre>
+ 
+  <p>
+    but can be implemented more efficiently.
+  </p>
+</dd>
+
+<dt><code>lset-union!        	= list1 ... -> list</code></dt>
+<dt><code>lset-intersection! 	= list1 list2 ... -> list</code></dt>
+<dt><code>lset-difference!   	= list1 list2 ... -> list</code></dt>
+<dt><code>lset-xor!          	= list1 ... -> list</code></dt>
+<dt><code>lset-diff+intersection! = list1 list2 ... -> [list list]</code></dt>
+<dd>
+  <p>
+    These are linear-update variants. They are allowed, but not
+    required, to use the cons cells in their first list parameter to
+    construct their answer. <code>LSET-UNION!</code> is permitted to
+    recycle cons cells from <em>any</em> of its lists arguments.
+  <p>
+</dd>
+</dl>
+
+
+The following variants of the general lset procedures use
+<code>EQUAL?</code>, <code>EQ?</code>, and <code>EQV?</code> for
+element comparison, respectively.
+
+<pre><code>
+union   list1 ... -> list		union!  list1 ... -> list
+unionq  list1 ... -> list		unionq! list1 ... -> list
+unionv  list1 ... -> list		unionv! list1 ... -> list
+
+intersection   list1 list2 ... -> list	intersection!  list1 list2 ... -> list
+intersectionq  list1 list2 ... -> list	intersectionq! list1 list2 ... -> list
+intersectionv  list1 list2 ... -> list	intersectionv! list1 list2 ... -> list
+
+list-xor   list1 ... -> list		list-xor!  list1 ... -> list
+list-xorq  list1 ... -> list		list-xorq! list1 ... -> list
+list-xorv  list1 ... -> list		list-xorv! list1 ... -> list
+
+adjoin  list elt1 ... -> list
+adjoinq list elt1 ... -> list
+adjoinv list elt1 ... -> list
+
+list-difference   list1 list2 ... -> list	
+list-differenceq  list1 list2 ... -> list	
+list-differencev  list1 list2 ... -> list	
+list-difference!  list1 list2 ... -> list
+list-differenceq! list1 list2 ... -> list
+list-differencev! list1 list2 ... -> list
+
+diff+intersection   list1 list2 ... -> list
+diff+intersectionq  list1 list2 ... -> list
+diff+intersectionv  list1 list2 ... -> list
+diff+intersection!  list1 list2 ... -> list
+diff+intersectionq! list1 list2 ... -> list
+diff+intersectionv! list1 list2 ... -> list
+</code></pre>
+
+<H1>Implementation</H1>
+
+<A HREF=srfi-3-reference.scm>Source for the reference implementation.</A>
+
+<a name="linear-update"></a><h1>Linear Update</h1>
+
+<p>
+The "linear" in "linear update" doesn't mean "linear time" or "linear space"
+or any sort of multiple-of-n kind of meaning. It's a fancy term that
+pointy-headed type theorists and pure functional programmers use to describe
+systems where you are only allowed to have exactly one reference to each
+variable. This provides a guarantee that the value bound to a variable is
+bound to no other variable. So when you <em>use</em> a variable in a variable
+reference, you "use it up." Knowing that no one else has a pointer to that
+value means the a system primitive is free to side-effect its arguments to
+produce what is, observationally, a pure-functional result.
+ </p>
+
+<p>
+In the context of this library, "linear update" means you, the programmer,
+know there are <em>no other</em> live references to the value passed to the
+procedure - after passing the value to one of these procedures, the
+value of the old pointer is indeterminate. Basically, you are licensing
+the Scheme implementation to alter the data structure if it feels like
+it - you have declared you don't care either way.
+<p>
+
+<p>
+You get no help from Scheme in checking that the values you claim are
+"linear" really are. So you better get it right. Or play it safe and
+use the non-<code>!</code> procedures - doesn't do any good to
+compute quickly if you get the wrong answer.
+</p>
+
+<p>
+Why go to all this trouble to define the notion of "linear update" and use it
+in a procedure spec, instead of the more common notion of a "destructive"
+operation?  First, note that destructive list-processing procedures are almost
+always used in a linear-update fashion. This is in part required by the
+special case of operating upon the empty list, which can't be side-effected.
+This means that destructive operators are not pure side-effects - they have
+to return a result. Second, note that code written using linear-update
+operators can be trivially ported to a pure, functional subset of Scheme by
+simply providing pure implementations of the linear-update operators. Finally,
+requiring destructive side-effects ruins opportunities to parallelise these
+operations - and the places where one has taken the trouble to spell out
+destructive operations are usually exactly the code one would want a
+parallelising compiler to parallelise: the efficiency-critical kernels of the
+algorithm.  Linear-update operations are easily parallelised. Going with a
+linear-update spec doesn't close off these valuable alternative implementation
+techniques. This list library is intended as a set of low-level, basic
+operators, so we don't want to exclude these possible implementations.
+</p>
+
+<H1>Copyright</H1>
+Copyright (C) Olin Shivers (1998). All Rights Reserved. 
+<p>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<p>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<p>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+
+    <hr>
+    <address>Editor: <a href="mailto:srfi-editors@schemers.org">Mike Sperber</a></address>
+<!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
+<!-- hhmts start -->
+Last modified: Tue Jan 12 13:23:12 MET 1999
+<!-- hhmts end -->
+  </body>
+</html>
