@@ -1,0 +1,307 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 17:  Generalized set!</title>
+  </head>
+
+<body>
+
+<H1>Title</H1>
+Generalized <code>set!</code>
+
+<H1>Author</H1>
+
+Per Bothner
+
+<H1>Status</H1>
+This SRFI is currently in ``draft'' status.  To see an explanation of each status that a SRFI can hold, see <A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+It will remain in draft status until 2000/03/17, or as amended.
+To provide input on this SRFI, please <code><A
+HREF="mailto:srfi-17@srfi.schemers.org">mail to
+&lt;srfi-17@srfi.schemers.org&gt;</A></code>.  See <A HREF=../srfi-list-subscribe.html>instructions here</A> to subscribe to the list.  You can access previous messages via <A HREF=mail-archive/maillist.html>the archive of the mailing list</A>.
+<P><UL>
+<LI>Received: 1999/12/08
+<LI>Draft: 2000/01/16-2000/03/17
+</UL>
+
+<H1>Abstract</H1>
+
+This is a proposal to allow "functions that reference a location"
+to be used as the first operand of <code>set!</code>.
+For example:
+<pre>
+(set! (car x) (car y))
+</pre>
+becomes equivalent to
+<pre>
+(set-car! x (car y))
+</pre>
+
+<p>
+      Many programming languages have the concept of an <i>lvalue</i>.
+that is an "expression" that "evaluates" to a location, and
+which can appear on the left-hand-side of an assignment.
+Common Lisp has a related concept of "generalized variables"
+which can be used in <code>setf</code> and some other special forms.
+However, the Common Lisp concept is based on the idea of
+compile-time recognition of special "location-producing" functions;
+this does not seem to be in the "spirit of Scheme".
+<p>
+This SRFI proposes an extension of <code>set!</code>
+so that it provides similar functionality as Common Lisps's <code>setf</code>,
+but in the "functional (first-class)" manner.
+Actually, various alternatives are discussed, with the hope
+that we can agree on a specific consensus.
+
+<H1>Issues</H1>
+
+See <a href="#issue">below</a>.
+
+<H1>Rationale</H1>
+<p>There is ample precedent for general "lvalues" on the
+left-hand side of an assignment.  This includes most statically
+typed languages, and many dynamically typed languages (including APL
+and Common Lisp).  That suggests this is a natural idiom for people.
+One reason may be that there are fewer procedure names to learn.
+Another is that it becomes visually clearer which expression is the new value,
+and which are parameters.  Also, the visual consistency between
+an expression evaluated for its value and one evaluated to yield
+a location seems natural to people.
+<p>
+For most languages, the set of lvalue-producing operators is limited
+(typically array indexing and field selection).  Some languages have
+general lvalues as first class values.  For example Algol 68 has
+expressions that have reference type.  However, this is made convenient
+by using automatic dereferencing coercions, which would not work for
+a dynamically typed language like Scheme.  ML goes further:  All
+mutable variables are first-class "cells", and accessing the
+contents of a cell requires an explicit operator.  This is also not
+compatible with Scheme.  Instead we need to stick to the model
+where using a variable in most contexts means using its value,
+but refering to a variable in certain lvalue contexts (lhs of
+assignment) refers to its actual location.  Sticking to this model
+for general "lvalue expressions" in <code>set!</code> means
+that "evaluation" must be done differently from normal
+evaluation when in an "lvalue context".  That is what this proposal does.
+
+<H1>Specification</H1>
+<p>
+The special form <code>set!</code> is extended so the first operand
+can be a procedure application, and not just a variable.
+The procedure is typically one that extracts a component from
+some data structure.  Informally, when the procedure is called
+in the first operand of <code>set!</code>, it causes the corresponding
+component to be <em>replaced</em> by the second operand.
+For example,
+<pre>
+(set (vector-ref x i) v)
+</pre>
+would be equivalent to:
+<pre>
+(vector-set! x i v)
+</pre>
+<p>
+Each procedure that may be used as the first operand to <code>set!</code>
+must have a corresponding "setter" procedure.
+The builtin procedure <code>setter</code> takes a procedure and returns the
+corresponding setter procedure.
+<p>
+<a name="issue"></a>
+We define:
+<pre>
+(set! (proc arg ...) value)
+</pre>
+as (Alternative 1):
+<pre>
+((setter proc) arg ... value)
+</pre>
+or (Alternative 2):
+<pre>
+((setter proc) value arg ...)
+</pre>
+<p>
+We have two reasonable definitions.  It is not clear
+which is best.
+<ul>
+<li>Alternative 1 is probably more natural.  It matches
+the existing Scheme convention for setter procedures, where
+the new value is given last.  For example we can define
+<code>(setter car)</code> to be <code>set-car!</code>.
+It also has the minor advantage of preserving evaluation
+order, which makes things a little easier for Schemes
+that do define the evaluation order.
+<li>
+Alternative 2 works much better when you consider
+procedures that take a variable number of arguments.
+This is because it is straight-forward to add one extra
+initial fixed argument, but if you add an extra fixed
+argument to the end of an argument list that has
+a "rest" parameter, then things get more messy:
+You have to extract the new value from the <em>end</em>
+of the rest list, and the copy the list except for the
+final parameter.  You get a similar problem for
+procedures that have optional arguments, which some
+Scheme implementation support, and which a number
+of builtin Scheme procedures take.
+Also, <code>syntax-rules</code> can easily handle
+the rewrite for Alternative 1, but not alternative 2.
+Common Lisp <code>setf</code> is defined this way.
+</ul>
+<p>
+It is not clear-cut which alternative makes most sense.
+Kawa implemented Alternative 2;  then Guile implemented
+Alternative 1.  Alternative 2 is cleaner for implementors
+and when dealing with varargs procedures;  alternative 1
+is more intuitive, and has the big advantage that many
+existing functions already have proper setters.
+My tentative recommendation is alternative 1.
+
+<h2>Standard setters</h2>
+<p>
+The following standard procedures have pre-defined setters:
+<pre>
+(set! (car x) v) == (set-car! x v)
+(set! (cdr x) v) == (set-cdr! x v)
+(set! (caar x) v) == (set-car! (car x) v)
+(set! (cadr x) v) == (set-car! (cdr x) v)
+....
+(set! (caXXr x) v) == (set-car! (cXXr x) v)
+(set! (cdXXr x) v) == (set-cdr! (cXXr x) v)
+(set! (string-ref x i) v) == (string-set! x i v)
+(set! (vector-ref x i) v) == (vector-set! x i v)
+</pre>
+
+<!--
+<p>
+One useful addition:
+<pre>
+(set! (substring x i j) v) == ....
+</pre>
+(Of course this is more useful if Scheme had
+variable-length mutable strings.)
+-->
+
+<p>
+One might consider some more questionable definitions, such as:
+<pre>
+(set! (string->symbol x) v) == (string-copy (symbol->string v) x)
+(set! (- x) v) == (set! x (- v))
+</pre>
+However, I do not propose these should be standardized!
+
+
+<h2>Setting setters;  properties</h2>
+<p>
+A setter procedure is a special case of the concept of procedures having
+associated <dfn>properties</dfn>.  Other properties might include
+the procedures's name or usage documentation.
+As a <em>hypothetical</em> example (i.e. not part of this SRFI),
+we can use the Common Lisp <code>documentation</code> function,
+where for example:
+<pre>
+(documentation sqrt)
+</pre>
+returns the "documentation string" (if defined) for <code>sqrt</code>.
+Such properties should also be settable using generalized <code>set!</code>.
+For example:
+<pre>
+(set! (documentation sqrt) "Calculates the square root.")
+</pre>
+
+<p>
+This SRFI does
+not propose a general "procedure properties" feature, but it
+should be compatible with it.  It does specify the special case
+for the <code>setter</code> property.  This is defined such that:
+<pre>
+(set! (setter <var>proc</var>) <var>setter</var>)
+</pre>
+sets the setter procedure associated with <var>proc</var>
+to <var>setter</var>.
+For example, assuming the Alternative 1 above, we can assume
+<pre>
+(set! (setter car) set-car!)
+</pre>
+has been executed by the Scheme prologue.
+
+<h2>Efficiency Issues</h2>
+<p>
+If <code>(set! (foo ..) ...)</code> is to be the preferred idiom,
+we want to make  <code>((setter foo) ...)</code> as efficient
+as <code>(set-foo! ...)</code>.
+This is only possible when the compiler knows both what function
+the symbol <code>foo</code> is bound to, <em>and</em> the setter
+associated with that function.  Scheme (as opposed to Common Lisp)
+does not say anything about a compiler or what it can inline,
+so we cannot say much here.
+<p>
+However, I do suggest a rule that that once a <code>setter</code>
+has been specified for a procedure, then changing the <code>setter</code>
+property to something else is undefined.  
+This would allow a compiler to optimize
+<code>setter</code> calls to the same extent that resolve (or inline)
+calls to specific functions.
+I see no use for being able to change
+the setter property once set, except perhaps for debugging.
+<p>
+An alternative might be to use a functional interface
+to define a procedure with associated properties. 
+Specifically:
+<pre>
+(getter-with-setter <var>getter</var> <var>setter</var>)
+</pre>
+This evaluates to a new anonymous procedure which when 
+applied invokes <var>getter</var>, and whose setter is <var>setter</var>.
+It is an error for a program to subsequently try to modify
+the setter of the resulting compound.
+<p>
+For example, we could define:
+<pre>
+(define car (getter-with-setter %primitive-car %primitive-set-car!))
+(define set-car! (setter car))
+</pre>
+The advantage of this approach that whenever a compiler can inline
+<code>car</code>, it can also inline <code>(setter car)</code>.
+
+
+<H1>Implementation</H1>
+<p>
+The Scheme implementations Kawa, Guile, and STk are know to have
+extended <code>set!</code>.  It is not possible to give a really
+portable implementation, but it should be straight-forwarded to modify
+an implementation as needed.
+
+<H1>Copyright</H1>
+Copyright (C) Per Bothner (1999). All Rights Reserved. 
+<p>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<p>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<p>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+    <hr>
+    <address>Editor: <a href="mailto:srfi-editors@schemers.org">Mike Sperber</a></address>
+<!-- Created: Wed Nov 10 03:14:43 PST 1999 -->
+<!-- hhmts start -->
+Last modified: Sun Jan 16 10:45:36 MET 2000
+<!-- hhmts end -->
+  </body>
+</html>
