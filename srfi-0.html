@@ -6,15 +6,15 @@
 
   <body>
 
-<H1>Title</H1><UL>
+<H1>Title</H1>
 
 Feature-based conditional expansion construct
 
-</UL><H1>Author</H1><UL>
+<H1>Author</H1>
 
 Marc Feeley
 
-</UL><H1>Status</H1><UL>
+<H1>Status</H1>
 This SRFI is currently in ``draft'' status.  To see an explanation of each status that a SRFI can hold, see <A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
 It will remain in draft status until 1999/03/05, or as amended.
 To provide input on this SRFI, please <code><A
@@ -25,7 +25,7 @@ HREF="mailto:srfi-0@srfi.schemers.org">mail to
 <LI>Draft: 1999/01/05-1999/03/05
 </UL>
 
-</UL><H1>Abstract</H1><UL>
+<H1>Abstract</H1>
 
 This SRFI describes a mechanism to check at macro-expansion time for
 the existence of a particular feature of the Scheme system and to
@@ -33,8 +33,9 @@ enable and/or disable a piece of Scheme code based on this.  This
 allows a Scheme program to be written in such a way that it adapts its
 code to the features provided by the Scheme system.
 
-</UL><H1>Rationale</H1><UL>
+<H1>Rationale</H1>
 
+<p>
 Most Scheme systems extend the language with some additional features
 (such as the ability to manipulate Unicode characters and strings, to
 do binary I/O, or to handle asynchronous interrupts).  Such features
@@ -49,9 +50,9 @@ existence or absence of a feature in the Scheme system being used.
 For example, the construct could be use to check if a particular
 binary I/O API is available, and if not, load a portable library which
 implements that API.
+</p>
 
-	<p></p>
-
+<p>
 The construct is parameterized by a feature-identifier which denotes
 the feature that is being checked.  In order for the semantics of this
 construct to be well defined, the feature-identifier must of course
@@ -59,9 +60,9 @@ refer to a feature which has a well defined meaning.  There is thus a
 need for a registry, independent of this SRFI, to keep track of the
 formal specification associated with each valid feature-identifier.
 The SRFI registry is used for this purpose.
+</p>
 
-	<p></p>
-
+<p>
 Another issue is the binding time of this construct (i.e. the moment
 when it operates).  It is important that the binding time be early so
 that a compiler can discard the sections of code that are not needed,
@@ -74,12 +75,13 @@ would not achieve this goal, as its binding time is too late
 to the reader of existing Scheme systems and the syntax is not
 particularly human friendly.  Instead, a macro-expansion-time
 construct is used.
+</p>
 
-</UL><H1>Specification</H1><UL>
+<H1>Specification</H1>
 
+<p>
 The following special-form is added to the Scheme syntax:
-
-	<p></p>
+</p>
 
 <PRE>
   &lt;definition&gt; --&gt; (if-implements &lt;feature-id&gt; &lt;definition&gt; [ &lt;definition&gt; ] )
@@ -87,6 +89,7 @@ The following special-form is added to the Scheme syntax:
   &lt;feature-id&gt; --&gt; a symbol which is the name or alias of a SRFI
 </PRE>
 
+<p>
 At macro-expansion time the <code>if-implements</code> form expands
 into the second argument if the Scheme system implements the feature
 as specified in the SRFI registry, otherwise the
@@ -96,12 +99,11 @@ though an empty <code>begin</code> form was specified when
 <code>if-implements</code> is used as a definition, otherwise it is as
 though a side-effect free expression yielding an unspecified value was
 specified.
+</p>
 
-	<p></p>
-
+<p>
 Examples:
-
-	<p></p>
+</p>
 
 <PRE>
   (write (if-implements SRFI-0 (* 1 2) (+ 3 4)))  => writes 2
@@ -111,21 +113,24 @@ Examples:
     (define (command-line-arguments) '()))
 </PRE>
 
+<p>
 The second example assumes that <code>Gambit-C-3.0</code> is an alias
 for the SRFI associated with the specification of Gambit-C version 3.0
 (i.e.  the documentation for that Scheme system).
+</p>
 
-	<p></p>
-
+<p>
 When writing portable code, the case used for the feature identifier
 should match the one in the SRFI registry.  This is to ensure that the
 feature identifier will be correctly recognized whether or not the
 Scheme system is case-sensitive.  To support case-insensitive Scheme
 systems, the feature identifiers in the SRFI registry are guaranteed
 to be unique even when ignoring the case.
+</p>
 
-</UL><H1>Implementation</H1><UL>
+<H1>Implementation</H1>
 
+<p>
 The Scheme system must maintain a table of the feature-identifiers
 that it implements.  At macro-expansion time this table is checked to
 decide what the "if-implements" form expands into.  Except for the
@@ -133,8 +138,7 @@ table which is obviously system dependent, the
 <code>if-implements</code> construct could be defined as a macro along
 these lines (assuming <code>SRFI-0</code> and <code>SRFI-5</code> are
 the only implemented features):
-
-	<p></p>
+</p>
 
 <PRE>
 (define-syntax if-implements
@@ -147,13 +151,13 @@ the only implemented features):
     ((if-implements other yes no)  no)))
 </PRE>
 
+<p>
 If Scheme defined that <code>(begin)</code> was a valid expression
 that returned an unspecified value then this definition would be
 correct.  However, in Scheme, <code>(begin)</code> is not a valid
 expression.  For example this is an error in R5RS, if
 <code>SRFI-9</code> is not implemented:
-
-	<p></p>
+</p>
 
 <PRE>
 (lambda (x)
@@ -162,12 +166,14 @@ expression.  For example this is an error in R5RS, if
   (newline))
 </PRE>
 
+<p>
 So to properly implement the <code>if-implements</code> construct, the
 Scheme system must also know at macro-expansion time if the form is
 used as a definition or expression, just like the implementation of
 the <code>begin</code> construct must know this.
+</p>
 
-</UL><H1>Copyright</H1><UL>
+<H1>Copyright</H1>
 Copyright (C) Marc Feeley (1999). All Rights Reserved. 
 <p>
 This document and translations of it may be copied and furnished to
@@ -192,13 +198,12 @@ WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
 WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
 RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
 PARTICULAR PURPOSE.
-</UL>
 
     <hr>
     <address>Editor: <a href="mailto:srfi-editors@schemers.org">Mike Sperber</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Wed Jan 13 15:34:21 MET 1999
+Last modified: Wed Jan 13 16:59:21 MET 1999
 <!-- hhmts end -->
   </body>
 </html>
