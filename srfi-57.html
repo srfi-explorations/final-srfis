@@ -38,7 +38,7 @@ update, and for composing records.
 
 <H1>Rationale</H1>
 
-The existing SRFI-9 provides a facility for defining record types.  
+The existing SRFI-9 [1] provides a facility for defining record types.  
 It is simple and clean, but does
 not support various common record operations and 
 programming idioms 
@@ -46,16 +46,16 @@ particularly well.  Such support was left to extensions such as
 the current SRFI, which provides
 
 <ul>
-<li>the ability to construct record values by field labels, useful for 
+<li>The ability to construct record values by field labels, useful for 
     writing robust and readable code.  
-<li>a mechanism for record subtyping.  Record types may have multiple supertypes.    
-<li>facilities for functional record update, including polymorphic
+</li><li>A mechanism for record subtyping.  Record types may have multiple supertypes.    
+</li><li>Facilities for functional record update, including polymorphic
     update, as well as a linear version of destructive update.  These
     make functional programming with records easier.
-<li>a mechanism for composing records.     
-<li>a declaration syntax that allows less wordy variations and
+</li><li>A mechanism for composing records.     
+</li><li>A declaration syntax that allows less wordy variations and
     optional elements.    
-</ul>
+</li></ul>
 
 For efficiency, the SRFI specification was designed with the constraint that 
 all record expressions containing field labels be translatable into positional 
@@ -68,16 +68,15 @@ expressions at macro-expansion time.
 The syntax of a record type definition is as follows:
 
 <pre>
-
  &lt;command or definition&gt;           
    -&gt; &lt;record type definition&gt;           ; addition to 7.1.6 in R5RS
 
  &lt;record type definition&gt; -&gt; (define-record-type &lt;type clause&gt; 
-                                                 &lt;constructor clause&gt 
+                                                 &lt;constructor clause&gt; 
                                                  &lt;predicate clause&gt;                          
                                                  &lt;field clause&gt; ...)  
                           -&gt; (define-record-type &lt;type clause&gt; 
-                                                 &lt;constructor clause&gt)  
+                                                 &lt;constructor clause&gt;)  
                           -&gt; (define-record-type &lt;type clause&gt;)                   
 
  &lt;type clause&gt; -&gt; &lt;type name&gt;                           
@@ -92,9 +91,7 @@ The syntax of a record type definition is as follows:
 
  &lt;field clause&gt; -&gt; (&lt;field label&gt; &lt;accessor clause&gt; &lt;modifier clause&gt;) 
                 -&gt; (&lt;field label&gt; &lt;accessor clause&gt;)
-                -&gt; (&lt;field label&gt;)
-                -&gt; &lt;field label&gt;
-
+            
  &lt;accessor clause&gt; -&gt; &lt;accessor name&gt;                 
                    -&gt; #f
 
@@ -109,36 +106,35 @@ The syntax of a record type definition is as follows:
 An instance of <code>define-record-type</code> is equivalent to the following:
 
 <ul>
-<li> An ordered set of field labels is associated with the record type <code>&lt;type name&gt</code>,
-     obtained by appending the ordered set of field labels of each declared supertype
+<li> A default order of field labels is associated with the record type <code>&lt;type name&gt;</code>,
+     obtained by appending the default order of each declared supertype
      from left to right, followed by all field labels in order of first appearance in either the
-     <code>&lt;constructor clause&gt</code> or the <code>&lt;field clause&gt;</code>s of 
-     the <code>&lt;record type definition&gt;</code>, at
-     each step dropping any repeated labels. 
+     <code>&lt;constructor clause&gt;</code> or the <code>&lt;field clause&gt;</code>s of 
+     the <code>&lt;record type definition&gt;</code>, while dropping any repeated labels. 
      <p>
 
-<li> <code>&lt;type name&gt;</code> is bound to a macro, described below, that can be used to construct record 
+</p></li><li> <code>&lt;type name&gt;</code> is bound to a macro, described below, that can be used to construct record 
      values by label.
    <p> 
-<li> If <code>&lt;constructor clause&gt</code> is 
+</p></li><li> If <code>&lt;constructor clause&gt;</code> is 
      of the form <code>(&lt;constructor name&gt; &lt;field label&gt; ...)</code>, then
      <code>&lt;constructor name&gt;</code> is bound to a procedure that takes as many arguments as 
       there are <code>&lt;field label&gt;</code>s following it
       and returns a new <code>&lt;type name&gt;</code> record. 
-      Fields whose labels are listed with <code>&lt;type name&gt</code> have the corresponding 
+      Fields whose labels are listed with <code>&lt;type name&gt;</code> have the corresponding 
      argument as their initial value. The initial values of all other fields are unspecified.
      <p>
-     If <code>&lt;constructor clause&gt</code> is of the form <code>&lt;constructor name&gt;</code>, 
+     If <code>&lt;constructor clause&gt;</code> is of the form <code>&lt;constructor name&gt;</code>, 
      the  procedure
      <code>&lt;constructor name&gt;</code> takes as many arguments as there are field labels
-     associated with <code>&lt;type name&gt</code>, in the default order as defined above.
-     <p> 
-<li> <code>&lt;predicate name&gt;</code>, is bound to a predicate procedure 
+     associated with <code>&lt;type name&gt;</code>, in the default order as defined above.
+     </p><p> 
+</p></li><li> <code>&lt;predicate name&gt;</code>, is bound to a predicate procedure 
      that returns <code>#t</code> when given a record value that belongs to any subtype of 
      <code>&lt;type name&gt;</code>, and <code>#f</code> for any other
     value.
      <p>
-<li> Fields appearing in the constructor do not have to be repeated in the 
+</p></li><li> Fields appearing in the constructor do not have to be repeated in the 
       <code>&lt;field clause&gt;</code>s.  Fields that are not further specified in
       a <code>&lt;field clause&gt;</code> of the record type or a
       supertype are taken as immutable.  Where present, <code>&lt;field
@@ -152,32 +148,27 @@ An instance of <code>define-record-type</code> is equivalent to the following:
       declares a mutable field, while a field clause of the form 
       <code>(&lt;field label&gt; &lt;accessor clause&gt;)</code>
       declares an immutable field.
-      <p>
-      The syntax <code>(&lt;field label&gt;)</code> is short for 
-      a mutable field declaration <code>(&lt;field label&gt; #f #f)</code>.
-      The syntax <code>&lt;field label&gt;</code> is short for an
-      immutable field declaration
-       <code>(&lt;field label&gt; #f)</code>.
-     <p>
+      </p><p>
+     </p><p>
      A <code>&lt;field label&gt;</code> already declared in a supertype may
-     be listed again in a <code>&lt;field clause&gt</code> of a 
+     be listed again in a <code>&lt;field clause&gt;</code> of a 
      subtype, along with additional accessors or modifiers as desired.  It
      is an error for a subtype declaration to modify the mutability
      attribute of an
      inherited field.  In addition,  it is an error if more than one supertype 
      of a record type declares the same field label with different mutability attributes. 
-     <p>
+     </p><p>
      Field labels may be reused as the name of accessors or modifiers (a practice known 
      as punning).
-     <p>
-<li> Each <code>&lt;accessor name&gt;</code> is bound to
+     </p><p>
+</p></li><li> Each <code>&lt;accessor name&gt;</code> is bound to
      a procedure that takes a 
      record belonging to any subtype of <code>&lt;type name&gt;</code>,
      and returns the current value of the corresponding 
      field.  It is an error to pass an accessor a value which is not a
      record of the appropriate type.
      <p>
-<li> Each <code>&lt;modifier name&gt;</code> is bound to 
+</p></li><li> Each <code>&lt;modifier name&gt;</code> is bound to 
      a procedure that takes a record belonging to any subtype of
      <code>&lt;type name&gt;</code>,
      and a value which becomes the new value of the corresponding field.  The updated record 
@@ -186,7 +177,7 @@ An instance of <code>define-record-type</code> is equivalent to the following:
      It is an error to pass a modifier a first argument which is not a record 
      of the appropriate type. 
      <p>
-</ul>
+</p></li></ul>
  
 <p>
 <code>define-record-type</code> is generative: each use creates a new record type that is distinct 
@@ -194,12 +185,11 @@ from all existing types, including
 other record types and Scheme's predefined types. Record-type definitions may only occur at top-level.
 
 
-<h4>A note on subtyping and redefinition</h4>
+</p><h4>A note on subtyping and redefinition</h4>
 
 In the following example, two supertypes define different accessors for the same field:
 
-<pre>
-  (define-record-type foo make-foo foo? (x foo-x))
+<pre>  (define-record-type foo make-foo foo? (x foo-x))
   (define-record-type bar make-bar bar? (x bar-x))
   (define-record-type (foo-bar foo bar) (x foo-bar-x))
 </pre>
@@ -214,8 +204,7 @@ field of any instances of <code>foo-bar</code> or further subtypes of <code>foo-
 In the following example, two record types define
 the same accessor:
 
-<pre>
-  (define-record-type foo       make-foo foo? (x foo-x))
+</p><pre>  (define-record-type foo       make-foo foo? (x foo-x))
   (define-record-type (bar foo) make-bar bar? (x foo-x))
 </pre>
 As in any <code>define-...</code> form, later bindings replace earlier bindings.
@@ -228,15 +217,14 @@ longer on instances of the supertype <code>foo</code> that are not also instance
 
 <h4>A simple record:</h4>
 
-<pre>
-  (define-record-type point (make-point x y) point?
+<pre>  (define-record-type point (make-point x y) point?
     (x get-x set-x!)           
     (y get-y set-y!))                    
 
   (define p (make-point 1 2))
-  (get-y  p)                                 ==> 2
-  (set-y! p 3))                              ==> (point (x 1) (y 3))                              
-  (point? p)                                 ==> #t  
+  (get-y  p)                                 ==&gt; 2
+  (set-y! p 3))                              ==&gt; (point (x 1) (y 3))                              
+  (point? p)                                 ==&gt; #t  
 </pre>
 
 Note that the setter returns the updated record.  
@@ -244,7 +232,6 @@ Note that the setter returns the updated record.
 <h4>Optional elements:</h4>
 
 Elements may be left out if not desired, as the following examples illustrate:
-
 <pre>  
   (define-record-type node (make-node left right)) 
   (define-record-type leaf (make-leaf value))       
@@ -260,8 +247,7 @@ mutable or we want to bind getters or setters.
 Here <code>monday</code> has no declared constructor or predicate, while <code>tuesday</code>
 has a predicate but no constructor.       
 
-<pre>
-  (define-record-type node make-node #f                                   
+<pre>  (define-record-type node make-node #f                                   
     (left  left  #f)                        
     (right right #f))                     
 </pre>
@@ -269,39 +255,22 @@ Here the constructor <code>make-node</code> has the default argument order and n
 is bound.  Fields are mutable, but no setters are bound.  Also note that field labels are
 punned.    
   
-<pre>
-  (define-record-type node make-node #f
-    (left)                                          
-    (right))
-</pre>
-Here <code>(left)</code> is short for <code>(left #f #f)</code>, indicating a mutable field.
-
-<pre>
-  (define-record-type node (make-node left right) #f  
-    extra)                                            
-</pre>  
-Here <code>left</code> and <code>right</code> are immutable fields.  The field clause
-<code>extra</code> is short for <code>(extra #f)</code>, indicating an immutable field.  
-
-
-
 <h4>Subtyping:</h4>
-<pre>
-  (define-record-type color make-color color?     ; make-color takes default argument order
+<pre>  (define-record-type color make-color color?     ; make-color takes default argument order
     (hue hue set-hue!))                           ; punning of field labels is allowed
 
   (define-record-type (color-point color point)   ; more than one supertype
-                      (make-color-point x y hue)  ; differs from default ordering and arity
-                      color-point?
-    (info info))                                  ; additional field left undefined by constructor
+    (make-color-point x y hue)                   
+    color-point?
+    (info info))                                  ; field left undefined by constructor
 
   (define cp (make-color-point 1 2 'green))
-  (color-point? cp)                          ==> #t
-  (point? cp)                                ==> #t
-  (color? cp)                                ==> #t
-  (get-x  cp)                                ==> 1
-  (hue    cp)                                ==> green
-  (info   cp)                                ==> &lt;undefined&gt;
+  (color-point? cp)                          ==&gt; #t
+  (point? cp)                                ==&gt; #t
+  (color? cp)                                ==&gt; #t
+  (get-x  cp)                                ==&gt; 1
+  (hue    cp)                                ==&gt; green
+  (info   cp)                                ==&gt; &lt;undefined&gt;
 </pre>
 
 <h2>Labeled record expressions</h2>
@@ -310,8 +279,7 @@ The following syntax allows one to construct a record by labels.  All the
 <code>&lt;field label&gt;</code>s have to belong to the record type <code>&lt;type name&gt;</code>.
 If this condition is not satisfied, an expansion time error must be signaled.  
 
-<pre>
-   &lt;expression&gt; -&gt; (&lt;type name&gt; (&lt;field label&gt; &lt;expression&gt;) ...)
+<pre>   &lt;expression&gt; -&gt; (&lt;type name&gt; (&lt;field label&gt; &lt;expression&gt;) ...)
 </pre>
 
 
@@ -322,24 +290,23 @@ can lead to code that is hard to read and fragile under common operations such a
 adding, removing, or rearranging field declarations.  The ability to populate record values 
 by labels provides a more robust and readable alternative, especially useful when a record has 
 more than two or three fields, or if it has supertypes.  Field labels are checked for validity 
-at expansion time, thus eliminating a large class of potential programmer errors. 
+and the macro is compiled to a positional constructor at expansion time, 
+thus eliminating a large class of potential programmer errors at no cost in efficiency. 
 
 <h4>Example</h4>
 
-<pre>
-  (color-point (info 'hi) (x 1) (y 2))  
+<pre>  (color-point (info 'hi) (x 1) (y 2))  
             
-                 ==> (color-point (hue &lt;undefined&gt;) (x 1) (y 2) (info hi)) 
+                 ==&gt; (color-point (hue &lt;undefined&gt;) (x 1) (y 2) (info hi)) 
 </pre>
 
 <h2>Record update</h2>
 
 The following syntax allows different forms of record update:
 
-<pre>
-   &lt;expression&gt; -&gt; (record-update  &lt;type name&gt; &lt;record&gt; (&lt;field label&gt; &lt;expression&gt;) ...)
-                -&gt; (record-update. &lt;type name&gt; &lt;record&gt; (&lt;field label&gt; &lt;expression&gt;) ...)
-                -&gt; (record-update! &lt;type name&gt; &lt;record&gt; (&lt;field label&gt; &lt;expression&gt;) ...)
+<pre>   &lt;expression&gt; -&gt; (record-update  &lt;record&gt; &lt;type name&gt; (&lt;field label&gt; &lt;expression&gt;) ...)
+                -&gt; (record-update* &lt;record&gt; &lt;type name&gt; (&lt;field label&gt; &lt;expression&gt;) ...)
+                -&gt; (record-update! &lt;record&gt; &lt;type name&gt; (&lt;field label&gt; &lt;expression&gt;) ...)
 </pre>
 
 The first alternative is used for polymorphic functional record update.  The expression 
@@ -357,69 +324,77 @@ The second alternative is used for monomorphic functional record update.  The ex
 record value is unaffected.  All the
 <code>&lt;field label&gt;</code>s have to belong to the record type <code>&lt;type name&gt;</code>.
 If this condition is not satisfied, an expansion time error must be signaled. 
-<p>
+</p><p>
 The third alternative is used for in-place record update.  The expression 
 <code>&lt;record&gt;</code> must evaluate to a record value that belongs to a subtype of 
 <code>&lt;type name&gt;</code>.  The result will be the original record value 
 <code>&lt;type name&gt;</code>, with the given fields, which must be mutable,
-updated in place.  It is an error to attempt to <code>record-update!</code> immutable fields.  
+updated in place.  
 Note that a useful value is returned.  All the
 <code>&lt;field label&gt;</code>s have to belong to the record type <code>&lt;type name&gt;</code>
 and, in addition, be mutable.
 If this condition is not satisfied, an expansion time error must be signaled. 
 
-<h4>Rationale</h4>
+</p><h4>Rationale</h4>
 
-A mechanism for functional update makes functional-style programming
-with records easier.  It is particularly useful when we are updating only a 
+In the presence of subtyping, polymorphic record update is not reducible
+to the other operations we have listed and therefore has to be 
+provided as a built-in primitive [2].   
+
+<p>
+Apart from this, a mechanism for functional update facilitates and encourages functional-style programming
+with records.  It is particularly useful when we are updating only a 
 few fields of a large record. 
 
-<p> A rationale for the naming convention is as follows: 
-the more general polymorphic <code>update</code> form is the safest in that it
+<p> A rationale for the naming convention is as follows: the shortest name is
+given to the more general polymorphic <code>update</code> form, which is the safest in that it
 can be used in most
-instances where the monomorphic  <code>update.</code> would suffice, and the 
+instances where the monomorphic  <code>update*</code> would suffice, and the 
 former can indeed be replaced by the latter for efficiency when the programmer knows
 that the situation requires only monomorphic update.  A destructive linear version
-<code>update!</code> is provided expecially for cases where the programmer 
-knows that no other references to a value exist to produce what is, observationally, a
-pure-functional result.  See SRFI-1 for a good discussion of linear update procedures.
+<code>update!</code> is provided especially for cases where the programmer 
+knows that no other references to a value exist, to produce what is, observationally, a
+pure-functional result.  In these cases, an <code>update</code> or 
+<code>update*</code> operation may be replaced by <code>update!</code> for efficiency.
+See SRFI-1 for a good discussion of linear update procedures.
 
-<h4>Examples</h4>
+</p><h4>Examples</h4>
 
-<pre>
-  (define-record-type point2          #f #f (x) (y))
+<pre>  (define-record-type point2          #f #f (x) (y))
   (define-record-type (point3 point2) #f #f (x) (y) (z))
   
   (define p (point3 (x 1) (y 1) (z 3)))
 
-  (record-update  point2 p (y 5))  ==> (point3 (x 1) (y 5) (z 3))  -- polymorphic update
-  p                                ==> (point3 (x 1) (y 1) (z 3))  -- original unaffected
-  (record-update. point2 p (y 5))  ==> (point2 (x 1) (y 5))        -- monomorphic update
-  p                                ==> (point3 (x 1) (y 1) (z 3))  -- original unaffected
-  (record-update! point2 p (y 5))  ==> (point3 (x 1) (y 5) (z 3))  -- destructive update
-  p                                ==> (point3 (x 1) (y 5) (z 3))  -- original updated
+  (record-update  p point2 (y 5))  ==&gt; (point3 (x 1) (y 5) (z 3))  -- polymorphic update
+  p                                ==&gt; (point3 (x 1) (y 1) (z 3))  -- original unaffected
+  (record-update* p point2 (y 5))  ==&gt; (point2 (x 1) (y 5))        -- monomorphic update
+  p                                ==&gt; (point3 (x 1) (y 1) (z 3))  -- original unaffected
+  (record-update! p point2 (y 5))  ==&gt; (point3 (x 1) (y 5) (z 3))  -- destructive update
+  p                                ==&gt; (point3 (x 1) (y 5) (z 3))  -- original updated
 </pre>
 
-<h2>Record extension</h2>
+<h2>Record composition</h2>
 
 The following syntax provides a shorthand for composing record values:
 
-<pre>
-   &lt;expression&gt; -&gt; (record-extend ((&lt;import-type name&gt; &lt;record&gt;) ...)
+<pre>   &lt;expression&gt; -&gt; (record-compose ((&lt;import-type name&gt; &lt;record&gt;) ...)
                      (&lt;export-type name&gt; (&lt;field label&gt; &lt;expression&gt;) ...)
 </pre>
 Here each expression <code>&lt;record&gt;</code> must evaluate to a record value belonging to
 a subtype of 
-<code>&lt;import-type name&gt;</code>.  The exported record type 
-<code>&lt;export-type name&gt;</code> must be a subtype of all the import types, a condition
-that must be checked at compile-time.  The expression 
+<code>&lt;import-type name&gt;</code>.  The expression 
 evaluates to a record value of type <code>&lt;export-type name&gt;</code> whose fields are
-populated as follows:  All fields of the imported record values are imported from left to
-right, dropping repeated fields.  The additional fields  <code>&lt;field label&gt;</code>
-are then populated with the corresponding <code>&lt;expression&gt;</code>.
+populated as follows:  All fields of the imported record values that also belong to the type
+<code>&lt;export type name&gt;</code> by comparing labels are imported from left to
+right, dropping any repeated fields.  The additional fields  <code>&lt;field label&gt;</code>
+are then populated with the corresponding <code>&lt;expression&gt;</code>, overwriting
+any fields with the same labels already imported.
 All the
-<code>&lt;field label&gt;</code>s have to belong to the record type <code>&lt;type name&gt;</code>.
+<code>&lt;field label&gt;</code>s have to belong to the record type <code>&lt;export type name&gt;</code>.
 If this condition is not satisfied, an expansion time error must be signaled. 
+<p>
+The exported record type 
+<code>&lt;export-type name&gt;</code> does not have to be a subtype of all the import types.
 
 <h4>Rationale</h4>
 
@@ -427,66 +402,134 @@ Calculi for composing record values, such as the above scheme,
 may be used, for example, as "units" are used in 
 PLT Scheme, or for writing what amounts to modules and functors in the sense of ML.  
 
-<h4>Example</h4>
+<h4>Examples</h4>
 
-<pre>
-  (define c (color (hue 'green)))
+<pre>  (define c (color (hue 'green)))
   (define p (point (x 1) (y 2)))
 
-  (record-extend ((point p)
-                  (color c))
+  (record-compose ((point p)
+                   (color c))
     (color-point (x 5)
-                 (info 'hi)))  ==> (color-point (hue green) (x 5) (y 2) (info hi))
+                 (info 'hi)))  ==&gt; (color-point (hue green) (x 5) (y 2) (info hi))
+
+; Another record composition example:  
+
+  (define-record-type monoid #f #f 
+    (mult monoid.mult) 
+    (one  monoid.one))
+  
+  (define-record-type abelian-group #f #f 
+    (add  group.add) 
+    (zero group.zero)
+    (sub  group.sub))
+  
+  (define-record-type ring #f #f
+    (mult ring.mult) 
+    (one  ring.one)
+    (add  ring.add) 
+    (zero ring.zero)
+    (sub  ring.sub))
+  
+  ; A simple functor
+
+  (define (make-ring g m)
+    (record-compose ((monoid        m)
+                     (abelian-group g))
+      (ring)))
+  
+  (define integer-monoid (monoid (mult *) 
+                                 (one  1)))
+  
+  (define integer-group (abelian-group (add  +)
+                                       (zero 0)
+                                       (sub  -)))
+  
+  (define integer-ring (make-ring integer-group 
+                                  integer-monoid))
+  
+  ((ring.add integer-ring) 1
+                           2)   ;==> 3
+
+
 </pre>
 
 
 <H1>Implementation</H1>
 
-The reference implementation uses the macro mechanism of 
-R5RS. It does not use any other SRFI or any library.
+<p>
+The reference implementations use the macro mechanism of 
+R5RS. They do not use any other SRFI or any library.
+
+<p>
+Two reference implementations are given.  One represents records as
+closures, while the other represents records as vectors.  Depending
+on the application,
+the implementation based on closures may in fact perform better.
 
 <p> 
 This version depends on <code>define</code> being treated as a binding form by <code>syntax-rules</code>.
 This is true for recent versions of portable syntax-case, for PLT, for Scheme48, and possibly others.   
-A less efficient version exists that does not make this assumption.  Let me know if you
-need it and I will post it also.  
 
-<p>
+</p><p>
 The SRFI specification was designed with the constraint that 
 all record expressions containing field labels be translatable into positional 
 expressions at macro-expansion time.  For example, labeled record expressions 
 and patterns should be just as efficient as positional constructors and 
 patterns.  This is true for the reference implementation.
 
-<p>
+</p><p>
 In a deviation from the specification,
 record types defined by the reference implementation are not generative, and not disjoint from other
-types.  Since various Schemes have their own ways of defining unique tags/types,
+types.  Since various Schemes have their own ways of defining unique tags or types,
 it is left to implementors to choose the best way of achieving generativity.
 A simple mechanism for achieving generativity is implemented in SRFI-9.  However, since this
 mechanism is not foolproof and slows down certain key primitives, it was not adopted here.
 
-<p>
+</p><p>
 Only the names in the exports section should be visible to the user.  The other
 name should be hidden by a suitable module system or naming convention.  
 
-<p>
+</p><p>
+Stub implementations are given for pattern matching, hopefully to be specified in a 
+future SRFI.
+This is done because in the absence of static analysis, 
+providing pattern matching as a primitive is much more efficient
+for certain common programming patterns.  
+For example, writing 
+<pre>
+  (match r
+    ((r1 : f1 ... fn) (.... (f1 r) ....
+                       .... (f2 r) ....
+                            ...
+                       .... (fn r) ....)))
+
+</pre>
+for the common pattern
+<pre>
+  (cond
+    ((r1? r) (.... (r1.field1 r) ....
+              .... (r1.field2 r) ....
+                   ...
+              .... (r1.fieldn r) ....)))
+</pre>
+will save at least n type tests, and up to kn type tests in the 
+presence of subtyping with depth k.  
+</p><p>
 The last section contains a few examples and (non-exhaustive) tests.  
 
 
 
+</p>
 <H2>Reference implementation </H2>
 
-<PRE>
-;==============================================================================
-; IMPLEMENTATION:
-;
-; Andre van Tonder 2004.
-;
-; Records are implemented as closures that inject their fields into
-; a continuation.  Constructors, updaters and extenders by labels are
-; compiled into positional expressions at expansion time.
-; Mutable fields are represented by boxed values. 
+</p><h3>Records as vectors</h3>
+
+<pre>;==============================================================================
+
+; Andre van Tonder, 2004.
+
+; Records are implemented as vectors, with the attending virtual tables
+; for polymorphism included in a dispatcher procedure.
 
 ;==============================================================================
 ; Exports:
@@ -504,29 +547,459 @@ The last section contains a few examples and (non-exhaustive) tests.
 
 (define-syntax record-update
   (syntax-rules ()
-    ((record-update name record (label binding) ...)
-     (name ("labels")
-      (update-help record (name (label binding) ...))))))
+    ((record-update record name (label exp) ...)
+     (update name record ((label exp) ...)))))
 
-(define-syntax record-update.
+(define-syntax record-update*
   (syntax-rules ()
-    ((record-update. name val (label exp) ...)
-     (name ("labels")
-       (update.-help name val ((label . exp) ...))))))
+    ((record-update* record name (label exp) ...)
+     (record.labels name
+      (update* name record ((label exp) ...))))))
 
 (define-syntax record-update!
   (syntax-rules ()
-    ((record-update! name val (label exp) ...)
-     (add-temporaries ((label exp) ...)
-       (update!-help val name)))))
+    ((record-update! record name (label exp) ...)
+     (update! name record ((label exp) ...)))))
 
-(define-syntax extend
+(define-syntax record-compose
   (syntax-rules ()
-    ((extend () (export-name (label exp) ...))
+    ((record-compose () (export-name (label exp) ...))
      (export-name (label exp) ...))
-    ((extend ((name val) . imports) export)
-     (name ("labels")
-       (extend-help (export name val imports))))))
+    ((record-compose ((name val) . imports) (export-name (label exp) ...))
+     (syntax-map (name export-name) (record.labels)
+      (compose 1 ((name val) . imports) (export-name (label exp) ...))))))
+
+;==================================================================================
+; Internal record utilities:
+
+(define &lt;record> '&lt;record>)
+
+(define &lt;undefined> '&lt;undefined>)
+
+(define-syntax build-record      
+  (syntax-rules ()
+    ((build-record name supers (make-name pos-label ...) name? fields)
+     (build-record name supers (make-name pos-label ...) (pos-label ...) name? fields))
+    ((build-record name supers make-name name? fields)
+     (build-record name supers make-name () name? fields))
+    ((build-record name supers constructor (pos-label ...) name? fields)
+     (get-immutable () fields                         ;  -> (immutables . stack) where stack = ()
+      (get-mutable fields                             ;  -> (mutables immutables . stack)          
+       (get-interfaces supers                         ;  -> (interfaces mutables immutables . stack)
+        (union-mutables                               ;  -> (mut-labels interfaces mutables immutables . stack)
+         (extract-labels fields (pos-label ...) name  ;  -> (labels mut-labels interfaces mutables immutables . stack)
+          (union-labels                               ;  -> (labels interfaces mut-labels mutables immutables . stack)
+           (recolor-identifiers
+            (emit-record 1 name constructor name?)))))))))))
+
+(define-syntax emit-record
+  (syntax-rules () 
+    ((emit-record (labels interfaces . stack) 1 name (make-name . pos-labels) name?) 
+     (syntax-map (labels pos-labels interfaces) (add-temporaries) 
+      (emit-record 2 labels name make-name name? . stack)))
+    ((emit-record (labels . stack) 1 name make-name name?)
+     (emit-record (labels . stack) 1 name (make-name . labels) name?))
+    ((emit-record (((label index) ...) ((pos-label pos-temp) ...) (((super super-label ...) vtable) ...)) 2
+                  labels name make-name name? (mut-label ...)
+                  ((label** get-label** set-label!**) ...)
+                  ((label*  get-label*) ...))
+     (begin
+
+       (define n 3)
+       (begin 
+         (define index n)
+         (set! n (+ n 1)))
+       ... 
+
+       (define-syntax name                        
+         (syntax-rules (label ...)
+           ((name ("index") label) index)
+           ...))
+       
+       (define maker 
+         (let ((dispatcher 
+                (let ((vtable (vector #f #f #f (record.index name super-label) ...))   
+                      ...) 
+                  (lambda (interface sk fk) 
+                    (case interface              
+                      ((name)  (sk (lambda (n) n)))
+                      ((super) (sk (lambda (n) (vector-ref vtable n))))
+                      ...
+                      (else    (fk))))))
+               (printer 
+                (lambda (record)
+                  (list 'name
+                        (list 'label
+                              (vector-ref record
+                                          (record.index name label)))
+                        ...))))             
+           (lambda labels                               
+             (make-record dispatcher
+                          printer
+                          label
+                          ...))))
+                
+       (define (constructor pos-temp ...)
+         (populate maker 1 labels (pos-label pos-temp) ...))
+       
+       (define-if make-name constructor)
+       
+       (define-if name?
+         (lambda (val)
+           (and (record? val)
+                ((record.dispatcher val) 'name
+                                         (lambda ignore #t)
+                                         (lambda () #f)))))
+                          
+       (define-if get-label*
+         (lambda (record)
+           ((record.dispatcher record) 'name
+                                       (lambda (idx)
+                                         (vector-ref record
+                                                     (idx (record.index name label*))))
+                                       (lambda () (error "Invalid argument" (show record)
+                                                         "for" 'get-label*)))))
+       ...
+       
+       (define-if get-label**
+         (lambda (record)
+           ((record.dispatcher record) 'name
+                                       (lambda (idx)
+                                         (vector-ref record
+                                                     (idx (record.index name label**))))
+                                       (lambda () (error "Invalid argument" (show record)
+                                                         "for" 'get-label**)))))
+       ...
+       
+       
+       (define-if set-label!**
+         (lambda (record val)
+           ((record.dispatcher record) 'name
+                                       (lambda (idx)
+                                         (vector-set! record
+                                                      (idx (record.index name label**))
+                                                      val)
+                                         record)
+                                       (lambda () (error "Invalid argument" (show record)
+                                                         "for" 'set-label**)))))
+       ...
+       
+       (define-syntax name
+         (syntax-rules (: name label ... super ...)
+           ((name ("labels") k)                   (syntax-apply k labels))
+           ((name ("mutables") k)                 (syntax-apply k (mut-label ...)))
+           ((name ("interfaces") k)               (syntax-apply k ((super super-label ...) ... (name label ...))))
+           ((name ("match") val (: . pats) sk fk) (syntax-zip (pos-label ...) pats
+                                                              (match-labels name labels val sk fk)
+                                                              (syntax-error "Wrong number of patterns in match"
+                                                                            (name : pats)
+                                                                            "Positional fields are"
+                                                                            (pos-label ...))))
+           ((name ("match") val bindings sk fk)   (match-labels bindings name labels val sk fk))
+           ((name ("mutable?") mut-label sk fk)   sk)
+           ...
+           ((name ("mutable?") other sk fk)       fk)
+           ((name ("index") label)                index)
+           ...
+           ((name . bindings)                     (populate maker 1 labels . bindings))))
+       
+       (newline)
+       (display "Record: ") (display 'name)  (newline)
+       (display "Labels: ") (display 'labels) (newline)
+       (display "Constr: ") (display '(pos-label ...)) (newline)
+       (display "Supers: ")
+       (for-each (lambda (int) (display int) (newline)
+                   (display "        "))
+                 (reverse '((super super-label ...) ...)))
+       (newline)))))
+
+(define-syntax make-record
+  (syntax-rules ()
+    ((make-record dispatcher printer field ...)
+     (vector &lt;record> dispatcher printer field ...))))
+
+(define (record? x)
+  (and (vector? x)
+       (> (vector-length x) 2)             
+       (eq? (vector-ref x 0) &lt;record>)))
+
+(define (record.dispatcher r) (vector-ref r 1))
+(define (record.printer r)    (vector-ref r 2))
+
+(define-syntax record.labels
+  (syntax-rules ()
+    ((record.labels name k)
+     (name ("labels") k))))
+
+(define-syntax record.mutables
+  (syntax-rules ()
+    ((record.mutables name k)
+     (name ("mutables") k))))
+
+(define-syntax record.if-mutable?
+  (syntax-rules ()
+    ((record.if-mutable? label name sk fk)
+     (name ("mutable?") label sk fk))))
+
+(define-syntax record.interfaces
+  (syntax-rules ()
+    ((record.interfaces name k)
+     (name ("interfaces") k))))
+
+(define-syntax record.index
+  (syntax-rules ()
+    ((record.index name label)
+     (name ("index") label))))
+
+(define (record-copy record)
+  (let* ((ln  (vector-length record))
+         (new (make-vector ln)))
+    (let recur ((i 0))
+      (if (= i ln)
+          new
+          (begin (vector-set! new i (vector-ref record i))
+                 (recur (+ i 1)))))))
+
+(define-syntax define-if
+  (syntax-rules ()
+    ((define-if #f   binding) (begin))
+    ((define-if name binding) (define name binding))))
+
+(define (record->list r)
+  ((record.printer r) r))
+
+(define (show x)
+  (if (record? x)
+      (record->list x)
+      x))
+
+(define-syntax extract-labels 
+  (syntax-rules ()
+    ((extract-labels stack fields pos-labels name k)
+     (syntax-map fields (syntax-car)
+       (syntax-append-after pos-labels
+         (remove-duplicates top:if-free=
+            (push-result stack k)))))))
+
+(define-syntax get-immutable
+  (syntax-rules ()
+    ((get-immutable stack fields k)
+     (syntax-filter fields (if-immutable?)
+       (push-result stack k)))))
+  
+(define-syntax if-immutable?
+  (syntax-rules ()
+    ((if-immutable? (a b) sk fk) sk)
+    ((if-immutable? other sk fk) fk)))
+
+(define-syntax get-mutable
+  (syntax-rules ()
+    ((get-mutable stack fields k)
+     (syntax-filter fields (if-mutable?)
+       (push-result stack k)))))
+
+(define-syntax if-mutable?
+  (syntax-rules ()
+    ((if-mutable? (a b c) sk fk) sk)
+    ((if-mutable? other sk fk)   fk)))
+
+(define-syntax get-interfaces
+  (syntax-rules ()
+    ((get-interfaces stack supers k)
+     (syntax-map supers (record.interfaces)
+      (syntax-append-all
+       (remove-duplicates interface=
+        (push-result stack k)))))))
+
+(define-syntax interface=
+  (syntax-rules ()
+    ((interface= (name . stuff) (name* . stuff*) sk fk)
+     (top:if-free= name name* sk fk))))
+
+(define-syntax union-mutables
+  (syntax-rules ()
+    ((union-mutables (interfaces ((mutable . stuff) ...) . stack) k)
+     (syntax-map interfaces (syntax-car)    
+      (syntax-map (record.mutables)
+       (syntax-cons-after (mutable ...)
+        (syntax-append-all
+         (remove-duplicates top:if-free=
+          (push-result (interfaces ((mutable . stuff) ...) . stack) k)))))))))
+
+(define-syntax union-labels
+  (syntax-rules ()
+    ((union-labels (labels mut-labels interfaces . stack) k)
+     (syntax-map interfaces (syntax-cdr)
+      (syntax-append (labels)
+       (syntax-append-all
+        (remove-duplicates top:if-free=
+         (push-result (interfaces mut-labels . stack) k))))))))
+
+(define-syntax recolor-identifiers
+  (syntax-rules ()
+    ((recolor-identifiers (labels . rest) k)
+     (recolor top:if-free= labels rest 
+      (syntax-cons-after labels k)))))
+       
+(define-syntax populate
+  (syntax-rules ()
+    ((populate maker 1 labels (label exp) ...)
+     (order labels ((label . exp) ...) &lt;undefined>
+       (populate 2 maker)))
+    ((populate ((label . exp) ...) 2 maker)
+     (maker exp ...))))
+
+(define-syntax order
+  (syntax-rules ()
+    ((order ordering alist default k)
+     (order ordering alist alist () default k))
+    ((order () () () accum default k)
+     (syntax-apply k accum))
+    ((order (label* . labels*) bindings () (binding* ...) default k)         
+     (order labels* bindings bindings (binding* ... (label* . default)) default k))
+    ((order () ((label . value) . rest) countdown bindings* default k)
+     (syntax-error "Illegal label in" (label value)
+                   "Legal bindings are" bindings*))
+    ((order (label* . labels*) 
+            ((label . value) binding ...) 
+            (countdown . countdowns) 
+            (binding* ...) 
+            default 
+            k)
+     (if-free= label label*
+               (order labels* 
+                      (binding ...) 
+                      (binding ...) 
+                      (binding* ... (label . value)) 
+                      default 
+                      k)
+               (order (label* . labels*) 
+                      (binding ... (label . value))  
+                      countdowns 
+                      (binding* ...) 
+                      default 
+                      k)))))
+
+(define-syntax update                      
+  (syntax-rules ()
+    ((update name record ((label exp) ...))
+     (let* ((val record)
+            (new (record-copy val)))
+       ((record.dispatcher val) 'name 
+                                (lambda (idx)
+                                  (vector-set! new
+                                               (idx (record.index name label))
+                                               exp)
+                                  ...
+                                  new)
+                                (lambda () (error "Value" (show val) 
+                                                  "is not of record type" 'name)))))))
+
+(define-syntax update!                         
+  (syntax-rules ()
+    ((update! name record ((label exp) ...))
+     (syntax-andmap (label ...) (record.if-mutable? name)              
+                    (let ((val record))
+                      ((record.dispatcher val) 'name
+                                               (lambda (idx) (vector-set! val
+                                                                          (idx (record.index name label))
+                                                                          exp)
+                                                 ...
+                                                 val)
+                                               (lambda () (error "Value" (show val) 
+                                                                 "is not of record type" 'name))))
+                    (syntax-error "Attempt to update! immutable field:"
+                                  (update! name record ((label exp) ...)))))))
+       
+(define-syntax update*
+  (syntax-rules () 
+    ((update* (label ...) name record ((label* exp) ...))
+     (let ((val record))
+       ((record.dispatcher val) 'name
+                                (lambda (idx)
+                                  (let ((new (name (label (vector-ref val
+                                                                      (idx (record.index name label))))
+                                                   ...)))
+                                    (vector-set! new
+                                                 (idx (record.index name label*))
+                                                 exp)
+                                    ...
+                                    new))
+                                (lambda () (error "Value" (show val) 
+                                                  "is not of record type" 'name)))))))
+
+(define-syntax compose     
+  (syntax-rules ()
+    ((compose (labels export-labels) 1 ((name record) . imports) (export-name . bindings))
+     (syntax-filter labels (if-member? export-labels if-free=)
+      (syntax-filter (if-not-member? bindings)
+       (compose 2 ((name record) . imports) (export-name . bindings)))))
+    ((compose (label ...) 2 ((name record) . imports) (export-name . bindings))
+     (let ((val record))
+       ((record.dispatcher val) 'name
+                                (lambda (idx)
+                                  (record-compose imports 
+                                                  (export-name (label (vector-ref val
+                                                                                  (idx (record.index name label))))
+                                                               ...
+                                                               . bindings)))
+                                (lambda () (error "Value" (show val) 
+                                                  "is not of record type" 'name)))))))
+     
+(define-syntax if-not-member?
+  (syntax-rules ()
+    ((if-not-member? label () sk fk) sk)
+    ((if-not-member? label ((label* . stuff*) . bindings) sk fk)
+     (if-free= label label*
+               fk
+               (if-not-member? label bindings sk fk)))))
+
+(define-syntax record-match
+  (syntax-rules (_)
+    ((record-match exp)
+     (error "Match failure for" exp))
+    ((record-match (f . args) clause ...)
+     (let ((val (f . args)))
+       (record-match val clause ...)))
+    ((record-match val ((name . pattern) . template) clause ...)
+     (name ("match") val pattern 
+           (begin . template) 
+           (record-match val clause ...)))
+    ((record-match val (_ . template) clause ...)
+     (begin . template))
+    ((record-match val (x . template) clause ...)
+     (let ((x val)) . template))))
+
+(define-syntax match-labels
+  (syntax-rules ()
+    ((match-labels ((label pat) ...) name labels val sk fk)
+     (syntax-andmap (label ...) (if-member? labels if-free=)
+                    (let ((fail (lambda () fk)))
+                      (if (record? val)
+                          ((record.dispatcher val) 'name
+                                                   (lambda (idx)
+                                                     (match-each ((pat (vector-ref val
+                                                                                   (idx (record.index name label))))
+                                                                  ...) 
+                                                                 sk 
+                                                                 fail))
+                                                   fail)
+                          (fail)))
+                    (syntax-error "Attempt to match illegal label in match expression"
+                                  (name (label pat) ...)
+                                  "Legal labels are" labels)))))
+                                  
+     
+
+(define-syntax match-each
+  (syntax-rules ()
+    ((match-each () sk fail)
+     sk)
+    ((match-each ((pat var) . bindings) sk fail)
+     (record-match var
+       (pat (match-each bindings sk fail))
+       (_   (fail))))))
+
 
 ;====================================================================
 ; Internal syntax utilities:
@@ -547,15 +1020,15 @@ The last section contains a few examples and (non-exhaustive) tests.
                    ((test z kt* kf*) kf*))))
         (test y kt kf)))))
 
-(define-syntax if-symbol?
+(define-syntax top:if-free=
   (syntax-rules ()
-    ((if-symbol? (x . y)  sk fk) fk)
-    ((if-symbol? #(x ...) sk fk) fk)
-    ((if-symbol? x sk fk)
-     (let-syntax ((test (syntax-rules ()
-                          ((test x sk* fk*)     sk*)
-                          ((test non-x sk* fk*) fk*))))
-       (test foo sk fk)))))
+    ((top:if-free= x y kt kf)
+     (begin
+       (define-syntax if-free=:test
+         (syntax-rules (x)
+           ((if-free=:test x kt* kf*) kt*)
+           ((if-free=:test z kt* kf*) kf*)))
+       (if-free=:test y kt kf)))))
 
 (define-syntax syntax-cons
   (syntax-rules ()
@@ -569,13 +1042,9 @@ The last section contains a few examples and (non-exhaustive) tests.
   (syntax-rules ()
     ((syntax-car (h . t) k) (syntax-apply k h))))
 
-(define-syntax syntax-foldl
+(define-syntax syntax-cdr
   (syntax-rules ()
-    ((syntax-foldl accum (f arg ...) () k)
-     (syntax-apply k accum))
-    ((syntax-foldl accum (f arg ...) (h . t) k)
-     (f accum h arg ...
-       (syntax-foldl (f arg ...) t k)))))
+    ((syntax-cdr (h . t) k) (syntax-apply k t))))
 
 (define-syntax syntax-foldr
   (syntax-rules ()
@@ -585,19 +1054,14 @@ The last section contains a few examples and (non-exhaustive) tests.
      (syntax-foldr accum (f arg ...) t
        (f h arg ... k)))))
 
-(define-syntax syntax-map
-  (syntax-rules ()
-    ((syntax-map () (f arg ...) k)      (syntax-apply k ()))
-    ((syntax-map (h . t) (f arg ...) k) (syntax-map t (f arg ...)
-                                          (syntax-map (f arg ...) h k)))
-    ((syntax-map done (f arg ...) h k)  (f h arg ...
-                                          (syntax-cons done k)))))
-
 (define-syntax syntax-append
   (syntax-rules ()
-    ((syntax-append ()      y k) (syntax-apply k y))
-    ((syntax-append (h . t) y k) (syntax-append t y
-                                   (syntax-cons-after h k)))))
+    ((syntax-append (a ...) (b ...) k) (syntax-apply k (a ... b ...)))))
+
+(define-syntax syntax-append-all
+  (syntax-rules ()
+    ((syntax-append-all lists k) 
+     (syntax-foldr () (syntax-append-after) lists k))))
 
 (define-syntax syntax-append-after
   (syntax-rules ()
@@ -612,116 +1076,145 @@ The last section contains a few examples and (non-exhaustive) tests.
             (syntax-filter t (if-p? arg ...) (syntax-cons-after h k))
             (syntax-filter t (if-p? arg ...) k)))))
 
-(define-syntax syntax-reverse
+(define-syntax syntax-map
   (syntax-rules ()
-    ((syntax-reverse lst k)         (syntax-reverse lst () k))
-    ((syntax-reverse () acc k)      (syntax-apply k acc))
-    ((syntax-reverse (h . t) acc k) (syntax-reverse t (h . acc) k))))
+    ((syntax-map () (f arg ...) k)      (syntax-apply k ()))
+    ((syntax-map (h . t) (f arg ...) k) (syntax-map t (f arg ...)
+                                          (syntax-map (f arg ...) h k)))
+    ((syntax-map done (f arg ...) h k)  (f h arg ...
+                                          (syntax-cons done k)))))
+
+(define-syntax syntax-andmap
+  (syntax-rules ()
+    ((syntax-andmap () (if-p? arg ...) sk fk) sk)
+    ((syntax-andmap (h . t) (if-p? arg ...) sk fk)
+     (if-p? h arg ...
+            (syntax-andmap t (if-p? arg ...) sk fk)
+            fk))))
+     
+(define-syntax add-temporaries   
+  (syntax-rules () 
+    ((add-temporaries lst k)                (add-temporaries lst () k))
+    ((add-temporaries () lst-temps k)       (syntax-apply k lst-temps))
+    ((add-temporaries (h . t) (done ...) k) (add-temporaries t (done ... (h temp)) k)))) 
 
 (define-syntax syntax-zip
   (syntax-rules ()
-    ((syntax-zip lst lst* sk fk)                (syntax-zip () lst lst* sk fk))
-    ((syntax-zip accum () () sk fk)             (syntax-reverse accum sk))
-    ((syntax-zip accum () lst* sk fk)           fk)
-    ((syntax-zip accum lst ()  sk fk)           fk)
-    ((syntax-zip accum (h . t) (h* . t*) sk fk) (syntax-zip ((h . h*) . accum) t t* sk fk))))
-
-(define-syntax add-temporaries   
-  (syntax-rules () 
-    ((add-temporaries lst k)           (add-temporaries lst () k))
-    ((add-temporaries () temps k)      (syntax-reverse temps k))
-    ((add-temporaries (h . t) temps k) (add-temporaries t ((h temp) . temps) k))))
-                                     
+    ((syntax-zip () () sk fk)             (syntax-apply sk ()))
+    ((syntax-zip () lst* sk fk)           fk)
+    ((syntax-zip lst () sk fk)            fk)
+    ((syntax-zip (h . t) (h* . t*) sk fk) (syntax-zip t t* 
+                                                      (syntax-cons-after (h h*) sk) 
+                                                      fk))))  
+                                                                                               
 (define-syntax push-result
   (syntax-rules ()
     ((push-result x stack k) (syntax-apply k (x . stack)))))
 
-;=========================================================================
-; Pattern matching interface - used internally:
-
-(define-syntax match
+(define-syntax remove-duplicates
   (syntax-rules ()
-    ((match exp . rest)
-     (if-symbol? exp
-                 (match-var exp . rest)
-                 (let ((var exp))
-                   (match-var var . rest))))))
+    ((remove-duplicates lst compare? k)
+     (remove-duplicates lst () compare? k))
+    ((remove-duplicates () done compare? k)
+     (syntax-apply k done))
+    ((remove-duplicates (h . t) (d ...) compare? k)
+     (if-member? h (d ...) compare? 
+                 (remove-duplicates t (d ...) compare? k)
+                 (remove-duplicates t (d ... h) compare? k)))))
 
-(define-syntax match-let
+(define-syntax if-member?
   (syntax-rules ()
-    ((match-let bindings . body)
-     (add-temporaries bindings 
-       (match-let-emit body)))))
- 
-(define-syntax match-let*
-  (syntax-rules ()
-    ((match-let* () . body)
-     (begin . body))
-    ((match-let* (binding . bindings) . body)
-     (match-let (binding) 
-       (match-let* bindings . body)))))
+    ((if-member? x () compare? sk fk) 
+     fk)
+    ((if-member? x (h . t) compare? sk fk)
+     (compare? x h
+               sk
+               (if-member? x t compare? sk fk)))))
 
-(define-syntax define-view
-  (syntax-rules (match)
-    ((define-view name (lit ...)
-       (match var sk fk  
-         ((name* . pat) template)
-         ...)
-       . rest)
-     (define-syntax name
-       (syntax-rules (lit ...)
-         ((name ("match") var pat sk fk) template)
-         ...
-         . rest)))))
+(define-syntax recolor
+  (syntax-rules ()
+    ((recolor compare labels () k)
+     (syntax-apply k ()))
+    ((recolor compare labels (h . t) k)
+     (recolor compare labels h 
+      (recolor compare labels t "combine" k)))
+    ((recolor h-done compare labels to-do "combine" k)
+     (recolor compare labels to-do
+      (syntax-cons-after h-done k)))
+    ((recolor compare labels id k)
+     (get-equiv compare id labels k))))
+
+(define-syntax get-equiv
+  (syntax-rules ()
+    ((get-equiv compare label () k)
+     (syntax-apply k label))
+    ((get-equiv compare label (h . t) k)
+     (compare h label
+              (syntax-apply k h)
+              (get-equiv compare label t k)))))
+
 
 ;=============================================================================
-; Internal pattern matching utilities:
+; End of reference implementation
+;=============================================================================
+</pre>
 
-(define-syntax match-var 
-  (syntax-rules (_ => quote)
-    ((match-var var)
-     (error "No match for" (show var)))
-    ((match-var var (pattern (=> fail) . body) . rest)
-     (let ((fail (lambda ()
-                   (match-var var . rest))))
-       (match-var var (pattern . body) . rest)))
-    ((match-var var (_ . body) . rest)
-     (begin . body))
-    ((match-var var ((quote x) . body) . rest)
-     (if (equal? (quote x) var)
-         (begin . body)
-         (match-var var . rest)))
-    ((match-var var ((name . pattern) . body) . rest)
-     (name ("match") var pattern (begin . body) (match-var var . rest))) 
-    ((match-var var (x . body) . rest)
-     (if-symbol? x
-                 (let ((x var)) . body)
-                 (if (eqv? x var)
-                     (begin . body)
-                     (match-var var . rest))))))
+</p><h3>Records as closures</h3>
 
-(define-syntax match-let-emit
+<pre>;==============================================================================
+
+; Andre van Tonder, 2004. 
+
+; Records are implemented as closures that inject their fields into
+; a continuation.  
+
+;==============================================================================
+; Exports:
+
+(define-syntax define-record-type
   (syntax-rules ()
-    ((match-let-emit (((pat exp) temp) ...) body)
-     (let ((temp exp) ...)
-       (match-let-vars ((pat temp) ...) . body)))))
+    ((define-record-type (name super ...) constructor-clause name? field ...)
+     (build-record  name (super ...) constructor-clause name? (field ...)))
+    ((define-record-type (name super ...) constructor-clause)
+     (define-record-type (name super ...) constructor-clause #f))  
+    ((define-record-type (name super ...))
+     (define-record-type (name super ...) #f #f))
+    ((define-record-type name . rest)
+     (define-record-type (name) . rest))))
 
-(define-syntax match-let-vars 
+(define-syntax record-update
   (syntax-rules ()
-    ((match-let-vars () . body)
-     (begin . body))
-    ((match-let-vars ((pat var) . bindings) . body)
-     (match-var var
-       (pat (match-let-vars bindings . body))
-       (_   (error "Match-let pattern" 'pat 
-                   "does not match value" (show var)))))))
+    ((record-update record name (label exp) ...)
+     (record.labels name
+      (update 1 name record ((label exp) ...))))))
+
+(define-syntax record-update*
+  (syntax-rules ()
+    ((record-update* record name (label exp) ...)
+     (record.labels name
+      (update* 1 name record ((label exp) ...))))))
+
+(define-syntax record-update!
+  (syntax-rules ()
+    ((record-update! record name (label exp) ...)
+     (record.labels name
+      (update! 1 name record ((label exp) ...))))))
+
+(define-syntax record-compose
+  (syntax-rules ()
+    ((record-compose () (export-name (label exp) ...))
+     (export-name (label exp) ...))
+    ((record-compose ((name val) . imports) (export-name (label exp) ...))
+     (syntax-map (name export-name) (record.labels)
+      (compose 1 (export-name (label exp) ...) name val imports)))))
+
 
 ;==================================================================================
 ; Internal record utilities:
 
-(define &lt;record&gt; '&lt;record&gt;)
+(define &lt;record> '&lt;record>)
 
-(define &lt;undefined&gt; '&lt;undefined&gt;)
+(define &lt;undefined> '&lt;undefined>)
 
 (define-syntax build-record      
   (syntax-rules ()
@@ -730,91 +1223,94 @@ The last section contains a few examples and (non-exhaustive) tests.
     ((build-record name supers make-name name? fields)
      (build-record name supers make-name () name? fields))
     ((build-record name supers constructor (pos-label ...) name? fields)
-     (begin
-       (define-syntax name        ; used by if-not-in-constructor? below 
-         (syntax-rules (pos-label ...)
-           ((name ("constructor-has") pos-label sk fk) sk)
-           ...
-           ((name ("constructor-has") other     sk fk) fk)))
-       (get-immutable () fields                         ;  -> (immutables . stack) where stack = ()
-        (get-mutable fields                             ;  -> (mutables immutables . stack)          
-         (get-interfaces supers                         ;  -> (interfaces mutables immutables . stack)
-          (union-mutables                               ;  -> (mut-labels interfaces mutables immutables . stack)
-           (extract-labels fields (pos-label ...) name  ;  -> (labels mut-labels interfaces mutables immutables . stack)
-            (union-labels                               ;  -> (labels mut-labels interfaces mutables immutables . stack)
-             (emit-record name constructor name?)))))))))))
+     (get-immutables () fields                        ;  -> (immutables . stack) where stack = ()
+      (get-mutables fields                            ;  -> (mutables immutables . stack)          
+       (get-interfaces supers                         ;  -> (interfaces mutables immutables . stack)
+        (union-mutables                               ;  -> (mut-labels interfaces mutables immutables . stack)
+         (extract-labels fields (pos-label ...) name  ;  -> (labels mut-labels interfaces mutables immutables . stack)
+          (union-labels                               ;  -> (labels mut-labels interfaces mutables immutables . stack)
+           (recolor-identifiers
+            (emit-record 1 name constructor name?)))))))))))
 
 (define-syntax emit-record
   (syntax-rules () 
-    ((emit-record (labels . stack) name (make-name pos-label ...) name?) 
-     (add-temporaries labels 
-      (emit-record name (make-name pos-label ...) name? stack)))
-    ((emit-record (labels . stack) name make-name name?)
-     (emit-record (labels . stack) name (make-name . labels) name?))
-    ((emit-record ((label temp) ...) name (make-name pos-label ...) name? stack)
+    ((emit-record (labels . stack) 1 name (make-name pos-label ...) name?) 
      (add-temporaries (pos-label ...)
-      (emit-record ((label temp) ...) (label ...) (temp ...) name make-name name? stack)))
-    ((emit-record ((pos-label pos-temp) ...) ((label temp) ...) labels temps
+      (emit-record 2 labels labels name make-name name? stack)))
+    ((emit-record (labels . stack) 1 name make-name name?)
+     (emit-record (labels . stack) 1 name (make-name . labels) name?))
+    ((emit-record ((pos-label pos-temp) ...) 2 (label ...) labels
                   name make-name name? ((mut-label ...)
                                         ((super   super-label ...) ...)
                                         ((label** get-label** set-label!**) ...)
                                         ((label*  get-label*) ...) . stack))
      (begin
        
-       (define (maker . labels)
-         (let ((mut-label (box mut-label))
-               ...)
-           (list &lt;record&gt;                                           
-                 (lambda (interface sk fk)            ; match vtable
-                   (case interface
-                     ((name)  (sk label ...))
-                     ((super) (sk super-label ...))
-                     ...
-                     (else (fk))))
-                 (lambda (super-tag fields-k)         ; for polymorphic update
-                   (let ((mut-label (unbox mut-label))
-                         ...)
-                     (fields-k
-                      (case super-tag 
-                        ((name)  (lambda labels
-                                   (maker . labels)))
-                        ((super) (lambda (super-label ...) 
-                                   (maker . labels)))
-                        ...))))
-                 (lambda ()                          ; for printing
-                   (let ((mut-label (unbox mut-label))
-                         ...)
-                     (list 'name (list 'label label) ...))))))
-       
+       (define maker 
+         (let ()
+           (define (printer record)
+             ((cadr record) 'name  
+                            (lambda labels
+                              (let ((mut-label (unbox mut-label))
+                                    ...)
+                                (list 'name (list 'label label) ...)))
+                            (lambda () (error))))
+           
+           (define (updater record)    
+             ((cadr record) 'name
+                            (lambda labels
+                              (lambda (super-tag fields-k)         
+                                (let ((mut-label (unbox mut-label))
+                                      ...)
+                                  (fields-k
+                                   (case super-tag 
+                                     ((name)  (lambda labels
+                                                (maker . labels)))
+                                     ((super) (lambda (super-label ...) 
+                                                (maker . labels)))
+                                     ...)))))
+                            (lambda () (error))))
+           
+           (lambda labels
+             (let ((mut-label (make-box mut-label))
+                   ...)
+               (list &lt;record>                                            
+                     (lambda (interface sk fk)           
+                       (case interface               
+                         ((name)  (sk label ...))
+                         ((super) (sk super-label ...))
+                         ...
+                         (else (fk))))
+                     updater
+                     printer)))))
+                
        (define (constructor pos-temp ...)
          (make-record maker labels (pos-label pos-temp) ...))
-
+       
        (define-if make-name constructor)
        
        (define-if name?
          (lambda (val)
            (and (record? val)
-                ((cadr val) 'name
+                ((cadr val) 'name 
                             (lambda ignore #t)
                             (lambda () #f)))))
-       
+                          
        (define-if get-label**
          (lambda (record)
            ((cadr record) 'name
                           (lambda labels
                             (unbox label**)) 
-                          (lambda () (error "Record" (show record)
-                                            "does not support selector for"
-                                            '(name label**))))))
+                          (lambda () (error "Invalid argument" (show record)
+                                            "for" 'get-label**)))))
        ...
        
        (define-if get-label*  
          (lambda (record)
            ((cadr record) 'name
                           (lambda labels label*)
-                          (lambda () (error "Record" (show record)
-                                            "does not support selector for"
-                                            '(name label*)))))) 
+                          (lambda () (error "Invalid argument" (show record)
+                                            "for" 'get-label*))))) 
        ...
        
        (define-if set-label!**
@@ -823,29 +1319,27 @@ The last section contains a few examples and (non-exhaustive) tests.
                           (lambda labels
                             (begin (set-box! label** val)
                                    record))                  
-                          (lambda () (error "Record" (show record)
-                                            "does not support mutator for"
-                                            '(name label**))))))
+                          (lambda () (error "Invalid argument" (show record)
+                                            "for" 'set-label!**)))))
        ...
        
        (define-syntax name
-         (syntax-rules (name label ... super ...)
-           ((name ("info") k) 
-            (syntax-apply k (make-name ((super super-label ...) ...) label ...)))
-           ((name ("labels") k)                 (syntax-apply k labels))
-           ((name ("has") label sk fk)          sk)
-           ... 
-           ((name ("has") other sk fk)          fk)
-           ((name ("project") temps label k)    (syntax-apply k temp))   
+         (syntax-rules (: name label ... super ...)
+           ((name ("labels") k)                   (syntax-apply k labels))
+           ((name ("positionals") k)              (syntax-apply k (pos-label ...)))
+           ((name ("mutables") k)                 (syntax-apply k (mut-label ...)))
+           ((name ("interfaces") k)               (syntax-apply k ((super super-label ...) ... (name label ...))))
+           ((name ("mutable?") mut-label sk fk)   sk)
            ...
-           ((name ("mutable?") mut-label sk fk) sk)
-           ...
-           ((name ("mutable?") other sk fk)     fk)
-           ((name ("=") name sk fk)             sk)
-           ((name ("=") other sk fk)            fk)
-           ((name ("match") val bindings sk fk)
-            (match-record val (name . bindings) labels (pos-label ...) sk fk))
-           ((name . bindings)                   (make-record maker labels . bindings))))
+           ((name ("mutable?") other sk fk)       fk)
+           ((name ("match") val (: . pats) sk fk) (syntax-zip (pos-label ...) pats
+                                                              (match-labels 1 labels name val sk fk)
+                                                              (syntax-error "Wrong number of patterns in match"
+                                                                            (name : pats)
+                                                                            "Positional fields are"
+                                                                            (pos-label ...))))
+           ((name ("match") val bindings sk fk)   (match-labels bindings 1 labels name val sk fk))
+           ((name . bindings)                     (make-record maker labels . bindings))))
        
        (newline)
        (display "Record: ") (display 'name)  (newline)
@@ -857,186 +1351,107 @@ The last section contains a few examples and (non-exhaustive) tests.
                  (reverse '((super super-label ...) ...)))
        (newline)))))
 
+(define-syntax record.labels
+  (syntax-rules ()
+    ((record-labels name k) (name ("labels") k))))
+
+(define-syntax record.mutables
+  (syntax-rules ()
+    ((record.mutables name k) (name ("mutables") k))))
+
+(define-syntax record.interfaces
+  (syntax-rules ()
+    ((record.interfaces name k) (name ("interfaces") k))))
+
 (define-syntax define-if
   (syntax-rules ()
     ((define-if #f   binding) (begin))
     ((define-if name binding) (define name binding))))
 
-(define-syntax define-syntax-if 
-  (syntax-rules ()
-    ((define-syntax-if #f   binding) (begin))
-    ((define-syntax-if name binding) (define-syntax name binding))))
-
 (define (record? x)
   (and (pair? x)
-       (eq? (car x) &lt;record&gt;)))
+       (eq? (car x) &lt;record>)))
 
-(define (record->sexp r)
-  ((cadddr r)))
+(define (record->list r)
+  ((cadddr r) r))
 
 (define (show x)
   (if (record? x)
-      (record->sexp x)
+      (record->list x)
       x))
 
 (define-syntax extract-labels 
   (syntax-rules ()
     ((extract-labels stack fields pos-labels name k)
-     (syntax-map fields (extract-label)
-       (syntax-filter (if-not-in-constructor? name)
-         (syntax-append-after pos-labels
-           (push-result stack k)))))))
+     (syntax-map fields (syntax-car)
+       (syntax-append-after pos-labels
+         (remove-duplicates top:if-free=
+            (push-result stack k)))))))
 
-(define-syntax extract-label
+(define-syntax get-immutables
   (syntax-rules ()
-    ((extract-label (label . stuff) k) (syntax-apply k label))
-    ((extract-label label k)           (syntax-apply k label))))
-
-(define-syntax if-not-in-constructor?   
-  (syntax-rules ()
-    ((if-not-in-constructor? label name sk fk)
-     (name ("constructor-has") label
-           fk
-           sk))))
-
-(define-syntax get-immutable
-  (syntax-rules ()
-    ((get-immutable stack fields k)
+    ((get-immutables stack fields k)
      (syntax-filter fields (if-immutable?)
        (push-result stack k)))))
   
 (define-syntax if-immutable?
   (syntax-rules ()
-    ((if-immutable? (a b c) sk fk) fk)
-    ((if-immutable? (a b)   sk fk) sk)
-    ((if-immutable? other   sk fk) fk)))
+    ((if-immutable? (a b) sk fk) sk)
+    ((if-immutable? other sk fk) fk)))
 
-(define-syntax get-mutable
+(define-syntax get-mutables
   (syntax-rules ()
-    ((get-mutable stack fields k)
+    ((get-mutables stack fields k)
      (syntax-filter fields (if-mutable?)
-      (syntax-map (dress-mutable)
-       (push-result stack k))))))
+       (push-result stack k)))))
 
 (define-syntax if-mutable?
   (syntax-rules ()
     ((if-mutable? (a b c) sk fk) sk)
-    ((if-mutable? (a)     sk fk) sk)
     ((if-mutable? other sk fk)   fk)))
-
-(define-syntax dress-mutable
-  (syntax-rules ()
-    ((dress-mutable (a b c) k) (syntax-apply k (a b c)))
-    ((dress-mutable (a)     k) (syntax-apply k (a #f #f)))))
 
 (define-syntax get-interfaces
   (syntax-rules ()
     ((get-interfaces stack supers k)
-     (syntax-foldl () (insert-interfaces) supers
-       (push-result stack k)))))
-   
-(define-syntax insert-interfaces
-  (syntax-rules ()
-    ((insert-interfaces acc name k)
-     (name ("info")
-       (emit-interfaces acc name k)))))
+     (syntax-map supers (record.interfaces)
+      (syntax-append-all
+       (remove-duplicates interface=
+        (push-result stack k)))))))
 
-(define-syntax emit-interfaces
+(define-syntax interface=
   (syntax-rules ()
-    ((emit-interfaces (make-name supers label ...) acc name k)
-     (syntax-foldr acc (insert-interface) supers 
-       (insert-interface (name label ...) k)))))
-
-(define-syntax insert-interface
-  (syntax-rules ()
-    ((insert-interface acc (name label ...) k)
-     (contains-interface? name acc
-                          (syntax-apply k acc)
-                          (recolor (name label ...) acc
-                                   (syntax-cons acc k)))))) 
-    
-(define-syntax contains-interface?
-  (syntax-rules ()
-    ((contains-interface? name () sk fk) fk)
-    ((contains-interface? name ((name* . stuff) . interfaces) sk fk)
-     (name* ("=") name
-            sk
-            (contains-interface? name interfaces sk fk)))))
-
-(define-syntax recolor
-  (syntax-rules ()
-    ((recolor interface interfaces k)
-     (syntax-foldr interface (absorb-colors) interfaces k))))
-
-(define-syntax absorb-colors
-  (syntax-rules ()
-    ((absorb-colors (name . labels) (name* . labels*) k)
-     (syntax-map labels (recolor-label (name* . labels*)) 
-       (syntax-cons-after name k)))))
-
-(define-syntax recolor-label
-  (syntax-rules ()
-    ((recolor-label label (name* . labels*) k)
-     (name* ("has") label
-            (name* ("project") labels* label k)
-            (syntax-apply k label)))))
+    ((interface= (name . stuff) (name* . stuff*) sk fk)
+     (top:if-free= name name* sk fk))))
 
 (define-syntax union-mutables
   (syntax-rules ()
     ((union-mutables (interfaces ((mutable . stuff) ...) . stack) k)
-     (syntax-foldr (() ()) (insert-mutables) interfaces
-       (insert-mutables ("main" mutable ...)
-         (syntax-car         
-           (syntax-reverse
-             (push-result (interfaces ((mutable . stuff) ...) . stack) k))))))))
-
-(define-syntax insert-mutables
-  (syntax-rules ()
-    ((insert-mutables (accum already) (name . labels) k)
-     (syntax-foldl accum (insert-mutable name already) labels
-       (syntax-cons ((name . already)) k)))))
-
-(define-syntax insert-mutable
-  (syntax-rules ()
-    ((insert-mutable accum label "main" () k)
-     (syntax-apply k (label . accum)))
-    ((insert-mutable accum label super () k)
-     (super ("mutable?") label
-            (syntax-apply k (label . accum))
-            (syntax-apply k accum)))
-    ((insert-mutable accum label name (name* . names*) k)
-     (name* ("has") label
-            (syntax-apply k accum)
-            (insert-mutable accum label name names* k)))))
+     (syntax-map interfaces (syntax-car)    ; abstract this
+      (syntax-map (record.mutables)
+       (syntax-cons-after (mutable ...)
+        (syntax-append-all
+         (remove-duplicates top:if-free=
+          (push-result (interfaces ((mutable . stuff) ...) . stack) k)))))))))
 
 (define-syntax union-labels
   (syntax-rules ()
     ((union-labels (labels mut-labels interfaces . stack) k)
-     (syntax-foldr (() ()) (insert-labels) interfaces
-       (insert-labels (main . labels)
-         (syntax-car         
-           (syntax-reverse
-             (push-result (mut-labels interfaces . stack) k))))))))
+     (syntax-map interfaces (syntax-cdr)
+      (syntax-append (labels)
+       (syntax-append-all
+        (remove-duplicates top:if-free=
+         (push-result (mut-labels interfaces . stack) k))))))))
 
-(define-syntax insert-labels      
+(define-syntax recolor-identifiers
   (syntax-rules ()
-    ((insert-labels (accum already) (name . labels) k)
-     (syntax-foldl accum (insert-label already) labels
-       (syntax-cons ((name . already)) k)))))
-
-(define-syntax insert-label
-  (syntax-rules ()
-    ((insert-label accum label () k)
-     (syntax-apply k (label . accum)))      
-    ((insert-label accum label (name* . names*) k)
-     (name* ("has") label
-            (syntax-apply k accum)
-            (insert-label accum label names* k)))))
-                   
+    ((recolor-identifiers (labels . rest) k)
+     (recolor top:if-free= labels rest 
+      (syntax-cons-after labels k)))))
+       
 (define-syntax make-record
   (syntax-rules ()
     ((make-record maker labels (label exp) ...)
-     (order labels ((label . exp) ...) &lt;undefined&gt;
+     (order labels ((label . exp) ...) &lt;undefined>
        (populate maker)))))
 
 (define-syntax populate
@@ -1056,201 +1471,317 @@ The last section contains a few examples and (non-exhaustive) tests.
      (syntax-error "Illegal label in" (label value)
                    "Legal bindings are" bindings*))
     ((order (label* . labels*) 
-             ((label . value) binding ...) 
-             (countdown . countdowns)
-             (binding* ...)
-             default
-             k)
+            ((label . value) binding ...) 
+            (countdown . countdowns) 
+            (binding* ...) 
+            default 
+            k)
      (if-free= label label*
-               (order labels*
-                      (binding ...)
-                      (binding ...)
-                      (binding* ... (label . value))
-                      default
+               (order labels* 
+                      (binding ...) 
+                      (binding ...) 
+                      (binding* ... (label . value)) 
+                      default 
                       k)
-               (order (label* . labels*)
-                      (binding ... (label . value))
-                      countdowns
-                      (binding* ...)
-                      default
+               (order (label* . labels*) 
+                      (binding ... (label . value))  
+                      countdowns 
+                      (binding* ...) 
+                      default 
                       k)))))
 
-(define-syntax match-record              
+(define-syntax update
   (syntax-rules ()
-    ((match-record val (name . pats) labels pos-labels sk fk)
-     (let ((fail (lambda () fk)))
-       (if (record? val)
-           (match-fields (cadr val) (name . pats) labels pos-labels sk fail)
-           (fail))))))
-       
-(define-syntax match-fields
+   ((update labels 1 name record bindings)
+    (order labels bindings (#f)
+     (syntax-map (insert-pattern)
+      (update 2 record name))))
+    ((update ((label pat binding) ...) 2 record name)
+     (let ((val record))
+       (record-match val 
+         ((name (label pat) ...) 
+          (((caddr val) val) 'name 
+                             (lambda (k) (k binding ...)))))))))
+    
+(define-syntax update*
   (syntax-rules () 
-    ((match-fields val (name (label pat) ...) labels pos-labels sk fail) 
-     (match-labels ((label . pat) ...) labels val name sk fail))
-    ((match-fields val (name ("pos") . pats) labels pos-labels sk fail)
-     (syntax-zip pos-labels pats
-       (match-labels labels val name sk fail)
-       (syntax-error "Wrong number of patterns in positional match" (name : . pats)
-                     "Matchable fields are in order" pos-labels)))
-    ((match-fields val (name . pats) . rest)
-     (syntax-error "Illegal record pattern for" val "in" (name . pats)))))
+    ((update* labels 1 name record bindings)
+     (order labels bindings (#f)
+      (syntax-map (insert-pattern)
+       (update* 2 name record))))
+    ((update* ((label pat binding) ...) 2 name record)
+     (record-match record 
+       ((name (label pat) ...)
+        (name (label binding) ...))))))
+
+(define-syntax insert-pattern
+  (syntax-rules ()
+    ((insert-pattern (label #f) k)      (syntax-apply k (label temp temp)))
+    ((insert-pattern (label binding) k) (syntax-apply k (label _ binding)))))
+            
+(define-syntax update!
+  (syntax-rules ()
+    ((update! labels 1 name record ((label binding) ...))
+     (recolor if-free= labels (label ...)
+      (update! 2 labels name record (binding ...))))
+    ((update! (label ...) 2 labels name record (binding ...))
+     (let ((val record))
+       ((cadr val) 'name
+                   (lambda labels
+                     (set-box! label binding)
+                     ...
+                     val)
+                   (lambda () (error "Update!" (show val) 
+                                     "is not of expected type" 'name)))))))
+
+(define-syntax compose
+  (syntax-rules () 
+    ((compose (labels export-labels) 1 export name exp imports) 
+     (syntax-filter labels (if-member? export-labels if-free=)
+      (add-temporaries
+       (compose 2 export name exp imports))))
+    ((compose ((label temp) ...) 2 (export-name . bindings) name exp imports)
+     (syntax-filter ((label temp) ...) (if-not-member? bindings)
+      (compose 3 ((label temp) ...) export-name bindings name exp imports)))
+    ((compose ((label* temp*) ...) 3 ((label temp) ...) export-name bindings name exp imports)
+     (let ((val exp))
+       (record-match val 
+         ((name (label temp) ...)
+          (record-compose imports (export-name (label* temp*) ... . bindings))))))))
+
+(define-syntax if-not-member?
+  (syntax-rules ()
+    ((if-not-member? (label . stuff) () sk fk) sk)
+    ((if-not-member? (label . stuff) ((label* . stuff*) . rest) sk fk)
+     (if-free= label label*
+               fk
+               (if-not-member? (label . stuff) rest sk fk)))))
+
+(define-syntax record-match
+  (syntax-rules (_)
+    ((record-match exp)
+     (error "Match failure for" exp))
+    ((record-match (f . args) clause ...)
+     (let ((val (f . args)))
+       (record-match val clause ...)))
+    ((record-match val ((name . pattern) . template) clause ...)
+     (name ("match") val pattern 
+           (begin . template) 
+           (record-match val clause ...)))
+    ((record-match val (_ . template) clause ...)
+     (begin . template))
+    ((record-match val (x . template) clause ...)
+     (let ((x val)) . template))))
 
 (define-syntax match-labels
   (syntax-rules ()
-    ((match-labels bindings labels val name sk fail)
-     (order labels bindings _
-       (match-labels val name sk fail)))
-    ((match-labels ((label . pat) ...) val name sk fail)
-     (syntax-map ((label . pat) ...) (decorate-mutable name)
-       (match-positions val name sk fail)))))          
-
-(define-syntax decorate-mutable
-  (syntax-rules ()
-    ((decorate-mutable (label . pat) name k)
-     (name ("mutable?") label
-           (syntax-apply k (box pat))
-           (syntax-apply k pat)))))
-
-; This works and is relatively simple.  Below is slight optimization
-; that only introduces new variables for non-variable patterns.
-; That mostly makes expanded code more readable for debugging.
-
-; (define-syntax match-positions*
-;   (syntax-rules ()
-;     ((match-positions pats val name sk fail)
-;      (add-temporaries pats
-;        (match-positions val name pats sk fail)))
-;     ((match-positions ((pat temp) ...) val name pats sk fail)
-;      (val 'name
-;           (lambda (temp ...)
-;             (match-each ((pat temp) ...) sk fail))
-;           fail))))
-
-(define-syntax match-positions
-  (syntax-rules ()
-    ((match-positions pats val name sk fail)
-     (syntax-foldr (() ()) (separate-variable-or-pattern) pats
-       (match-positions val name pats sk fail)))
-    ((match-positions ((var ...) ((pat temp) ...)) val name pats sk fail)
-     (val 'name
-          (lambda (var ...)
-            (match-each ((pat temp) ...) sk fail))
-          fail))))
+    ((match-labels bindings 1 labels name val sk fk)
+     (order labels bindings (_)
+      (add-temporaries 
+       (match-labels 2 val name sk fk))))
+    ((match-labels (((label pat) var) ...) 2 val name sk fk)
+     (syntax-filter ((label var) ...) (if-mutable-entry? name)
+      (match-labels 3 ((label pat var) ...) val name sk fk)))
+    ((match-labels ((mut-label mut-var) ...) 3 ((label pat var) ...) val name sk fk)
+     (let ((fail (lambda () fk)))
+       (if (record? val)
+           ((cadr val) 'name
+                       (lambda (var ...)
+                         (let ((mut-var (unbox mut-var)) 
+                               ...)
+                           (match-each ((pat var) ...) sk fail)))
+                       fail)
+           (fail))))))
 
 (define-syntax match-each
   (syntax-rules ()
     ((match-each () sk fail)
      sk)
     ((match-each ((pat var) . bindings) sk fail)
-     (match-var var
+     (record-match var
        (pat (match-each bindings sk fail))
        (_   (fail))))))
 
-(define-syntax separate-variable-or-pattern
-  (syntax-rules (_)
-    ((separate-variable-or-pattern (vars pats-temps) _ k)
-     (syntax-apply k ((temp* . vars) ((_ temp*) . pats-temps))))
-    ((separate-variable-or-pattern (vars pats-temps) pat* k)
-     (if-symbol? pat*
-                 (syntax-apply k ((pat*  . vars) pats-temps))
-                 (syntax-apply k ((temp* . vars) ((pat* temp*) . pats-temps)))))))
-
-(define-syntax update-help
+(define-syntax if-mutable-entry?    
   (syntax-rules ()
-   ((update-help all-labels record (name (label binding) ...))
-    (order all-labels ((label . binding) ...) (#f)
-      (syntax-map (insert-patterns)
-        (update-help all-labels record name))))
-    ((update-help ((label pat binding) ...) all-labels record name)
-     (match-let (((name (label pat) ...) record))
-       ((caddr record) 'name 
-                       (lambda (k) (k binding ...)))))))
-
-(define-syntax update.-help
-  (syntax-rules () 
-    ((update.-help labels name val bindings)
-     (order labels bindings (#f)
-       (syntax-map (insert-patterns)
-         (update.-help name val))))
-    ((update.-help ((label pat binding) ...) name val)
-     (match-let (((name (label pat) ...) val))
-       (name (label binding) ...)))))
-
-(define-syntax insert-patterns
-  (syntax-rules ()
-    ((insert-patterns (label . (#f)) k)    (syntax-apply k (label temp temp)))
-    ((insert-patterns (label . binding) k) (syntax-apply k (label _ binding)))))
-
-(define-syntax update!-help
-  (syntax-rules ()
-    ((update!-help (((label exp) set-label!) ...) exp* name)
-     (let ((val exp*))
-       (match val
-         ((name (label (set! set-label!)) ...)
-          (set-label! exp)
-          ...
-          val))))))
-
-(define-syntax extend-help 
-  (syntax-rules () 
-    ((extend-help labels stack)      
-     (add-temporaries labels
-       (extend-help labels stack)))
-    ((extend-help ((label temp) ...) labels ((export-name . bindings) . stack))
-     (syntax-filter ((label temp) ...) (if-not-member? bindings)
-      (emit-extend ((label temp) ...) export-name bindings stack)))))
-
-(define-syntax emit-extend
-  (syntax-rules ()
-    ((emit-extend ((label* temp*) ...) ((label temp) ...) export-name
-                  bindings (name exp imports))
-     (let ((val exp))
-       (match-let (((name (label temp) ...) val))
-         (extend imports (export-name (label* temp*) ... . bindings)))))))
-
-(define-syntax if-not-member?
-  (syntax-rules ()
-    ((if-not-member? (label . stuff) () sk fk) sk)
-    ((if-not-member? (label . stuff) ((label* . stuff*) . bindings) sk fk)
-     (if-free= label label*
-               fk
-               (if-not-member? (label . stuff) bindings sk fk)))))
+    ((if-mutable-entry? (label . rest) name sk fk)
+     (name ("mutable?") label sk fk)))) 
 
 ; Boxes for mutable fields
-
-(define-view box (set!)
-  (match val sk fk
-         ((box (set! m))
-                    (if (box? val)
-                        (let ((m (lambda (v) (set-box! val v) val))) sk)
-                        fk))
-         ((box pat) (if (box? val)
-                        (match (unbox val) 
-                          (pat sk)
-                          (_   fk))
-                        fk)))
-  ((box exp) (cons exp '())))
                       
+(define (make-box x) (cons x '()))
 (define box? pair?)              
 (define unbox car)
 (define (set-box! box value) (set-car! box value))
 
-(define-view setter ()
-  (match val sk fk
-         ((setter pat)
-          (syntax-error "No setter available for pattern" (setter pat)))))
 
+;====================================================================
+; Internal syntax utilities:
+
+(define-syntax syntax-error (syntax-rules ()))
+
+(define-syntax syntax-apply
+  (syntax-rules ()
+    ((syntax-apply (f . args) exp ...) 
+     (f exp ... . args))))
+
+(define-syntax if-free=
+  (syntax-rules ()
+    ((if-free= x y kt kf)
+      (let-syntax
+          ((test (syntax-rules (x)
+                   ((test x kt* kf*) kt*)
+                   ((test z kt* kf*) kf*))))
+        (test y kt kf)))))
+
+(define-syntax top:if-free=
+  (syntax-rules ()
+    ((top:if-free= x y kt kf)
+     (begin
+       (define-syntax if-free=:test
+         (syntax-rules (x)
+           ((if-free=:test x kt* kf*) kt*)
+           ((if-free=:test z kt* kf*) kf*)))
+       (if-free=:test y kt kf)))))
+
+(define-syntax syntax-cons
+  (syntax-rules ()
+    ((syntax-cons x rest k) (syntax-apply k (x . rest)))))
+
+(define-syntax syntax-cons-after
+  (syntax-rules ()
+    ((syntax-cons-after rest x k) (syntax-apply k (x . rest)))))
+
+(define-syntax syntax-car
+  (syntax-rules ()
+    ((syntax-car (h . t) k) (syntax-apply k h))))
+
+(define-syntax syntax-cdr
+  (syntax-rules ()
+    ((syntax-cdr (h . t) k) (syntax-apply k t))))
+
+(define-syntax syntax-foldr
+  (syntax-rules ()
+    ((syntax-foldr accum (f arg ...) () k)
+     (syntax-apply k accum))
+    ((syntax-foldr accum (f arg ...) (h . t) k)
+     (syntax-foldr accum (f arg ...) t
+       (f h arg ... k)))))
+
+(define-syntax syntax-map
+  (syntax-rules ()
+    ((syntax-map () (f arg ...) k)      (syntax-apply k ()))
+    ((syntax-map (h . t) (f arg ...) k) (syntax-map t (f arg ...)
+                                          (syntax-map (f arg ...) h k)))
+    ((syntax-map done (f arg ...) h k)  (f h arg ...
+                                          (syntax-cons done k)))))
+
+(define-syntax syntax-append
+  (syntax-rules ()
+    ((syntax-append (a ...) (b ...) k) (syntax-apply k (a ... b ...)))))
+
+(define-syntax syntax-append-all
+  (syntax-rules ()
+    ((syntax-append-all lists k) 
+     (syntax-foldr () (syntax-append-after) lists k))))
+
+(define-syntax syntax-append-after
+  (syntax-rules ()
+    ((syntax-append-after y x k) (syntax-append x y k))))
+
+(define-syntax syntax-filter
+  (syntax-rules ()
+    ((syntax-filter () (if-p? arg ...) k)
+     (syntax-apply k ()))
+    ((syntax-filter (h . t) (if-p? arg ...) k)
+     (if-p? h arg ...
+            (syntax-filter t (if-p? arg ...) (syntax-cons-after h k))
+            (syntax-filter t (if-p? arg ...) k)))))  
+
+(define-syntax syntax-zip
+  (syntax-rules ()
+    ((syntax-zip () () sk fk)             (syntax-apply sk ()))
+    ((syntax-zip () lst* sk fk)           fk)
+    ((syntax-zip lst () sk fk)            fk)
+    ((syntax-zip (h . t) (h* . t*) sk fk) (syntax-zip t t* 
+                                                      (syntax-cons-after (h h*) sk) 
+                                                      fk))))  
+
+(define-syntax add-temporaries   
+  (syntax-rules () 
+    ((add-temporaries lst k)                (add-temporaries lst () k))
+    ((add-temporaries () lst-temps k)       (syntax-apply k lst-temps))
+    ((add-temporaries (h . t) (done ...) k) (add-temporaries t (done ... (h temp)) k)))) 
+                                                                                               
+(define-syntax push-result
+  (syntax-rules ()
+    ((push-result x stack k) (syntax-apply k (x . stack)))))
+
+(define-syntax remove-duplicates
+  (syntax-rules ()
+    ((remove-duplicates lst compare? k)
+     (remove-duplicates lst () compare? k))
+    ((remove-duplicates () done compare? k)
+     (syntax-apply k done))
+    ((remove-duplicates (h . t) (d ...) compare? k)
+     (if-member? h (d ...) compare? 
+                 (remove-duplicates t (d ...) compare? k)
+                 (remove-duplicates t (d ... h) compare? k)))))
+
+(define-syntax if-member?
+  (syntax-rules ()
+    ((if-member? x () compare? sk fk) 
+     fk)
+    ((if-member? x (h . t) compare? sk fk)
+     (compare? x h
+               sk
+               (if-member? x t compare? sk fk)))))
+
+(define-syntax recolor
+  (syntax-rules ()
+    ((recolor compare labels () k)
+     (syntax-apply k ()))
+    ((recolor compare labels (h . t) k)
+     (recolor compare labels h 
+      (recolor compare labels t "combine" k)))
+    ((recolor h-done compare labels to-do "combine" k)
+     (recolor compare labels to-do
+      (syntax-cons-after h-done k)))
+    ((recolor compare labels id k)
+     (get-equiv compare id labels k))))
+
+(define-syntax get-equiv
+  (syntax-rules ()
+    ((get-equiv compare label () k)
+     (syntax-apply k label))
+    ((get-equiv compare label (h . t) k)
+     (compare h label
+              (syntax-apply k h)
+              (get-equiv compare label t k)))))
+
+(define-syntax if-symbol?
+  (syntax-rules ()
+    ((if-symbol? (x . y) sk fk) fk)
+    ((if-symbol? #(x ...))      fk)
+    ((if-symbol? x sk fk)
+     (let-syntax ((test (syntax-rules ()
+                          ((test x sk* fk*)     sk*)
+                          ((test non-x sk* fk*) fk*))))
+       (test foo sk fk)))))
 
 ;=============================================================================
 ; End of reference implementation
 ;=============================================================================
+</pre>
 
 
-;=============================================================================
+
+<h2>Tests and examples</h2>
+
+<pre>;==============================================================================
 ; Tests:
 ;=============================================================================
 
-;-------------------------------------------------------------------------------
 ; A simple record:
 
   (define-record-type point (make-point x y) point?
@@ -1261,41 +1792,17 @@ The last section contains a few examples and (non-exhaustive) tests.
   (get-y  p)                                 ;==> 2
   (show
    (set-y! p 3))                             ;==> (point (x 1) (y 3))                              
-  (point? p)                                 ;==> #t  
-  
-;-------------------------------------------------------------------------------
-; Elements may be left out if not desired, as the following examples illustrate:
-  
-  (define-record-type node (make-node left right))  ; no predicates bound, fields listed in the
-  (define-record-type leaf (make-leaf value))       ; constructor do not have to be repeated in 
-                                                    ; the field clause list unless mutable or
-                                                    ; we want to bind getters or setters
-               
-  (define-record-type monday)               ; no predicates or constructors bound
-  (define-record-type tuesday #f tuesday?)  ; predicate bound, no constructor           
-  
-  (define-record-type node make-node      ; make-node has default argument order 
-    #f                                    ; no predicate is bound
-    (left left #f)                        ; fields are mutable, but no setters are bound
-    (right right #f))                     ; also note that field labels may be punned
-  
-  (define-record-type node make-node #f
-    (left)                                            ; short for (left #f #f) indicating mutable field
-    (right))
-  
-  (define-record-type node (make-node left right) #f  ; left and right are immutable fields
-    extra)                                            ; short for (extra #f) indicating immutable field
-  
-;-------------------------------------------------------------------------------  
+  (point? p)                                 ;==> #t
+
 ; Subtyping:
 
-  (define-record-type color make-color color?      ; make-color takes default argument order
-    (hue hue set-hue!))                            ; punning of field labels is allowed
+  (define-record-type color make-color color?      ; default argument order is declaration order
+    (hue hue set-hue!))                            ; notice punning
 
-  (define-record-type (color-point color point)   ; more than one supertype
-                      (make-color-point x y hue)  ; differs from default ordering and arity
-                      color-point?
-    (info info))                                  ; additional field left undefined by constructor
+  (define-record-type (color-point color point)   
+    (make-color-point x y hue)  ; differs from default ordering and arity
+    color-point?
+    (info info))                ; additional field left undefined by constructor
 
   (define cp (make-color-point 1 2 'green))
   (color-point? cp)                          ;==> #t
@@ -1303,46 +1810,117 @@ The last section contains a few examples and (non-exhaustive) tests.
   (color? cp)                                ;==> #t
   (get-x  cp)                                ;==> 1
   (hue    cp)                                ;==> green
-  (info   cp)                                ;==> &lt;undefined&gt;
+  (info   cp)                                ;==> &lt;undefined>
 
-;-------------------------------------------------------------------------------
 ; Labeled record expressions:
 
   (show
    (color-point (info 'hi) (x 1) (y 2)))  
             
-                 ;==> (color-point (hue &lt;undefined&gt;) (x 1) (y 2) (info hi))
+                 ;==> (color-point (hue &lt;undefined>) (x 1) (y 2) (info hi))
 
-;-------------------------------------------------------------------------------  
 ; Record update
 
-  (define-record-type point2          #f #f (x) (y))
-  (define-record-type (point3 point2) #f #f (x) (y) (z))
+  (define-record-type point2          #f #f (x #f #f) (y #f #f))
+  (define-record-type (point3 point2) #f #f (x #f #f) (y #f #f) (z #f #f))
   
   (define p (point3 (x 1) (y 1) (z 3)))
 
-  (show (record-update  point2 p (y 5)))  ;==> (point3 (x 1) (y 5) (z 3))  -- polymorphic update
+  (show (record-update  p point2 (y 5)))  ;==> (point3 (x 1) (y 5) (z 3))  -- polymorphic update
   (show p)                                ;==> (point3 (x 1) (y 1) (z 3))  -- original unaffected
-  (show (record-update. point2 p (y 5)))  ;==> (point2 (x 1) (y 5))        -- monomorphic update
+  (show (record-update* p point2 (y 5)))  ;==> (point2 (x 1) (y 5))        -- monomorphic update
   (show p)                                ;==> (point3 (x 1) (y 1) (z 3))  -- original unaffected
-  (show (record-update! point2 p (y 5)))  ;==> (point3 (x 1) (y 5) (z 3))  -- destructive update
-  (show p)                                ;==> (point3 (x 1) (y 5) (z 3))  -- original updated
+  (show (record-update! p point2 (y 5)))  ;==> (point3 (x 1) (y 5) (z 3))  -- destructive update
+  (show p)          
 
-;-------------------------------------------------------------------------------  
-; Record extension:
+; Record composition:
 
   (define c (color (hue 'green)))
   (define p (point (x 1) (y 2)))
 
   (show 
-   (extend ((point p)
-            (color c))
+   (record-compose ((point p)
+                    (color c))
      (color-point (x 5)
                   (info 'hi))))  ;==> (color-point (hue green) (x 5) (y 2) (info hi))
+  
+; Another record composition example:  
 
-</PRE>
+  (define-record-type monoid #f #f 
+    (mult monoid.mult) 
+    (one  monoid.one))
+  
+  (define-record-type abelian-group #f #f 
+    (add  group.add) 
+    (zero group.zero)
+    (sub  group.sub))
+  
+  (define-record-type ring #f #f
+    (mult ring.mult) 
+    (one  ring.one)
+    (add  ring.add) 
+    (zero ring.zero)
+    (sub  ring.sub))
+  
+  ; A simple functor
 
-<H2>References</H2>
+  (define (make-ring g m)
+    (record-compose ((monoid        m)
+                     (abelian-group g))
+      (ring)))
+  
+  (define integer-monoid (monoid (mult *) 
+                                 (one  1)))
+  
+  (define integer-group (abelian-group (add  +)
+                                       (zero 0)
+                                       (sub  -)))
+  
+  (define integer-ring (make-ring integer-group 
+                                  integer-monoid))
+  
+  ((ring.add integer-ring) 1 2)    ;==> 3
+  
+; A tree record type:
+  
+  (define-record-type node (make-node lhs rhs) node?
+    (lhs node.lhs)
+    (rhs node.rhs))
+
+  (define-record-type leaf (make-leaf val) leaf?
+    (val leaf.val))
+  
+  (define (tree->list t)
+    (cond
+      ((leaf? t) (leaf.val t))
+      ((node? t) (cons (tree->list (node.lhs t))
+                       (tree->list (node.rhs t))))))
+  
+  (define t (make-node (make-node (make-leaf 1)
+                                  (make-leaf 2))
+                       (make-leaf 3)))
+
+  (tree->list t)              ;==> ((1 . 2) . 3)
+  
+; Test pattern matching stub: 
+  
+  (record-match (color-point (x 1) (y 2) (hue 'blue))
+    ((point (x a) (y b))
+     (list a b)))             ;==> (1 2)
+
+ (define (tree->list t)
+   (record-match t
+     ((leaf : v)   v)
+     ((node : l r) (cons (tree->list l)
+                         (tree->list r)))))
+
+  (tree->list t)              ;==> ((1 . 2) . 3)
+  
+;=======================================================================================  
+</pre>
+
+
+<h2>References</h2>
 
 <pre>
 [1] Richard Kelsey, Defining Record Types, SRFI-9: http://srfi.schemers.org/srfi-9/srfi-9.html
@@ -1354,9 +1932,6 @@ The last section contains a few examples and (non-exhaustive) tests.
     John Reppy, Jon Riecke, Simple objects for Standard ML,
                 Proceedings of the ACM SIGPLAN '96 Conference on Programming Language Design and Implementation
 
-[3] Andrew Wright and Bruce Duba, Pattern Matching for Scheme, Rice University 1994
-    Bruce Hauman, The plt-match.ss MzScheme library, http://sol.cs.wcu.edu/~bhauman/scheme/pattern.php
-    Manual Serrano, The Bigloo Pattern Matching Facilities, Bigloo User Manual, July 2004
 
 </pre>
 
