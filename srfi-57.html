@@ -10,23 +10,23 @@ André van Tonder
 
 <H1>Status</H1> 
 
-This SRFI is currently in ``draft'' status. To see an explanation of each
+This SRFI is currently in ``final'' status. To see an explanation of each
 status that a SRFI can hold, see <A
-href="http://srfi.schemers.org/srfi-process.html">here</A>. It will remain
-in draft status until 2005/01/08, or as amended. To provide input on this
-SRFI, please <CODE><A
-href="mailto:srfi-57@srfi.schemers.org">mailto:srfi-57@srfi.schemers.org</A></CODE>.
-See <A
-href="http://srfi.schemers.org/srfi-list-subscribe.html">instructions
-here</A> to subscribe to the list. You can access previous messages via <A
-href="http://srfi.schemers.org/srfi-57/mail-archive/maillist.html">the
-archive of the mailing list</A>.  <P> <UL>
+href="http://srfi.schemers.org/srfi-process.html">here</A>. You can access
+previous messages via <A
+href="http://srfi.schemers.org/srfi-57/mail-archive/maillist.html"> the
+archive of the mailing list</A>.
+
+<P> 
+<UL>
   <LI>Received: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-57/srfi-57.html?rev=1.1">2004/09/08</A></LI>
   <LI>Draft: 2004/09/08 - 2005/01/08</LI>
   <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-57/srfi-57.html?rev=1.2">2004/09/22</A></LI>
   <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-57/srfi-57.html?rev=1.3">2004/11/08</A></LI>
   <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-57/srfi-57.html?rev=1.6">2004/11/25</A></LI>
   <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-57/srfi-57.html?rev=1.7">2004/12/08</A></LI>
+  <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-57/srfi-57.html?rev=1.8">2005/03/07</A></LI>
+  <LI>Final: 2005/03/07</LI>
 </UL>
 
 <H1>Abstract</H1>
@@ -142,9 +142,12 @@ An instance of <code>define-record-type</code> is equivalent to the following:
      type schemes (see below) appearing in the <code>&lt;type clause&gt;</code>,
  followed by the list of labels in the
      <code>&lt;constructor clause&gt;</code>, followed by the labels
-     in order of appearance in the <code>&lt;field clause&gt;</code>s.
+     in order of appearance in the <code>&lt;field
+     clause&gt;</code>s.    
      Duplicates are removed from the resulting list according
-     to the semantics of <code>delete-duplicates</code> of SRFI-1.  
+     to the semantics of <code>delete-duplicates</code> of SRFI-1. 
+     Labels in the constructor clause must be
+     distinct.  Labels in the field clauses must also be distinct. 
      <p>
 
 </p></li><li>For each <code>&lt;scheme name&gt;</code> in <code>&lt;type clause&gt;</code>, the record type 
@@ -169,7 +172,7 @@ An instance of <code>define-record-type</code> is equivalent to the following:
      the  procedure
      <code>&lt;constructor name&gt;</code> takes as many arguments as there are field labels
      associated with <code>&lt;type name&gt;</code>, in the default order defined above.
-     </p><p> 
+     <p></p><p> 
 
    <code>&lt;constructor name&gt;</code> may be
       registered, in a way to be described in a future SRFI,  for performing a 
@@ -217,11 +220,14 @@ An instance of <code>define-record-type</code> is equivalent to the following:
 </p></li></ul></li></ul>
  
 <p>
-<code>define-record-type</code> is generative: each use creates a new record type that is distinct 
+<code>Define-record-type</code> is generative: each use creates a new record type that is distinct 
 from all existing types, including
-other record types and Scheme's predefined types. Record-type definitions may only occur at top-level.
+other record types and Scheme's predefined types. This SRFI only
+specifies the behaviour of <code>define-record-type</code> at
+top-level.  
   
-<h3>Record type schemes</h3>
+
+</p><h3>Record type schemes</h3>
 
 An instance of <code>define-record-scheme</code> is equivalent to the following:
 
@@ -235,6 +241,8 @@ An instance of <code>define-record-scheme</code> is equivalent to the following:
      in order of appearance in the <code>&lt;field clause&gt;</code>s.
      Duplicates are removed from the resulting list according
      to the semantics of <code>delete-duplicates</code> of SRFI-1.  
+    Labels in the constructor clause must be
+     distinct.  Labels in the field clauses must also be distinct. 
      <p>
 
 </p></li><li>A record type scheme is called a <i>parent scheme</i> of
@@ -265,15 +273,13 @@ An instance of <code>define-record-scheme</code> is equivalent to the following:
      If <code>&lt;deconstructor clause&gt;</code> is of the form <code>&lt;deconstructor name&gt;</code>, 
      the positional match will be on all fields 
      associated with <code>&lt;scheme name&gt;</code>, in the default order defined above.
-     </p><p> 
+     <p></p><p> 
 
 </p></li><li> <code>&lt;predicate name&gt;</code>, is bound to a predicate procedure 
      that returns <code>#t</code> when given a record value of any record type conforming
      to <code>&lt;scheme name&gt;</code>,
      and <code>#f</code> for any other
-    value.  Values on which <code>&lt;predicate name&gt;</code>, if applied, would return 
-    <code>#t</code>, are themselves said to <i>conform</i> to 
-    <code>&lt;scheme name&gt;</code>. 
+    value. 
      <p>
 
 </p></li><li> Field labels inherited from a <code>&lt;parent type scheme&gt;</code> or 
@@ -311,7 +317,7 @@ An instance of <code>define-record-scheme</code> is equivalent to the following:
 
 
 
-</p><h3>Examples</h3>
+<p></p><h3>Examples</h3>
 
 <h4>A simple record:</h4>
 
@@ -442,6 +448,11 @@ the equivalent positional constructor.
 <pre>   &lt;expression&gt; -&gt; (&lt;type name&gt; (&lt;field label&gt; &lt;expression&gt;) ...)
 </pre>
 
+</p><p>
+The order of evaluation of the expressions
+<code>&lt;expression&gt; ...</code> is undefined.
+
+
 
 <h4>Rationale</h4>
 
@@ -514,7 +525,7 @@ to the other operations we have listed and therefore has to be
 provided as a built-in primitive [2].   
 
 
-</p><p>The linear version
+<p></p><p>The linear version
 <code>update!</code> is provided especially for cases where the programmer 
 knows that no other references to a value exist to produce what is, observationally, a
 pure-functional result.  In these cases, an <code>update</code> 
@@ -526,8 +537,7 @@ to mutate the original record.
 </p><h4>Examples</h4>
 
 Monomorphic update:
-<pre>
-  (define p (point (x 1) (y 2)))
+<pre>  (define p (point (x 1) (y 2)))
 
   (record-update p point (x 7))      ==&gt; (point (x 7) (y 2))
   p                                  ==&gt; (point (x 1) (y 2))   - original unaffected
@@ -574,9 +584,10 @@ All the
 If this condition is not satisfied, an expansion time error must be signaled.
 
 <p>
-The order of evaluation of the expressions <code>&lt;record&gt; ...</code> 
-<code>&lt;expression&gt; ...</code> is undefined.  All these
-expressions will be evaluated, even if their values might not be used in
+The order of evaluation of the expressions <code>&lt;record&gt; ...</code> and
+<code>&lt;expression&gt; ...</code> is undefined.  All the
+expressions  <code>&lt;record&gt; ...</code> will be evaluated, even
+if their values might not be used in
 the result.  
 
 </p><h4>Rationale</h4>
@@ -587,7 +598,7 @@ PLT Scheme, or for writing what amounts to modules and functors in the sense of 
 Monomorphic record update is a special case of <code>record-compose</code>.  The latter
 may be used to express more general updates polymorphic in the 
 argument but monomorphic in the result type.
-<p>
+</p><p>
 
 
 </p><h4>Examples</h4>
@@ -656,12 +667,26 @@ Small module-functor example:
 <p>
 The reference implementation uses the macro mechanism of 
 R5RS. It assumes an existing implementation of SRFI-9, here denoted
-srfi-9:define-record-type.  It also has a trivial use of case-lambda from SRFI-16.
+srfi-9:define-record-type.  It also contains a trivial use of
+case-lambda from SRFI-16.
 
-</p><p> 
-This version depends on <code>define</code> being treated as a binding form by <code>syntax-rules</code>.
-This is true for recent versions of portable syntax-case as used in Chez Scheme.  It is
-also true for PLT, for Scheme48, and possibly others.  
+</p><p>
+The reference implementation, though relatively portable as a set of
+<code>syntax-rules</code> macros, is slow.  For practical
+implementations, it is recommended that a procedural macro system be
+used.  Such implementations are provided separately in the discussion
+archives.  Unless otherwise stated by the author(s), they are covered
+by the same copyright agreement as this document.  
+
+
+</p><p>  
+This version depends on <code>define</code> being treated as a binding
+form by <code>syntax-rules</code>.  This is true for recent versions of portable syntax-case as used in Chez Scheme.  It is
+also true for PLT, for Scheme48, and possibly others.  It also assumes
+that the implementation of SRFI-9 binds the type name passed to it, which is a
+hygienically introduced internal identifier, 
+using <code>define</code>.  
+
 
 </p><p>
 The SRFI specification was designed with the constraint that 
@@ -1339,13 +1364,16 @@ Implementation process or editors, except as needed for the purpose of
 developing SRFIs in which case the procedures for copyrights defined in the SRFI 
 process must be followed, or as required to translate it into languages other 
 than English. 
+</P>
 <P>The limited permissions granted above are perpetual and will not be revoked 
 by the authors or their successors or assigns. 
+</P>
 <P>This document and the information contained herein is provided on an "AS IS" 
 basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL WARRANTIES, EXPRESS OR 
 IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTY THAT THE USE OF THE 
 INFORMATION HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED WARRANTIES OF 
 MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. 
+</P>
 <HR>
 
 <ADDRESS>Author: <A href="mailto:andre@het.brown.edu">André van 
