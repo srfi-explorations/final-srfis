@@ -909,14 +909,6 @@ href="">SRFI-9</a>, and the functions <code>any</code> and
      (stream-low-level-lazy (stream-low-level-eager exp)))))
 
 ;; STREAM-LOW-LEVEL-FORCE -- force the value from a low-level promise
-(define (stream-low-level-force prom)
-    (case (car prom)
-      ((eager) (cdr prom))
-      ((lazy)  (let ((val (stream-promise ((cdr prom)))))
-                 (set-car! prom (car val))
-                 (set-cdr! prom (cdr val))
-                 (stream-low-level-force prom)))))
-
 (define (stream-low-level-force promise)
   (let ((content (car promise)))
     (case (car content)
