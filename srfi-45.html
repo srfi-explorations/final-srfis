@@ -13,7 +13,7 @@
 
     <H1>Author</H1>
     
-    Andre van Tonder
+    André van Tonder
     
     <H1>Status</H1>
 
@@ -31,6 +31,7 @@
       <li>Revised: 2003/12/20</li>
       <li>Revised: 2004/03/06</li>
       <li>Final: 2004/04/05</li>
+      <li>Bug fix: 2004/08/04</li>
     </ul>
     
     <H1>Abstract</H1>
@@ -212,7 +213,7 @@ We see that an ever growing sequence of pending promises builds up until the hea
 is exhausted.
 
 
-<h2>Why this is not call-by-need</h2>
+<h2>Why the above is not call-by-need</h2>
 
 Expressing the above algorithm in terms of {<code>delay</code>, <code>force</code>}
 in fact does not correctly capture common notions of 
@@ -264,26 +265,42 @@ entry points.  We also
 redefine <code>delay</code> and <code>force</code> as below:  
 
 <pre>
-; type Promise a = lazy (Promise a) | eager a
-    
+; type Promise a = lazy (Promise a) | eager a 
+
 (define-syntax lazy
   (syntax-rules ()
-    ((lazy exp) (cons 'lazy (lambda () exp)))))
+    ((lazy exp) 
+     (box (cons 'lazy (lambda () exp))))))
 
-(define (eager x) (cons 'eager x))
+(define (eager x)
+  (box (cons 'eager x)))
 
 (define-syntax delay
   (syntax-rules ()
     ((delay exp) (lazy (eager exp)))))
 
 (define (force promise)
-  (case (car promise)
-    ((eager) (cdr promise))
-    ((lazy)  (let ((val ((cdr promise))))
-               (set-car! promise (car val))
-               (set-cdr! promise (cdr val))
-               (force promise)))))
+  (let ((content (unbox promise)))
+    (case (car content)
+      ((eager) (cdr content))
+      ((lazy)  (let* ((promise* ((cdr content)))        
+                      (content  (unbox promise)))                      ; *
+                 (if (not (eqv? (car content) 'eager))                 ; *
+                     (begin (set-car! content (car (unbox promise*)))
+                            (set-cdr! content (cdr (unbox promise*)))
+                            (set-box! promise* content)))
+                 (force promise))))))
+
+(*) These two lines re-fetch and check the original promise in case 
+    the first line of the let* caused it to be forced.  For an example  
+    where this happens, see reentrancy test 3 below.
+
+(define (box x) (list x))
+(define unbox car)
+(define set-box! set-car!)
 </pre>
+
+
 
 Our example is then coded (see the full recipe below)
 <pre>
@@ -471,48 +488,50 @@ Reference implementation
 </h2>
 
 <pre>
-;==========================================================
+;=========================================================================
+; Boxes
+
+(define (box x) (list x))
+(define unbox car)
+(define set-box! set-car!)
+
+;=========================================================================
 ; Primitives for lazy evaluation:
 
-; type Promise a = lazy (Promise a) | eager a
-            
-; lazy : Promise a -> Promise a
-    
 (define-syntax lazy
   (syntax-rules ()
-    ((lazy exp) (cons 'lazy (lambda () exp)))))
+    ((lazy exp)
+     (box (cons 'lazy (lambda () exp))))))
 
-; eager : a -> Promise a
-
-(define (eager x) (cons 'eager x))
-
-; delay : a -> Promise a   
+(define (eager x)
+  (box (cons 'eager x)))
 
 (define-syntax delay
   (syntax-rules ()
     ((delay exp) (lazy (eager exp)))))
 
-; force : Promise a -> a 
-
 (define (force promise)
-  (case (car promise)
-    ((eager) (cdr promise))
-    ((lazy)  (let ((val ((cdr promise))))
-               (set-car! promise (car val))
-               (set-cdr! promise (cdr val))
-               (force promise)))
-    (else         
-      'force-error)))
+  (let ((content (unbox promise)))
+    (case (car content)
+      ((eager) (cdr content))
+      ((lazy)  (let* ((promise* ((cdr content)))        
+                      (content  (unbox promise)))                      ; * 
+                 (if (not (eqv? (car content) 'eager))                 ; *
+                     (begin (set-car! content (car (unbox promise*)))
+                            (set-cdr! content (cdr (unbox promise*)))
+                            (set-box! promise* content)))
+                 (force promise))))))
 
-</pre>
+; (*) These two lines re-fetch and check the original promise in case 
+;     the first line of the let* caused it to be forced.  For an example  
+;     where this happens, see reentrancy test 3 below.
 
-<h2>
-Benchmarks
-</h2>
+;=========================================================================
+; TESTS AND BENCHMARKS:
+;=========================================================================
 
-<pre>
-;============================================================
-; Test memoization:
+;=========================================================================
+; Memoization test 1:
 
 (define s (delay (begin (display 'hello) 1)))
 
@@ -520,13 +539,48 @@ Benchmarks
 (force s)
                ;===> Should display 'hello once
 
+;=========================================================================
+; Memoization test 2:
+
 (let ((s (delay (begin (display 'bonjour) 2))))
   (+ (force s) (force s)))
 
                ;===> Should display 'bonjour once
 
-;=============================================================
-; Test from R5RS: memoization and reentrancy
+;=========================================================================
+; Memoization test 3: (pointed out by Alejandro Forero Cuervo) 
+
+(define r (delay (begin (display 'hi) 1)))
+(define s (lazy r))
+(define t (lazy s))
+
+(force t)
+(force r)
+               ;===> Should display 'hi once
+
+;=========================================================================
+; Memoization test 4: Stream memoization 
+
+(define (stream-drop s index)
+  (lazy
+   (if (zero? index)
+       s
+       (stream-drop (cdr (force s)) (- index 1)))))
+
+(define (ones)
+  (delay (begin
+           (display 'ho)
+           (cons 1 (ones)))))
+
+(define s (ones))
+
+(car (force (stream-drop s 4)))
+(car (force (stream-drop s 4)))
+
+               ;===> Should display 'ho five times
+
+;=========================================================================
+; Reentrancy test 1: from R5RS
 
 (define count 0)
 (define p
@@ -536,13 +590,12 @@ Benchmarks
                     (force p)))))
 (define x 5)
 (force p)                     ;===>  6
-(begin (set! x 10)
-       (force p))             ;===>  6
+(set! x 10)
+(force p)                     ;===>  6
        
-;===========================================================
-; Reentrancy test from SRFI 40
 
-; This has correct reentrancy behavior:
+;=========================================================================
+; Reentrancy test 2: from SRFI 40
 
 (define f
   (let ((first? #t))
@@ -555,20 +608,43 @@ Benchmarks
 
 (force f)                     ;===> 'second 
 
-;=============================================================
+;=========================================================================
+; Reentrancy test 3: due to John Shutt
+
+(define q
+  (let ((count 5))
+    (define (get-count) count)
+    (define p (delay (if (<= count 0)
+                         count
+                         (begin (set! count (- count 1))
+                                (force p)
+                                (set! count (+ count 2))
+                                count))))
+    (list get-count p)))
+(define get-count (car q))
+(define p (cadr q))
+
+(get-count)  ; =>   5
+(force p)    ; =>   0
+(get-count)  ; =>   10
+
+;=========================================================================
 ; Test leaks:  All the leak tests should run in bounded space.
 
+;=========================================================================
 ; Leak test 1: Infinite loop in bounded space.
 
 (define (loop) (lazy (loop)))
-;(force (loop))
+;(force (loop))                               ;==> bounded space
 
+;=========================================================================
 ; Leak test 2: Pending memos should not accumulate 
 ;              in shared structures.
 
 (define s (loop))
-;(force s)                     
+;(force s)                                    ;==> bounded space 
 
+;=========================================================================
 ; Leak test 3: Safely traversing infinite stream.
 
 (define (from n)
@@ -577,17 +653,17 @@ Benchmarks
 (define (traverse s)
   (lazy (traverse (cdr (force s)))))
 
-;(force (traverse (from 0)))    
+;(force (traverse (from 0)))                  ;==> bounded space
 
+;=========================================================================
 ; Leak test 4: Safely traversing infinite stream 
 ;              while pointer to head of result exists.
 
-(define s (traverse (from 0)))
-;(force s)                      
-
+(define s (traverse (from 0)))  
+;(force s)                                    ;==> bounded space
 
 ;=========================================================================
-; Convenient list deconstructor.
+; Convenient list deconstructor used below.
 
 (define-syntax match
   (syntax-rules ()
@@ -601,7 +677,9 @@ Benchmarks
                             exp2))
              (else 'match-error))))))
 
-;==============================================================
+;========================================================================
+; Leak test 5: Naive stream-filter should run in bounded space.
+;              Simplest case.
 
 (define (stream-filter p? s)
   (lazy (match (force s)
@@ -610,15 +688,17 @@ Benchmarks
                        (delay (cons h (stream-filter p? t)))
                        (stream-filter p? t))))))
 
-; Leak test 5: Naive stream-filter should run in bounded space.
-;              Simplest case.
-
 ;(force (stream-filter (lambda (n) (= n 10000000000))
 ;                      (from 0)))
+                                             ;==> bounded space
+
+;========================================================================
+; Leak test 6: Another long traversal should run in bounded space.
 
 ; The stream-ref procedure below does not strictly need to be lazy.  
-; It is defined lazy for the purpose of testing safe compostion of lazy procedures in 
-; the times3 benchmark below (previous candidate solutions had failed this).  
+; It is defined lazy for the purpose of testing safe compostion of 
+; lazy procedures in the times3 benchmark below (previous 
+; candidate solutions had failed this).  
 
 (define (stream-ref s index)
   (lazy
@@ -631,12 +711,13 @@ Benchmarks
 ; Check that evenness is correctly implemented - should terminate:
 
 (force (stream-ref (stream-filter zero? (from 0))
-                   0))
-
-; Leak test 6: Another long traversal should run in bounded space.
+                   0))                              ;==> 0
 
 (define s (stream-ref (from 0) 100000000))
-;(force s)                      
+;(force s)                                          ;==> bounded space
+
+;======================================================================
+; Leak test 7: Infamous example from SRFI 40. 
 
 (define (times3 n)
   (stream-ref (stream-filter
@@ -644,10 +725,8 @@ Benchmarks
                (from 0))
               3))
 
-; Leak test 7: Infamous example from SRFI 40. 
-
 (force (times3 7))
-;(force (times3 100000000))   
+;(force (times3 100000000))                        ;==> bounded space
 
 </pre>
 
@@ -664,14 +743,14 @@ Richard Jones. <em>Tail recursion without space leaks</em>, Journal of Functiona
 [Fee97]
 Marc Feeley, James S. Miller, Guillermo J. Rozas, Jason A. Wilson, 
 <em> Compiling Higher-Order Languages into Fully Tail-Recursive Portable C</em>, 
-Rapport technique 1078, département d'informatique et r.o., Université de Montréal, Aout 1997. 
+Rapport technique 1078, département d'informatique et r.o., Université de Montréal, août 1997. 
 
 
 
 
     <H1>Copyright</H1>
 
-Copyright (C) Andre van Tonder (2003). All Rights Reserved. 
+Copyright (C) André van Tonder (2003). All Rights Reserved. 
 <p>
 This document and translations of it may be copied and furnished to
 others, and derivative works that comment on or otherwise explain it
@@ -697,7 +776,7 @@ RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
 PARTICULAR PURPOSE.
 
     <hr>
-    <address>Author: <a href="mailto:andre@het.brown.edu">Andre van Tonder</a></address>
+    <address>Author: <a href="mailto:andre@het.brown.edu">André van Tonder</a></address>
     <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Francisco Solsona</a></address>
 <!-- Created: Fri Sep 19 17:55:00 EST 2002 -->
 <!-- hhmts start -->
