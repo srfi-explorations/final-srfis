@@ -37,6 +37,7 @@ the archive of the mailing list</a>.
       <LI>Draft: 2002/07/24-2002/10/20</LI>
       <li>Revised: 2002/09/20</li>
       <li>Final: 2002/12/1</li>
+      <LI>Fixed reference implementation: 2003/03/10</LI>
 </UL>
 
 <h1>Abstract</h1>
@@ -192,86 +193,53 @@ PRINTS: reraised 0
 <p>The reference implementation makes use of <a href="http://srfi.schemers.org/srfi-9/">SRFI 9</a>
  (&quot;Defining Record Types&quot;), and <a href="http://srfi.schemers.org/srfi-23/">SRFI 23</a>
  (&quot;Error reporting mechanism&quot;).</p>
-<pre>(define-record-type :exception-context
-  (make-exception-context handler
-                          dynamic-env
-                          previous)
-  exception-context?
-  (handler exception-context-handler)
-  (dynamic-env exception-context-dynamic-env)
-  (previous exception-context-previous))
-
-(define (exception-context-previous-handler exception-context)
-  (exception-context-handler
-    (or (exception-context-previous exception-context)
-        (error &quot;default exception handler called RAISE&quot;))))
-
-(define (current-dynamic-environment)
-  (let ((pair (call-with-current-continuation
-                (lambda (c) (cons #f c)))))
-    (if (car pair)
-        (call-with-values (car pair) (cdr pair))
-        (cdr pair))))
-
-(define (with-dynamic-environment dynamic-environment thunk)
-  (call-with-current-continuation
-    (lambda (done)
-      (dynamic-environment (cons thunk done)))))
-
-; To avoid nontermination, it is important that the default exception
-; handler not call RAISE.
-
-(define *current-exception-context*
-  (make-exception-context (lambda (condition)
-                            (error &quot;unhandled exception&quot; condition))
-                          (current-dynamic-environment)
-                          #f))		; no previous context
+<pre>(define *current-exception-handlers*
+  (list (lambda (condition)
+          (error &quot;unhandled exception&quot; condition))))
 
 (define (with-exception-handler handler thunk)
-  (let* ((previous-context *current-exception-context*)
-         (new-context (make-exception-context handler
-                                              (current-dynamic-environment)
-                                              previous-context)))
+  (with-exception-handlers (cons handler *current-exception-handlers*)
+                           thunk))
+
+(define (with-exception-handlers new-handlers thunk)
+  (let ((previous-handlers *current-exception-handlers*))
     (dynamic-wind
       (lambda ()
-        (set! *current-exception-context* new-context))
+        (set! *current-exception-handlers* new-handlers))
       thunk
       (lambda ()
-        (set! *current-exception-context* previous-context)))))
+        (set! *current-exception-handlers* previous-handlers)))))
 
 (define (raise obj)
-  (let ((context *current-exception-context*))
-    (with-dynamic-environment
-      (exception-context-dynamic-env context)
+  (let ((handlers *current-exception-handlers*))
+    (with-exception-handlers (cdr handlers)
       (lambda ()
-        (with-exception-handler (exception-context-previous-handler context)
-          (lambda ()
-            ((exception-context-handler context) obj)
-            (error &quot;handler returned&quot;
-                    (exception-context-handler context)
-                    obj)))))))
+        ((car handlers) obj)
+        (error &quot;handler returned&quot;
+               (car handlers)
+               obj)))))
 
 (define-syntax guard
   (syntax-rules ()
     ((guard (var clause ...) e1 e2 ...)
      ((call-with-current-continuation
-       (lambda (k)
+       (lambda (guard-k)
          (with-exception-handler
-          (lambda (var)
-            (let ((env (current-dynamic-environment)))
-              (k
-               (lambda ()
-                 (let ((condition var))
-                   (guard-aux (with-dynamic-environment env
-                                                        (lambda ()
-                                                          (raise condition)))
-                              clause ...))))))
+          (lambda (condition)
+            ((call-with-current-continuation
+               (lambda (handler-k)
+                 (guard-k
+                  (lambda ()
+                    (let ((var condition))      ; clauses may SET! var
+                      (guard-aux (handler-k (lambda ()
+                                              (raise condition)))
+                                 clause ...))))))))
           (lambda ()
             (call-with-values
              (lambda () e1 e2 ...)
              (lambda args
-               (k (lambda ()
-                    (apply values args)))))))))))))
+               (guard-k (lambda ()
+                          (apply values args)))))))))))))
 
 (define-syntax guard-aux
   (syntax-rules (else =&gt;)
