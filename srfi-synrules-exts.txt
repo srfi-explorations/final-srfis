@@ -18,7 +18,7 @@ macro-generating macros; the second allows for 'tail patterns.'
 Macros that generate macros are fairly common and very useful in a
 variety of circumstances, e.g. in CPS macros[2] for local continuation
 macros.  R5RS currently provides no mechanism for generating literal
-ellipsis in a syntax-rules' clause's template -- all ellipsis in the
+ellipsis in a syntax-rules clause's template -- all ellipsis in the
 template is processed by the macro.  Macros that generate macros are
 thereby restricted, since the generated macros are unable to make use
 of ellipsis.  This is a severe restriction that can be removed by a
@@ -53,7 +53,7 @@ patterns.'  The following clauses are added to <pattern>:
  (<pattern> ... <ellipsis> <pattern> ...)
 #(<pattern> ... <ellipsis> <pattern> ...)
 
-The following clauses are added to the semantics of SYNTAX-RULES'
+And the following clauses are added to the semantics of SYNTAX-RULES'
 pattern matching:
 
   - P is of the form (P_1 ... P_x-1 P_x <ellipsis> P_x+1 ... P_y) where
@@ -227,6 +227,12 @@ internally.  Both were written by Al* Petrofsky; see their source for
 copyright information & licensing terms.  Alexpander is available at
 <http://srfi.schemers.org/srfi-46/alexpander.scm> and EIOD is available
 at <http://srfi.schemers.org/srfi-46/eiod.scm>.
+
+-- Acknowledgements --
+
+Al* Petrofsky provided much crucial input about the fundamental design
+of this SRFI's extensions on the mailing list that strongly influenced
+the final result; I thank him greatly for that input.
 
 -- References --
 
