@@ -12,6 +12,7 @@
 
     Collections 
 
+
     <H1>Author</H1>
 
     Scott G. Miller 
@@ -38,9 +39,12 @@
       <li>Revised: 2003/07/24
       <li>Revised: 2003/08/10
       <li>Revised: 2003/08/19
+      <li>Revised: 2003/08/27
     </ul></p>
 
+
     <h1>Abstract</h1>
+    
 
     <p>
       A Collections API which defines a common naming scheme and
@@ -53,7 +57,59 @@
       vectors) and for the homogeneous Scheme string is provided.
     </p>
 
-    <h1>Issues</h1>
+    <h1>Table of Contents</h1>
+
+    <blockquote>
+       <a href="#issues">Issues</a><br>
+       <a href="#rationale">Rationale</a><br>
+       <a href="#specification">Specification</a><br>
+       <blockquote>
+          <a href="#chier">Collections Hierarchy</a><br>
+          <a href="#storagemodel">Storage Model</a><br>
+          <a href="#attribute">Collection Attributes</a><br>
+          <blockquote>
+            <a href="#ordered">Ordered Collections</a><br>
+            <a href="#mutable">Mutable Collections</a><br>
+          </blockquote>
+          <a href="#foldingenums">Folding Enumerators</a><br>
+          <blockquote>
+            <a href="#stability">Enumeration Stability</a><br>
+          </blockquote>          
+          <a href="#equivalence">Equivalence</a><br>
+          <a href="#immutablecols">Immutable Collections</a><br>
+          <a href="#homogeneity">Homogeneity</a><br>
+          <a href="#sizevslength">Size versus Length</a><br>
+          <a href="#orderedcols">Ordered Collections</a><br>
+          <a href="#valueequality">Bags, Sets, Dictionaries and Value Equality</a><br>
+          <a href="#sequences">Sequences</a><br>
+          <blockquote>
+            <a href="#flexsequences">Flexible Sequences</a><br>
+            <a href="#limitedsequences">Limited Sequences</a><br>
+          </blockquote>
+          <a href="#procedures">Procedures</a><br>
+          <blockquote>
+            <a href="#flup">Functional, Linear Update, and Purely Mutable Collections</a><br>
+            <a href="#enumprocs">Enumeration</a><br>
+            <a href="#collprocs">Collections</a><br>
+            <a href="#orderedcollprocs">Ordered Collections</a><br>
+            <a href="#mutablecollprocs">Mutable Collections</a><br>
+            <a href="#bagprocs">Bags</a><br>
+            <a href="#setprocs">Sets</a><br>
+            <a href="#sequenceprocs">Sequences</a><br>
+            <a href="#flexsequenceprocs">Flexible Sequences</a><br>
+            <a href="#dictprocs">Dictionaries</a><br>
+         </blockquote>
+         <a href="#schemecolls">Scheme Collections</a><br>       
+         <blockquote>
+           <a href="#lists">Scheme Lists</a><br>
+           <a href="#alists">Scheme Association Lists</a><br>
+           <a href="#vectors">Scheme Vectors</a><br>
+           <a href="#strings">Scheme Strings</a><br>
+         </blockquote>
+         <a href="#implementation">Implementation</a><br>
+      </blockquote>
+
+    <h1><a name="issues">Issues</a></h1>
 
     <p>
       Several functions in this SRFI are required to take arbitrary
@@ -88,7 +144,7 @@
       collection function in place.
     </p>
 
-    <h1>Rationale</h1>
+    <h1><a name="rationale">Rationale</a></h1>
 
     <p>
       The Scheme language provides two basic datastructures for
@@ -148,11 +204,11 @@
       elements.
     </p>
 
-    <h1>Specification</h1>
+    <h1><a name="specification">Specification</a></h1>
 
     <blockquote>
       <h2>
-        Collections Hierarchy
+        <a name="chier">Collections Hierarchy</a>
       </h2>
       <blockquote>
         <center>
@@ -245,7 +301,7 @@
         </blockquote>
       </blockquote>
       <h2>
-        Collection Attributes
+        <a name="attribute">Collection Attributes</a>
       </h2>
       <blockquote>
         <p>
@@ -261,7 +317,7 @@
           <i>orderedness</i> and <i>mutability.</i>
         </p>
         <h3>
-          Ordered Collections
+          <a name="ordered">Ordered Collections</a>
         </h3>
         <p>
           Ordered collections maintain an ordering to their values
@@ -278,7 +334,7 @@
           function.
         </p>
         <h3>
-          Mutable Collections
+          <a name="mutable">Mutable Collections</a>
         </h3>
         <p>
           This SRFI's API is accommodating to purely functional and
@@ -310,7 +366,7 @@ terms of unnecessarily allocated storage. <br>
         </p>
       </blockquote>
       <h2>
-        Storage Model
+        <a name="storagemodel">Storage Model</a>
       </h2>
       <blockquote>
         <p>
@@ -324,7 +380,7 @@ terms of unnecessarily allocated storage. <br>
         </p>
       </blockquote>
       <h2>
-        Folding Enumerators
+        <a name="foldingenums">Folding Enumerators</a>
       </h2>
       <blockquote>
         <p>
@@ -366,7 +422,7 @@ terms of unnecessarily allocated storage. <br>
           reverse.
         </p>
         <h3>
-          Enumeration Stability
+          <a name="stability">Enumeration Stability</a>
         </h3>
         <p>
           It is undefined in this SRFI whether the process of
@@ -400,7 +456,7 @@ terms of unnecessarily allocated storage. <br>
         </p>
       </blockquote>
       <h2>
-        Equivalence
+        <a name="equivalence">Equivalence</a>
       </h2>
       <blockquote>
         <p>
@@ -433,7 +489,7 @@ terms of unnecessarily allocated storage. <br>
         </pre>
       </blockquote><br>
       <h2>
-        Immutable Collections
+        <a name="immutablecols">Immutable Collections</a>
       </h2>
       <blockquote>
         <p>
@@ -444,7 +500,7 @@ terms of unnecessarily allocated storage. <br>
         </p>
       </blockquote>
       <h2>
-        Homogeneity
+        <a name="homogeneity">Homogeneity</a>
       </h2>
       <blockquote>
         <p>
@@ -456,7 +512,7 @@ terms of unnecessarily allocated storage. <br>
         </p>
       </blockquote>
       <h2>
-        Size versus Length
+        <a name="sizevslength">Size versus Length</a>
       </h2>
       <blockquote>
         <p>
@@ -483,7 +539,7 @@ terms of unnecessarily allocated storage. <br>
         </p>
       </blockquote>
       <h2>
-        Ordered Collections
+        <a name="orderedcols">Ordered Collections</a>
       </h2>
       <blockquote>
         <p>
@@ -510,7 +566,7 @@ terms of unnecessarily allocated storage. <br>
         </p>
       </blockquote>
       <h2>
-        Bags, Sets, Dictionaries and Value Equality
+        <a name="valueequality">Bags, Sets, Dictionaries and Value Equality</a>
       </h2>
       <blockquote>
         <p>
@@ -538,7 +594,7 @@ terms of unnecessarily allocated storage. <br>
         </p>
       </blockquote>
       <h2>
-        Sequences
+        <a name="sequences">Sequences</a>
       </h2>
       <blockquote>
         <p>
@@ -552,7 +608,7 @@ terms of unnecessarily allocated storage. <br>
           <tt>(- (collection-size <i>seq</i>) 1)</tt>.
         </p>
         <h3>
-          Flexible Sequences
+          <a name="flexsequences">Flexible Sequences</a>
         </h3>
         <p>
           Flexible sequences are sequences which allow insertion of
@@ -566,7 +622,7 @@ terms of unnecessarily allocated storage. <br>
           indices are now decreased by one.
         </p>
         <h3>
-          Limited Sequences
+          <a name="limitedsequences">Limited Sequences</a>
         </h3>
         <p>
           Limited Sequences are the opposite of flexible sequences.
@@ -580,7 +636,7 @@ terms of unnecessarily allocated storage. <br>
         </p>
       </blockquote>
       <h2>
-        Procedures
+        <a name="procedures">Procedures</a>
       </h2>
       <blockquote>
         <p>
@@ -615,14 +671,8 @@ terms of unnecessarily allocated storage. <br>
           <tt>%</tt> as a return value indicates a collection of
           that specific type.
         </p>
-        <p>
-          Note that while ordered collections are visually
-          represented as a distinct type in the tree above,
-          'orderedness' is considered an attribute of the
-          collection, not a distinct set of types.
-        </p>
         <h3>
-          Functional, Linear Update, and Purely Mutable Collections
+          <a name="flup">Functional, Linear Update, and Purely Mutable Collections</a>
         </h3>
         <p>
           Functions in this SRFI which modify a collection are
@@ -669,13 +719,6 @@ terms of unnecessarily allocated storage. <br>
           to the cloned collection.
         </p>
         <p>
-          Finally, mutable collections (for which
-          <tt>mutable-collection?</tt> returns a non-false value)
-          add an additional update procedure for each linear-update
-          procedure described, which adds an additional bang (!) to
-          the end of the procedure name. This is represented in
-          this SRFI's API specification as
-          <tt>*-<i>update</i>![!]</tt>.<br>
            As the case of functionally updating a collection whose
           structure is functionally updateable can be expensive
           (due to worst-case need to clone a large collection), the
@@ -685,7 +728,7 @@ terms of unnecessarily allocated storage. <br>
           update functions.
         </p>
         <h3>
-          Enumeration
+          <a name="enumprocs">Enumeration</a>
         </h3>
         <blockquote>
           <i>procedure:</i> <b>collection-fold-left</b> collection
@@ -747,7 +790,7 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
         </blockquote>
         <h3>
-          Collections
+          <a name="collprocs">Collections</a>
         </h3>
         <blockquote>
           <p>
@@ -760,14 +803,14 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>collection-name</b> collection
-            <b>=&gt; symbol ('%)</b>
+            <b>=&gt; symbol (%)</b>
           </p>
           <blockquote>
             Returns the collection name of the provided collection.
             The name is a symbol containing the type name of the
             specific collection. A collection whose constructor is
-            make-list, for example, would have 'list returned from
-            <tt>collection-name</tt>
+            make-list, for example, would have the symbol <tt>list</tt>
+            returned from <tt>collection-name</tt>
           </blockquote>
           <p>
             <i>procedure:</i> <b>%?</b> value <b>=&gt; value</b>
@@ -778,7 +821,7 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-size</b> collection <b>=&gt;</b>
-            integer
+            exact integer
           </p>
           <blockquote>
             If the collection has a concept of size, this function
@@ -788,7 +831,7 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-count</b> collection
-            value<b>=&gt;</b> integer
+            value<b>=&gt;</b> exact integer
           </p>
           <blockquote>
             Counts the number of times <tt>value</tt> occurs in the
@@ -797,31 +840,33 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-get-left</b> *
-            [default]<b>=&gt;</b> value
+            [absense-thunk]<b>=&gt;</b> value
           </p>
           <blockquote>
             Returns a value the given collection.  For an arbitrary
             collection, it is unspecified which of its values is 
             returned.  More specific collection types may 
             have more rigorous requirements.
-            If the collection is empty, <tt>default</tt> is
-            returned if present, otherwise <tt>#f</tt> is returned.
+            If the collection is empty, <tt>absence-thunk</tt> is
+            invoked if present and its value returned,  
+            otherwise <tt>#f</tt> is returned.
           </blockquote>
           <p>
-            <i>procedure:</i> <b>*-get-right</b> * [default]
+            <i>procedure:</i> <b>*-get-right</b> * [absence-thunk]
             <b>=&gt;</b> value
           </p>
           <blockquote>
             Returns an unspecified value from the given collection.
-            If the collection is empty, <tt>default</tt> is
-            returned if present, otherwise <tt>#f</tt> is returned.
+            If the collection is empty, <tt>absence-thunk</tt> is
+            invoked if present and its value returned,  
+            otherwise <tt>#f</tt> is returned.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-empty?</b> collection
             <b>=&gt;</b> boolean
           </p>
           <blockquote>
-            Returns true iff the given collection is known to be
+            Returns a non-fale value iff the given collection is known to be
             empty. This function should return false if it is known
             that there are values within the collection, or if it
             is unknown whether any values exist.
@@ -832,12 +877,24 @@ terms of unnecessarily allocated storage. <br>
           </p>
           <blockquote>
             Returns a newly allocated list containing the values of
-            the collection. This be done trivially with
+            the collection. This can be done trivially with
             enumeration, but an implementation may choose to allow
             this function to behave more efficiently on certain
             collections. If the collection is ordered, the list
             must contain the values of the collection in the same
             order as a left enumeration.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-clear</b> collection
+            <b>=&gt;</b> %<br>
+            <i>procedure:</i> <b>*-clear![!]</b> collection
+            <b>=&gt;</b> %
+          </p>
+          <blockquote>
+            Clears the collection.  In all cases a
+	    collection is returned with no values or mappings.  It 
+            is an error to clear an immutable collection and may
+            be an error to clear a limited sequence.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*=</b> elt= collections ...
@@ -879,7 +936,7 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-copy</b> collection <b>=&gt;
-            collection</b>
+            %</b>
           </p>
           <blockquote>
             Creates a new collection whose type and contents are
@@ -892,7 +949,7 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
         </blockquote>
         <h3>
-          Ordered Collections
+          <a name="orderedcollprocs">Ordered Collections</a>
         </h3>
         <blockquote>
           <p>
@@ -905,23 +962,25 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-get-left</b> *
-            [default]<b>=&gt;</b> value
+            [absence-thunk]<b>=&gt;</b> value
           </p>
           <blockquote>
             Returns the leftmost (least precedent) value in the
-            ordered collection. If the collection is empty,
-            <tt>default</tt> is returned if present, otherwise
-            <tt>#f</tt> is returned.
+            ordered collection. 
+            If the collection is empty, <tt>absence-thunk</tt> is
+            invoked if present and its value returned,  
+            otherwise <tt>#f</tt> is returned.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-get-right</b> *
-            [default]<b>=&gt;</b> value
+            [absence-thunk]<b>=&gt;</b> value
           </p>
           <blockquote>
             Returns the rightmost (most precedent) value in the
-            ordered collection. If the collection is empty,
-            <tt>default</tt> is returned if present, otherwise
-            <tt>#f</tt> is returned.
+            ordered collection. 
+            If the collection is empty, <tt>absence-thunk</tt> is
+            invoked if present and its value returned,  
+            otherwise <tt>#f</tt> is returned.          
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-remove-left</b> * <b>=&gt;</b> *
@@ -955,7 +1014,7 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
         </blockquote>
         <h3>
-          Mutable Collections
+          <a name="mutablecollprocs">Mutable Collections</a>
         </h3>
         <blockquote>
           <p>
@@ -968,7 +1027,7 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
         </blockquote>
         <h3>
-          Bags
+          <a name="bagprocs">Bags</a>
         </h3>
         <blockquote>
           <p>
@@ -1036,7 +1095,7 @@ terms of unnecessarily allocated storage. <br>
       (let ((col (make-* values ...)))
         (call-with-values 
            (lambda ()
-             (*-remove-left (*-add-left * a-value)))
+             (*-remove-left (*-insert-left * a-value)))
            (lambda (newcol val)
              (bag= equal? col newcol)))) ; =&gt; #t
 </pre>
@@ -1056,7 +1115,7 @@ terms of unnecessarily allocated storage. <br>
       (let ((col (make-* values ...)))
         (call-with-values 
            (lambda ()
-             (*-remove-right (*-add-right * a-value)))
+             (*-remove-right (*-insert-right * a-value)))
            (lambda (newcol val)
              (bag= equal? col newcol)))) ; =&gt; #t
 </pre>
@@ -1112,7 +1171,7 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
         </blockquote>
         <h3>
-          Sets
+          <a name="setprocs">Sets</a>
         </h3>
         <blockquote>
           <p>
@@ -1151,7 +1210,7 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
         </blockquote>
         <h3>
-          Sequences
+          <a name="sequenceprocs">Sequences</a>
         </h3>
         <blockquote>
           <p>
@@ -1164,40 +1223,36 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-ref</b> sequence integer
-            <b>=&gt;</b> value
+            [absence-thunk] <b>=&gt;</b> value
           </p>
           <blockquote>
-            Returns the value stored in the sequence at the integer
-            index provided. It is an error to reference an index
-            outside the range of the sequence.
-          </blockquote>
-          <p>
-            <i>procedure:</i> <b>*-ref/default</b> sequence integer
-            [default] <b>=&gt;</b> value
-          </p>
-          <blockquote>
-            Returns the value stored in the sequence at the integer
-            index provided. Returns the default value if the
-            integer is outside the range of stored values.
+            Returns the value stored in the sequence at the exact
+            integer index provided. 
+            If the index is outside the range of the sequence, 
+            <tt>absence-thunk</tt> is invoked if present and its value 
+            returned instead.  It is an error if the index is out 
+            of range and no absence-thunk is provided.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-get-left</b> *
-            [default]<b>=&gt;</b> value
+            [absence-thunk]<b>=&gt;</b> value
           </p>
           <blockquote>
-            Returns the value at index 0 in the collection. If no
-            such value exists, <tt>default</tt> is returned if
-            present, otherwise <tt>#f</tt> is returned.
+            Returns the value at index 0 in the collection. 
+            If the sequence is empty, <tt>absence-thunk</tt> is
+            invoked if present and its value returned,  
+            otherwise <tt>#f</tt> is returned.          
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-get-right</b> *
-            [default]<b>=&gt;</b> value
+            [absence-thunk]<b>=&gt;</b> value
           </p>
           <blockquote>
             Returns the value at index <tt>(- (sequence-size *)
-            1)</tt> in the collection. If no values exist,
-            <tt>default</tt> is returned if present, otherwise
-            <tt>#f</tt> is returned.
+            1)</tt> in the collection.
+            If the sequence is empty, <tt>absence-thunk</tt> is
+            invoked if present and its value returned,  
+            otherwise <tt>#f</tt> is returned.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-insert-right</b> *
@@ -1216,7 +1271,7 @@ terms of unnecessarily allocated storage. <br>
           </p>
           <blockquote>
             Replaces the value stored in the sequence at the
-            integer index provided with the given value. It is an
+            exact integer index provided with the given value. It is an
             error to reference an index outside the range of the
             sequence. It is recommended that the return value of
             this function be the previous value stored at the given
@@ -1233,7 +1288,7 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
         </blockquote>
         <h3>
-          Flexible Sequences
+          <a name="flexsequenceprocs">Flexible Sequences</a>
         </h3>
         <blockquote>
           <p>
@@ -1283,7 +1338,7 @@ terms of unnecessarily allocated storage. <br>
           <p>
             <i>procedure:</i> <b>*-remove-left</b> * <b>=&gt;</b> *
             value<br>
-             <i>procedure:</i> <b>*-remove-left![!]</b> value *
+             <i>procedure:</i> <b>*-remove-left![!]</b> *
             <b>=&gt;</b> * value
           </p>
           <blockquote>
@@ -1293,9 +1348,9 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-remove-right</b> * <b>=&gt;</b>
-            *<br>
-             <i>procedure:</i> <b>*-remove-right![!]</b> *
-            <b>=&gt;</b> *
+            * value<br>
+             <i>procedure:</i> <b>*-remove-right![!]</b> * 
+            <b>=&gt;</b> * value
           </p>
           <blockquote>
             Removes the value at position <tt>(-
@@ -1304,7 +1359,7 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
         </blockquote>
         <h3>
-          Dictionaries
+          <a name="dictprocs">Dictionaries</a>
         </h3>
         <blockquote>
           <p>
@@ -1316,16 +1371,22 @@ terms of unnecessarily allocated storage. <br>
             dictionary.
           </blockquote>
           <p>
-            <i>procedure:</i> <b>%</b> [equivalence-function] (key
+            <i>procedure:</i> <b>%</b> (key
             . value) ... <b>=&gt; *</b>
           </p>
           <blockquote>
             Constructs a % dictionary with the zero or more
-            bindings provided as it's initial values. If provided,
-            the keys will be compared with the given equivalence
-            function, otherwise eqv? is used. Each operand after
-            the equivalence function to a dictionary constructor
-            must be a Scheme pair.
+            bindings provided as it's initial values. 
+            Each operand (after an equivalence function if present)
+            to a dictionary constructor must be a Scheme pair.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-key-count</b> dict value <b>=&gt; exact integer</b>
+          </p>
+          <blockquote>
+            Similar to <tt>*-count</tt>, but counts the number of times
+            the given value occurs as a key in the dictionary, returning
+            that count as an integer.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-keys-&gt;list</b> dictionary
@@ -1341,54 +1402,44 @@ terms of unnecessarily allocated storage. <br>
             same order as a left enumeration.
           </blockquote>
           <p>
-            <i>procedure:</i> <b>*-get</b> dictionary key [default]
+            <i>procedure:</i> <b>*-get</b> dictionary key [absence-thunk]
             <b>=&gt;</b> value
           </p>
           <blockquote>
             Retrieves the value of the mapping for the given key.
-            If no such mapping exists, the value of
-            <tt>default</tt> is returned, or <tt>#f</tt> if default
-            was not provided.
+            If no such mapping exists, <tt>absence-thunk</tt> is
+            invoked if present and its value returned,  
+            otherwise <tt>#f</tt> is returned.
           </blockquote>
           <p>
-            <i>procedure:</i> <b>*-put</b> dictionary key value
-            <b>=&gt;</b> *<br>
-             <i>procedure:</i> <b>*-put![!]</b> dictionary key
-            value <b>=&gt;</b> *
+            <i>procedure:</i> <b>*-put</b> dictionary key
+            value [absence-thunk] <b>=&gt;</b> * value<br>
+             <i>procedure:</i> <b>*-put![!]</b> dictionary
+            key value [absence-thunk] <b>=&gt;</b> * value
           </p>
           <blockquote>
             Sets the value the mapping for the given key to the
-            given value.
-          </blockquote>
-          <p>
-            <i>optional-procedure:</i> <b>*-put</b> dictionary key
-            value [default] <b>=&gt;</b> value<br>
-             <i>optional-procedure:</i> <b>*-put![!]</b> dictionary
-            key value [default] <b>=&gt;</b> value
-          </p>
-          <blockquote>
-            Sets the value the mapping for the given key to the
-            given value. If the mapping previously existed, this
-            function returns the previous value of that mapping. If
-            no such mapping existed, the value of default is
-            returned, or <tt>#f</tt> if no default value was
-            provided. It is preferred that dictionary collections
-            implement this form of <tt>dict-put!</tt> over the
-            previous one if it is feasible.
+            given value, returning the updated dictionary as the
+            first of two values.
+            If the mapping previously existed, the second return value
+            is the previous value of that mapping. 
+            If no previous mapping existed, <tt>absence-thunk</tt> is
+            invoked if present and its value returned,  
+            otherwise <tt>#f</tt> is returned.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-update</b> dictionary key func
-            [default] <b>=&gt;</b> *<br>
+            [absence-thunk] <b>=&gt;</b> *<br>
              <i>procedure:</i> <b>*-update!</b> dictionary key func
-            [default] <b>=&gt;</b> *
+            [absence-thunk] <b>=&gt;</b> *
           </p>
           <blockquote>
             Updates the value of the dictionary entry mapped by
             <tt>key</tt> to the results of applying the single
             argument function <tt>func</tt> to the previous value.
-            If no such previous value existed, the value of
-            <tt>default</tt> is provided to the function, otherwise
-            <tt>#f</tt> is passed.
+            If no previous mapping existed, <tt>absence-thunk</tt> is
+            invoked if present and its value returned,  
+            otherwise <tt>#f</tt> is returned.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-remove</b> dictionary key
@@ -1445,7 +1496,7 @@ terms of unnecessarily allocated storage. <br>
         </blockquote>
       </blockquote>
       <h2>
-        Scheme Collections
+        <a name="schemecolls">Scheme Collections</a>
       </h2>
       <blockquote>
         <p>
@@ -1454,7 +1505,7 @@ terms of unnecessarily allocated storage. <br>
           and string types.
         </p>
         <h4>
-          Scheme Lists
+          <a name="lists">Scheme Lists</a>
         </h4>
         <blockquote>
           <p>
@@ -1476,29 +1527,28 @@ terms of unnecessarily allocated storage. <br>
           <br>
            
           <p>
-            <i>procedure:</i> <b>list-name</b> list <b>=&gt;</b>
-            'list
-          </p>
-          <p>
             <i>procedure:</i> <b>list-copy</b> list <b>=&gt;</b>
+            <i>procedure:</i> <b>list->list</b> list =&gt; list
             list
           </p>
           <p>
-            <i>procedure:</i> <b>list?</b> value =&gt; boolean
+            <i>procedure:</i> <b>list?</b> value =&gt; boolean<br>
+            <i>procedure:</i> <b>list-size</b> list =&gt; exact integer<br>
+            <i>procedure:</i> <b>list-empty?</b> list =&gt; boolean
           </p>
           <p>
             <i>procedure:</i> <b>list-contains?</b> list value
             =&gt; boolean
           </p>
           <p>
-            <i>procedure:</i> <b>list-get-left</b> list [default]
+            <i>procedure:</i> <b>list-get-left</b> list [absence-thunk]
             =&gt; value<br>
-             <i>procedure:</i> <b>list-get-right</b> list [default]
+             <i>procedure:</i> <b>list-get-right</b> list [absence-thunk]
             =&gt; value
           </p>
           <p>
             <i>procedure:</i> <b>list-count</b> list value =&gt;
-            integer
+            exact integer
           </p>
           <p>
             <i>procedure:</i> <b>list=</b> elt= list1 list2 =&gt;
@@ -1507,34 +1557,40 @@ terms of unnecessarily allocated storage. <br>
           <p>
             <i>procedure:</i> <b>list-add</b> list value =&gt;
             list<br>
-             <i>procedure:</i> <b>list-add![!]</b> list value =&gt;
+             <i>procedure:</i> <b>list-add!</b> list value =&gt;
+            list
+          </p>
+          <p>
+            <i>procedure:</i> <b>list-set</b> list integer value =&gt;
+            list<br>
+             <i>procedure:</i> <b>list-set!</b> list integer value =&gt;
             list
           </p>
           <p>
             <i>procedure:</i> <b>list-insert-left</b> list value
             =&gt; list<br>
-             <i>procedure:</i> <b>list-insert-left![!]</b> list
+             <i>procedure:</i> <b>list-insert-left!</b> list
             value =&gt; list<br>
              <i>procedure:</i> <b>list-insert-right</b> list value
             =&gt; list<br>
-             <i>procedure:</i> <b>list-insert-right![!]</b> list
+             <i>procedure:</i> <b>list-insert-right!</b> list
             value =&gt; list
           </p>
           <p>
             <i>procedure:</i> <b>list-remove</b> list value =&gt;
             list<br>
-             <i>procedure:</i> <b>list-remove![!]</b> list value
+             <i>procedure:</i> <b>list-remove!</b> list value
             =&gt; list
           </p>
           <p>
-            <i>procedure:</i> <b>list-remove-left</b> list value
+            <i>procedure:</i> <b>list-remove-left</b> list 
             =&gt; list value<br>
-            a <i>procedure:</i> <b>list-remove-left![!]</b> list
-            value =&gt; list value<br>
-             <i>procedure:</i> <b>list-remove-right</b> list value
+            a <i>procedure:</i> <b>list-remove-left!</b> list
             =&gt; list value<br>
-             <i>procedure:</i> <b>list-remove-right![!]</b> list
-            value =&gt; list value
+             <i>procedure:</i> <b>list-remove-right</b> list 
+            =&gt; list value<br>
+             <i>procedure:</i> <b>list-remove-right!</b> list
+            =&gt; list value
           </p>
           <p>
             <i>procedure:</i> <b>list-remove-any</b> list value
@@ -1545,36 +1601,42 @@ terms of unnecessarily allocated storage. <br>
           <p>
             <i>procedure:</i> <b>list-add-all</b> list bag =&gt;
             list<br>
-             <i>procedure:</i> <b>list-add-all![!]</b> list bag
+             <i>procedure:</i> <b>list-add-all!</b> list bag
             =&gt; list
           </p>
           <p>
             <i>procedure:</i> <b>list-remove-all</b> list bag =&gt;
             list<br>
-             <i>procedure:</i> <b>list-remove-all![!]</b> list bag
+             <i>procedure:</i> <b>list-remove-all!</b> list bag
             =&gt; list
           </p>
           <p>
             <i>procedure:</i> <b>list-remove-any-of</b> list bag
             =&gt; list<br>
-             <i>procedure:</i> <b>list-remove-any-of![!]</b> list
+             <i>procedure:</i> <b>list-remove-any-of!</b> list
             bag =&gt; list
+          </p>
+	  <p> 
+            <i>procedure:</i> <b>list-clear</b> list
+            =&gt; list<br>	    
+            <i>procedure:</i> <b>list-clear!</b> list
+            =&gt; list
           </p>
           <p>
             <i>procedure:</i> <b>list-insert</b> list bag =&gt;
             list<br>
-             <i>procedure:</i> <b>list-insert![!]</b> list bag
+             <i>procedure:</i> <b>list-insert!</b> list bag
             =&gt; list
           </p>
           <p>
             <i>procedure:</i> <b>list-delete</b> list index =&gt;
             list<br>
-             <i>procedure:</i> <b>list-delete![!]</b> list index
+             <i>procedure:</i> <b>list-delete!</b> list index
             =&gt; list
           </p>
         </blockquote>
         <h4>
-          Scheme Association Lists
+          <a name="alists">Scheme Association Lists</a>
         </h4>
         <blockquote>
           <p>
@@ -1597,11 +1659,14 @@ terms of unnecessarily allocated storage. <br>
             (key . value) ... =&gt; alist
           </p>
           <p>
-            <i>procedure:</i> <b>alist-name</b> alist <b>=&gt;</b>
-            'alist
+            <i>procedure:</i> <b>alist-count</b> alist value =&gt; exact integer<br>
+            <i>procedure:</i> <b>alist-key-count</b> alist value =&gt; exact integer<br>
+            <i>procedure:</i> <b>alist-size</b> alist value =&gt; exact integer
           </p>
           <p>
-            <i>procedure:</i> <b>alist-copy</b> alist =&gt; alist
+            <i>procedure:</i> <b>alist-copy</b> alist =&gt; alist<br>
+            <i>procedure:</i> <b>alist->list</b> alist =&gt; list<br>
+            <i>procedure:</i> <b>alist-keys>list</b> alist =&gt; list
           </p>
           <p>
             <i>procedure:</i> <b>alist?</b> value =&gt; boolean
@@ -1625,10 +1690,10 @@ terms of unnecessarily allocated storage. <br>
             value
           </p>
           <p>
-            <i>procedure:</i> <b>alist-get-left</b> alist [default]
+            <i>procedure:</i> <b>alist-get-left</b> alist [absence-thunk]
             =&gt; value<br>
              <i>procedure:</i> <b>alist-get-right</b> alist
-            [default] =&gt; value
+            [absence-thunk] =&gt; value
           </p>
           <p>
             <i>procedure:</i> <b>alist-put</b> alist value value
@@ -1636,9 +1701,9 @@ terms of unnecessarily allocated storage. <br>
              <i>procedure:</i> <b>alist-put!</b> alist value value
             =&gt; alist<br>
              <i>procedure:</i> <b>alist-update</b> alist value func
-            [default]=&gt; alist<br>
+            [absence-thunk]=&gt; alist<br>
              <i>procedure:</i> <b>alist-update!</b> alist value
-            func [default]=&gt; alist
+            func [absence-thunk]=&gt; alist
           </p>
           <p>
             <i>procedure:</i> <b>alist-remove</b> alist value =&gt;
@@ -1664,6 +1729,12 @@ terms of unnecessarily allocated storage. <br>
              <i>procedure:</i> <b>alist-remove-any-of!</b> alist
             bag =&gt; alist
           </p>
+	  <p> 
+            <i>procedure:</i> <b>alist-clear</b> alist
+            =&gt; alist<br>	    
+            <i>procedure:</i> <b>alist-clear!</b> alist
+            =&gt; alist
+          </p>
           <p>
             <i>procedure:</i> <b>alist-add-all</b> alist dict =&gt;
             alist<br>
@@ -1672,7 +1743,7 @@ terms of unnecessarily allocated storage. <br>
           </p>
         </blockquote>
         <h4>
-          Scheme Vectors
+          <a name="vectors">Scheme Vectors</a>
         </h4>
         <blockquote>
           <p>
@@ -1693,15 +1764,13 @@ terms of unnecessarily allocated storage. <br>
           <br>
            
           <p>
-            <i>procedure:</i> <b>vector-name</b> list <b>=&gt;</b>
-            'vector
+            <i>procedure:</i> <b>vector-copy</b> vector =&gt; vector<br>
+            <i>procedure:</i> <b>vector->list</b> vector =&gt; list<br>
           </p>
           <p>
-            <i>procedure:</i> <b>vector-copy</b> vector =&gt;
-            vector
-          </p>
-          <p>
-            <i>procedure:</i> <b>vector?</b> value =&gt; boolean
+            <i>procedure:</i> <b>vector?</b> value =&gt; boolean<br>
+            <i>procedure:</i> <b>vector-size</b> vector =&gt; exact integer<br>
+            <i>procedure:</i> <b>vector-empty?</b> vector =&gt; boolean
           </p>
           <p>
             <i>procedure:</i> <b>vector-contains?</b> value =&gt;
@@ -1709,13 +1778,21 @@ terms of unnecessarily allocated storage. <br>
           </p>
           <p>
             <i>procedure:</i> <b>vector-count</b> vector value
-            =&gt; integer
+            =&gt; exact integer
           </p>
           <p>
+            <i>procedure:</i> <b>vector-ref</b> vector index
+            [absence-thunk] =&gt; value<br>
             <i>procedure:</i> <b>vector-get-left</b> vector
-            [default] =&gt; value<br>
+            [absence-thunk] =&gt; value<br>
              <i>procedure:</i> <b>vector-get-right</b> vector
-            [default] =&gt; value
+            [absence-thunk] =&gt; value
+          </p>
+          <p>
+            <i>procedure:</i> <b>vector-set</b> vector index value 
+            =&gt; value<br>
+            <i>procedure:</i> <b>vector-set!</b> vector index value 
+            =&gt; value<br>
           </p>
           <p>
             <i>procedure:</i> <b>vector=</b> elt= vector1 vector2
@@ -1723,7 +1800,7 @@ terms of unnecessarily allocated storage. <br>
           </p>
         </blockquote>
         <h4>
-          Scheme Strings
+          <a name="strings">Scheme Strings</a>
         </h4>
         <blockquote>
           <p>
@@ -1739,13 +1816,14 @@ terms of unnecessarily allocated storage. <br>
             string
           </p>
           <p>
-            <i>procedure:</i> <b>string-name</b> string
-            <b>=&gt;</b> 'string
-          </p>
-          <p>
             <i>procedure:</i> <b>string-copy</b> string =&gt;
-            string
+            string<br>
+            <i>procedure:</i> <b>string->list</b> string =&gt;
+            list
           </p>
+	  <p>
+            <i>procedure:</i> <b>string-size</b> string =&gt; exact integer<br>
+            <i>procedure:</i> <b>string-empty?</b> string =&gt; boolean
           <p>
             <i>procedure:</i> <b>string?</b> value =&gt; boolean
           </p>
@@ -1755,13 +1833,21 @@ terms of unnecessarily allocated storage. <br>
           </p>
           <p>
             <i>procedure:</i> <b>string-count</b> string character
-            =&gt; integer
+            =&gt; exact integer
           </p>
           <p>
+            <i>procedure:</i> <b>string-ref</b> string index
+            [absence-thunk] =&gt; value<br>
             <i>procedure:</i> <b>string-get-left</b> string
-            [default] =&gt; value<br>
+            [absence-thunk] =&gt; value<br>
              <i>procedure:</i> <b>string-get-right</b> string
-            [default] =&gt; value
+            [absence-thunk] =&gt; value
+          </p>
+          <p>
+            <i>procedure:</i> <b>string-set</b> string index character
+            =&gt; value<br>
+            <i>procedure:</i> <b>vector-set!</b> vector index character
+            =&gt; value<br>
           </p>
           <p>
             <i>procedure:</i> <b>string=</b> elt= string1 string2
@@ -1771,7 +1857,7 @@ terms of unnecessarily allocated storage. <br>
       </blockquote>
     </blockquote>
 
-    <h1>Implementation</h1>
+    <h1><a name="implementation">Implementation</a></h1>
 
     <p>
       This SRFI behaves more as a meta-SRFI for future SRFIs to
@@ -1822,6 +1908,6 @@ terms of unnecessarily allocated storage. <br>
     <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Francisco Solsona</a></address>
     <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
     <!-- hhmts start --><!-- hhmts end -->
-    Last modified: Tue Aug 19 23:42 CST 2003
+    Last modified: Wed Aug 20 11:26 CST 2003
   </body>
 </html>
