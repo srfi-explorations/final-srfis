@@ -1,7 +1,7 @@
 The SRFI-32 sort libraries					-*- outline -*-
 Olin Shivers
-98/10/19
-Last Update: 2002/7/12
+First draft: 1998/10/19
+Last update: 2002/7/21
 
 Emacs should display this document in outline mode. Say c-h m for
 instructions on how to move through it by sections (e.g., c-c c-n, c-c c-p).
@@ -480,17 +480,19 @@ i.e., what they do to the data (sort, stable sort, merge, and so forth).
       LIST-SORT!
       LIST-STABLE-SORT!
     are "linear update" operators -- they are allowed, but not required, to
-    alter the cons cells of their arguments to produce their results. On the
-    other hand, the procedures
+    alter the cons cells of their arguments to produce their results. 
+
+    On the other hand, the procedures
       LIST-DELETE-NEIGHBOR-DUPS!
       LIST-MERGE!
-    make only a single, iterative, linear-time pass over their argument
-    lists, constructing their results by side-effecting these lists.
-    The intent of this algorithmic commitment is to allow the programmer to be
-    sure that if, for example, LIST-MERGE! is asked to merge two
-    ten-million-element lists, the operation will complete without performing 
-    some extremely (possibly twenty-million) deep recursion. That is, 
-    LIST-MERGE! is implemented as an iterative algorithm.
+    make only a single, iterative, linear-time pass over their argument lists,
+    using SET-CDR!s to rearrange the cells of the lists into the final result
+    -- they work "in place." Hence, any cons cell appearing in the result must
+    have originally appeared in an input. The intent of this
+    iterative-algorithm commitment is to allow the programmer to be sure that
+    if, for example, LIST-MERGE! is asked to merge two ten-million-element
+    lists, the operation will complete without performing some extremely
+    (possibly twenty-million) deep recursion.
 
     The vector procedures
       VECTOR-SORT
