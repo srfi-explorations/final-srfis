@@ -52,9 +52,9 @@ Specification
        positive number without a positive sign, the positive sign is prefixed
        to the resulting string.
      * <precision> is an inexact integer whose absolute value specifies the
-       number of decimal digits after a decimal point.  If <precision> is
-       a non-negative integer, an exact sign (#e) is prefixed to the resulting
-       string as needed.
+       number of decimal digits after a decimal point.  If <precision> is a
+       non-negative integer, an exact sign is prefixed to the resulting string
+       as needed.
      * <separator> is a list whose first element is a character serving as a
        separator and second element is a positive exact integer.  If the
        integer is n, the resulting string is separated in every n-characters
@@ -101,19 +101,18 @@ Specification
 
 The order of all optional arguments does not matter.  The CAT procedure
 processes optional arguments in the following order; <exactness>, <radix>,
-<sign>, <precision>, <separator> for the number type of <object>, or in the
+<precision>, <separator>, <sign> for the number type of <object>, or in the
 following order; <writer>, <pipe>, <take> for all other types.
 
 Examples
 
 (cat 129.995 -10 2.)				"130.00    "
 (cat 129.995 10 2.)				"    130.00"
+(cat 129.985 10 2.)				"    129.98"
+(cat 129.985001 10 2.)				"    129.99"
 (cat 129.995 2. 'exact)				"#e130.00"
 (cat 129 -2.)					"129.00"
 (cat 129 2.)					"#e129.00"
-(cat -99.985 2.)				"-99.98"
-(cat -99.985001 2.)				"-99.99"
-(cat -99.995 2.)				"-100.00"
 (cat 129 10 2. #\0 'sign)			"#e+0129.00"
 (cat 129 10 2. #\* 'sign)			"*#e+129.00"
 (cat 1/3)					"1/3"
@@ -126,8 +125,8 @@ Examples
 (cat 99.5 10 'sign 'octal 'exact)		"  #o+307/2"
 (cat #x123 'octal 'sign)			"#o+443"
 (cat #x123 -10 2. 'sign #\*)			"#e+291.00*"
-(cat -1.2345e+12+1.2355e-10i 3.)		"-1.234e12+1.236e-10i"
-(cat 1.2345e+12 10 3. 'sign)			" +1.234e12"
+(cat -1.2345e+15+1.2355e-15i 3.)		"-1.234e15+1.236e-15i"
+(cat 1.2345e+15 10 3. 'sign)			" +1.234e15"
 (cat "string" -10)				"string    "
 (cat "string" 10 (list string-upcase))		"    STRING"
 (cat "string" 10 (list string-upcase) '(-2))    "      RING"
@@ -183,38 +182,8 @@ ex						'#{:example}
 Implementation
 
 The implementation below requires SRFI-1 (List library), SRFI-6 (Basic string
-ports), SRFI-8 (Receive), SRFI-13 (String library), and SRFI-23 (Error
-reporting mechanism).
-
-;; The OPT-VALUES is a part of the REST-VALUES in SRFI-51 (Handling rest list).
-(define (opt-values rest-list . default-list)
-  (let loop ((rest-list rest-list)
-	     (default-list default-list)
-	     (result '()))
-    (if (null? default-list)
-	(if (null? rest-list)
-	    (apply values (reverse result))
-	    (error "cat: bad argument" rest-list))
-	(if (null? rest-list)
-	    (apply values (append-reverse result (map car default-list)))
-	    (let ((default (car default-list)))
-	      (let lp ((rest rest-list)
-		       (head '()))
-		(if (null? rest)
-		    (loop (reverse head)
-			  (cdr default-list)
-			  (cons (car default) result))
-		    (if (list? default)
-			(if (member (car rest) default)
-			    (loop (append-reverse head (cdr rest))
-				  (cdr default-list)
-				  (cons (car rest) result))
-			    (lp (cdr rest) (cons (car rest) head)))
-			(if ((cdr default) (car rest))
-			    (loop (append-reverse head (cdr rest))
-				  (cdr default-list)
-				  (cons (car rest) result))
-			    (lp (cdr rest) (cons (car rest) head)))))))))))
+ports), SRFI-8 (Receive), SRFI-13 (String library), and SRFI-51 (Handling rest
+list).
 
 (define (cat object . rest)
   (receive (str-list rest-list) (partition string? rest)
@@ -233,40 +202,40 @@ reporting mechanism).
 	       str-list)
 	(receive (width port char converter precision sign radix exactness
 		  separator writer pipe take)
-	    (opt-values rest-list
-			(cons 0 (lambda (x) (and (integer? x) (exact? x))))
-			(cons #f (lambda (x) (or (boolean? x)
-						 (output-port? x))))
-			(cons #\space char?)
-			(cons #f (lambda (x)
-				   (and (pair? x)
-					(procedure? (car x))
-					(procedure? (cdr x)))))
-			(cons #f (lambda (x) (and (integer? x) (inexact? x))))
-			(cons #f (lambda (x) (eq? x 'sign)))
-			'(decimal octal binary hexadecimal)
-			(cons #f (lambda (x) (memq x '(exact inexact))))
-			(cons #f (lambda (x)
-				   (and (list? x)
-					(< 0 (length x) 3)
-					(char? (car x))
-					(or (null? (cdr x))
-					    (let ((n (cadr x)))
-					      (and (integer? n)
-						   (exact? n)
-						   (< 0 n)))))))
-			(cons #f procedure?)
-			(cons #f (lambda (x)
-				   (and (list? x)
-					(not (null? x))
-					(every procedure? x))))
-			(cons #f (lambda (x)
-				   (and (list? x)
-					(< 0 (length x) 3)
-					(every (lambda (x)
-						 (and (integer? x)
-						      (exact? x)))
-					       x)))))
+	    (rest-values "cat: bad argument" rest-list #t
+			 (cons 0 (lambda (x) (and (integer? x) (exact? x))))
+			 (cons #f (lambda (x) (or (boolean? x)
+						  (output-port? x))))
+			 (cons #\space char?)
+			 (cons #f (lambda (x)
+				    (and (pair? x)
+					 (procedure? (car x))
+					 (procedure? (cdr x)))))
+			 (cons #f (lambda (x) (and (integer? x) (inexact? x))))
+			 (cons #f (lambda (x) (eq? x 'sign)))
+			 '(decimal octal binary hexadecimal)
+			 (cons #f (lambda (x) (memq x '(exact inexact))))
+			 (cons #f (lambda (x)
+				    (and (list? x)
+					 (< 0 (length x) 3)
+					 (char? (car x))
+					 (or (null? (cdr x))
+					     (let ((n (cadr x)))
+					       (and (integer? n)
+						    (exact? n)
+						    (< 0 n)))))))
+			 (cons #f procedure?)
+			 (cons #f (lambda (x)
+				    (and (list? x)
+					 (not (null? x))
+					 (every procedure? x))))
+			 (cons #f (lambda (x)
+				    (and (list? x)
+					 (< 0 (length x) 3)
+					 (every (lambda (x)
+						  (and (integer? x)
+						       (exact? x)))
+						x)))))
 	  (let ((port (if (eq? port #t) (current-output-port) port))
 		(str
 		 (apply
@@ -281,12 +250,11 @@ reporting mechanism).
 		       ((< 0 width) (string-append (make-string pad char) str))
 		       (else (string-append str (make-string pad char))))))
 		   ((number? object)
-		    (and (not (eq? radix 'decimal)) precision
-			 (error "cat: non-decimal cannot have a decimal point"
-				radix))
-		    (and precision (< precision 0) (eq? exactness 'exact)
-			 (error "cat: exact number cannot have a decimal point without exact sign"
-				precision))
+		    (arg-ors 
+		     ("cat: non-decimal cannot have a decimal point" radix
+		      (and (not (eq? radix 'decimal)) precision))
+		     ("cat: exact number cannot have a decimal point without exact sign" precision
+		      (and precision (< precision 0) (eq? exactness 'exact))))
 		    (let ((exact-sign
 			   (and precision
 				(<= 0 precision)
@@ -306,44 +274,17 @@ reporting mechanism).
 					      (hexadecimal . "#x")))))
 			  (plus-sign (and sign (< 0 (real-part object)) "+")))
 		      (let* ((exactness-sign (or exact-sign inexact-sign))
-			     (str (number->string
-				   (cond
-				    (precision
-				     (if (exact? object)
-					 (exact->inexact object) object))
-				    (inexact-sign
-				     (if (inexact? object)
-					 (inexact->exact object) object))
-				    (exactness
-				     (if (eq? exactness 'exact)
-					 (if (inexact? object)
-					     (inexact->exact object) object)
-					 (if (exact? object)
-					     (exact->inexact object) object)))
-				    (else object))
-				   (cdr (assq radix '((decimal . 10)
-						      (octal . 8)
-						      (binary . 2)
-						      (hexadecimal . 16))))))
 			     (str
 			      (if precision
 				  (let ((precision
 					 (inexact->exact (abs precision)))
-					(s-index
-					 (let ((i
-						(or (string-index str #\+ 1)
-						    (string-index str #\- 1))))
-					   (and i
-						(if (char=? (string-ref
-							     str (- i 1))
-							    #\e)
-						    (or (string-index str #\+
-								      (+ i 1))
-							(string-index str #\-
-								      (+ i 1)))
-						    i)))))
-				    (define (real-mold str pre)
-				      (let ((e-index (string-index str #\e)))
+					(imag (imag-part object)))
+				    (define (e-mold num pre)
+				      (let* ((str (number->string
+						   (if (exact? num)
+						       (exact->inexact num)
+						       num)))
+					     (e-index (string-index str #\e)))
 					(if e-index
 					    (string-append
 					     (mold (substring str 0 e-index)
@@ -363,15 +304,24 @@ reporting mechanism).
 							       (make-string
 								(- pre d-len)
 								#\0)))
-
+					       ;;((char<? #\4
+					       ;;	(string-ref
+					       ;;	 str
+					       ;;	 (+ 1 ind pre)))
+					       ;;(let ((com (expt 10 pre)))
+					       ;;  (number->string
+					       ;;   (/ (round
+					       ;;       (* (string->number str)
+					       ;;	  com))
+					       ;;      com))))
 ((or (char<? #\5 (string-ref str (+ 1 ind pre)))
      (and (char=? #\5 (string-ref str (+ 1 ind pre)))
 	  (or (< (+ 1 pre) d-len)
 	      (memv (string-ref str (+ ind (if (= 0 pre) -1 pre)))
 		    '(#\1 #\3 #\5 #\7 #\9)))))
  (apply string
-	(let* ((sign (char=? #\- (string-ref str 0)))
-	       (str (substring str (if sign 1 0) (+ 1 ind pre)))
+	(let* ((minus (char=? #\- (string-ref str 0)))
+	       (str (substring str (if minus 1 0) (+ 1 ind pre)))
 	       (char-list
 		(reverse
 		 (let lp ((index (- (string-length str) 1))
@@ -388,70 +338,89 @@ reporting mechanism).
 					    (+ 1 (char->integer chr)))
 					   (lp (- index 1) #f)))
 				 (cons chr (lp (- index 1) raise))))))))))
-	  (if sign (cons #\- char-list) char-list))))
-
+	  (if minus (cons #\- char-list) char-list))))
 					       (else
 						(substring str
 							   0 (+ 1 ind pre)))))
 					    (string-append
 					     str "." (make-string pre #\0)))))
-				    (if s-index
+				    (if (= 0 imag)
+					(e-mold object precision)
 					(string-append
-					 (real-mold
-					  (substring str 0 s-index) precision)
-					 (string (string-ref str s-index))
-					 (real-mold
-					  (substring str (+ 1 s-index)
-						     (- (string-length str) 1))
-					  precision)
-					 "i")
-					(real-mold str precision)))
-				  str))
+					 (e-mold (real-part object) precision)
+					 (if (< 0 imag) "+" "")
+					 (e-mold imag precision)
+					 "i")))
+				  (number->string
+				   (cond
+				    (inexact-sign
+				     (if (inexact? object)
+					 (inexact->exact object) object))
+				    (exactness
+				     (if (eq? exactness 'exact)
+					 (if (inexact? object)
+					     (inexact->exact object) object)
+					 (if (exact? object)
+					     (exact->inexact object) object)))
+				    (else object))
+				   (cdr (assq radix '((decimal . 10)
+						      (octal . 8)
+						      (binary . 2)
+						      (hexadecimal . 16)))))))
 			     (str
 			      (if (and separator
-				       (not (or (string-index str #\e)
+				       (not (or (and (eq? radix 'decimal)
+						     (string-index str #\e))
 						(string-index str #\i)
 						(string-index str #\/))))
-				  (let ((sep (car separator))
-					(num (if (null? (cdr separator))
-						 3 (cadr separator)))
-					(dot-index (string-index str #\.)))
-				    (define (separate str sep num opt)
-				      (let* ((len (string-length str))
-					     (pos
-					      (if opt
-						  (let ((pos
-							 (remainder
-							  (if (eq? opt 'sign)
-							      (- len 1) len)
-							  num)))
-						    (if (= 0 pos) num pos))
-						  num)))
+ 				  (let ((sep (string (car separator)))
+ 					(num (if (null? (cdr separator))
+ 						 3 (cadr separator)))
+ 					(dot-index (string-index str #\.)))
+ 				    (define (separate str sep num opt)
+ 				      (let* ((len (string-length str))
+ 					     (pos
+ 					      (if opt
+ 						  (let ((pos
+ 							 (remainder
+ 							  (if (eq? opt 'minus)
+ 							      (- len 1) len)
+ 							  num)))
+ 						    (if (= 0 pos) num pos))
+ 						  num)))
+ 					;;(let loop ((ini 0)
+ 					;;	   (pos (if (eq? opt 'minus)
+ 					;;		    (+ pos 1) pos)))
+ 					;;  (if (< pos len)
+ 					;;      (string-append
+ 					;;       (substring str ini pos)
+ 					;;       sep
+ 					;;       (loop pos (+ pos num)))
+ 					;;      (substring str ini len)))))
 					(apply
-					 string
+					 string-append
 					 (let loop ((ini 0)
-						    (pos (if (eq? opt 'sign)
+						    (pos (if (eq? opt 'minus)
 							     (+ pos 1) pos)))
-					   (cond
-					    ((= ini len)
-					     '())
-					    ((= ini pos)
-					     (cons sep (loop ini (+ num pos))))
-					    (else
-					     (cons (string-ref str ini)
-						   (loop (+ 1 ini) pos))))))))
+					   (if (< pos len)
+					       (cons (substring str ini pos)
+						     (cons sep
+							   (loop pos
+								 (+ pos num))))
+					       (list (substring str
+								ini len)))))))
 				    (if dot-index
 					(string-append
 					 (separate (substring str 0 dot-index)
-						   sep num
-						   (if (< object 0) 'sign #t))
+						   sep num (if (< object 0)
+							       'minus #t))
 					 "."
 					 (separate (substring
 						    str (+ 1 dot-index)
 						    (string-length str))
 						   sep num #f))
-					(separate str sep num
-						  (if (< object 0) 'sign #t))))
+					(separate str sep num (if (< object 0)
+								  'minus #t))))
 				  str))
 			     (pad (- (abs width)
 				     (+ (string-length str)
@@ -512,20 +481,25 @@ reporting mechanism).
 				      (right (if (null? (cdr take))
 						 0 (cadr take)))
 				      (len (string-length str)))
+				  (define (substr str beg end)
+				    (let ((end (cond
+						((< end 0) 0)
+						((< len end) len)
+						(else end)))
+					  (beg (cond
+						((< beg 0) 0)
+						((< len beg) len)
+						(else beg))))
+				      (if (and (= beg 0) (= end len))
+					  str
+					  (substring str beg end))))
 				  (string-append
 				   (if (< left 0)
-				       (string-drop str (if (< (abs left) len)
-							    (abs left) len))
-				       (string-take str (if (< left len)
-							    left len)))
+				       (substr str (abs left) len)
+				       (substr str 0 left))
 				   (if (< right 0)
-				       (string-drop-right str
-							  (if (< (abs right)
-								 len)
-							      (abs right) len))
-				       (string-take-right str
-							  (if (< right len)
-							      right len)))))
+				       (substr str 0 (+ len right))
+				       (substr str (- len right) len))))
 				str))
 			   (pad (- (abs width) (string-length str))))
 		      (cond
