@@ -1,3 +1,4 @@
+
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <html>
   <head>
@@ -14,10 +15,12 @@ External Representation for Data With Shared Structure
 
 Ray Dillinger
 
+<H1>Status</H1>
+
 This SRFI is currently in ``draft'' status. To see an explanation of
 each status that a SRFI can hold, see <a
 href="http://srfi.schemers.org/srfi-process.html">here</a>.  It will
-remain in draft until 2003-01-14, or as amended.  To provide input on
+remain in draft until 2003-02-14, or as amended.  To provide input on
 this SRFI, please mail to 
 <a href="mailto:srfi-38@srfi.schemers.org">
 <code>srfi-38@srfi.schemers.org</code></a>.
@@ -34,45 +37,26 @@ the archive of the mailing list</a>.
 <H1>Abstract</H1>
 <P>
 This SRFI proposes <tt>(write-with-shared-structure)</tt> and 
-<tt>(read-with-shared-structure)</tt>, procedures for writing 
-and reading external representations of data containing shared 
-structure.  These procedures implement a proposed standard 
-external notation for data containing shared structure. 
+<tt>(read-with-shared-structure)</tt>, procedures for writing
+and reading external representations of data containing shared
+structure.  These procedures implement a proposed standard
+external notation for data containing shared structure.
 </P>
 <P>
-This SRFI permits but does not require replacing the standard 
-<tt>(write)</tt> and <tt>(read)</tt> functions.  These functions 
-may be implemented without the overhead in time and space required 
-to detect and specify <tt>(eq?)</tt> relationships.  
+This SRFI permits but does not require replacing the standard
+<tt>(write)</tt> and <tt>(read)</tt> functions.  These functions
+may be implemented without the overhead in time and space required
+to detect and specify shared structure.
 </P>
 <P>
-An implementation conforms to this SRFI if it provides procedures  
-named <tt>(write-with-shared-structure)</tt> and 
-<tt>(read-with-shared-structure)</tt>, which produce and read 
+An implementation conforms to this SRFI if it provides procedures
+named <tt>(write-with-shared-structure)</tt> and
+<tt>(read-with-shared-structure)</tt>, which produce and read
 the same notation as produced by the reference implementation.
 It may also provide <tt>(read/ss)</tt> and <tt>(write/ss)</tt>,
 equivalent functions with shorter names.
 </P>
 
-
-<H1>Issues</H1>
-
-<P>
-I still need to provide a BNF grammar for the external
-representation that is produced by
-<tt>(write-with-shared-structure)</tt>.  It should make it explicit
-that all whitespace sequences are equivalent and that numeric
-representations of differing radices, if preceded by a radix prefix,
-are permitted.
-</P>
-
-<P>
-It may be possible to provide a more efficient portable reference
-implementation of </tt>(write-showing-shared) by using an atree
-instead of an alist. Since ordering of container types such as pairs
-and vectors involves considerable effort and possibly recursion, this
-may or may not be a win.
-</P>
 
 <H1>Rationale</H1>
 
@@ -82,19 +66,19 @@ R5RS scheme and IEEE scheme provide the procedure <tt>(write)</tt>,
 which prints machine-readable representations of lists and other
 objects.  However, the printed representation does not preserve
 information about what parts of the structure are shared, and in the
-case of self-referential objects the behavior of (write) itself is
-undefined; it is permitted to go into an infinite loop or invoke the
-dreaded curse of the nasal demons.
+case of self-referential objects the behavior of <tt>(write)</tt>
+itself is undefined; it is permitted to go into an infinite loop or
+invoke the dreaded curse of the nasal demons.
 
 </P>
 <P>
 
 For example, it is possible to have a list within which two or more
-members are the same string (in the sense of eq?), but when the list
-is written, there is not sufficient information in the representation
-to recover the <tt>(eq?)</tt> relationship.  When the list is read
-back in, there will be two or more copies of the string which are
-<tt>(eqv?)</tt> but not <tt>(eq?)</tt>.
+members are the same string (in the sense of <tt>(eq?)</tt>), but when
+the list is written, there is not sufficient information in the
+representation to recover the <tt>(eq?)</tt> relationship.  When the
+list is read back in, there will be two or more copies of the string
+which are <tt>(eqv?)</tt> but not <tt>(eq?)</tt>.
 
 </P>
 <P>
@@ -105,15 +89,16 @@ As an example of the second problem,  The results of evaluating
        (write a))
 </PRE>
 
-are undefined; in R5RS parlance, calling write on such a structure "is
-an error", but not one that is necessarily signalled. The routine is
-permitted to print a nonstandard notation such as the one proposed in
-this standard or a different one, fail silently, signal an error, go
-into an infinite loop, or make demons fly out of your nose.  Some of
-these results are unacceptable in some cases. This SRFI hopes to
-provide a standard way of dealing with this problem by providing a
-method of writing data which is guaranteed to be well-behaved and
-predictable even on data containing shared structures.
+are undefined; in R5RS parlance, calling write on such a structure
+&quot;is an error&quot;, but not one that is necessarily
+signalled. The routine is permitted to print a nonstandard notation
+such as the one proposed in this standard or a different one, fail
+silently, signal an error, go into an infinite loop, or make demons
+fly out of your nose.  Some of these results are unacceptable in some
+cases. This SRFI hopes to provide a standard way of dealing with this
+problem by providing a method of writing data which is guaranteed to
+be well-behaved and predictable even on data containing shared
+structures.
 
 </P>
 
@@ -127,6 +112,35 @@ The extended functionality described below in the implementation of
 </P>
 
 <H1>Specification</H1>
+<P>
+
+<h2> Formal Grammar of the New External Representation</h2>
+This SRFI creates an alternative external representation for data
+written and read under <tt>(write/ss)</tt> and <tt>(read/ss)</tt>.
+It is identical to the grammar for external representation for data
+written and read under <tt>(write)</tt> and <tt>(read)</tt> given in
+section 7 of R5RS, except that the single production
+<PRE>
+
+&lt;datum&gt; --&gt; &lt;simple datum&gt; | &lt;compound datum&gt; 
+
+</PRE>
+Is replaced by the following five productions.
+<PRE>
+
+&lt;datum&gt; --&gt; &lt;defining datum&gt; | &lt;nondefining datum&gt; | &lt;defined datum&gt;
+
+&lt;defining datum&gt; --&gt;  #&lt;indexnum&gt;=&lt;nondefining datum&gt;
+
+&lt;defined datum&gt; --&gt; #&lt;indexnum&gt;#
+
+&lt;nondefining datum&gt; --&gt; &lt;simple datum&gt; | &lt;compound datum&gt; 
+
+&lt;indexnum&gt; --&gt; &lt;digit 10&gt;+ | &lt;radix R&gt; &lt;digit R&gt;+
+</PRE>
+</P>
+
+<h2>New Procedures</h2>
 <P>
 <PRE>
 
@@ -157,13 +171,13 @@ external representation for those objects as <tt>(write)</tt>.
 
 </P>
 
-<P> 
+<P>
 
 Write-with-shared-structure must terminate in finite time when writing
 finite data.  Write-with-shared-structure must produce a finite
 representation when writing finite data.
 
-</P><P> 
+</P><P>
 
 Write-with-shared-structure returns an unspecified value. The port
 argument may be omitted, in which case it defaults to the value
@@ -178,7 +192,7 @@ return values. The reference implementation ignores optarg.
 </P>
 <P>
 
-For example, the code 
+For example, the code
 <PRE>
 
 (begin (define a (cons 'val1 'val2))
@@ -187,8 +201,8 @@ For example, the code
 
 </PRE>
 
-should produce the output <tt> #1=(val1 . #1#) </tt>.  This shows a cons 
-cell whose cdr contains itself.  
+should produce the output <tt> #1=(val1 . #1#) </tt>.  This shows a cons
+cell whose cdr contains itself.
 
 </P><P>
 
@@ -202,11 +216,11 @@ cell whose cdr contains itself.
 <tt>(read-with-shared-structure)</tt> converts the external
 representations of Scheme objects produced by
 <tt>(write-with-shared-structure)</tt>into scheme objects.  That is,
-it is a parser for the nonterminal <datum> (see external
-representation grammar). <tt>(read-with-shared-structure)</tt> returns
-the next object parsable from the given input port, updating port to
-point to the first character past the end of the external
-representation of the object.  
+it is a parser for the nonterminal &lt;datum&gt; in the augmented
+external representation grammar defined above.
+<tt>(read-with-shared-structure)</tt> returns the next object parsable
+from the given input port, updating port to point to the first
+character past the end of the external representation of the object.
 
 </P> <P>
 
@@ -230,9 +244,9 @@ read from a closed port.
 
 
 
-<H1>Implementation</H1> 
+<H1>Implementation</H1>
 
-<P> 
+<P>
 
 The reference implementation of <tt>(write-with-shared-structure)</tt>
 is based on an implementation provided by Al Petrofsky.  If there are
@@ -249,19 +263,20 @@ permission.
 Note that portability forces the reference implementation of
 <tt>(write-with-shared-structure)</tt> to be O(N^2) but that if an
 implementor tracks objects through additional fields hidden from R5RS
-scheme, a much more efficient implementation can be provided.
+scheme, a more efficient implementation can be provided.
 
 </P>
 <P>
 
-If all the locations in your scheme are mutable, you can write an O(n)
-version that destructively marks locations as it goes and then
-restores them all when done.  If locations are immutable, then there
-should be some fixed ordering of them that you can use to make an
-O(log n) lookup table, giving you an O(n log n) write-showing-shared.
-R5rs does not give the programmer access to mutability information nor
-to comparison of constant data's addresses, but both of these are
-trivial operations if you have access to the system's internals.
+If all the locations in your scheme are mutable and you don't do any
+locking or multithreading, you can write an O(n) version that
+destructively marks locations as it goes and then restores them all
+when done.  If locations are immutable, then there should be some
+fixed ordering of them that you can use to make an O(log n) lookup
+table, giving you an O(n log n) write-showing-shared.  R5RS does not
+give the programmer access to mutability information nor to comparison
+of constant data's addresses, but both of these are trivial operations
+if you have access to the system's internals.
 
 </P>
 
@@ -270,13 +285,13 @@ trivial operations if you have access to the system's internals.
 ;;; A printer that shows all sharing of substructures.  Uses the Common
 ;;; Lisp print-circle notation: #n# refers to a previous substructure
 ;;; labeled with #n=.  Returns a string rather than printing anything.
-;;; Takes O(n^2) time. 
+;;; Takes O(n^2) time.
 
 
   (define (write-with-shared-structure obj . optional-port)
     (define (acons key val alist)
       (cons (cons key val) alist))
-    (define outport (if (eq? '() optional-port) 
+    (define outport (if (eq? '() optional-port)
 			(current-output-port)
 			(car optional-port))
     ;; We only track duplicates of pairs, vectors, and strings.  We
@@ -328,12 +343,12 @@ trivial operations if you have access to the system's internals.
 	     (let ((val (cdr (assq obj alist))))
 	       (cond ((not val) (write-interesting alist))
 		     ((number? val) 
-		      (begin (display "#" outport) 
-			     (write val outport) 
+		      (begin (display "#" outport)
+			     (write val outport)
 			     (display "#" outport) alist))
 		     (else
 		      (let ((n (+ 1 (cdar alist))))
-			(begin (display "#" outport) 
+			(begin (display "#" outport)
 			       (write n outport) 
 			       (display "=" outport))
 			(write-interesting (acons obj n alist)))))))
@@ -622,9 +637,8 @@ PARTICULAR PURPOSE.
     href="mailto:srfi-editors@srfi.schemers.org">David Rush</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Tue Jan 14 10:36:27 MET 2003
+Last modified: Tue Feb  4 19:54:37 GMT 2003
 <!-- hhmts end -->
   </body>
 </html>
-
 
