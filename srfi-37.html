@@ -28,16 +28,6 @@ HREF=mail-archive/maillist.html>the archive of the mailing list</A>.
 
 <p>Many operating systems make the set of argument strings used to invoke a program available (often following the program name string in an array called argv). Most programs need to parse and process these argument strings in one way or another. This SRFI describes a set of procedures that support processing program arguments according to POSIX and GNU C Library Reference Manual guidelines.</p>
 
-<h1>Issues</h1>
-
-<p>This SRFI does not address how to obtain the program arguments from the operating system (but maybe it should).</p>
-
-<p>This SRFI does not address long option abbreviations. Presumably some implementations might support such abbreviations (as an optional extension), but it is also debatable if long argument abbreviations are desirable, so they are not included in this SRFI.</p>
-
-<p>As usual when folding multiple values, zero seeds produces zero results, which requires a continuation accepting zero values. (It might be desirable for this SRFI to point out this pitfall to beginners.)</p>
-
-<p>Should the NAME argument of an option-processor be eq? or equal? to one of the OPTION's option-names. Probably eq?: fix the reference implementation.
-
 <h1>Rationale</h1>
 
 <p>Program arguments are the primary interface to many programs, so processing arguments is a common programming task. There are many common (often conflicting) ways take care of this task, so a custom processor is often necessary; however, many programmers (and their users) would welcome a convenient interface supporting common guidelines.</p>
@@ -99,7 +89,7 @@ procedure: (option-processor OPTION)
 
 <p>Parse argument strings left-to-right, calling the appropriate processors in-order (for the parsed known options, unknown options, and operands), passing the seed values from one processor to the next and returning the final seeds values as results. ARGS is a list of strings. OPTIONS is a list of options. UNRECOGNIZED-OPTION-PROC is a procedure (following the option-processor prototype) for unrecognized options. NOTE: args-fold will create temporary options as necessary for the UNRECOGNIZED-OPTION-PROC. OPERAND-PROC is a procedure (following the operand-processor prototype) for operands.</p>
 
-<a href="http://srfi.schemers.org/srfi-37-reference.scm">Source for the reference implementation.</a>
+<a href="http://srfi.schemers.org/srfi-37/srfi-37-reference.scm">Source for the reference implementation.</a>
 
 <h1>Copyright</h1>
 Copyright (C) Anthony Carrico (2002). All Rights Reserved.
