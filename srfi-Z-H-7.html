@@ -1,0 +1,461 @@
+<!doctype html public "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!--
+
+Generated from srfi.tex by tex2page, v 2004-09-11
+(running on MzScheme 209, windows), 
+(c) Dorai Sitaram, 
+http://www.ccs.neu.edu/~dorai/tex2page/tex2page-doc.html
+
+-->
+<head>
+<title>
+SRFI 67: Compare Procedures
+</title>
+<link rel="stylesheet" type="text/css" href="srfi-Z-S.css" title=default>
+<meta name=robots content="noindex,follow">
+</head>
+<body>
+<div align=right class=navigation><i>[Go to <span><a href="srfi.html">first</a>, <a href="srfi-Z-H-6.html">previous</a></span><span>, <a href="srfi-Z-H-8.html">next</a></span> page<span>; &nbsp;&nbsp;</span><span><a href="srfi-Z-H-1.html#node_toc_start">contents</a></span><span><span>; &nbsp;&nbsp;</span><a href="srfi-Z-H-11.html#node_index_start">index</a></span>]</i></div><p></p>
+<a name="node_chap_6"></a>
+<h1 class=chapter>
+<div class=chapterheading><a href="srfi-Z-H-1.html#node_toc_node_chap_6">Section 6</a></div><br>
+<a href="srfi-Z-H-1.html#node_toc_node_chap_6">Design Rationale</a></h1>
+<p></p>
+<p>
+</p>
+<p>
+In this section we present our reasoning behind the design
+decisions made for this SRFI.
+We would like to be explicit on this because we believe
+that design is not about the outcome of decisions but
+about the alternatives considered.
+The section is organized as a Q&amp;A list.</p>
+<p>
+</p>
+<a name="node_sec_Temp_15"></a>
+<h3><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_15">Order predicates (2-way) or 3-way comparisons?</a></h3>
+<p>It is mathematical tradition to specify a total order
+in terms of a ``less or equal'' (<u>&lt;</u>) relation.
+This usually carries over to programming languages in the
+form of a <tt>&lt;=</tt> predicate procedure.</p>
+<p>
+However, there are inherently <em>three</em> possible relations 
+between two elements <em>x</em> and <em>y</em> with respect to a total order:
+<em>x</em> &lt; <em>y</em>, <em>x</em>  =  <em>y</em>, and <em>x</em> &gt; <em>y</em>.
+(With respect to a partial order there is a fourth:
+<em>x</em> and <em>y</em> are uncomparable.)
+This implies that any mechanism based on 2-valued 
+operations (be it <u>&lt;</u>, or ( = , &lt;), or other)
+has cases in which <em>two</em> expressions must be
+evaluated in order to determine the relation between
+two elements.</p>
+<p>
+In practice, this is a problem if a comparison
+is computationally expensive.
+Examples of this are implicitly defined orders in which the
+order of elements depends on their relative position in some enumeration.
+(Think of comparing graphs by isomorphism type.)
+In this case, each order predicate is as expensive as a
+compare procedure -- implying that a proper 3-way branch
+could be twice as fast as cascaded 2-way branches.
+Hence, there is a potentially considerable loss in performance,
+and it is purely due to the interface for comparisons.</p>
+<p>
+The primary disadvantage of bare 3-way comparisons
+is that they are less convenient, both in use and 
+in their definition.
+Luckily, this problem can be solved quite satisfactorily using
+the syntactic (macro) and procedural abstractions of Scheme
+(refer to Sections&nbsp;<a href="srfi-Z-H-5.html#node_sec_4.5">4.5</a> and <a href="srfi-Z-H-5.html#node_sec_4.6">4.6</a>.)</p>
+<p>
+</p>
+<a name="node_sec_Temp_16"></a>
+<h3><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_16">How to represent the three cases?</a></h3>
+<p>We have considered the following alternatives for representing
+the three possible results of a comparison:
+</p>
+<ol>
+<li><p>the exact integers -1, 0, and 1 (used in this SRFI),
+</p>
+<li><p>the sign of an exact immediate integer,
+</p>
+<li><p>the sign of any Scheme number satisfying <tt>real?</tt>,
+</p>
+<li><p>three different symbols (e.g. <tt>'&lt;</tt>, <tt>'=</tt>, and <tt>'&gt;</tt>)
+</p>
+</ol><p></p>
+<p>
+The advantage of using only three values is that the 
+representation of each case is uniquely defined.
+In particular, this enables the use of <tt>case</tt>
+instead of <tt>if</tt>, and it ensures portability.
+Portability of numbers is problematic in 
+R<sup>5</sup>RS  due to 
+underspecification and inexactness.</p>
+<p>
+The advantage of using a non-unique numerical representation
+is that the result of a computation can sometimes immediately be
+used in a branch, much like the ``non-<tt>#f</tt> means true''-convention.
+However, with the procedures in Section&nbsp;<a href="srfi-Z-H-5.html#node_sec_4.6">4.6</a>
+this advantage hardly matters.</p>
+<p>
+The advantage of using { <tt>-</tt> 1, 0, 1} over using three 
+symbols is that the integers support additional operations,
+for example they can directly be used in index computations,
+and they are self-evaluating literals.
+A minor consideration is that Scheme systems usually
+treat small integers as unboxed values.</p>
+<p>
+Given this situation, we have chosen for { <tt>-</tt> 1,0,1},
+while providing facilities for using this conveniently.</p>
+<p>
+</p>
+<a name="node_sec_Temp_17"></a>
+<h3><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_17">How to order complex numbers?</a></h3>
+<p>Mathematically, no total order of the complex numbers exists
+which is compatible with the algebraic or topological structure.
+Nevertheless, it is useful for programming purposes to have
+<em>some</em> total order of complex numbers readily available.</p>
+<p>
+Several total orders on the complex numbers are at least 
+compatible with the natural ordering of real numbers.
+The least surprising of these is lexicographic on (<em>r</em><em>e</em>, <em>i</em><em>m</em>).</p>
+<p>
+</p>
+<p>
+</p>
+<a name="node_sec_Temp_18"></a>
+<h3><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_18">How to define <tt>default-compare</tt>?</a></h3>
+<p>The purpose of <tt>default-compare</tt> is providing <em>some</em>
+well-defined way of comparing two arbitrary Scheme values.
+This can be used in all situations in which the user is 
+unwilling to define a compare procedure explicitly,
+for example because the actual details of the total order
+do not really matter.</p>
+<p>
+As an example, consider the task of dealing
+with sets of sets of integers. 
+In this case, one could simply use sorted lists without
+repetition for representing lists and <tt>default-compare</tt>
+already provides a total order.</p>
+<p>
+However, there are limits as to how <tt>default-compare</tt> can be defined.  
+For example, <tt>default-compare</tt> cannot easily be based on a hash 
+code derived from the pointer representing an object due to the close
+dependency with the garbage collection mechanism.
+Also, we believe it to be more useful to applications if
+<tt>default-compare</tt> is based on type and structure.</p>
+<p>
+Unfortunately, this imposes limits on what can be compared
+using <tt>default-compare</tt> because it is very desireable to
+have a portable reference implementation.
+In particular, portable ways of dealing with circular structures
+are overly costly.</p>
+<p>
+Naturally, the question arises how the types should be ordered.
+For this question it is useful to understand that 
+<tt>compare-boolean</tt> and <tt>compare-pair</tt> both already
+define a total order for all values (at least in priciple.)
+Hence, <tt>default-compare</tt> could refine one of them,
+but unfortunately not both at the same time (unless
+<tt>#f</tt> and <tt>'()</tt> are minimum and maximum of the order, resp.)
+Since <tt>compare-pair</tt> is more frequently used than
+<tt>compare-boolean</tt> we base <tt>default-compare</tt>
+on <tt>compare-pair</tt>.
+The other portably comparable types are ordered by
+increasing complexity, which clearly is an arbitrary choice.</p>
+<p>
+</p>
+<a name="node_sec_Temp_19"></a>
+<h3><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_19">What is the ``lexicographic order''?</a></h3>
+<p>The <em>lexicographic order</em> is a general way of defining
+an ordering for sequences from an ordering of elements:</p>
+<p>
+In the lexicographic order, the empty sequence is the smallest
+sequence of all, and two non-empty sequences are first compared
+by their first element and only if these are equal the residual
+sequences are compared, recursively.</p>
+<p>
+The lexicographic order has its name from its use in a lexicon:
+For example, <em>fun</em> &lt; <em>funloving</em> &lt; <em>jolly</em>.</p>
+<p>
+</p>
+<a name="node_sec_Temp_20"></a>
+<h3><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_20">What is the ``natural order'' of lists and vectors?</a></h3>
+<p>The basic access operations with constant execution time 
+for Scheme lists are <tt>null?</tt>, <tt>car</tt>, and <tt>cdr</tt>.
+These are exactly the operations needed for comparing two
+sequences lexicographically.</p>
+<p>
+The constant time access operations for Scheme vectors
+are <tt>length</tt> and <tt>ref</tt>.
+This suggests defining the natural order of vectors by
+first comparing the length and only if the lengths are
+equal by comparing the elements.</p>
+<p>
+</p>
+<a name="node_sec_Temp_21"></a>
+<h3><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_21">Why no higher-order constructions?</a></h3>
+<p>An alternative for the control structures (macros) <tt>refine-compare</tt>,
+<tt>select-compare</tt>, and <tt>cond-compare</tt> is a set of
+higher-order procedures for constructing compare procedures.</p>
+<p>
+We have chosen for control structures instead of higher-order
+procedures for simplicity.
+This becomes particularly evident when a recursive compare procedure,
+e.g. <tt>default-compare</tt>, is to be defined.
+Using <tt>select-compare</tt> it is possible to define <tt>default-compare</tt> simply
+as a procedure calling itself in some branches (refer to the example in
+Section&nbsp;<a href="srfi-Z-H-5.html#node_sec_4.4">4.4</a>.)
+In the higher-order approach, the procedure under construction must also
+be able to call itself, with arguments that are application specific.
+Expressing this with a flexible higher-order procedure is much more indirect. </p>
+<p>
+</p>
+<p>
+</p>
+<p>
+</p>
+<p>
+</p>
+<a name="node_sec_Temp_22"></a>
+<h3><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_22">Why the operations <tt>&lt;?</tt>, <tt>&lt;=?</tt> etc.?</a></h3>
+<p>Programs need both 2-way branching and 3-way branching.
+For 3-way branching, the conditional <tt>if3</tt>
+is provided.</p>
+<p>
+For 2-way branching, the set { <tt>-</tt> 1,0,1} of results of
+a comparison is mapped onto the set {<tt>#f</tt>, <tt>#t</tt>}.
+There are eight functions from a 3-set into a 2-set;
+all six non-constant functions are provided as <tt>&lt;?</tt>,
+<tt>&lt;=?</tt>, etc.</p>
+<p>
+The five monotonic functions can be generalized to 
+chains of values.
+In order to make the compare procedure parameter optional
+in the ordinary comparisons, separate operations 
+(<tt>chain&lt;?</tt>, <tt>chain&lt;=?</tt> etc.) are defined for chains.
+For the sixth operation (<tt>not=?</tt>) the generalization
+to pairwise unequality is defined as <tt>pairwise-not=?</tt>.
+This operation can be implemented efficiently because the
+compare procedure also defines a total order.</p>
+<p>
+As chains of length three are still frequently tested in
+programs (think of a range check ``0 <u>&lt;</u> <em>i</em> &lt; <em>n</em>''),
+and often two different relations are combined, 
+there are special operations for chains of length three
+(<tt>&lt;/&lt;?</tt>, <tt>&lt;/&lt;=?</tt>, etc.)</p>
+<p>
+For convenience, the compare procedure argument is
+made optional as often as possible. 
+Unfortunately, this opens up a possiblity for mistake:
+Writing <tt>(&lt;=? x y z)</tt> where <tt>(&lt;=/&lt;=? x y z)</tt> is meant.
+Fortunately, the mistake will likely manifest itself at the
+time <tt>(x y z)</tt> is evaluated.</p>
+<p>
+</p>
+<a name="node_sec_Temp_23"></a>
+<h3><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_23">Why are <tt>&lt;?</tt> etc. procedures, not macros?</a></h3>
+<p>The procedures <tt>&lt;?</tt>, <tt>&lt;/&lt;?</tt>, <tt>chain&lt;?</tt> etc.
+could also have been specified as macros.
+This would have the advantage that they could make full use
+of ``short evaluation'': A chain of comparisons stops as
+soon as one of the comparisons has failed; all remaining
+argument expressions and comparisons need not be evaluated.
+This is potentially more efficient.</p>
+<p>
+The advantage of procedures, on the other hand, is that
+in Scheme they are ``first class citizens,'' meaning that
+they can be passed as arguments and returned from higher-order
+procedures.</p>
+<p>
+Taking this approach one step further, one can even require
+the compare procedures to check the types of all arguments,
+even if the result of the comparison is already known.
+This is what Section&nbsp;6.2.5 of 
+R<sup>5</sup>RS  calls ``transitive``
+behavior of the predicates <tt>=</tt>, <tt>&lt;</tt>, etc.
+For example, <tt>(&lt; 0 x y)</tt> first tests if <tt>x</tt> is positive,
+and only if this is the case <tt>(&lt; x y)</tt> is tested.
+But even if <tt>x</tt> is not positive it is checked that 
+<tt>y</tt> is indeed a <tt>real</tt> -- otherwise an error is raised.
+In ``short evaluation,'' on the contrary, if <tt>x</tt> is not
+positive, <tt>y</tt> can be an arbitrary Scheme value.</p>
+<p>
+Clearly, ``transitive'' tests have an overhead, namely that
+they need to execute potentially redundant type checks.
+Even worse, as types are only known to the compare procedure
+the only way to check the type of a value is to compare it,
+maybe with itself (which should result in 0 by definition
+of a compare procedure.)</p>
+<p>
+The advantage of ``transitive'' comparisons is the automatic
+insertion of a type assertion.
+For example, after <tt>(&lt;? compare-integer 0 x y)</tt> has been computed, 
+no matter the result, it is known that <tt>x</tt> and <tt>y</tt> are integers.
+We consider this advantage sufficiently important to pay the price.</p>
+<p>
+</p>
+<a name="node_sec_Temp_24"></a>
+<h3><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_24">Why <tt>compare&lt;</tt> etc.?</a></h3>
+<p>It is often easier to define an order predicate,
+and possibly a separate equivalence relation,
+than it is to define a compare procedure.
+For this case, <tt>compare&lt;</tt> etc. provide a convenient
+and robust way of constructing the associated compare
+procedure.</p>
+<p>
+As has been learned from writing the reference implementation,
+despite the fact that each of these procedures is just a few
+lines of trivial code, they miraculously attract bugs.</p>
+<p>
+</p>
+<a name="node_sec_Temp_25"></a>
+<h3><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_25">How do I define a compare function from just an equivalence?</a></h3>
+<p>You don't.</p>
+<p>
+A compare function defines a total order on equivalence classes,
+and vice versa (refer to Section&nbsp;<a href="srfi-Z-H-6.html#node_chap_5">5</a>.)
+Hence, a compare procedure <tt>compare</tt> can be used to
+test equivalence: <tt>(=? compare <em>x</em> <em>y</em>)</tt>.</p>
+<p>
+In reverse, one could be tempted to define a ``compare function''
+<em>c</em> from just an equivalence relation ~ as <em>c</em>(<em>x</em>, <em>y</em>)  =  0
+if <em>x</em> ~ <em>y</em> and <em>c</em>(<em>x</em>, <em>y</em>)  =  1 otherwise.
+However, <em>c</em> is not antisymmetric (unless there is just one
+object) and hence it is not a compare function -- and,
+in fact, there is no way at all of avoiding a total order
+on the equivalence classes.</p>
+<p>
+This is also reflected in the fact that there are efficient
+(log-time) search data structures based on a total order, 
+but there are no efficient (sublinear worst-case) data 
+structures based solely on an explicit equivalence relation.
+(Union-find data structures are efficient but they do not 
+<em>use</em> an equivalence, they <em>represent</em> one.)</p>
+<p>
+</p>
+<a name="node_sec_Temp_26"></a>
+<h3><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_26">How do I switch from 
+R<sup>5</sup>RS  to this SRFI?</a></h3>
+<p>The easiest way of switching is by defining all 25 order 
+predicates of 
+R<sup>5</sup>RS  in terms of this SRFI:
+</p>
+<tt>(define&nbsp;(=&nbsp;z1&nbsp;z2&nbsp;.&nbsp;zs)&nbsp;<br>
+&nbsp;&nbsp;(apply&nbsp;chain=?&nbsp;compare-number&nbsp;z1&nbsp;z2&nbsp;zs))<br>
+<br>
+For&nbsp;<em>R</em>&nbsp;<img src="srfi-Z-G-D-4.png" border="0" alt="[srfi-Z-G-D-4.png]">&nbsp;{<tt>&lt;</tt>,<tt>&nbsp;&gt;</tt>,<tt>&nbsp;&lt;=</tt>,<tt>&nbsp;&gt;=</tt>}:<br>
+&nbsp;&nbsp;(define&nbsp;(<em>R</em>&nbsp;x1&nbsp;x2&nbsp;.&nbsp;xs)&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;(apply&nbsp;chain<i>R</i>?&nbsp;compare-real&nbsp;x1&nbsp;x2&nbsp;xs))<br>
+<br>
+For&nbsp;<em>T</em>&nbsp;<img src="srfi-Z-G-D-4.png" border="0" alt="[srfi-Z-G-D-4.png]">&nbsp;{<tt>char</tt>,<tt>&nbsp;char-ci</tt>,<tt>&nbsp;string</tt>,<tt>&nbsp;string-ci</tt>}:<br>
+&nbsp;&nbsp;For&nbsp;<em>R</em>&nbsp;<img src="srfi-Z-G-D-4.png" border="0" alt="[srfi-Z-G-D-4.png]">&nbsp;{<tt>=</tt>,<tt>&nbsp;&lt;</tt>,<tt>&nbsp;&gt;</tt>,<tt>&nbsp;&lt;=</tt>,<tt>&nbsp;&gt;=</tt>}:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;(define&nbsp;(<em>T</em><em>R</em>?&nbsp;x&nbsp;y)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<em>R</em>?&nbsp;compare-<em>T</em>&nbsp;x&nbsp;y))<br>
+</tt>
+(Refer to the file ``r5rs-to-srfi.scm'' for proper Scheme-code
+without syntactic abstraction.)<p>
+Alternatively, each expression involving a reference to an
+
+R<sup>5</sup>RS  order predicate can be transformed into an equivalent 
+expression using the facilities of this SRFI.
+Be reminded though that this requires an understanding of
+the <em>context</em> of the expression in question,
+in particular variable bindings, macro definitions,
+and the use of <tt>eval</tt>.</p>
+<p>
+However, if the meaning of an expression may be altered,
+it is often possible to increase type safety or simplicity.
+Consider for example the following potential replacements
+of <tt>(and (&lt;= 0 i) (&lt; i n))</tt>:
+</p>
+<tt>&nbsp;&nbsp;(and&nbsp;(&lt;=?&nbsp;compare-real&nbsp;0&nbsp;i)&nbsp;(&lt;?&nbsp;compare-real&nbsp;i&nbsp;n))<br>
+&nbsp;&nbsp;(&lt;=/&lt;?&nbsp;compare-real&nbsp;0&nbsp;i&nbsp;n)&nbsp;&nbsp;&nbsp;&nbsp;;&nbsp;always&nbsp;compares&nbsp;<tt>n</tt><br>
+&nbsp;&nbsp;(&lt;=/&lt;?&nbsp;compare-integer&nbsp;0&nbsp;i&nbsp;n)&nbsp;;&nbsp;only&nbsp;integer&nbsp;<tt>i</tt>,&nbsp;<tt>n</tt><br>
+&nbsp;&nbsp;(&lt;=/&lt;?&nbsp;0&nbsp;i&nbsp;n)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;&nbsp;uses&nbsp;<tt>default-compare</tt><br>
+</tt><p>
+Only the first alternative is equivalent to the original
+expression, but the other alternatives might be useful, too,
+depending on the goal.</p>
+<p>
+</p>
+<a name="node_sec_Temp_27"></a>
+<h3><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_27">Why be so tight with types?</a></h3>
+<p>Most procedures and macros in this SRFI are required to 
+signal an error if an argument is not according to the
+type specified, in particular comparison values must be
+exact integer in { <tt>-</tt> 1,0,1} at all times.
+Alternatively, we could have specified that procedures and
+macros accept values as general as makes sense.</p>
+<p>
+We believe that being tight on types at this fundamental
+level of a language pays off quickly.
+In particular, this will simplify debugging.
+Moreover, static analysis of a program will recognize
+more variables of a known type, which allows for more
+unboxed values and tighter compiled code.
+(Clearly, at the time of this writing this is speculative.)</p>
+<p>
+</p>
+<a name="node_sec_Temp_28"></a>
+<h3><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_28">Is there a performance penalty for this SRFI?</a></h3>
+<p>Yes and no.</p>
+<p>
+The focus of the reference implementation is correctness and 
+portability; performance will very likely suffer due to the
+overhead of internal procedure calls and type-checking.</p>
+<p>
+But as the word ``SRFI'' suggests, this document is a ``request
+for implementation,'' meaning we would love to see this SRFI
+being implemented efficiently by the implementation experts of
+particular Scheme systems.
+In practice, this means that most of the operations defined
+here, if not all, are supported natively.</p>
+<p>
+In this case, there is no performance penalty for using the
+mechanisms of this SRFI -- using this SRFI might even be faster
+due to explicit 3-way branching and beter typing.</p>
+<p>
+</p>
+<a name="node_sec_Temp_29"></a>
+<h3><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_29">Why are there optional leading arguments?</a></h3>
+<p>Some operations have an optional first argument.
+This is in contrast to common practice in Scheme to
+put optional arguments after mandatory arguments.</p>
+<p>
+The leading optional argument is always the argument
+<i>compare</i>, representing the total order to be used.
+If it is missing <tt>default-compare</tt> is used.</p>
+<p>
+In the cases where we have chosen to make <i>compare</i>
+optional it is for the sake of brevity, e.g. in <tt>(&lt;? x y)</tt>
+instead of enforcing <tt>(&lt;? default-compare x y)</tt>.
+Although an option introduces potential for confusion
+(e.g. <tt>(&lt;? x y z)</tt> vs. <tt>(&lt;/&lt;? x y z)</tt>),
+we consider it an important feature for interactive use
+and convenient programming
+(e.g. in <tt>(do ((i 0 (+ i 1))) ((=? i n)))</tt>.)</p>
+<p>
+Given our decision for optional <i>compare</i>,
+the question arises how to pass the option.
+In the absence of other widely accepted mechanisms for options,
+we can only vary the length of the argument list.
+For historical reasons -- before <tt>case-lambda</tt> of SRFI 16 -- 
+optional arguments are passed at the end of the argument list
+for simplified parsing.
+On the other hand, <tt>(&lt;? compare x y)</tt> is more consistent
+with the rest of the SRFI than <tt>(&lt;? x y compare)</tt>.
+In the end we have chosen for consistency within this SRFI,
+partly sacrificing on consistency with tradition. </p>
+<p>
+</p>
+<p>
+</p>
+<p>
+</p>
+<p></p>
+<div align=right class=navigation><i>[Go to <span><a href="srfi.html">first</a>, <a href="srfi-Z-H-6.html">previous</a></span><span>, <a href="srfi-Z-H-8.html">next</a></span> page<span>; &nbsp;&nbsp;</span><span><a href="srfi-Z-H-1.html#node_toc_start">contents</a></span><span><span>; &nbsp;&nbsp;</span><a href="srfi-Z-H-11.html#node_index_start">index</a></span>]</i></div><p></p>
+</body>
+</html>

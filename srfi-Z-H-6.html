@@ -1,0 +1,279 @@
+<!doctype html public "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!--
+
+Generated from srfi.tex by tex2page, v 2004-09-11
+(running on MzScheme 209, windows), 
+(c) Dorai Sitaram, 
+http://www.ccs.neu.edu/~dorai/tex2page/tex2page-doc.html
+
+-->
+<head>
+<title>
+SRFI 67: Compare Procedures
+</title>
+<link rel="stylesheet" type="text/css" href="srfi-Z-S.css" title=default>
+<meta name=robots content="noindex,follow">
+</head>
+<body>
+<div align=right class=navigation><i>[Go to <span><a href="srfi.html">first</a>, <a href="srfi-Z-H-5.html">previous</a></span><span>, <a href="srfi-Z-H-7.html">next</a></span> page<span>; &nbsp;&nbsp;</span><span><a href="srfi-Z-H-1.html#node_toc_start">contents</a></span><span><span>; &nbsp;&nbsp;</span><a href="srfi-Z-H-11.html#node_index_start">index</a></span>]</i></div><p></p>
+<a name="node_chap_5"></a>
+<h1 class=chapter>
+<div class=chapterheading><a href="srfi-Z-H-1.html#node_toc_node_chap_5">Section 5</a></div><br>
+<a href="srfi-Z-H-1.html#node_toc_node_chap_5">The theory of compare functions</a></h1>
+<p></p>
+<p>
+</p>
+<p>
+</p>
+<p>
+This section contains a theoretical justification
+for the concept ``compare function''.
+First an axiomatic definition of compare functions is given.
+Then it is proved that compare functions are just an 
+unconventional way of defining total orders on equivalence
+classes of elements -- and mathematically that
+is all there is to say about compare functions.</p>
+<p>
+At this point, a mathematician may wonder why we
+introduce compare functions in the first place.
+The answer is: Because they are convenient and efficient
+for writing programs involving total orders.</p>
+<p>
+In order to make this SRFI as accessible as possible we give the
+theorems and proofs explicitly, no matter how trivial they are.</p>
+<p>
+</p>
+<a name="node_sec_Temp_4"></a>
+<h5><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_4">Definition:</a></h5>
+<p>A <em>compare function</em> on a set <img src="srfi-Z-G-1.png" border="0" alt="[srfi-Z-G-1.png]"> is a function
+<img src="srfi-Z-G-2.png" border="0" alt="[srfi-Z-G-2.png]"> such that
+for all <img src="srfi-Z-G-3.png" border="0" alt="[srfi-Z-G-3.png]">
+</p>
+<div align=left><img src="srfi-Z-G-4.png" border="0" alt="[srfi-Z-G-4.png]"></div><p>
+We call the properties 
+(R) <em>reflexivity</em>,
+(A) <em>antisymmetry</em>, and
+(T) <em>transitivity</em>.
+</p>
+<p>
+The archetypical compare function is
+</p>
+<div align=left><img src="srfi-Z-G-5.png" border="0" alt="[srfi-Z-G-5.png]"></div><p>
+it compares real numbers with respect
+to their canonical order.
+Obviously, <img src="srfi-Z-G-6.png" border="0" alt="[srfi-Z-G-6.png]"> if and only if <img src="srfi-Z-G-7.png" border="0" alt="[srfi-Z-G-7.png]">,
+which we will fix as our sign convention:
+Instead of writing ``<img src="srfi-Z-G-8.png" border="0" alt="[srfi-Z-G-8.png]">'' we will often
+simply write ``<img src="srfi-Z-G-9.png" border="0" alt="[srfi-Z-G-9.png]">'' when the compare function
+<img src="srfi-Z-G-10.png" border="0" alt="[srfi-Z-G-10.png]"> is obvious from the context. (And of course,
+the convention extends to <img src="srfi-Z-G-11.png" border="0" alt="[srfi-Z-G-11.png]">, <img src="srfi-Z-G-12.png" border="0" alt="[srfi-Z-G-12.png]">, <img src="srfi-Z-G-13.png" border="0" alt="[srfi-Z-G-13.png]">, 
+and <img src="srfi-Z-G-14.png" border="0" alt="[srfi-Z-G-14.png]"> in the obvious way.)</p>
+<p>
+The first theorem states that each compare function
+gives rise to an equivalence relation in a natural way.</p>
+<p>
+</p>
+<a name="node_sec_Temp_5"></a>
+<h5><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_5">Theorem:</a></h5>
+<p>Let <img src="srfi-Z-G-15.png" border="0" alt="[srfi-Z-G-15.png]"> be a compare function on <img src="srfi-Z-G-16.png" border="0" alt="[srfi-Z-G-16.png]">.
+Then the relation <img src="srfi-Z-G-17.png" border="0" alt="[srfi-Z-G-17.png]"> defined by 
+</p>
+<div align=left><img src="srfi-Z-G-18.png" border="0" alt="[srfi-Z-G-18.png]"></div><p>
+for <img src="srfi-Z-G-19.png" border="0" alt="[srfi-Z-G-19.png]">, is an equivalence relation on <img src="srfi-Z-G-20.png" border="0" alt="[srfi-Z-G-20.png]">.
+</p>
+<p>
+</p>
+<a name="node_sec_Temp_6"></a>
+<h5><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_6">Proof:</a></h5>
+<p>Recall that an equivalence relation is 
+reflexive, symmetric, and transitive [<a href="srfi-Z-H-10.html#node_bib_2">2</a>].
+We check:</p>
+<p>
+``Reflexive'':
+Consider <img src="srfi-Z-G-21.png" border="0" alt="[srfi-Z-G-21.png]">.
+By (R) <img src="srfi-Z-G-22.png" border="0" alt="[srfi-Z-G-22.png]">, so <img src="srfi-Z-G-23.png" border="0" alt="[srfi-Z-G-23.png]"></p>
+<p>
+``Symmetric'':
+Consider <img src="srfi-Z-G-24.png" border="0" alt="[srfi-Z-G-24.png]"> such that <img src="srfi-Z-G-25.png" border="0" alt="[srfi-Z-G-25.png]">.
+By definition of <img src="srfi-Z-G-26.png" border="0" alt="[srfi-Z-G-26.png]"> we have <img src="srfi-Z-G-27.png" border="0" alt="[srfi-Z-G-27.png]">.
+By (A) this implies <img src="srfi-Z-G-28.png" border="0" alt="[srfi-Z-G-28.png]">.
+Thus <img src="srfi-Z-G-29.png" border="0" alt="[srfi-Z-G-29.png]">.</p>
+<p>
+``Transitive'':
+Consider <img src="srfi-Z-G-30.png" border="0" alt="[srfi-Z-G-30.png]"> such that <img src="srfi-Z-G-31.png" border="0" alt="[srfi-Z-G-31.png]"> and <img src="srfi-Z-G-32.png" border="0" alt="[srfi-Z-G-32.png]">.
+This means <img src="srfi-Z-G-33.png" border="0" alt="[srfi-Z-G-33.png]">.
+By (T) this implies <img src="srfi-Z-G-34.png" border="0" alt="[srfi-Z-G-34.png]">.
+Moreover, by symmetry also <img src="srfi-Z-G-35.png" border="0" alt="[srfi-Z-G-35.png]"> and
+by (T) this implies <img src="srfi-Z-G-36.png" border="0" alt="[srfi-Z-G-36.png]">.
+Hence, <img src="srfi-Z-G-37.png" border="0" alt="[srfi-Z-G-37.png]"> meaning <img src="srfi-Z-G-38.png" border="0" alt="[srfi-Z-G-38.png]">.
+</p>
+<p>
+The next theorem states that the equivalence classes defined
+by a compare function are also naturally ordered.</p>
+<p>
+</p>
+<a name="node_sec_Temp_7"></a>
+<h5><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_7">Theorem:</a></h5>
+<p>Let <img src="srfi-Z-G-39.png" border="0" alt="[srfi-Z-G-39.png]"> be a compare function on <img src="srfi-Z-G-40.png" border="0" alt="[srfi-Z-G-40.png]"> and let <img src="srfi-Z-G-41.png" border="0" alt="[srfi-Z-G-41.png]"> be
+the equivalence relation of the previous theorem.
+We write <img src="srfi-Z-G-42.png" border="0" alt="[srfi-Z-G-42.png]"> for the equivalence class containing <img src="srfi-Z-G-43.png" border="0" alt="[srfi-Z-G-43.png]">,
+i.e. <img src="srfi-Z-G-44.png" border="0" alt="[srfi-Z-G-44.png]">.
+Then the relation <img src="srfi-Z-G-45.png" border="0" alt="[srfi-Z-G-45.png]"> defined by
+</p>
+<div align=left><img src="srfi-Z-G-46.png" border="0" alt="[srfi-Z-G-46.png]"></div><p>
+for <img src="srfi-Z-G-47.png" border="0" alt="[srfi-Z-G-47.png]">, is a total order on the set
+<img src="srfi-Z-G-48.png" border="0" alt="[srfi-Z-G-48.png]"> of all equivalence classes.
+</p>
+<p>
+</p>
+<a name="node_sec_Temp_8"></a>
+<h5><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_8">Proof:</a></h5>
+<p>Recall that a total order relation is reflexive, 
+(weakly) antisymmetric, transitive, 
+and all elements are comparable [<a href="srfi-Z-H-10.html#node_bib_1">1</a>].
+Again, we check:</p>
+<p>
+``Reflexive'': 
+Consider <img src="srfi-Z-G-49.png" border="0" alt="[srfi-Z-G-49.png]">. 
+By (R) <img src="srfi-Z-G-50.png" border="0" alt="[srfi-Z-G-50.png]">, so <img src="srfi-Z-G-51.png" border="0" alt="[srfi-Z-G-51.png]"> for all <img src="srfi-Z-G-52.png" border="0" alt="[srfi-Z-G-52.png]">.</p>
+<p>
+``Antisymmetric'':
+Consider <img src="srfi-Z-G-53.png" border="0" alt="[srfi-Z-G-53.png]"> such that <img src="srfi-Z-G-54.png" border="0" alt="[srfi-Z-G-54.png]"> and <img src="srfi-Z-G-55.png" border="0" alt="[srfi-Z-G-55.png]">.
+By definition of <img src="srfi-Z-G-56.png" border="0" alt="[srfi-Z-G-56.png]">, this means <img src="srfi-Z-G-57.png" border="0" alt="[srfi-Z-G-57.png]"> and 
+<img src="srfi-Z-G-58.png" border="0" alt="[srfi-Z-G-58.png]"> by (A).
+Hence, <img src="srfi-Z-G-59.png" border="0" alt="[srfi-Z-G-59.png]"> which means <img src="srfi-Z-G-60.png" border="0" alt="[srfi-Z-G-60.png]">.</p>
+<p>
+``Transitive'':
+Consider <img src="srfi-Z-G-61.png" border="0" alt="[srfi-Z-G-61.png]"> such that <img src="srfi-Z-G-62.png" border="0" alt="[srfi-Z-G-62.png]"> and 
+<img src="srfi-Z-G-63.png" border="0" alt="[srfi-Z-G-63.png]">.
+By definition of <img src="srfi-Z-G-64.png" border="0" alt="[srfi-Z-G-64.png]"> this means <img src="srfi-Z-G-65.png" border="0" alt="[srfi-Z-G-65.png]"> and <img src="srfi-Z-G-66.png" border="0" alt="[srfi-Z-G-66.png]">.
+By (T) this implies <img src="srfi-Z-G-67.png" border="0" alt="[srfi-Z-G-67.png]"> which means <img src="srfi-Z-G-68.png" border="0" alt="[srfi-Z-G-68.png]">.</p>
+<p>
+``Comparable'':
+For <img src="srfi-Z-G-69.png" border="0" alt="[srfi-Z-G-69.png]">, <img src="srfi-Z-G-70.png" border="0" alt="[srfi-Z-G-70.png]">
+as <img src="srfi-Z-G-71.png" border="0" alt="[srfi-Z-G-71.png]"> is a compare function.
+Hence, <img src="srfi-Z-G-72.png" border="0" alt="[srfi-Z-G-72.png]">, meaning <img src="srfi-Z-G-73.png" border="0" alt="[srfi-Z-G-73.png]">,
+or <img src="srfi-Z-G-74.png" border="0" alt="[srfi-Z-G-74.png]">, meaning <img src="srfi-Z-G-75.png" border="0" alt="[srfi-Z-G-75.png]"> by (A).
+</p>
+<p>
+Finally, the last theorem shows the converse of the previous two:
+There is a unique compare function for each total order on a set 
+of equivalence classes.</p>
+<p>
+</p>
+<a name="node_sec_Temp_9"></a>
+<h5><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_9">Theorem:</a></h5>
+<p>Let <img src="srfi-Z-G-76.png" border="0" alt="[srfi-Z-G-76.png]"> be a set, <img src="srfi-Z-G-77.png" border="0" alt="[srfi-Z-G-77.png]"> an equivalence relation on <img src="srfi-Z-G-78.png" border="0" alt="[srfi-Z-G-78.png]">,
+and <img src="srfi-Z-G-79.png" border="0" alt="[srfi-Z-G-79.png]"> a total order on the set of equivalence classes
+with respect to <img src="srfi-Z-G-80.png" border="0" alt="[srfi-Z-G-80.png]">.
+Then the function <img src="srfi-Z-G-81.png" border="0" alt="[srfi-Z-G-81.png]"> defined by
+</p>
+<div align=left><img src="srfi-Z-G-82.png" border="0" alt="[srfi-Z-G-82.png]"></div><p>
+is a compare function on <img src="srfi-Z-G-83.png" border="0" alt="[srfi-Z-G-83.png]"> giving rise to the order <img src="srfi-Z-G-84.png" border="0" alt="[srfi-Z-G-84.png]">
+and the equivalence relation <img src="srfi-Z-G-85.png" border="0" alt="[srfi-Z-G-85.png]">.
+</p>
+<p>
+</p>
+<a name="node_sec_Temp_10"></a>
+<h5><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_10">Proof:</a></h5>
+<p>First note that <img src="srfi-Z-G-86.png" border="0" alt="[srfi-Z-G-86.png]"> is well-defined as a function, because
+<img src="srfi-Z-G-87.png" border="0" alt="[srfi-Z-G-87.png]"> and <img src="srfi-Z-G-88.png" border="0" alt="[srfi-Z-G-88.png]"> imply <img src="srfi-Z-G-89.png" border="0" alt="[srfi-Z-G-89.png]"> (i.e. <img src="srfi-Z-G-90.png" border="0" alt="[srfi-Z-G-90.png]">)
+by the fact that <img src="srfi-Z-G-91.png" border="0" alt="[srfi-Z-G-91.png]"> is (weakly) antisymmetric.
+We check the axioms of a compare function:</p>
+<p>
+``(R)'':
+Reflexivity of <img src="srfi-Z-G-92.png" border="0" alt="[srfi-Z-G-92.png]"> implies <img src="srfi-Z-G-93.png" border="0" alt="[srfi-Z-G-93.png]"> for all <img src="srfi-Z-G-94.png" border="0" alt="[srfi-Z-G-94.png]">.</p>
+<p>
+``(A)'': 
+Consider <img src="srfi-Z-G-95.png" border="0" alt="[srfi-Z-G-95.png]">.
+Then <img src="srfi-Z-G-96.png" border="0" alt="[srfi-Z-G-96.png]"> or <img src="srfi-Z-G-97.png" border="0" alt="[srfi-Z-G-97.png]"> because <img src="srfi-Z-G-98.png" border="0" alt="[srfi-Z-G-98.png]"> and <img src="srfi-Z-G-99.png" border="0" alt="[srfi-Z-G-99.png]">
+are comparable with <img src="srfi-Z-G-100.png" border="0" alt="[srfi-Z-G-100.png]">.
+If both properties hold then <img src="srfi-Z-G-101.png" border="0" alt="[srfi-Z-G-101.png]">, meaning <img src="srfi-Z-G-102.png" border="0" alt="[srfi-Z-G-102.png]">,
+so <img src="srfi-Z-G-103.png" border="0" alt="[srfi-Z-G-103.png]">.
+Otherwise, either <img src="srfi-Z-G-104.png" border="0" alt="[srfi-Z-G-104.png]"> and <img src="srfi-Z-G-105.png" border="0" alt="[srfi-Z-G-105.png]"> or
+the signs are flipped.
+In either case, <img src="srfi-Z-G-106.png" border="0" alt="[srfi-Z-G-106.png]">.</p>
+<p>
+``(T)'':
+Consider <img src="srfi-Z-G-107.png" border="0" alt="[srfi-Z-G-107.png]"> such that <img src="srfi-Z-G-108.png" border="0" alt="[srfi-Z-G-108.png]">.
+Then <img src="srfi-Z-G-109.png" border="0" alt="[srfi-Z-G-109.png]"> and <img src="srfi-Z-G-110.png" border="0" alt="[srfi-Z-G-110.png]"> by definition of <img src="srfi-Z-G-111.png" border="0" alt="[srfi-Z-G-111.png]">.
+Since <img src="srfi-Z-G-112.png" border="0" alt="[srfi-Z-G-112.png]"> is transitive, this implies <img src="srfi-Z-G-113.png" border="0" alt="[srfi-Z-G-113.png]">,
+meaning <img src="srfi-Z-G-114.png" border="0" alt="[srfi-Z-G-114.png]">.
+</p>
+<p>
+At this point the mathematics of compare functions is finished.
+However, it is instructive to explore constructions making new
+compare functions from old ones.</p>
+<p>
+</p>
+<a name="node_sec_Temp_11"></a>
+<h5><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_11">Sign flip:</a></h5>
+<p>Let <img src="srfi-Z-G-115.png" border="0" alt="[srfi-Z-G-115.png]"> be a compare function on <img src="srfi-Z-G-116.png" border="0" alt="[srfi-Z-G-116.png]">.
+Then <img src="srfi-Z-G-117.png" border="0" alt="[srfi-Z-G-117.png]"> is also a compare function on <img src="srfi-Z-G-118.png" border="0" alt="[srfi-Z-G-118.png]">;
+it is identical to <img src="srfi-Z-G-119.png" border="0" alt="[srfi-Z-G-119.png]">.</p>
+<p>
+As it happens, there are only two functions <img src="srfi-Z-G-120.png" border="0" alt="[srfi-Z-G-120.png]"> mapping
+<img src="srfi-Z-G-121.png" border="0" alt="[srfi-Z-G-121.png]"> into itself such that <img src="srfi-Z-G-122.png" border="0" alt="[srfi-Z-G-122.png]">
+is a compare function if <img src="srfi-Z-G-123.png" border="0" alt="[srfi-Z-G-123.png]"> is one: <img src="srfi-Z-G-124.png" border="0" alt="[srfi-Z-G-124.png]"> and
+<img src="srfi-Z-G-125.png" border="0" alt="[srfi-Z-G-125.png]">.</p>
+<p>
+</p>
+<a name="node_sec_Temp_12"></a>
+<h5><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_12">Argument transformation:</a></h5>
+<p>Let <img src="srfi-Z-G-126.png" border="0" alt="[srfi-Z-G-126.png]"> be a compare function on <img src="srfi-Z-G-127.png" border="0" alt="[srfi-Z-G-127.png]"> and 
+consider a function <img src="srfi-Z-G-128.png" border="0" alt="[srfi-Z-G-128.png]">.
+Then 
+</p>
+<div align=left><img src="srfi-Z-G-129.png" border="0" alt="[srfi-Z-G-129.png]"></div><p>
+is a compare function on the set <img src="srfi-Z-G-130.png" border="0" alt="[srfi-Z-G-130.png]">.</p>
+<p>
+One could be tempted to consider the case
+<img src="srfi-Z-G-131.png" border="0" alt="[srfi-Z-G-131.png]">, <img src="srfi-Z-G-132.png" border="0" alt="[srfi-Z-G-132.png]">.
+But this only results in a compare function
+(i.e. (R), (A), (T) hold) if <img src="srfi-Z-G-133.png" border="0" alt="[srfi-Z-G-133.png]">, <img src="srfi-Z-G-134.png" border="0" alt="[srfi-Z-G-134.png]">, 
+and <img src="srfi-Z-G-135.png" border="0" alt="[srfi-Z-G-135.png]"> are closely related.</p>
+<p>
+</p>
+<a name="node_sec_Temp_13"></a>
+<h5><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_13">Refinement:</a></h5>
+<p>Let <img src="srfi-Z-G-136.png" border="0" alt="[srfi-Z-G-136.png]"> be compare 
+functions on the same set <img src="srfi-Z-G-137.png" border="0" alt="[srfi-Z-G-137.png]">.
+Then 
+</p>
+<div align=left><img src="srfi-Z-G-138.png" border="0" alt="[srfi-Z-G-138.png]"></div><p>
+is a compare function.
+By induction, this construction can be repeated a finite
+number of times, e.g. starting at the coarsest of all
+compare functions: <img src="srfi-Z-G-139.png" border="0" alt="[srfi-Z-G-139.png]">.</p>
+<p>
+</p>
+<a name="node_sec_Temp_14"></a>
+<h5><a href="srfi-Z-H-1.html#node_toc_node_sec_Temp_14">Hierachical extension:</a></h5>
+<p>Let <img src="srfi-Z-G-140.png" border="0" alt="[srfi-Z-G-140.png]"> be disjoint sets and let 
+<img src="srfi-Z-G-141.png" border="0" alt="[srfi-Z-G-141.png]">, <img src="srfi-Z-G-142.png" border="0" alt="[srfi-Z-G-142.png]"> be compare functions on <img src="srfi-Z-G-143.png" border="0" alt="[srfi-Z-G-143.png]">, <img src="srfi-Z-G-144.png" border="0" alt="[srfi-Z-G-144.png]">, resp.
+Then 
+</p>
+<div align=left><img src="srfi-Z-G-145.png" border="0" alt="[srfi-Z-G-145.png]"></div><p>
+is a compare function on <img src="srfi-Z-G-146.png" border="0" alt="[srfi-Z-G-146.png]">.
+The function refines ``<img src="srfi-Z-G-147.png" border="0" alt="[srfi-Z-G-147.png]">'' by
+<img src="srfi-Z-G-148.png" border="0" alt="[srfi-Z-G-148.png]"> on <img src="srfi-Z-G-149.png" border="0" alt="[srfi-Z-G-149.png]"> and <img src="srfi-Z-G-150.png" border="0" alt="[srfi-Z-G-150.png]"> on <img src="srfi-Z-G-151.png" border="0" alt="[srfi-Z-G-151.png]">, resp.
+This construction can be generalized to an arbitrary family
+(mind the axiom of choice) of compare functions
+on disjoint domains.</p>
+<p>
+In Scheme, this SRFI defines macros <tt>refine-compare</tt>, 
+<tt>select-compare</tt>, and <tt>cond-compare</tt>
+for providing convenient and efficient ways
+of defining  refinement, hierachical extension,
+argument transformation, and sign flip.</p>
+<p>
+</p>
+<p>
+</p>
+<p></p>
+<p></p>
+<p></p>
+<div align=right class=navigation><i>[Go to <span><a href="srfi.html">first</a>, <a href="srfi-Z-H-5.html">previous</a></span><span>, <a href="srfi-Z-H-7.html">next</a></span> page<span>; &nbsp;&nbsp;</span><span><a href="srfi-Z-H-1.html#node_toc_start">contents</a></span><span><span>; &nbsp;&nbsp;</span><a href="srfi-Z-H-11.html#node_index_start">index</a></span>]</i></div><p></p>
+</body>
+</html>

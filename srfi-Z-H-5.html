@@ -1,0 +1,815 @@
+<!doctype html public "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!--
+
+Generated from srfi.tex by tex2page, v 2004-09-11
+(running on MzScheme 209, windows), 
+(c) Dorai Sitaram, 
+http://www.ccs.neu.edu/~dorai/tex2page/tex2page-doc.html
+
+-->
+<head>
+<title>
+SRFI 67: Compare Procedures
+</title>
+<link rel="stylesheet" type="text/css" href="srfi-Z-S.css" title=default>
+<meta name=robots content="noindex,follow">
+</head>
+<body>
+<div align=right class=navigation><i>[Go to <span><a href="srfi.html">first</a>, <a href="srfi-Z-H-4.html">previous</a></span><span>, <a href="srfi-Z-H-6.html">next</a></span> page<span>; &nbsp;&nbsp;</span><span><a href="srfi-Z-H-1.html#node_toc_start">contents</a></span><span><span>; &nbsp;&nbsp;</span><a href="srfi-Z-H-11.html#node_index_start">index</a></span>]</i></div><p></p>
+<a name="node_chap_4"></a>
+<h1 class=chapter>
+<div class=chapterheading><a href="srfi-Z-H-1.html#node_toc_node_chap_4">Section 4</a></div><br>
+<a href="srfi-Z-H-1.html#node_toc_node_chap_4">Specification</a></h1>
+<p></p>
+<a name="node_sec_4.1"></a>
+<h2><a href="srfi-Z-H-1.html#node_toc_node_sec_4.1">4.1&nbsp;&nbsp;Comparing atoms</a></h2>
+<p></p>
+<p>
+In this section, compare procedures for most of the atomic
+types of 
+R<sup>5</sup>RS  are defined: 
+Booleans, characters, strings, symbols, and numbers.</p>
+<p>
+As a general convention, it is required that the procedure named
+<tt>Compare-</tt><em>type</em> compares two values of type <em>type</em>.
+It is an error if an argument is not of type <em>type</em>.</p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_2"></a>compare-boolean<i> <i>bool<sub>1</sub></i> <i>bool<sub>2</sub></i></i>)</tt>&nbsp;</div>
+<p>
+Compares two booleans, ordered by <tt>#f</tt> &lt; <tt>#t</tt>.</p>
+<p>
+</p>
+<blockquote><em>Note:&nbsp;&nbsp;</em>
+A non-<tt>#f</tt> value is <em>not</em> interpreted as a ``true value,''
+but rather an error will be signalled.
+</blockquote>
+<p></p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_4"></a>compare-char<i>    <i>char<sub>1</sub></i> <i>char<sub>2</sub></i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_6"></a>compare-char-ci<i> <i>char<sub>1</sub></i> <i>char<sub>2</sub></i></i>)</tt>&nbsp;</div>
+<p>
+Compare characters as <tt>char&lt;=?</tt> and <tt>char-ci&lt;=?</tt>, resp.
+(Recall that <tt>-ci</tt> indicates ``case insensitivity''.)
+</p>
+<p></p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_8"></a>compare-string<i>    <i>string<sub>1</sub></i> <i>string<sub>2</sub></i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_10"></a>compare-string-ci<i> <i>string<sub>1</sub></i> <i>string<sub>2</sub></i></i>)</tt>&nbsp;</div>
+<p>
+Compare strings as <tt>string&lt;=</tt> and <tt>string-ci&lt;=?</tt>.</p>
+<p>
+</p>
+<blockquote><em>Note:&nbsp;&nbsp;</em>
+<tt>Compare-string</tt> could be defined as
+<tt>&nbsp;&nbsp;(define&nbsp;(compare-string&nbsp;string1&nbsp;string2)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;(compare-vector-as-list&nbsp;compare-char&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;string1&nbsp;string2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;string-length&nbsp;string-ref))<br>
+</tt>
+</blockquote>
+<p></p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_12"></a>compare-symbol<i> <i>symbol<sub>1</sub></i> <i>symbol<sub>2</sub></i></i>)</tt>&nbsp;</div>
+<p>
+Compares symbols as <tt>string&lt;=</tt> on the names returned by <tt>symbol-&gt;string</tt>.</p>
+<p></p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_14"></a>compare-integer<i>  <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_16"></a>compare-rational<i> <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_18"></a>compare-real<i>     <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_20"></a>compare-complex<i>  <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_22"></a>compare-number<i>   <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+<p>
+Compare two numbers.
+It is an error if an argument is not of the type specified
+by the name of the procedure.</p>
+<p>
+Complex numbers are ordered lexicographically on pairs (<em>r</em><em>e</em>, <em>i</em><em>m</em>).
+For real numbers, sign(<em>x</em>  <tt>-</tt>  <em>y</em>) is computed.</p>
+<p>
+Numerical compare procedures are compatible with the 
+R<sup>5</sup>RS  
+numerical tower in the following sense: 
+If <em>S</em> is a subtype of the numerical type <em>T</em>
+and <em>x</em>, <em>y</em> can be represented both in <em>S</em> and in <em>T</em>,
+then <tt>compare-</tt><em>S</em> and <tt>compare-</tt><em>T</em> compute the same result.</p>
+<p>
+</p>
+<em>Warning:</em> 
+The propagation of inexactness can lead to surprises.
+For example in PLT 208:<p>
+</p>
+<tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(compare-complex&nbsp;(make-rectangular&nbsp;(/&nbsp;1&nbsp;3)&nbsp;&nbsp;1.)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(make-rectangular&nbsp;(/&nbsp;1&nbsp;3)&nbsp;-1))&nbsp;<p>&nbsp;&nbsp;===&gt;&nbsp;-1<br>
+</p>
+</tt><p>
+At first glance, one might expect the first complex number to be
+larger, because the numbers are equal on their real parts and the
+first imaginary part (<tt>1.</tt>) is larger than the second (<tt>-1</tt>).
+Closer inspection reveals that the decimal dot causes the first 
+real part to be made inexact upon construction of the complex number,
+and since <tt>(exact-&gt;inexact (/ 1 3))</tt> is less than <tt>(/ 1 3)</tt>
+in the underlying floating point format used,
+the real parts decide the comparison of the complex numbers.
+</p>
+
+<p></p>
+<p>
+</p>
+<a name="node_sec_4.2"></a>
+<h2><a href="srfi-Z-H-1.html#node_toc_node_sec_4.2">4.2&nbsp;&nbsp;Comparing lists and vectors</a></h2>
+<p></p>
+<p>
+In this section compare procedures are defined for Scheme
+lists and vectors -- and for objects that can be accessed
+like lists or like vectors.</p>
+<p>
+An object <em>x</em> can be <em>accessed like a vector</em> if
+there are procedures <tt>size</tt> and <tt>ref</tt> such that
+<tt>(size <em>x</em>)</tt> is a non-negative integer <em>n</em> 
+indicating the number of elements, and <tt>(ref <em>x</em> <em>i</em>)</tt>
+is the <em>i</em>-th element of <em>x</em> for <em>i</em> <img src="srfi-Z-G-D-4.png" border="0" alt="[srfi-Z-G-D-4.png]"> {0, <tt>...</tt>, <em>n</em> <tt>-</tt> 1}.
+The default vector access procedures are <tt>vector-length</tt>
+and <tt>vector-ref</tt>.</p>
+<p>
+An object <em>x</em> can be <em>accessed like a (proper) list</em>
+if there are procedures <tt>empty?</tt>, <tt>head</tt>, and <tt>tail</tt>
+such that <tt>(empty? <em>x</em>)</tt> is a boolean indicating that
+there are no elements in <em>x</em>, <tt>(head <em>x</em>)</tt> is the
+first element of <em>x</em>, and <tt>(tail <em>x</em>)</tt> is an object
+representing the residual elements of <em>x</em>.
+The default list access procedures are <tt>null?</tt>,
+<tt>car</tt>, and <tt>cdr</tt>.</p>
+<p>
+Independent of the way the elements are accessed,
+the natural ordering of vectors and lists differs:
+Sequences are <em>compared as vectors</em> if
+shorter sequences are smaller than longer sequences,
+and sequences of the same size are compared lexicographically.
+Sequences are <em>compared as lists</em> if the empty
+sequence is smallest, and two non-empty sequences are
+compared by their first elements, and only if the first
+elements are equal the residual sequences are compared, 
+recursively.</p>
+<p>
+</p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_24"></a>compare-vector<i> [ <i>compare</i> ] <i>x</i> <i>y</i> [ <i>size</i> <i>ref</i> ]</i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_26"></a>compare-vector-as-list<i> [ <i>compare</i> ] <i>x</i> <i>y</i> [ <i>size</i> <i>ref</i> ]</i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_28"></a>compare-list<i> [ <i>compare</i> ] <i>x</i> <i>y</i> [ <i>empty?</i> <i>head</i> <i>tail</i> ]</i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_30"></a>compare-list-as-vector<i> [ <i>compare</i> ] <i>x</i> <i>y</i> [ <i>empty?</i> <i>head</i> <i>tail</i> ]</i>)</tt>&nbsp;</div>
+
+<p>
+Compare two sequences <i>x</i> <i>y</i>,
+using <i>compare</i> for comparing elements.
+The result is an exact integer in { <tt>-</tt> 1, 0, 1}.
+If <i>compare</i> is not supplied, <tt>default-compare</tt> is used.</p>
+<p>
+The procedure named <tt>compare-</tt><em>access</em><tt>-as-</tt><em>order</em>
+accesses the objects like <em>access</em> and compares them
+as <em>order</em>.
+The names <tt>compare-</tt><em>type</em> are abbreviations for
+<tt>compare-</tt><em>type</em><tt>-as-</tt><em>type</em>.</p>
+<p>
+Examples:
+</p>
+<tt>&nbsp;&nbsp;(compare-list&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'(2)&nbsp;'(1&nbsp;2))&nbsp;&nbsp;&nbsp;&nbsp;===&gt;&nbsp;&nbsp;1<br>
+&nbsp;&nbsp;(compare-list-as-vector&nbsp;'(2)&nbsp;'(1&nbsp;2))&nbsp;&nbsp;&nbsp;&nbsp;===&gt;&nbsp;-1<br>
+&nbsp;&nbsp;(compare-vector&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'#(2)&nbsp;'#(1&nbsp;2))&nbsp;&nbsp;===&gt;&nbsp;-1<br>
+&nbsp;&nbsp;(compare-vector-as-list&nbsp;'#(2)&nbsp;'#(1&nbsp;2))&nbsp;&nbsp;===&gt;&nbsp;&nbsp;1<br>
+</tt>
+<p></p>
+<p>
+</p>
+<a name="node_sec_4.3"></a>
+<h2><a href="srfi-Z-H-1.html#node_toc_node_sec_4.3">4.3&nbsp;&nbsp;Comparing pairs and improper lists</a></h2>
+<p></p>
+<p>
+In this section, compare procedures for Scheme
+pairs and (possibly) improper lists are defined.</p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_32"></a>compare-car<i> <i>compare</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_34"></a>compare-cdr<i> <i>compare</i></i>)</tt>&nbsp;</div>
+<p>
+Construct a compare procedure on pairs which only uses
+the car (only the cdr, resp.), and ignores the other.
+One could define
+</p>
+<tt>&nbsp;&nbsp;(define&nbsp;(compare-car&nbsp;compare)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(lambda&nbsp;(x&nbsp;y)&nbsp;(compare&nbsp;(car&nbsp;x)&nbsp;(car&nbsp;y))))<br>
+</tt><p>
+</p>
+<blockquote><em>Rationale:&nbsp;&nbsp;</em>
+<tt>Compare-car</tt> can be used to turn a search data structure
+(e.g. a heap) into a dictionary:
+Store <tt>(key . value)</tt> pairs and compare them using the
+compare procedure <tt>(compare-car compare-key)</tt>.
+</blockquote>
+<p></p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_36"></a>compare-pair<i> <i>compare-car</i> <i>compare-cdr</i> <i>pair<sub>1</sub></i> <i>pair<sub>2</sub></i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_38"></a>compare-pair<i> [ <i>compare</i> ] <i>obj<sub>1</sub></i> <i>obj<sub>2</sub></i></i>)</tt>&nbsp;</div>
+
+<p>
+Compares two pairs, or (possibly improper) lists.</p>
+<p>
+The 4-ary form compares two pairs <i>pair<sub>1</sub></i> <i>pair<sub>2</sub></i>
+by comparing their cars using <i>compare-car</i>, 
+and if the cars are equal the cdrs are compared
+using <i>compare-cdr</i>.</p>
+<p>
+The 3-ary form compares two objects by type using the ordering
+of types</p>
+<p>
+</p>
+<div align=center><table><tr><td>
+
+<i>null</i> &lt; <i>pair</i> &lt; <i>neither-null-nor-pair</i>.
+</td></tr></table></div>
+<p>
+Two objects of type <i>neither-null-nor-pair</i> are compared
+using <i>compare</i>. 
+Two pairs are compared by using <i>compare</i> on the cars,
+and if the cars are equal by recursing on the cdrs.</p>
+<p>
+The 2-ary form uses <tt>default-compare</tt> for <i>compare</i>.</p>
+<p>
+</p>
+<tt>&nbsp;&nbsp;&nbsp;(compare-pair&nbsp;'()&nbsp;'foo)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;===&gt;&nbsp;&nbsp;-1<br>
+&nbsp;&nbsp;&nbsp;(compare-pair&nbsp;'()&nbsp;'(1&nbsp;.&nbsp;2)))&nbsp;===&gt;&nbsp;&nbsp;-1<br>
+&nbsp;&nbsp;&nbsp;(compare-pair&nbsp;'(1&nbsp;.&nbsp;2)&nbsp;'foo)&nbsp;===&gt;&nbsp;&nbsp;-1<br>
+&nbsp;&nbsp;&nbsp;(compare-pair&nbsp;3&nbsp;4)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;===&gt;&nbsp;&nbsp;-1<br>
+</tt>
+<p></span></p>
+<p>
+</p>
+<a name="node_sec_4.4"></a>
+<h2><a href="srfi-Z-H-1.html#node_toc_node_sec_4.4">4.4&nbsp;&nbsp;The default compare procedure</a></h2>
+<p></p>
+<p>
+It is convenient to have a compare procedure readily available
+for comparing most built-in types.</p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_40"></a>default-compare<i> <i>obj<sub>1</sub></i> <i>obj<sub>2</sub></i></i>)</tt>&nbsp;</div>
+<p>
+compares its arguments by type using the ordering</p>
+<p>
+</p>
+<div align=center><table><tr><td>
+
+<i>null</i>    &lt; 
+<i>pair</i>    &lt; 
+<i>boolean</i> &lt; 
+<i>char</i>    &lt; 
+<i>string</i>  &lt; 
+<i>symbol</i>  &lt; 
+<i>number</i>  &lt; 
+<i>vector</i>  &lt; 
+<i>other</i>
+</td></tr></table></div>
+<p>
+Two objects of the same type <em>type</em> are 
+compared as <tt>compare-</tt><em>type</em> would,
+if there is such a procedure.
+The type <i>null</i> consists of the empty list <tt>'()</tt>.
+The effect of comparing two <i>other</i> objects or
+of comparing cyclic structures (made from lists or vectors)
+is unspecified.</p>
+<p>
+</p>
+<blockquote><em>Rationale:&nbsp;&nbsp;</em>
+<tt>Default-compare</tt> refines <tt>compare-pair</tt> by splitting
+<i>neither-null-nor-pair</i>.
+</blockquote><p>
+</p>
+<blockquote><em>Note:&nbsp;&nbsp;</em>
+<tt>Default-compare</tt> could be defined as follows
+(mind the order of the cases!):<p>
+</p>
+<tt>&nbsp;&nbsp;&nbsp;(define&nbsp;(default-compare&nbsp;x&nbsp;y)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(select-compare&nbsp;x&nbsp;y<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(null?&nbsp;&nbsp;&nbsp;&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(pair?&nbsp;&nbsp;&nbsp;&nbsp;(default-compare&nbsp;(car&nbsp;x)&nbsp;(car&nbsp;y))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(default-compare&nbsp;(cdr&nbsp;x)&nbsp;(cdr&nbsp;y)))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(boolean?&nbsp;(compare-boolean&nbsp;x&nbsp;y))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(char?&nbsp;&nbsp;&nbsp;&nbsp;(compare-char&nbsp;&nbsp;&nbsp;&nbsp;x&nbsp;y))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(string?&nbsp;&nbsp;(compare-string&nbsp;&nbsp;x&nbsp;y))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(symbol?&nbsp;&nbsp;(compare-symbol&nbsp;&nbsp;x&nbsp;y))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(number?&nbsp;&nbsp;(compare-number&nbsp;&nbsp;x&nbsp;y))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(vector?&nbsp;&nbsp;(compare-vector&nbsp;default-compare&nbsp;x&nbsp;y))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(else&nbsp;(error&nbsp;&quot;unrecognized&nbsp;types&quot;&nbsp;x&nbsp;y))))<br>
+</tt><p>
+</p>
+</blockquote>
+<p></p>
+<p>
+</p>
+<a name="node_sec_4.5"></a>
+<h2><a href="srfi-Z-H-1.html#node_toc_node_sec_4.5">4.5&nbsp;&nbsp;Constructing compare procedures</a></h2>
+<p></p>
+<p>
+An important goal of this SRFI is a mechanism for defining
+new compare procedures as conveniently as possible.
+The syntactic extensions defined in this section are the
+primary utilities for doing so.</p>
+<p>
+</p>
+<p></p>
+<div align=left><u>syntax:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_42"></a>refine-compare &lt;c<sub>1</sub>&gt; <tt>...</tt>)</tt>&nbsp;</div>
+
+<p>
+<em>Syntax: </em>The &lt;c<sub><em>i</em></sub>&gt; are expressions.</p>
+<p>
+<em>Semantics: </em>The arguments &lt;c<sub>1</sub>&gt; <tt>...</tt>are evaluated from left to
+right until a non-zero value is found (which then is the value)
+or until there are no more arguments to evaluate (in which case
+the value is 0.)
+It is allowed that there are no arguments at all.</p>
+<p>
+</p>
+<blockquote><em>Note:&nbsp;&nbsp;</em>
+This macro is the preferred way to define a compare procedure
+as a refinement (refer to Section&nbsp;<a href="srfi-Z-H-6.html#node_chap_5">5</a>.) Example:<p>
+</p>
+<tt>(define&nbsp;(compare-rectangle&nbsp;r&nbsp;s)<br>
+&nbsp;&nbsp;(refine-compare&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;(compare-length&nbsp;(width&nbsp;&nbsp;r)&nbsp;(width&nbsp;&nbsp;s))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;(compare-length&nbsp;(height&nbsp;r)&nbsp;(height&nbsp;s))))<br>
+</tt>
+</blockquote>
+<p></p>
+<p>
+</p>
+<p>
+</p>
+<p></p>
+<div align=left><u>syntax:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_44"></a>select-compare &lt;x<sub>1</sub>&gt; &lt;x<sub>2</sub>&gt;
+&lt;clause<sub>1</sub>&gt; <tt>...</tt>)</tt>&nbsp;</div>
+
+<p>
+<em>Syntax: </em>Each &lt;clause&gt;, with the possible exception of the last, is of the form
+</p>
+<tt>(&lt;type?&gt;&nbsp;&lt;c<sub>1</sub>&gt;&nbsp;<tt>...</tt>)</tt>
+where &lt;type?&gt; is an expression evaluating to a predicate procedure, 
+and &lt;c<sub><em>i</em></sub>&gt; are expressions evaluating to an exact integer in { <tt>-</tt> 1,0,1}. 
+The last &lt;clause&gt; may be an ``else clause,''
+which has the form 
+<tt>(else&nbsp;&lt;c<sub>1</sub>&gt;&nbsp;<tt>...</tt>).</tt><p>
+<em>Semantics: </em>A <tt>select-compare</tt> expression is a conditional for
+defining hierachical extension and refinement of compare
+procedures (refer to Section&nbsp;<a href="srfi-Z-H-6.html#node_chap_5">5</a>.)
+It compares the values of &lt;x<sub>1</sub>&gt; and &lt;x<sub>2</sub>&gt; by
+trying the type tests in order, and applies an implict
+<tt>refine-compare</tt> on the consequences upon a match.</p>
+<p>
+In more detail, evaluation proceeds as follows:
+First &lt;x<sub>1</sub>&gt; and &lt;x<sub>2</sub>&gt; are evaluated in
+unspecified order, resulting in values <em>x</em><sub>1</sub> and <em>x</em><sub>2</sub>, resp.
+Then the clauses are evaluated one by one, from left to right.</p>
+<p>
+For clause (&lt;type?&gt; &lt;c<sub>1</sub>&gt; <tt>...</tt>),
+first &lt;type?&gt; is evaluated resulting in a 
+predicate procedure <i>type?</i> and then the
+expressions (<i>type?</i> <em>x</em><sub>1</sub>) and (<i>type?</i> <em>x</em><sub>2</sub>)
+are evaluated and interpreted as booleans.
+If both booleans are true then the overall value is
+<tt>(refine-compare &lt;c<sub>1</sub>&gt; <tt>...</tt>)</tt>.
+If only the first is true the result is -1,
+if only the second is true the result is 1,
+and if neither is true the next clause is considered.
+An <tt>else</tt> clause is treated as if both tests
+where true.
+If there are no clauses left, the result is 0.</p>
+<p>
+<tt>Select-compare</tt> evaluates &lt;x<sub>1</sub>&gt; and &lt;x<sub>2</sub>&gt; 
+exactly once, even in the absence of any clauses. 
+Moreover, each &lt;type?&gt; is evaluated at most once and the 
+resulting procedure <i>type?</i> is called at most twice.</p>
+<p>
+</p>
+<blockquote><em>Note:&nbsp;&nbsp;</em>
+An example of <tt>select-compare</tt> is the definition
+of <tt>default-compare</tt> given above.
+</blockquote>
+<p></p>
+<p>
+</p>
+<p></p>
+<div align=left><u>syntax:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_46"></a>cond-compare &lt;clause<sub>1</sub>&gt; <tt>...</tt>)</tt>&nbsp;</div>
+ <p>
+<em>Syntax: </em>Each &lt;clause&gt;, with the possible exception of the last, is of the form
+</p>
+<tt>((&lt;t<sub>1</sub>&gt;&nbsp;&lt;t<sub>2</sub>&gt;)&nbsp;&lt;c<sub>1</sub>&gt;&nbsp;<tt>...</tt>)</tt>
+where &lt;t<sub>1</sub>&gt; and &lt;t<sub>2</sub>&gt; are expressions evaluating to booleans, 
+and &lt;c<sub><em>i</em></sub>&gt; are expressions evaluating to an exact integer in { <tt>-</tt> 1,0,1}. 
+The last &lt;clause&gt; may be an ``else clause,''
+which has the form 
+<tt>(else&nbsp;&lt;c<sub>1</sub>&gt;&nbsp;<tt>...</tt>).</tt><p>
+<em>Semantics: </em>A <tt>cond-compare</tt> expression is another conditional
+for defining hierachical extension and refinement of compare
+procedures (refer to Section&nbsp;<a href="srfi-Z-H-6.html#node_chap_5">5</a>.)</p>
+<p>
+Evaluation proceeds as follows:
+The clauses are evaluated one by one, from left to right.
+For clause ((&lt;t<sub>1</sub>&gt; &lt;t<sub>2</sub>&gt;) &lt;c<sub>1</sub>&gt; <tt>...</tt>),
+first &lt;t<sub>1</sub>&gt; and &lt;t<sub>2</sub>&gt; are evaluated and the
+results are interpreted as boolean values.
+If both booleans are true then the overall value is
+<tt>(refine-compare &lt;c<sub>1</sub>&gt; <tt>...</tt>)</tt>.
+If only the first is true the result is -1,
+if only the second is true the result is 1,
+and if neither is true the next clause is considered.
+An <tt>else</tt> clause is treated as if both booleans where true.
+If there are no clauses left (or there are no clauses
+to begin with), the result is 0.</p>
+<p>
+<tt>Cond-compare</tt> evaluates each expression at most once.</p>
+<p>
+</p>
+<blockquote><em>Rationale:&nbsp;&nbsp;</em>
+<tt>Cond-compare</tt> and <tt>select-compare</tt> only differ
+in the way the type tests are specified.
+Both ways are equivalent, and each way is sometimes
+more convenient than the other.
+</blockquote><p>
+</p>
+<p></p>
+<p>
+</p>
+<p>
+</p>
+<a name="node_sec_4.6"></a>
+<h2><a href="srfi-Z-H-1.html#node_toc_node_sec_4.6">4.6&nbsp;&nbsp;Using compare procedures</a></h2>
+<p></p>
+<p>
+The facilities defined in this section provide a mechanism for
+using a compare procedure (passed as a parameter) in the 
+different situations arising in applications.</p>
+<p>
+</p>
+<p></p>
+<div align=left><u>syntax:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_48"></a>if3 &lt;c&gt; &lt;less&gt; &lt;equal&gt; &lt;greater&gt;)</tt>&nbsp;</div>
+ <p>
+<em>Syntax: </em>&lt;c&gt;, &lt;less&gt;, &lt;equal&gt;, and &lt;greater&gt;
+are expressions.  </p>
+<p>
+<em>Semantics: </em><tt>If3</tt> is the 3-way conditional for comparisons.
+First &lt;c&gt; is evaluated, resulting in value <em>c</em>.
+The value <em>c</em> must be an exact integer in { <tt>-</tt> 1, 0, 1},
+otherwise an error is signalled.
+If <em>c</em>  =   <tt>-</tt> 1 then the value of the <tt>if3</tt>-expression 
+is obtained by evaluating &lt;less&gt;.
+If <em>c</em>  =  0 then &lt;equal&gt; is evaluated.
+If <em>c</em>  =  1 then &lt;greater&gt; is evaluated.</p>
+<p>
+</p>
+<blockquote><em>Note:&nbsp;&nbsp;</em>
+As an example, the following procedure inserts <tt>x</tt>
+into the sorted list <tt>s</tt>, possibly replacing the
+first equivalent element.
+<tt>(define&nbsp;(insert&nbsp;compare&nbsp;x&nbsp;s)<br>
+&nbsp;&nbsp;(if&nbsp;(null?&nbsp;s)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(list&nbsp;x)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(if3&nbsp;(compare&nbsp;x&nbsp;(car&nbsp;s))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(cons&nbsp;x&nbsp;s)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(cons&nbsp;x&nbsp;(cdr&nbsp;s))&nbsp;;&nbsp;replace<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(cons&nbsp;(car&nbsp;s)&nbsp;(insert&nbsp;compare&nbsp;x&nbsp;(cdr&nbsp;s))))))<br>
+</tt>
+</blockquote><p>
+</p>
+<blockquote><em>Rationale:&nbsp;&nbsp;</em>
+<tt>If3</tt> is the preferred way of branching on the result of 
+a comparison in case all three branches are different.
+</blockquote>
+<p></p>
+<p>
+</p>
+<p></p>
+<div align=left><u>syntax:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_50"></a>if=?     &lt;c&gt; &lt;consequent&gt; [ &lt;alternate&gt; ])</tt>&nbsp;</div>
+<div align=left><u>syntax:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_52"></a>if&lt;?     &lt;c&gt; &lt;consequent&gt; [ &lt;alternate&gt; ])</tt>&nbsp;</div>
+<div align=left><u>syntax:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_54"></a>if&gt;?     &lt;c&gt; &lt;consequent&gt; [ &lt;alternate&gt; ])</tt>&nbsp;</div>
+<div align=left><u>syntax:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_56"></a>if&lt;=?    &lt;c&gt; &lt;consequent&gt; [ &lt;alternate&gt; ])</tt>&nbsp;</div>
+<div align=left><u>syntax:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_58"></a>if&gt;=?    &lt;c&gt; &lt;consequent&gt; [ &lt;alternate&gt; ])</tt>&nbsp;</div>
+<div align=left><u>syntax:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_60"></a>if-not=? &lt;c&gt; &lt;consequent&gt; [ &lt;alternate&gt; ])</tt>&nbsp;</div>
+<p>
+<em>Syntax: </em>&lt;c&gt;, &lt;consequent&gt;, and &lt;alternate&gt; are expressions.
+If &lt;alternate&gt; is not provided, <tt>(if #f #f)</tt> is used.</p>
+<p>
+<em>Semantics: </em>These six macros are 2-way conditionals for comparisons.
+First &lt;c&gt; is evaluated, resulting in value <em>c</em>.
+The value <em>c</em> must be an exact integer in { <tt>-</tt> 1, 0, 1},
+otherwise an error is signalled.
+Then, depending on the value of <em>c</em> and the name of the macro,
+either &lt;consequence&gt; or &lt;alternate&gt; is evaluated,
+and the resulting value is the value of the conditional expression.</p>
+<p>
+The branch is chosen according to the following table:
+</p>
+<div align=center><table><tr><td>
+<table border=1><tr><td valign=top ></td><td valign=top >&lt;consequent&gt; </td><td valign=top >&lt;alternate&gt; </td></tr>
+<tr><td valign=top ><tt>if=?</tt>     </td><td valign=top ><em>c</em>  =  0           </td><td valign=top ><em>c</em> <img src="srfi-Z-G-D-4.png" border="0" alt="[srfi-Z-G-D-4.png]"> { <tt>-</tt> 1, 1} </td></tr>
+<tr><td valign=top ><tt>if&lt;?</tt>     </td><td valign=top ><em>c</em>  =   <tt>-</tt> 1          </td><td valign=top ><em>c</em> <img src="srfi-Z-G-D-4.png" border="0" alt="[srfi-Z-G-D-4.png]"> {0, 1}  </td></tr>
+<tr><td valign=top ><tt>if&gt;?</tt>     </td><td valign=top ><em>c</em>  =  1           </td><td valign=top ><em>c</em> <img src="srfi-Z-G-D-4.png" border="0" alt="[srfi-Z-G-D-4.png]"> { <tt>-</tt> 1, 0} </td></tr>
+<tr><td valign=top ><tt>if&lt;=?</tt>    </td><td valign=top ><em>c</em> <img src="srfi-Z-G-D-4.png" border="0" alt="[srfi-Z-G-D-4.png]"> { <tt>-</tt> 1, 0} </td><td valign=top ><em>c</em>  =  1           </td></tr>
+<tr><td valign=top ><tt>if&gt;=?</tt>    </td><td valign=top ><em>c</em> <img src="srfi-Z-G-D-4.png" border="0" alt="[srfi-Z-G-D-4.png]"> {0, 1}  </td><td valign=top ><em>c</em>  =   <tt>-</tt> 1          </td></tr>
+<tr><td valign=top ><tt>if-not=?</tt> </td><td valign=top ><em>c</em> <img src="srfi-Z-G-D-4.png" border="0" alt="[srfi-Z-G-D-4.png]"> { <tt>-</tt> 1, 1} </td><td valign=top ><em>c</em>  =  0
+</td></tr></table></td></tr></table></div>
+<p>
+</p>
+<blockquote><em>Note:&nbsp;&nbsp;</em>
+The macros <tt>if&lt;=?</tt> etc. are the preferred way of 2-way branching based
+on the result of a comparison.
+</blockquote>
+<p></p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_62"></a>=?<i>    [ <i>compare</i> ] <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_64"></a>&lt;?<i>    [ <i>compare</i> ] <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_66"></a>&gt;?<i>    [ <i>compare</i> ] <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_68"></a>&lt;=?<i>    [ <i>compare</i> ] <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_70"></a>&gt;=?<i>    [ <i>compare</i> ] <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_72"></a>not=?<i>    [ <i>compare</i> ] <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+<p>
+Test if the values <i>x</i> and <i>y</i> are in the relation specified
+by the name of the procedure, with respect to compare procedure <i>compare</i>.
+If <i>compare</i> is not provided, <tt>default-compare</tt> is used.
+The result is a boolean (either <tt>#t</tt> or <tt>#f</tt>),
+depending on <tt>(<i>compare</i> <i>x</i> <i>y</i>)</tt> and the name
+of the procedure similar to <tt>if=?</tt> etc.
+It is guaranteed that <i>compare</i> is called exactly once.</p>
+<p>
+</p>
+<blockquote><em>Note:&nbsp;&nbsp;</em>
+<tt>Char&lt;=?</tt> could be defined in terms of <tt>compare-char</tt> as<p>
+</p>
+<tt>&nbsp;&nbsp;&nbsp;(define&nbsp;(char&lt;=?&nbsp;x&nbsp;y)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(&lt;=?&nbsp;compare-char&nbsp;x&nbsp;y))<br>
+</tt>
+</blockquote><p>
+</p>
+<em>Warning:</em> 
+A common mistake is writing <tt>(&lt;=? x y z)</tt> 
+where <tt>(&lt;=/&lt;=? x y z)</tt> is meant; 
+this will most likely manifest itself at the time
+the expression <tt>(x y z)</tt> is evaluated.
+
+<p></p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_74"></a>&lt;/&lt;?<i>   [ <i>compare</i> ] <i>x</i> <i>y</i> <i>z</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_76"></a>&lt;/&lt;=?<i>   [ <i>compare</i> ] <i>x</i> <i>y</i> <i>z</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_78"></a>&lt;=/&lt;?<i>   [ <i>compare</i> ] <i>x</i> <i>y</i> <i>z</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_80"></a>&lt;=/&lt;=?<i>   [ <i>compare</i> ] <i>x</i> <i>y</i> <i>z</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_82"></a>&gt;/&gt;?<i>   [ <i>compare</i> ] <i>x</i> <i>y</i> <i>z</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_84"></a>&gt;/&gt;=?<i>   [ <i>compare</i> ] <i>x</i> <i>y</i> <i>z</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_86"></a>&gt;=/&gt;?<i>   [ <i>compare</i> ] <i>x</i> <i>y</i> <i>z</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_88"></a>&gt;=/&gt;=?<i>   [ <i>compare</i> ] <i>x</i> <i>y</i> <i>z</i></i>)</tt>&nbsp;</div>
+<p>
+Test if <i>x</i>, <i>y</i>, and <i>z</i> form a chain with the two relations
+specified by the name of the procedure, with respect to the compare
+procedure <i>compare</i>.
+If <i>compare</i> is not provided, <tt>default-compare</tt> is used.
+The result is a boolean (either <tt>#t</tt> or <tt>#f</tt>.)
+The order in which the values are compared is unspecified,
+but each value is compared at least once.</p>
+<p>
+</p>
+<blockquote><em>Note:&nbsp;&nbsp;</em>
+<tt>(&lt;=/&lt;? compare-real 0 <i>x</i> 1)</tt> tests if <i>x</i> is a real number
+in the half open interval [0,1).
+</blockquote>
+<p></p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_90"></a>chain=?<i>  <i>compare</i> <i>x<sub>1</sub></i> <tt>...</tt></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_92"></a>chain&lt;?<i>  <i>compare</i> <i>x<sub>1</sub></i> <tt>...</tt></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_94"></a>chain&gt;?<i>  <i>compare</i> <i>x<sub>1</sub></i> <tt>...</tt></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_96"></a>chain&lt;=?<i>  <i>compare</i> <i>x<sub>1</sub></i> <tt>...</tt></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_98"></a>chain&gt;=?<i>  <i>compare</i> <i>x<sub>1</sub></i> <tt>...</tt></i>)</tt>&nbsp;</div>
+<p>
+Test if the values <i>x<sub>1</sub></i> <tt>...</tt>(zero or more values) form
+a chain with respect to the relation specified by the name of
+the procedure, and with respect to the compare procedure <i>compare</i>.
+The result is a boolean (either <tt>#t</tt> or <tt>#f</tt>.)
+The order in which the values are compared is unspecified,
+but each value is compared at least once (even if there is just
+one.)</p>
+<p>
+A sequence of values <em>x</em><sub>1</sub>, <tt>...</tt>, <em>x</em><sub><em>n</em></sub> forms a chain with respect 
+to the relation <i>rel?</i> if <tt>(<i>rel?</i> <i>compare</i> <em>x</em><sub><em>i</em></sub> <em>x</em><sub><em>j</em></sub>)</tt>
+for all 1 <u>&lt;</u> <em>i</em> &lt; <em>j</em> <u>&lt;</u> <em>n</em>.
+In particular, this is the case for <em>n</em> <img src="srfi-Z-G-D-4.png" border="0" alt="[srfi-Z-G-D-4.png]"> {0,1}.</p>
+<p>
+Since the relations  = , &lt;, &gt;, <u>&lt;</u>, and <u>&gt;</u> are transitive,
+it is sufficient to test <tt>(<i>rel?</i> <i>compare</i> <em>x</em><sub><em>i</em></sub> <em>x</em><sub><em>i</em>+1</sub>)</tt>
+for 1 <u>&lt;</u> <em>i</em> &lt; <em>n</em>.</p>
+<p>
+</p>
+<p></p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_100"></a>pairwise-not=?<i> <i>compare</i> <i>x<sub>1</sub></i> <tt>...</tt></i>)</tt>&nbsp;</div>
+<p>
+Tests if the values <i>x<sub>1</sub></i> <tt>...</tt>(zero or more values) are
+pairwise unequal with respect to the compare procedure <i>compare</i>.
+The result is a boolean (either <tt>#t</tt> or <tt>#f</tt>.)
+The order in which the values are compared is unspecified,
+but each value is compared at least once (even if there is just one.)</p>
+<p>
+The values <em>x</em><sub>1</sub>, <tt>...</tt>, <em>x</em><sub><em>n</em></sub> are pairwise unequal if 
+<tt>(not=? <i>compare</i> <em>x</em><sub><em>i</em></sub> <em>x</em><sub><em>j</em></sub>)</tt> for all <em>i</em> <img src="srfi-Z-G-D-8.png" border="0" alt="[srfi-Z-G-D-8.png]"> <em>j</em>.
+In particular, this is the case for <em>n</em> <img src="srfi-Z-G-D-4.png" border="0" alt="[srfi-Z-G-D-4.png]"> {0,1}.</p>
+<p>
+Since <i>compare</i> defines a total ordering on the values,
+the property can be checked in time <em>O</em>(<em>n</em> log <em>n</em>), and
+implementations are required to do this. (For example by
+first sorting and then comparing adjacent elements.)
+</p>
+<p></p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_102"></a>min-compare<i> <i>compare</i> <i>x<sub>1</sub></i> <i>x<sub>2</sub></i> <tt>...</tt></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_104"></a>max-compare<i> <i>compare</i> <i>x<sub>1</sub></i> <i>x<sub>2</sub></i> <tt>...</tt></i>)</tt>&nbsp;</div>
+<p>
+A minimum or maximum of the values <i>x<sub>1</sub></i> <i>x<sub>2</sub></i> <tt>...</tt>(one or more values) with respect to the compare procedure <i>compare</i>.</p>
+<p>
+The result is the first value that is minimal (maximal, resp.)
+The order in which the values are compared is unspecified,
+but each value is compared at least once (even if there is
+just one value.)
+</p>
+<p></p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_106"></a>kth-largest<i> <i>compare</i> <i>k</i> <i>x<sub>0</sub></i> <i>x<sub>1</sub></i> <tt>...</tt></i>)</tt>&nbsp;</div>
+<p>
+The <em>k</em>-th largest element of values 
+<i>x<sub>0</sub></i> <i>x<sub>1</sub></i> <tt>...</tt>(one or more values)
+with respect to the compare procedure <i>compare</i>.</p>
+<p>
+More precisely,
+<tt>(kth-largest <i>compare</i> <i>k</i> <i>x<sub>0</sub></i> <tt>...</tt> <i>x<sub><em>n</em><tt>-</tt>1</sub></i>)</tt>
+returns the <tt>(modulo <i>k</i> <em>n</em>)</tt>-th element of the unique sequence
+obtained by stably sorting (<em>x</em><sub>0</sub> <tt>&middot;&middot;&middot;</tt> <em>x</em><sub><em>n</em><tt>-</tt>1</sub>).
+(Recall that a sorting algorithm is <em>stable</em> if it does not
+permute items with equal key, i.e. equivalent w.r.t. <i>compare</i>.)</p>
+<p>
+The argument <i>k</i> is an exact integer, and <em>n</em> <u>&gt;</u> 1.
+The order in which the values <em>x</em><sub><em>i</em></sub> are compared is unspecified,
+but each value is compare at least once (even if there is
+just one value.)</p>
+<p>
+</p>
+<blockquote><em>Note:&nbsp;&nbsp;</em>
+The 0-th largest element is the minimum,
+the ( <tt>-</tt> 1)-st largest element is the maximum.
+The median is the (<em>n</em> <tt>-</tt> 1)/2-th largest element if <em>n</em> is odd,
+and the average of the (<em>n</em>/2 <tt>-</tt> 1)-st and <em>n</em>/2-th largest elements
+if <em>n</em> is even.
+</blockquote>
+<p></p>
+<p>
+</p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_108"></a>compare&lt;<i>    <i>lt-pred</i> <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_110"></a>compare&gt;<i>    <i>gt-pred</i> <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_112"></a>compare&lt;=<i>   <i>le-pred</i> <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_114"></a>compare&gt;=<i>   <i>ge-pred</i> <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_116"></a>compare=/&lt;<i>  <i>eq-pred</i> <i>lt-pred</i> <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_118"></a>compare=/&gt;<i>  <i>eq-pred</i> <i>gt-pred</i> <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_120"></a>compare=/&lt;=<i> <i>eq-pred</i> <i>le-pred</i> <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_122"></a>compare=/&gt;=<i> <i>eq-pred</i> <i>ge-pred</i> <i>x</i> <i>y</i></i>)</tt>&nbsp;</div>
+
+<p>
+Compare <i>x</i> and <i>y</i> using the given predicate(s)
+and return the exact integer  <tt>-</tt> 1, 0, or 1, resp. if
+<em>x</em> &lt; <em>y</em>, <em>x</em>  =  <em>y</em>, or <em>x</em> &gt; <em>y</em>, resp., in the order defined
+by the predicate(s).</p>
+<p>
+The predicate procedures mean the following: 
+<tt>(<i>lt-pred</i> <i>x</i> <i>y</i>)</tt> tests if <em>x</em> &lt; <em>y</em>, 
+<i>le-pred</i> tests for <u>&lt;</u>, 
+<i>gt-pred</i> for &gt;,
+<i>ge-pred</i> for <u>&gt;</u>,
+and <i>eq-pred</i> tests if <em>x</em> and <em>y</em> are equivalent.
+The result returned by a predicate procedure is interpreted
+as a Scheme truth value (i.e. <tt>#f</tt> is false and non-<tt>#f</tt>
+is true.)</p>
+<p>
+These procedures <tt>compare</tt><em>p</em><em>r</em><em>e</em><em>d</em>(<em>s</em>) can be used to define a 
+compare procedure from an order predicate and possibly an additional
+equivalence predicate.
+If an equivalence predicate <i>eq-pred</i> is given, it is used 
+<em>before</em> the order predicate because the equivalence may be
+coarser than the total ordering, and <i>eq-pred</i> may be cheaper
+to evaluate.</p>
+<p>
+</p>
+<blockquote><em>Note:&nbsp;&nbsp;</em>
+<tt>Compare-char</tt> could be defined in terms of <tt>char&lt;=?</tt> as<p>
+</p>
+<tt>&nbsp;&nbsp;&nbsp;(define&nbsp;(compare-char&nbsp;x&nbsp;y)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(compare&lt;=&nbsp;char&lt;=?&nbsp;x&nbsp;y))<br>
+</tt>
+</blockquote>
+<p></p>
+<p>
+</p>
+<p>
+</p>
+<p></p>
+<div align=left><u>procedure:</u>&nbsp;&nbsp;<tt>(<a name="node_idx_124"></a>debug-compare<i> <i>compare</i></i>)</tt>&nbsp;</div>
+<p>
+Constructs a compare procedure equivalent to <i>compare</i>
+but with debugging code wrapped around the calls to <i>compare</i>.
+The debugging code signals an error if it detects a violation
+of the axioms of a compare function.
+For this it is assumed that <i>compare</i> has no side-effects.</p>
+<p>
+More specifically, <tt>(debug-compare <i>compare</i>)</tt> evaluates
+to a compare procedure <i>compare<sub>1</sub></i> which checks reflexivity,
+antisymmetry, and transitivity of <i>compare</i> based on the
+arguments on which <i>compare<sub>1</sub></i> is called:</p>
+<p>
+The procedure <i>compare<sub>1</sub></i> checks reflexivity on any value
+passed to <i>compare</i>,
+antisymmetry on any pair of values on which <i>compare</i> is called,
+and transitivity on triples where two of the arguments are from
+the current call to <i>compare<sub>1</sub></i> and the third is a pseudo-random
+selection from the two arguments of the previous call to <i>compare<sub>1</sub></i>.</p>
+<p>
+</p>
+<blockquote><em>Rationale:&nbsp;&nbsp;</em>
+The test coverage is partial and determined pseudo-randomly,
+but the execution time of <i>compare<sub>1</sub></i> is only a constant factor larger
+than the execution time of <i>compare</i>.
+</blockquote>
+<p></p>
+<p>
+</p>
+<p></p>
+<div align=right class=navigation><i>[Go to <span><a href="srfi.html">first</a>, <a href="srfi-Z-H-4.html">previous</a></span><span>, <a href="srfi-Z-H-6.html">next</a></span> page<span>; &nbsp;&nbsp;</span><span><a href="srfi-Z-H-1.html#node_toc_start">contents</a></span><span><span>; &nbsp;&nbsp;</span><a href="srfi-Z-H-11.html#node_index_start">index</a></span>]</i></div><p></p>
+</body>
+</html>

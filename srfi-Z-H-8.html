@@ -1,0 +1,97 @@
+<!doctype html public "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!--
+
+Generated from srfi.tex by tex2page, v 2004-09-11
+(running on MzScheme 209, windows), 
+(c) Dorai Sitaram, 
+http://www.ccs.neu.edu/~dorai/tex2page/tex2page-doc.html
+
+-->
+<head>
+<title>
+SRFI 67: Compare Procedures
+</title>
+<link rel="stylesheet" type="text/css" href="srfi-Z-S.css" title=default>
+<meta name=robots content="noindex,follow">
+</head>
+<body>
+<div align=right class=navigation><i>[Go to <span><a href="srfi.html">first</a>, <a href="srfi-Z-H-7.html">previous</a></span><span>, <a href="srfi-Z-H-9.html">next</a></span> page<span>; &nbsp;&nbsp;</span><span><a href="srfi-Z-H-1.html#node_toc_start">contents</a></span><span><span>; &nbsp;&nbsp;</span><a href="srfi-Z-H-11.html#node_index_start">index</a></span>]</i></div><p></p>
+<a name="node_chap_7"></a>
+<h1 class=chapter>
+<div class=chapterheading><a href="srfi-Z-H-1.html#node_toc_node_chap_7">Section 7</a></div><br>
+<a href="srfi-Z-H-1.html#node_toc_node_chap_7">Related work</a></h1>
+<p>The use of compare procedures is not new; 
+defining control structures (<tt>if3</tt>, <tt>select-compare</tt> etc.)
+for dealing with them efficiently, however, seems to be new
+(at least we have not seen it before.)</p>
+<p>
+Total ordering in 
+R<sup>5</sup>RS  is represented by typed order
+predicates, such as <tt>&lt;=</tt>, <tt>char&lt;=?</tt> etc.
+Although a ``less or equal''-predicate is sufficient to define
+a total order, 
+R<sup>5</sup>RS  defines a complete set of compare
+predicates (that is  = , &lt;, &gt;, <u>&lt;</u>, and <u>&lt;</u>) for
+the sake of convenience and readability.
+There are 25 procedures related to total orders in 
+R<sup>5</sup>RS .
+These are named 
+(<tt>=</tt>|<tt>&lt;</tt>|<tt>&gt;</tt>|<tt>&lt;=</tt>|<tt>&gt;=</tt>) and 
+(<tt>char</tt>|<tt>string</tt>)[<tt>-ci</tt>](<tt>=</tt>|<tt>&lt;</tt>|<tt>&gt;</tt>|<tt>&lt;=</tt>|<tt>&gt;=</tt>)<tt>?</tt>.</p>
+<p>
+The traditional approach in Scheme to equivalence (``Are two 
+values treated as equal?'') is the fixed set of predicates
+<tt>eq?</tt>, <tt>eqv?</tt>, and <tt>equal?</tt>.
+Historically, this approach was motivated by the desire to
+compare only pointers and avoid structural recursion.
+This SRFI provides the generalization to arbitrary equivalence
+relations, provided the equivalence classes are totally ordered.</p>
+<p>
+The Ruby programming language [<a href="srfi-Z-H-10.html#node_bib_4">4</a>] provides a method 
+<tt>&lt;=&gt;</tt> which is a compare procedure in the sense of this SRFI.
+By (re-)defining this method a total order can be defined 
+for the instances of a class, when compared against other objects. 
+All 2-way comparisons are based on <tt>&lt;=&gt;</tt>,
+but in Ruby essentially every method can be overloaded.</p>
+<p>
+In the Haskell&nbsp;98 programming language [<a href="srfi-Z-H-10.html#node_bib_6">6</a>] order
+predicates and compare functions coexist.
+The type <tt>Ordering</tt> [<a href="srfi-Z-H-10.html#node_bib_6">6</a>,&nbsp;Sect&nbsp;6.1.8] is an 
+enumeration of the three symbolic constants 
+<tt>LT</tt>, <tt>EQ</tt>, <tt>GT</tt>.
+The type class <tt>Ord</tt> [<a href="srfi-Z-H-10.html#node_bib_6">6</a>,&nbsp;Sect&nbsp;6.3.2] asserts
+the presence of a total order for a type, provided
+the type class <tt>Eq</tt> [<a href="srfi-Z-H-10.html#node_bib_6">6</a>,&nbsp;Sect&nbsp;6.3.1] also
+asserts the presence of an equivalence.
+Since the default definition of the method <tt>compare</tt>
+is in terms of the methods <tt>==</tt> and <tt>&lt;=</tt>,
+and vice versa, it can be chosen easily how to provide
+the total order without affecting its pattern of use.
+</p>
+<p>
+The C function <tt>strcmp</tt> [<a href="srfi-Z-H-10.html#node_bib_7">7</a>] of the ``string.h''-library acts as a compare procedure
+in the sense of this SRFI,
+although it is specified to return an integer of
+which only the sign matters.
+Python [<a href="srfi-Z-H-10.html#node_bib_5">5</a>] has a built-in function <tt>cmp</tt>
+which is a compare procedure in the sense of this SRFI.</p>
+<p>
+In SRFI-32 (Sort libraries) [<a href="srfi-Z-H-10.html#node_bib_8">8</a>] the total orders
+used for sorting are represented by a ``less than'' procedure.
+The discussion archive [<a href="srfi-Z-H-10.html#node_bib_8">8</a>] contains a short
+discussion thread on the use of 3-value comparisons under
+the aspect whether they can be used to improve the sorting
+algorithm itself.</p>
+<p>
+In the <tt>Galore.plt</tt> library of data structures for PLT Scheme,
+total orders are represented by the signature definition
+<tt>(define-signature 
+order^ (elm= elm&lt; elm&lt;=))</tt>.</p>
+<p>
+</p>
+<p>
+</p>
+<div align=right class=navigation><i>[Go to <span><a href="srfi.html">first</a>, <a href="srfi-Z-H-7.html">previous</a></span><span>, <a href="srfi-Z-H-9.html">next</a></span> page<span>; &nbsp;&nbsp;</span><span><a href="srfi-Z-H-1.html#node_toc_start">contents</a></span><span><span>; &nbsp;&nbsp;</span><a href="srfi-Z-H-11.html#node_index_start">index</a></span>]</i></div><p></p>
+</body>
+</html>
