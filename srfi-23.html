@@ -31,6 +31,8 @@ the archive of the mailing list</a>.
 <P>
 <UL>
 <LI>Draft: 2001/03/09-2001/06/09</LI>
+<LI>Revised: 2001/03/22
+<LI>Revised: 2001/04/26
 </UL>
 </P>
 
@@ -60,17 +62,16 @@ Scheme system.
 <p>
 Many Scheme systems already provide a mechanism that allows application code
 to report an error. At least the following implementations support
-such a mechanism: Bigloo, Guile, MIT Scheme, MzScheme, RScheme, Scsh, SCM,
+such a mechanism: Bigloo, Guile, MIT Scheme, PLT Scheme, RScheme, Scsh, SCM,
 all implementations supported by SLIB.
 Of these implementations, the following have an error mechanism compatible
-with this SRFI: Guile, MIT Scheme, MzScheme, RScheme, Scsh. The error
-mechanism in Bigloo conflicts with this SRFI, but this can be easily
-remedied. The implementation in SLIB just has a different name than the
+with this SRFI: Guile, MIT Scheme, PLT Scheme, RScheme, Scsh.
+The implementation in SLIB has a different name than the
 one proposed in this SRFI.
 
 <p>
 To summarise, many implementations already have the error reporting
-mechanism described in this SRFI, and others are easily made compatible
+mechanism described in this SRFI and others are easily made compatible
 with this SRFI. This shows that the proposed mechanism is considered useful
 and that it is easy to implement in most major implementations.
 
@@ -79,22 +80,22 @@ and that it is easy to implement in most major implementations.
 <p>
 The following procedure should be provided:
 <p>
-<code>(error</code> &lt;message&gt;<code> [&lt;obj1&gt; [&lt;obj2&gt; ...]])</code>
+<code>(error</code> &lt;reason&gt;<code> [&lt;arg1&gt; [&lt;arg2&gt; ...]])</code>
 <p>
-The argument &lt;message&gt; should be a string.
-The procedure or special form <code>error</code> will <em>signal an error</em>,
-as described in R5RS, and it will report the message &lt;message&gt;
-and the objects &lt;obj1&gt, &lt;obj1&gt. 
-What exactly consitutes "signalling" and "reporting" is not prescribed, because of the large variation in Scheme systems. So it is left to the implementor
+The argument &lt;reason&gt; should be a string.
+The procedure <code>error</code> will <em>signal an error</em>,
+as described in R5RS, and it will report the message &lt;reason&gt;
+and the objects &lt;arg1&gt, &lt;arg2&gt, .... 
+What exactly constitutes "signalling" and "reporting" is not prescribed, because of the large variation in Scheme systems. So it is left to the implementor
 to do something reasonable. To that end, a few examples of possible behaviour
 are given.
 <ol>
  <li>
-   Display &lt;message&gt; and &lt;obj1&gt;... on the screen and terminate
+   Display &lt;reason&gt; and &lt;arg1&gt;... on the screen and terminate
    the Scheme program. (This might be suitable for a Scheme system
    implemented as a batch compiler.)
  <li>  
-  Display &lt;message&gt; and &lt;obj1&gt;... on the screen and  
+  Display &lt;reason&gt; and &lt;arg1&gt;... on the screen and  
   go back to the read-evaluate-print loop. (This might be suitable for
   an interactive implementation).
  <li>
@@ -104,32 +105,51 @@ are given.
   way. See the <code>thread-join!</code> mechanism in SRFI-18 on
   how this could be done.
  <li>
-  Package &lt;message&gt; and &lt;obj1&gt;... up into an error object
+  Package &lt;reason&gt; and &lt;arg1&gt;... up into an error object
   and pass this error object to an exception handler. The default
   exception handler then might do something as described in points 1 to 3.
  <li>
-  In the case of a Scheme system that returns completely unattended
+  In the case of a Scheme system that runs completely unattended
   and that has no way to notify a human, the only reasonable
   course of action might be to do nothing at all. However, this should
   be considered a last resort. Clearly, if all implementors would choose
   this strategy, this SRFI would not be very useful.
 </ol>  
 An implementation might report more information than just 
-&lt;message&gt; and &lt;obj1&gt;... . For instance, it might report the procedure name in which
+&lt;reason&gt; and &lt;arg1&gt;... . For instance, it might report the procedure name in which
 the error occured or even print a stack trace.
-To make is easier for implementors to add such useful information, it is not
-required for <code>error</code> to be a procedure. However, it is
-still allowed to be a procedure.
+However, this will require additional support in the Scheme implementation.
 
+
+<H1>Why <code>error</code> is a procedure</H1>
+
+It is conceivable to allow <code>error</code> to be a special form,
+such as a macro, rather than a procedure. This might make providing
+information such as the source code location easier. This possibility
+has been considered, but rejected, for two reasons.
+<ol>
+ <li>
+  Since <code>error</code> accepts a variable number of arguments,
+  it could occasionally be useful to use <code>apply</code> to call
+  <code>error</code>. However, this is not possible if <code>error</code>
+  was allowed to be a special form.
+ <li>
+  Since <code>error</code> is currently a procedure in all Scheme
+  implementations mentioned above, it doesn't seem all that
+  worthwhile to allow it to be a special form.
+</ol>
 
 <H1>Implementation</H1>
 
 An implementation that works in almost any R5RS Scheme is the following:
 <pre>
-  (define (error message . objs)
+  (define (error reason . args)
       (display "Error: ")
-      (display message)
-      (for-each display objs)
+      (display reason)
+      (for-each (lambda (arg) 
+                  (display " ")
+		  (write arg))
+		args)
       (newline)
       (scheme-report-environment -1))  ;; we hope that this will signal an error
 </pre>
@@ -151,11 +171,12 @@ Thus, when SLIB is loaded, <code>error</code> can be defined as:
 </pre>  
 
 <p>
-If SRFI-18 is supported, it is allowed to implement <code>error</code> in
+If SRFI-18 is supported, it is allowed 
+(but not required) to implement <code>error</code> in
 terms of the exception mechanism of SRFI-18.
 <pre>
-  (define (error message . objs)
-    (raise (make-error-exception msg objs)))
+  (define (error reason . args)
+    (raise (make-error-exception reason args)))
 </pre>
 Here, <code>make-error-exception</code> is implementation dependent.
 
@@ -191,7 +212,7 @@ PARTICULAR PURPOSE.
     href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
 <!-- Created: Thu Mar  8 15:33:07 CET 2001 -->
 <!-- hhmts start -->
-Last modified: Fri Mar  9 14:36:39 MET 2001
+Last modified: Sun Apr 29 11:25:41 MST 2001
 <!-- hhmts end -->
   </body>
 </html>
