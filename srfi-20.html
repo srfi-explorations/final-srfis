@@ -1,0 +1,370 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 20: Simple object system </title>
+  </head>
+
+  <body>
+
+<H1>Title</H1>
+
+Simple object system.
+
+<H1>Author</H1>
+
+Christian Queinnec
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status. To see an explanation of
+each status that a SRFI can hold, see <a
+href="http://srfi.schemers.org/srfi-process.html">here</a>. It will
+remain in draft status until 2000/04/16, or as amended. To provide
+input on this SRFI, please <a
+href="mailto:srfi-20@srfi.schemers.org">mail to
+srfi-20@srfi.schemers.org</a>.  See <a
+href="http://srfi.schemers.org/srfi-list-subscribe.html">instructions
+here</a> to subscribe to the list.  You can access previous messages
+via <a
+href="http://srfi.schemers.org/srfi-20/mail-archive/maillist.html">
+the archive of the mailing list</a>.
+<P>
+<UL>
+<LI>Draft: 2000/04/16-2000/06/15 </LI>
+</UL>
+
+<H1>Abstract</H1>
+
+This SRFI presents an object system to define classes, generic functions
+as well as to support some level of introspection. This object system
+is based on Meroon-V3 which is itself inspired by CLOS. <a
+href="http://www-spi.lip6.fr/~queinnec/WWW/Meroon.html"> Meroon-V3</a>
+is distributed and used since 1992.
+
+<H1>Issues</H1>
+
+There are two kinds of object models: the closed model or the open
+model. The closed model comes from statically typed systems (C++,
+Java, OCaml, etc.); this model is characterized by the following
+dogmas: classes are encapsulation units, methods must be known at
+class-definition time, there's only one receiver for a message (since
+generic functions are hard to type). This model has good compilation
+properties since most types are known at compile-time.
+<p>
+The open model is more dynamic (CLOS, <a
+href="http://www-spi.lip6.fr/~queinnec/WWW/Meroon.html">
+Meroon-V3</a>, <a href="http://kaolin.unice.fr/STk/"> STklos</a>). It
+acknowledges the fact that all behaviors cannot be expressed at
+class-definition time, that it should be possible to add new behaviors
+to existing instances (data, particularly if persistent, often
+pre-exist to treatments), that introspection is desirable and useful
+for serialization, debug and all sorts of walkers, that some way to
+customize or extend the implementation should also exist as well.
+<p>
+This document proposes an open model in the dynamic spirit of Scheme
+(and Lisp). Meta-object aspects are not considered in this proposal
+but are still possible.
+
+<H1>Rationale</H1>
+
+Objects are useful and trendy (at least before components
+come). Meroon-V3 has proved useful for many years, has been ported to
+(no particular order intended) mzscheme, scheme->C, elk, bigloo, scm,
+guile, oscheme, mit-scheme, gambit. It is proposed to build on its
+strengths.
+<p>
+This model makes possible that vectors be regular instances of the
+object system since the object system allows fields to be regular (ie
+Mono-Field (a Mono-Field only holds one value)) or indexed (ie
+Poly-Field, the number of values it may hold is fixed at
+instantiation-time). Vectors are regular objects
+with a single indexed field.
+<p> 
+The proposed model is based on simple inheritance (for the same reasons
+Java took).
+
+<H1>Specification</H1>
+
+The <a href="http://www-spi.lip6.fr/~queinnec/Reports/MeroonV3.ps.gz">
+documentation of Meroon-V3</a> (23 pages) is available on the net.
+The following interface stresses the features that are within the
+scope of the present document.
+<p>
+The following are new special-forms. They use keywords ie symbols
+prefixed with a colon. 
+<pre>
+(define-class class-name superclass-name
+  (field-specification ...)
+  ;; where field-specification is
+  ;; ([ = | * ] field-name 
+  ;;            [ :mutable | :immutable |
+  ;;              :initialize (lambda () form) |      ; for (=) Mono-Field
+  ;;              :initialize (lambda (index) form)   ; for (*) Poly-Field
+  ;;             ] )
+  [ :prototype ] )                                    ; non-instantiable class
+
+(define-generic (generic-name variable ...)
+  ;; where variable is
+  ;;    symbol                                   ; regular variable
+  ;;  | (symbol [ class-name ])                  ; discriminating variable
+  [ default-body ] )
+
+(define-method (generic-name variable ...)
+  ;; where variable is
+  ;;    symbol                     ; regular variable
+  ;;  | (symbol class-name)        ; discriminating variable
+  body                             ; (call-next-method) allowed
+  )
+
+(instantiate class-name 
+  :mono-field-name form
+  :poly-field-name form ...
+  :poly-field-length size
+  ... ) </pre>
+
+<h2> Class definition </h2>
+<p>
+A <tt>define-class</tt> form creates a new class (redefinition of
+classes is left unspecified). The first parameter is the name of the
+class, the second is the name of the super-class, specifications of
+fields appear as third parameter, additional parameters may appear
+after.  Except initializers that are evaluated, no parameter or
+expressions within parameters are evaluated.
+<p>
+A class is made of fields which may be regular or indexed. A
+field may be mutable or not (mutable by default). A default
+initializer may be specified (a thunk for a regular field, a unary
+function for an indexed field). The form that define these
+initializers are evaluated at class-definition time. The
+<tt>:prototype</tt> class option forbids instantiation of the class.
+<p>
+When a class is defined, some functions are created: a predicate and
+some read/write accessors. 
+
+<h3> Example </h3>
+<p>
+The following class definition creates the
+following functions: <tt>Foo?</tt>, <tt>Foo-bar</tt>,
+<tt>Foo-hux</tt>, <tt>set-Foo-hux!</tt> and <tt>Foo-hux-length</tt>. A
+variable <tt>Foo-class</tt> is also created that holds a (possibly
+indirect) instance of <tt>Class</tt> for introspection purpose.
+<pre>
+(define-class Foo Object
+  ((= bar :immutable)
+   (* hux :initializer (lambda (i) i)) ) )
+</pre>
+<p>
+Here is the signature of the generated functions: <pre>
+(Foo? anySchemeValue) -> boolean
+(Foo-bar aFooInstance) -> anySchemeValue
+(Foo-hux aFooInstance aNaturalNumber) -> anySchemeValue
+(set-Foo-hux! aFooInstance anySchemeValue aNaturalNumber) -> unspecified
+(Foo-hux-length aFooInstance) -> aNaturalNumber
+</pre>
+<p> 
+Predicates, such as <tt>Foo?</tt> may be invoked on any Scheme values.
+Accessors may only apply on (possibly indirect) instances of <tt>Foo</tt>.
+Writers return an unspecified value. Accessors whether readers or writers 
+when applied on an indexed field take an index as last argument.
+
+
+<h2> Generic definition </h2>
+<p>
+The <tt>define-generic</tt> form defines generic functions.  When a
+generic function is defined, it does not possess any method. However
+it may have a default body which is invoked when no specific method is
+found (for instance, on values that are not objects). The generic
+function must specify the discriminating variables (at least
+one). Syntactically a discriminating variable appears within
+parentheses.  If a class is associated to a discriminating variable,
+it restricts the set of methods that may be adjoined to this generic
+function (for instance, the following <tt>clone</tt> function may only
+have methods defined on subclasses of <tt>Object</tt>). A generic
+function may have more than one discriminating variable.
+<p>
+The following are predefined generic functions. New methods may be
+added at will by programmers.
+<pre>
+(define-generic (initialize! (o Object)) ...)
+(define-generic (clone (o Object)) ...)
+</pre>
+<p>
+The <tt>initialize!</tt> function is automatically invoked on every
+freshly created instance. It may be used to register the instance in
+some data structures. 
+<p>
+The <tt>clone</tt> function, by default, performs a shallow copy of an
+object.
+<h3> Example </h3>
+<p>
+A generic predicate <tt>werk?</tt> may be defined on all (direct or
+indirect) instances of <tt>Object</tt> as:
+<pre>
+(define-generic (werk? (o))
+  #f )
+</pre>
+
+<h2> Method definition</h2>
+<p>
+The <tt>define-method</tt> form adjoins a method to a generic functions.
+Methods may be adjoined to any generic functions provided that the
+method has a compatible signature ie the same number of discriminating
+variables at the same position associated to classes that are
+sub-classes of the classes mentioned in the generic function
+definition. If the generic function has a final dotted variable, then 
+methods should also have such a final dotted variable.
+
+<p>
+Within the body of a method, it is possible to use the
+<tt>(call-next-method)</tt> local special form. It is not possible to
+use it elsewhere. The next method is defined to be the method that
+would have been invoked if the current method was absent. It is
+forbidden to define ambiguous multi-method that is a method that will
+make some signature ambiguous. This problem may only arise on methods
+that have strictly more than one discriminating variable: is SC is a
+subclass of C and a method M1 is defined on SC * C then it is not
+possible to define a method M2 on C * SC since that would make a call
+on SC * SC ambiguous. However if a method M3 on SC * SC is defined and
+does not contain a call to <tt>(call-next-method)</tt> then it is then
+possible to define a method M2 on C * SC. [NOTE: that may be
+considered as too dynamic, observe however that
+<tt>call-next-method</tt> is not a variable.]
+
+<h3> Example </h3>
+<p>
+If all (direct or indirect) instances of <tt>Foo</tt> satisfy the
+<tt>werk?</tt> predicate, then one may write:
+<pre>
+(define-method (werk? (o Foo))
+  #t ) 
+</pre>
+
+<h2> Instantiation </h2>
+<p>
+New objects may be created with the <tt>instantiate</tt> special form.
+This form takes as first parameter the name of a class. The other
+parameters specify the initial content of the object. The initial
+content of a field is specified by a keyword whose name is the name of
+the field to fill (prefixed with a colon). If the field is regular,
+the keyword is followed by a single expression (to be evaluated); if
+the field is indexed, the keyword is followed by as many expressions
+(to be evaluated) as needed.  Alternatively, an indexed field may be
+specified by its length in which case the initial content of this
+indexed field is unspecified.
+<p>
+The fields do not need to be ordered nor to be all specified. In which
+case, the initializer if defined at class-definition-time is run. For
+a regular field, the initializer looks like a thunk; for an indexed
+field, the initializer is a unary function taking the index as
+argument. Fields are guaranteed to be filled in order starting from
+inherited fields. Indexed fields are filled starting from 0. 
+
+<h3> Example </h3>
+<p>
+Here are some instantiations of <tt>Foo</tt>:
+<pre>
+(instantiate Foo :bar 1 :hux 2 3 4)
+(instantiate Foo :hux-length 3 :bar 11)
+</pre>
+Note that the values of the fields may be given in any order. A
+mono-field defined with an initializer may be omitted. A poly-field
+defined with an initializer only requires its length to be given. 
+
+<h2> Primitives </h2>
+<p>
+The following are regular functions. Note: <tt>value</tt> means whatever
+Scheme value; <tt>object</tt> means a (possibly indirect) instance of 
+<tt>Object</tt>; <tt>class</tt> means a (possibly indirect) instance of 
+<tt>Class</tt>.
+<pre>
+(object? value)                  ; anySchemeValue -> boolean
+(object->class object)           ; Object -> Class
+(is-a? value class)              ; anySchemeValue * Class -> boolean
+(subclass? class super-class)    ; Class * Class -> boolean
+</pre>
+<p>
+Among meta-objects only classes and fields are partially exposed not
+by their definition but through some functions or some variables.
+<tt>Class</tt> is the ``class of classes'' where classes are the
+values returned by the <tt>object->class</tt> function. The document
+does not impose <tt>Class</tt> to be definable by a specific
+<tt>define-class</tt> form. Classes may only be used with the
+functions whose name start with <tt>Class-</tt>. 
+<p>
+<tt>Field</tt> is the class of fields, objects reifying information
+about fields. The document does not impose <tt>Field</tt> to be
+definable by a specific <tt>define-class</tt> form. Fields may only be
+used with the functions whose name start with <tt>Field-</tt>.
+<p>
+The definition of a class may be inspected via a number of functions.
+It is possible to access the name of a class, its superclass
+(<tt>#f</tt> if that does not exist) as well as its fields. Fields are
+reified as if instances of a class of fields: <tt>Field</tt>. The
+document does not impose <tt>Field</tt> to exist (as if explicitly
+created by <tt>define-class</tt>) provided the <tt>Field-</tt>*
+functions still exist.
+<pre>
+Object-class                     ; Class
+(Class? value)                   ; anySchemeValue -> boolean
+(Class-name class)               ; Class -> symbol
+(Class-super-class class)        ; Class -> Class
+(Class-field class index)        ; Class * nat -> Field
+(Field? value)                   ; anySchemeValue -> boolean
+(Field-name field)               ; Field -> symbol
+(Field-mutable? field)           ; Field -> boolean
+(Field-initializer field)        ; Field -> closure
+(Mono-Field? value)              ; anySchemeValue -> boolean
+(Poly-Field? value)              ; anySchemeValue -> boolean
+(field-value object field [ index ])            ; Object * Field [* nat] -> value
+(set-field-value! object value field [ index ]) ; Object * value * Field [* nat] -> unspecified
+(field-length object field)                     ; Object * Field -> nat
+</pre>
+<p>
+Two generic functions are predefined: 
+<pre>
+(initialize! object)             ; Object -> Object
+(clone object)                   ; Object -> Object
+</pre>
+
+
+<H1>Implementation</H1>
+
+<A HREF="http://www-spi.lip6.fr/~queinnec/Programs/MeroonV3-98Feb09.tar.gz">
+Meroon-V3</a> implements the features of this document (and much more
+than this in fact) but is currently 10k lines long. <A
+HREF="http://www-spi.lip6.fr/~queinnec/Programs/meroonet93Mar19.tar.gz">
+Meroonet</a> is another almost conforming essential implementation
+(but for multi-methods) whose size makes it more readable (875 lines
+including comments) described in chapter 11 of my book: Lisp in Small
+Pieces, Cambridge U. Press, 1996.
+
+<H1>Copyright</H1>
+Copyright (C) Christian Queinnec (2000). All Rights Reserved. 
+<p>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<p>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<p>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+    <HR>
+    <ADDRESS>Editor: <A href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</A></ADDRESS>
+  </BODY>
+</HTML>
