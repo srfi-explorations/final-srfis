@@ -1,0 +1,250 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN""http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<body>
+<head>
+<title>SRFI 34: Exception Handling for Programs</title>
+</head>
+
+<body>
+<H1>Title</H1>
+
+Exception Handling for Programs
+
+<H1>Authors</H1>
+
+Richard Kelsey and Michael Sperber
+
+<h1>Abstract</h1>
+This SRFI defines exception-handling and exception-raising constructs for Scheme, including<ul><li>a <code>with-exception-handler</code>
+ procedure and a <code>try</code>
+ form for installing exception-handling procedures,</li>
+<li>a <code>raise</code>
+ procedure for invoking the current exception handler.</li>
+</ul>
+<p>This SRFI is closely based on (withdrawn) <a href="http://srfi.schemers.org/srfi-12/">SRFI 12: Exception Handling</a>
+by William Clinger, R. Kent Dybvig, Matthew Flatt, and Marc Feeley.</p>
+<h1>Rationale</h1>
+<p>The goals of the exception mechanism specified in this SRFI are to help programmers share code which relies on exception handling, and to be easily added to existing Scheme systems.</p>
+<p>This SRFI is primarily useful in conjunction with one or more companion SRFIs:</p>
+<ul><li>a SRFI specifying exception-describing objects (conditions). An example is <a href="http://srfi.schemers.org/srfi-35">SRFI 35</a>
+ (Conditions).</li>
+<li>a SRFI specifying a set of standard condition types to be raised by the primitives provided by the Scheme implementation, and requiring that certain Scheme primitives indeed raise exceptions within the framework described. An example is <a href="http://srfi.schemers.org/srfi-36">SRFI 36</a>
+ (I/O Conditions).</li>
+<li>a SRFI specifying how computations may be resumed after an exception is raised.</li>
+</ul>
+<p>This SRFI is intended to be compatible with <a href="http://srfi.schemers.org/srfi-18/">SRFI 18</a>
+; a Scheme implementation can implement both SRFI 18 and this SRFI without any conflict.  To this end, the specfications of <code>with-exception-handler</code>
+ and <code>raise</code>
+ (which also exist in SRFI 18) are intended to be compatible with the definition found there.</p>
+<h1>Specification</h1>
+<p>Exception handlers are one-argument procedures that determine the action the program takes when an exceptional situation is signalled. The system implicitly maintains a <i>current exception handler</i>.</p>
+<p>The program raises an exception by invoking the current exception handler, passing to it an object encapsulating information about the exception. Any procedure accepting one argument may serve as an exception handler and any object may be used to represent an exception.</p>
+<p>The system maintains the current exception handler as part of  the <i>dynamic environment</i> of the program, akin to the current input or output port, or the context for <code>dynamic-wind</code>
+. The dynamic environment can be thought of as that part of a continuation that does not specify where the destination of any returned values.  It includes the current input and output ports, the <code>dynamic-wind</code>
+ context, and this SRFI's current exception handler.  See the reference implementation for portable definitions of <code>current-dynamic-environment</code>
+ and <code>with-dynamic-environment</code>
+.</p>
+<p>The initial current exception handler of the program is implementation-dependent. However, it must interrupt the program in some way visible to the user, either by aborting it, invoking a debugger, or some similar action.</p>
+<p>In a Scheme implementation which supports <a href="http://srfi.schemers.org/srfi-18">SRFI 18</a>
+, <code>thread-start!</code>
+ installs an exception handler for the new thread that records the exceptional situation in such a way that <code>thread-join</code>
+ can retrieve it.  For details, see SRFI 18.</p>
+<h2>Establishing Exception Handlers</h2>
+<dl><dt><code>(with-exception-handler </code><var>handler</var>
+ <var>thunk</var>
+<code>)</code></dt>
+<dd><p>Returns the result(s) of invoking <var>thunk</var>
+. <var>Handler</var>
+ must be a procedure that accepts one argument. It is installed as the current exception handler for the dynamic extent (as determined by <code>dynamic-wind</code>
+) of the invocation of <var>thunk</var>
+.</p>
+</dd>
+</dl>
+<dl><dt><code>(try </code><code>(</code>
+ &lt;var&gt; <code>)</code>
+ &lt;handle-expr&gt; &lt;body&gt;<code>)</code> (syntax)</dt>
+<dd><p>Evaluates &lt;body&gt; with an exception handler that binds the exception to &lt;var&gt; and then evaluates &lt;handle-expr&gt;. The continuation of &lt;handle-expr&gt; is that of the <code>try</code>
+ expression. If no exception is raised, the <code>try</code>
+ expression returns the result(s) of the last expression in &lt;body&gt;.</p>
+</dd>
+</dl>
+<h2>Raising Exceptions</h2>
+<dl><dt><code>(raise </code><var>obj</var>
+<code>)</code></dt>
+<dd><p>Invokes the current exception handler on <var>obj</var>
+. The handler is called in the dynamic environment of the call to <code>raise</code>
+, except that the current exception handler is that in place for the call to <code>with-exception-handler</code>
+ that installed the handler being called.  The handler's continuation is otherwise unspecified.</p>
+<p>Note that a handler installed using <code>try</code>
+is invoked with the continuation of the <code>try</code>
+ expression, and thus sees the dynamic environment of that expression and not that of the call to <code>raise</code>
+.</p>
+</dd>
+</dl>
+<h1>Examples</h1>
+<pre>(call-with-current-continuation
+ (lambda (k)
+   (with-exception-handler (lambda (x)
+                             (display &quot;condition: &quot;)
+                             (write x)
+                             (newline)
+                             (k 'exception))
+     (lambda ()
+       (+ 1 (raise 'an-error))))))
+PRINTS: condition: an-error
+=&gt; exception
+
+(call-with-current-continuation
+ (lambda (k)
+   (with-exception-handler (lambda (x)
+                             (display &quot;something went wrong&quot;)
+                             (newline)
+                             'dont-care)
+     (lambda ()
+       (+ 1 (raise 'an-error))))))
+PRINTS: something went wrong
+then behaves in an unspecified way
+
+(try (condition) (begin
+                   (display &quot;condition: &quot;)
+                   (write condition)
+                   (newline)
+                   'exception)
+  (+ 1 (raise 'an-error)))
+PRINTS: condition: an-error
+=&gt; exception
+
+(try (condition) (begin
+                   (display &quot;something went wrong&quot;)
+                   (newline)
+                   'dont-care)
+ (+ 1 (raise 'an-error)))
+PRINTS: something went wrong
+=&gt; dont-care
+</pre><h1>Reference Implementation</h1>
+<p>The reference implementation makes use of <a href="http://srfi.schemers.org/srfi-9/">SRFI 9</a>
+ (&quot;Defining Record Types&quot;), and <a href="http://srfi.schemers.org/srfi-23/">SRFI 23</a>
+ (&quot;Error reporting mechanism&quot;).</p>
+<pre>(define-record-type :exception-context
+  (make-exception-context handler
+                          dynamic-env
+                          previous)
+  exception-context?
+  (handler exception-context-handler)
+  (dynamic-env exception-context-dynamic-env)
+  (previous exception-context-previous))
+
+(define (exception-context-previous-handler exception-context)
+  (exception-context-handler
+    (or (exception-context-previous exception-context)
+        (error &quot;default exception handler called RAISE&quot;))))
+
+(define (current-dynamic-environment)
+  (let ((pair (call-with-current-continuation
+                (lambda (c) (cons #f c)))))
+    (if (car pair)
+        (call-with-values (car pair) (cdr pair))
+        (cdr pair))))
+
+(define (with-dynamic-environment dynamic-environment thunk)
+  (call-with-current-continuation
+    (lambda (done)
+      (dynamic-environment (cons thunk done)))))
+
+; To avoid nontermination, it is important that the default exception
+; handler not call RAISE.
+
+(define *current-exception-context*
+  (make-exception-context (lambda (condition)
+                            (error &quot;unhandled exception&quot; condition))
+                          (current-dynamic-environment)
+                          #f))		; no previous context
+
+(define (with-exception-handler handler thunk)
+  (let* ((previous-context *current-exception-context*)
+         (new-context (make-exception-context handler
+                                              (current-dynamic-environment)
+                                              previous-context)))
+    (dynamic-wind
+      (lambda ()
+        (set! *current-exception-context* new-context))
+      thunk
+      (lambda ()
+        (set! *current-exception-context* previous-context)))))
+
+(define (raise obj)
+  (let ((context *current-exception-context*))
+    (with-dynamic-environment
+      (exception-context-dynamic-env context)
+      (lambda ()
+        (with-exception-handler (exception-context-previous-handler context)
+          (lambda ()
+            ((exception-context-handler context) obj)
+            (error &quot;handler returned&quot;
+                    (exception-context-handler context)
+                    obj)))))))
+
+(define-syntax try
+  (syntax-rules ()
+    ((try (var) handle-body e1 e2 ...)
+     ((call-with-current-continuation
+       (lambda (k)
+	 (with-exception-handler
+	  (lambda (var)
+	    (k (lambda () handle-body)))
+	  (lambda ()
+	    (call-with-values
+	     (lambda () e1 e2 ...)
+	     (lambda args
+	       (k (lambda ()
+		    (apply values args)))))))))))))
+</pre><h1>References</h1>
+<ul><li><a href="http://srfi.schemers.org/srfi-12/">SRFI 12: Exception Handling</a>
+by William Clinger, R. Kent Dybvig, Matthew Flatt, and Marc Feeley</li>
+<li>Richard Kelsey's <a href="http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00022.html">1996 proposal</a>
+</li>
+<li><a href="http://www.cs.indiana.edu/scheme-repository/doc.proposals.exceptions.html">Proposal for Exception Handling in Scheme</a>
+ by Dan Friedman, Chris Haynes, and Kent Dybvig</li>
+<li><a href="http://world.std.com/~pitman/Papers/Condition-Handling-2001.html">Kent Pitman's history paper</a>
+</li>
+<li>The <a href="http://www.xanalys.com/software_tools/reference/HyperSpec/Body/09_.htm">Conditions chapter</a>
+ from the <a href="http://www.xanalys.com/software_tools/reference/HyperSpec/Front/index.htm">Common Lisp HyperSpec</a>
+</li>
+<li>The Conditions chapter by Kent M. Pitman in <a href="http://www-2.cs.cmu.edu/afs/cs.cmu.edu/project/ai-repository/ai/html/cltl/cltl2.html"><i>Common Lisp the Language, 2nd edition</i>
+</a>
+ by Guy L. Steele</li>
+<li>The <a href="http://www.gwydiondylan.org/drm/drm_52.htm#HEADING52-0">Conditions chapter</a>
+ in the <a href="http://www.gwydiondylan.org/drm/drm_1.htm">Dylan Reference Manual</a>
+</li>
+<li>The Exceptions chapter in <a href="http://www-2.cs.cmu.edu/~rwh/smlbook/">Programming in Standard ML</a>
+ by Robert Harper</li>
+</ul>
+</body><H1>Copyright</H1>
+Copyright (C) Richard Kelsey, Michael Sperber (2002). All Rights Reserved. 
+<p>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<p>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<p>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+    <hr>
+    <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">?</a></address>
+</body></html>
