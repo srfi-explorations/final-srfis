@@ -136,7 +136,7 @@ Is replaced by the following five productions.
 
 &lt;nondefining datum&gt; --&gt; &lt;simple datum&gt; | &lt;compound datum&gt; 
 
-&lt;indexnum&gt; --&gt; &lt;digit 10&gt;+ | &lt;radix R&gt; &lt;digit R&gt;+
+&lt;indexnum&gt; --&gt; &lt;digit 10&gt;+
 </PRE>
 </P>
 
@@ -197,7 +197,7 @@ For example, the code
 
 (begin (define a (cons 'val1 'val2))
        (set-cdr! a a)
-       (write-showing-shared a))
+       (write-with-shared-structure a))
 
 </PRE>
 
@@ -273,10 +273,10 @@ locking or multithreading, you can write an O(n) version that
 destructively marks locations as it goes and then restores them all
 when done.  If locations are immutable, then there should be some
 fixed ordering of them that you can use to make an O(log n) lookup
-table, giving you an O(n log n) write-showing-shared.  R5RS does not
-give the programmer access to mutability information nor to comparison
-of constant data's addresses, but both of these are trivial operations
-if you have access to the system's internals.
+table, giving you an O(n log n) write-with-shared-structure.  R5RS
+does not give the programmer access to mutability information nor to
+comparison of constant data's addresses, but both of these are trivial
+operations if you have access to the system's internals.
 
 </P>
 
@@ -637,7 +637,7 @@ PARTICULAR PURPOSE.
     href="mailto:srfi-editors@srfi.schemers.org">David Rush</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Tue Feb  4 19:54:37 GMT 2003
+Last modified: Tue Mar 11 10:25:07 GMT 2003
 <!-- hhmts end -->
   </body>
 </html>
