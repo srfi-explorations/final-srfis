@@ -40,6 +40,7 @@
       <li>Revised: 2003/08/19
       <li>Revised: 2003/08/27
       <li>Revised: 2003/09/11
+      <li>Revised: 2003/10/07
     </ul></p>
 
 
@@ -57,7 +58,6 @@
     </p>
 
     <H1>Table of Contents</H1>
-
     <blockquote>
        <a href="#issues">Issues</a><br>
        <a href="#rationale">Rationale</a><br>
@@ -109,9 +109,7 @@ Mutable Collections</a><br>
          <a href="#implementation">Implementation</a><br>
       </blockquote>
 
-      <H1><a name="issues">Issues</a></H1>
-
-      
+    <H1><a name="issues">Issues</a></H1>
 
     <p>
       Several functions in this SRFI are required to take arbitrary
@@ -147,8 +145,6 @@ Mutable Collections</a><br>
     </p>
 
     <H1><a name="rationale">Rationale</a></H1>
-
-      
 
     <p>
       The Scheme language provides two basic datastructures for
@@ -207,11 +203,9 @@ Mutable Collections</a><br>
       may obviate the need to transfer many unaccessed future
       elements.
     </p>
-
-    <H1><a name="specification">Specification</a></H1>
-
-      
-
+    <h1>
+      <a name="specification">Specification</a>
+    </h1>
     <blockquote>
       <h2>
         <a name="chier">Collections Hierarchy</a>
@@ -278,7 +272,8 @@ Mutable Collections</a><br>
           </h4>
           <p>
             A sequence extends a bag with the ability to access and
-            replace its members using a non-negative exact integer.
+            replace all of its its members using a contiguous sequence of
+            non-negative exact integers.
             Sequences are <i>stable.</i> That is, if no mutation
             operation occurs on a sequence, its elements must
             remain in the same order according to their previously
@@ -300,8 +295,8 @@ Mutable Collections</a><br>
             Dictionary
           </h4>
           <p>
-            A dictionary maps an arbitrary value called a
-            <i>key</i> to another arbitrary value. Dictionaries may
+            A dictionary maps a value called a
+            <i>key</i> to another value. Dictionaries may
             or may not contain multiple mappings for a given key.
           </p>
         </blockquote>
@@ -501,7 +496,7 @@ terms of unnecessarily allocated storage. <br>
         <p>
           Any collection or instance of a collection may be
           immutable, or made immutable at any point in its
-          lifecycle. It is an error to add, remove, or modify and
+          lifecycle. It is an error to add, remove, or modify any
           values or mappings in an immutable collection.
         </p>
       </blockquote>
@@ -576,7 +571,7 @@ terms of unnecessarily allocated storage. <br>
       </h2>
       <blockquote>
         <p>
-          Dictionaries store mappings from a keys to values. Bags
+          Dictionaries store mappings from keys to values. Bags
           and Sets store values in an opaque fashion which only
           indicates the presence or absence of an object. In order
           to determine whether a given value exists in a set or
@@ -619,7 +614,7 @@ terms of unnecessarily allocated storage. <br>
           inside the normal range.  For example, a circular list sequence
           may allow you to retrieve the last value at position 
           <tt>(- (collection-size seq) 1)</tt> and at position <tt>-1</tt>.
-          Such additions should be well documented in the specification
+          Such extensions must be well documented in the specification
           of that sequence.
         </p>
         <h3>
@@ -659,7 +654,7 @@ terms of unnecessarily allocated storage. <br>
           Collections API functions, grouped by collection type. In
           each function, the name of the collection would replace
           the percentage mark in the function prototype. Function
-          definitions in sub or sibling collection types absolutely
+          definitions in child or sibling collection types absolutely
           override the same named function in the parent. For
           example <tt>make-%</tt> in the ordered collection.
         </p>
@@ -667,7 +662,7 @@ terms of unnecessarily allocated storage. <br>
           When <tt>*</tt> is encountered in the definitions below,
           it is implied that the asterisk is replaced with a
           function for the specific collection and each of the
-          collections supertypes for which the procedure is
+          collection's supertypes for which the procedure is
           defined. For example, if we had a 'list' flexible
           sequence collection, the functions
           <tt>list-contains?</tt>,
@@ -678,6 +673,10 @@ terms of unnecessarily allocated storage. <br>
           collection whose type does not satisfy that implied by
           the function name.
         </p>
+        <p>Encountering <tt>*</tt> as a function argument
+	indicates that the argument must be a collection
+	of the type the function is defined for, or any sub-type.
+	</p>
         <p>
           When <tt>%</tt> is encountered in the definitions below,
           the actual name of the collection is implied. Again,
@@ -686,6 +685,9 @@ terms of unnecessarily allocated storage. <br>
           <tt>%</tt> as a return value indicates a collection of
           that specific type.
         </p>
+	<p>Encountering <tt>%</tt> as a return type indicates that
+	a collection of the same type as the input is returned.  
+	</p>
         <h3>
           <a name="flup">Functional, Linear Update, and Purely Mutable Collections</a>
         </h3>
@@ -976,7 +978,7 @@ terms of unnecessarily allocated storage. <br>
             ordered collection.
           </blockquote>
           <p>
-            <i>procedure:</i> <b>*-get-left</b> *
+            <i>procedure:</i> <b>*-get-left</b> %
             [absence-thunk]<b>=&gt;</b> value
           </p>
           <blockquote>
@@ -987,7 +989,7 @@ terms of unnecessarily allocated storage. <br>
             otherwise <tt>#f</tt> is returned.
           </blockquote>
           <p>
-            <i>procedure:</i> <b>*-get-right</b> *
+            <i>procedure:</i> <b>*-get-right</b> %
             [absence-thunk]<b>=&gt;</b> value
           </p>
           <blockquote>
@@ -998,10 +1000,10 @@ terms of unnecessarily allocated storage. <br>
             otherwise <tt>#f</tt> is returned.          
           </blockquote>
           <p>
-            <i>procedure:</i> <b>*-remove-left</b> * <b>=&gt;</b> *
+            <i>procedure:</i> <b>*-remove-left</b> * <b>=&gt;</b> %
             value<br>
              <i>procedure:</i> <b>*-remove-left![!]</b> *
-            <b>=&gt;</b> * value
+            <b>=&gt;</b> % value
           </p>
           <blockquote>
             Removes the leftmost (least precedent) value from the
@@ -1010,9 +1012,9 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-remove-right</b> * <b>=&gt;</b>
-            * value<br>
+            % value<br>
              <i>procedure:</i> <b>*-remove-right![!]</b> *
-            <b>=&gt;</b> * value
+            <b>=&gt;</b> % value
           </p>
           <blockquote>
             Removes the rightmost (most precedent) value from the
@@ -1024,7 +1026,7 @@ terms of unnecessarily allocated storage. <br>
             <b>=&gt; %</b>
           </p>
           <blockquote>
-            Constructs a * ordered collection whose ordering is
+            Constructs a % ordered collection whose ordering is
             determined by the provided ordering function.
           </blockquote>
         </blockquote>
@@ -1062,18 +1064,18 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-add</b> bag value <b>=&gt;</b>
-            *<br>
+            %<br>
              <i>procedure:</i> <b>*-add![!]</b> bag value
-            <b>=&gt;</b> *
+            <b>=&gt;</b> %
           </p>
           <blockquote>
             Adds a single value to a bag.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-insert-left</b> *
-            value<b>=&gt;</b> *<br>
+            value<b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-insert-left![!]</b> *
-            value<b>=&gt;</b> *
+            value<b>=&gt;</b> %
           </p>
           <blockquote>
             Adds a value to an unspecified position in the bag. A
@@ -1084,9 +1086,9 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-insert-right</b> *
-            value<b>=&gt;</b> *<br>
+            value<b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-insert-right![!]</b> *
-            value<b>=&gt;</b> *
+            value<b>=&gt;</b> %
           </p>
           <blockquote>
             Adds a value to an unspecified position in the bag. A
@@ -1096,10 +1098,10 @@ terms of unnecessarily allocated storage. <br>
 </pre>
           </blockquote>
           <p>
-            <i>procedure:</i> <b>*-remove-left</b> * <b>=&gt;</b> *
+            <i>procedure:</i> <b>*-remove-left</b> * <b>=&gt;</b> %
             value<br>
              <i>procedure:</i> <b>*-remove-left![!]</b> value *
-            <b>=&gt;</b> * value
+            <b>=&gt;</b> % value
           </p>
           <blockquote>
             Removes an unspecified value from the bag, returning
@@ -1117,9 +1119,9 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-remove-right</b> * <b>=&gt;</b>
-            * value<br>
+            % value<br>
              <i>procedure:</i> <b>*-remove-right![!]</b> *
-            <b>=&gt;</b> * value
+            <b>=&gt;</b> % value
           </p>
           <blockquote>
             Removes an unspecified value from the bag, returning
@@ -1137,9 +1139,9 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-remove</b> bag value
-            <b>=&gt;</b> *<br>
+            <b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-remove![!]</b> bag value
-            <b>=&gt;</b> *
+            <b>=&gt;</b> %
           </p>
           <blockquote>
             Removes a single instance of the given value from the
@@ -1147,18 +1149,18 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-remove-any</b> bag value
-            <b>=&gt;</b> *<br>
+            <b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-remove-any![!]</b> bag value
-            <b>=&gt;</b> *
+            <b>=&gt;</b> %
           </p>
           <blockquote>
             Removes any instances of the given value from the bag.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-add-all</b> dest-bag source-bag
-            <b>=&gt;</b> *<br>
+            <b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-add-all![!]</b> dest-bag
-            source-bag <b>=&gt;</b> *
+            source-bag <b>=&gt;</b> %
           </p>
           <blockquote>
             Adds all the values in the source bag to the
@@ -1166,9 +1168,9 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-remove-all</b> dest-bag
-            source-bag <b>=&gt;</b> *<br>
+            source-bag <b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-remove-all![!]</b> dest-bag
-            source-bag <b>=&gt;</b> *
+            source-bag <b>=&gt;</b> %
           </p>
           <blockquote>
             Removes one instance of each value found in source-bag
@@ -1176,9 +1178,9 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-remove-any-of</b> dest-bag
-            source-bag <b>=&gt;</b> *<br>
+            source-bag <b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-remove-any-of![!]</b> dest-bag
-            source-bag <b>=&gt;</b> *
+            source-bag <b>=&gt;</b> %
           </p>
           <blockquote>
             Removes any instances of each value found in source-bag
@@ -1202,26 +1204,77 @@ terms of unnecessarily allocated storage. <br>
             <b>=&gt;</b> boolean
           </p>
           <blockquote>
-            Returns a non-false value if the set contains any
-            instances of the given value.
+            Returns a non-false value if the set contains the given value.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-add</b> set value <b>=&gt;</b>
-            *<br>
+             %<br>
              <i>procedure:</i> <b>*-add![!]</b> set value
-            <b>=&gt;</b> *
+            <b>=&gt;</b> %
           </p>
           <blockquote>
             Adds a value to the set.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-remove</b> set value
-            <b>=&gt;</b> *<br>
+            <b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-remove![!]</b> set value
-            <b>=&gt;</b> *
+            <b>=&gt;</b> %
           </p>
           <blockquote>
             Removes the given value from the set.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-union</b> set1 sets ...
+            <b>=&gt;</b> %<br>
+             <i>procedure:</i> <b>*-union![!]</b> set1 sets ...
+            <b>=&gt;</b> %
+          </p>
+          <blockquote>
+	    Performs set union of one set with zero or more
+	    other sets.  The resulting set contains the values
+	    of all input sets.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-intersection</b> set1 sets ...
+            <b>=&gt;</b> %<br>
+             <i>procedure:</i> <b>*-intersection![!]</b> set1 sets ...
+            <b>=&gt;</b> %
+          </p>
+          <blockquote>
+	    Performs set intersection of one set with zero or more
+	    other sets.  The resulting set contains the values
+	    common to all input sets.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-difference</b> set1 sets ...
+            <b>=&gt;</b> %<br>
+             <i>procedure:</i> <b>*-difference![!]</b> set1 sets ...
+            <b>=&gt;</b> %
+          </p>
+          <blockquote>
+	    Performs set difference between the first set
+            and the union of all subsequent sets.  
+	    The resulting set contains the values of set1 
+            which appear in no subsequent set.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-add-all</b> set bag
+            <b>=&gt;</b> %<br>
+             <i>procedure:</i> <b>*-add-all![!]</b> set bag
+            <b>=&gt;</b> %
+          </p>
+          <blockquote>
+	    Adds all the values in the given bag to the set.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-remove-all</b> set bag
+            <b>=&gt;</b> %<br>
+             <i>procedure:</i> <b>*-remove-all![!]</b> set bag
+            <b>=&gt;</b> %
+          </p>
+          <blockquote>
+	    Removes all the values in the given bag from the set.
           </blockquote>
         </blockquote>
         <h3>
@@ -1271,18 +1324,18 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-insert-right</b> *
-            value<b>=&gt;</b> *<br>
+            value<b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-insert-right![!]</b> *
-            value<b>=&gt;</b> *
+            value<b>=&gt;</b> %
           </p>
           <blockquote>
             Adds a value to the end of the sequence.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-set</b> sequence integer value
-            <b>=&gt;</b> *<br>
+            <b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-set![!]</b> sequence integer
-            value <b>=&gt;</b> *
+            value <b>=&gt;</b> %
           </p>
           <blockquote>
             Replaces the value stored in the sequence at the
@@ -1294,9 +1347,9 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-add</b> sequence value
-            <b>=&gt;</b> *<br>
+            <b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-add![!]</b> sequence value
-            <b>=&gt;</b> *
+            <b>=&gt;</b> %
           </p>
           <blockquote>
             Adds the given value to the end of the sequence.
@@ -1315,10 +1368,10 @@ terms of unnecessarily allocated storage. <br>
             flexible sequence.
           </blockquote>
           <p>
-            <i>procedure:</i> <b>*-insert</b> flexible-sequence
-            index value <b>=&gt;</b> *<br>
+            <i>procedure:</i> <b>*-insert</b> *
+            index value <b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-insert![!]</b>
-            flexible-sequence index value <b>=&gt;</b> *
+            * index value <b>=&gt;</b> %
           </p>
           <blockquote>
             Inserts the provided value at the given index in the
@@ -1328,10 +1381,10 @@ terms of unnecessarily allocated storage. <br>
             values' indices to increase by one.
           </blockquote>
           <p>
-            <i>procedure:</i> <b>*-delete</b> flexible-sequence
-            index <b>=&gt;</b> *<br>
+            <i>procedure:</i> <b>*-delete</b> *
+            index <b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-delete![!]</b>
-            flexible-sequence index <b>=&gt;</b> *
+            * index <b>=&gt;</b> %
           </p>
           <blockquote>
             Deletes the current value at the given index in the
@@ -1342,19 +1395,19 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-insert-left</b> *
-            value<b>=&gt;</b> *<br>
+            value<b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-insert-left![!]</b> *
-            value<b>=&gt;</b> *
+            value<b>=&gt;</b> %
           </p>
           <blockquote>
             Inserts a value into the flexible sequence at position
             0.
           </blockquote>
           <p>
-            <i>procedure:</i> <b>*-remove-left</b> * <b>=&gt;</b> *
+            <i>procedure:</i> <b>*-remove-left</b> * <b>=&gt;</b> %
             value<br>
              <i>procedure:</i> <b>*-remove-left![!]</b> *
-            <b>=&gt;</b> * value
+            <b>=&gt;</b> % value
           </p>
           <blockquote>
             Removes the value at position 0 in the flexible
@@ -1363,9 +1416,9 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-remove-right</b> * <b>=&gt;</b>
-            * value<br>
+            % value<br>
              <i>procedure:</i> <b>*-remove-right![!]</b> * 
-            <b>=&gt;</b> * value
+            <b>=&gt;</b> % value
           </p>
           <blockquote>
             Removes the value at position <tt>(-
@@ -1386,14 +1439,15 @@ terms of unnecessarily allocated storage. <br>
             dictionary.
           </blockquote>
           <p>
-            <i>procedure:</i> <b>%</b> (key
-            . value) ... <b>=&gt; *</b>
+            <i>procedure:</i> <b>%</b> pair ... <b>=&gt; %</b>
           </p>
           <blockquote>
             Constructs a % dictionary with the zero or more
             bindings provided as it's initial values. 
-            Each operand (after an equivalence function if present)
-            to a dictionary constructor must be a Scheme pair.
+            Each operand (after an equivalence and/or ordering function 
+	    if present) to a dictionary constructor must be a Scheme pair
+	    whose car is the new key and whose cdr is the value to which
+	    the key will map.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-key-count</b> dict value <b>=&gt; exact integer</b>
@@ -1413,8 +1467,8 @@ terms of unnecessarily allocated storage. <br>
             enumeration, but this procedure is provided if an
             implementation can more efficiently perform this
             operation directly. If the collection is ordered, the
-            list must contain the values of the collection in the
-            same order as a left enumeration.
+            list must contain the keys of the collection in the
+            same order as a left key enumeration.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-get</b> dictionary key [absence-thunk]
@@ -1428,9 +1482,9 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-put</b> dictionary key
-            value [absence-thunk] <b>=&gt;</b> * value<br>
+            value [absence-thunk] <b>=&gt;</b> % value<br>
              <i>procedure:</i> <b>*-put![!]</b> dictionary
-            key value [absence-thunk] <b>=&gt;</b> * value
+            key value [absence-thunk] <b>=&gt;</b> % value
           </p>
           <blockquote>
             Sets the value the mapping for the given key to the
@@ -1444,45 +1498,50 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-update</b> dictionary key func
-            [absence-thunk] <b>=&gt;</b> *<br>
+            [absence-thunk] <b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-update!</b> dictionary key func
-            [absence-thunk] <b>=&gt;</b> *
+            [absence-thunk] <b>=&gt;</b> %
           </p>
           <blockquote>
             Updates the value of the dictionary entry mapped by
             <tt>key</tt> to the results of applying the single
             argument function <tt>func</tt> to the previous value.
             If no previous mapping existed, <tt>absence-thunk</tt> is
-            invoked if present and its value returned,  
-            otherwise <tt>#f</tt> is returned.
+            invoked if present and its value passed to <tt>func</tt>
+            otherwise <tt>#f</tt> is passed.  The update's advantage
+            over a get, change, set sequence of operations is 
+            the possibility of a more efficient structure update,
+            and that the operation may be atomic or thread-safe, avoiding
+            race-conditions.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-remove</b> dictionary key
-            <b>=&gt;</b> *<br>
+            <b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-remove![!]</b> dictionary key
-            <b>=&gt;</b> *
+            <b>=&gt;</b> %
           </p>
           <blockquote>
             Removes an existing mapping for the given key. If there
-            was no such mapping, this call does nothing.
+            was no such mapping, this call makes no change.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-remove-any</b> dictionary key
-            <b>=&gt;</b> *<br>
+            <b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-remove-any![!]</b> dictionary
-            key <b>=&gt;</b> *
+            key <b>=&gt;</b> %
           </p>
           <blockquote>
             Removes any existing mappings for the given key. If
-            there weren't any such mappings, this call does
-            nothing. This procedure must be defined only if the
-            dictionary supports multiple mappings per key.
+            there weren't any such mappings, this call makes
+            no changes. This procedure is equivalent to 
+	    <tt>*-remove</tt> if the dictionary supports
+	    only one binding per key.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-remove-all</b> dictionary bag
-            <b>=&gt;</b> *<br>
+            <b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-remove-all![!]</b> dictionary
-            bag <b>=&gt;</b> *
+            bag <b>=&gt;</b> %
           </p>
           <blockquote>
             Removes one instance of each mapping from keys found in
@@ -1490,9 +1549,9 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-remove-any-of</b> dictionary bag
-            <b>=&gt;</b> *<br>
+            <b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-remove-any-of![!]</b>
-            dictionary bag <b>=&gt;</b> *
+            dictionary bag <b>=&gt;</b> %
           </p>
           <blockquote>
             Removes any instances of mappings from keys found in
@@ -1500,9 +1559,9 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-add-all</b> dest-dict
-            source-dict <b>=&gt;</b> *<br>
+            source-dict <b>=&gt;</b> %<br>
              <i>procedure:</i> <b>*-add-all![!]</b> dest-dict
-            source-dict <b>=&gt;</b> *
+            source-dict <b>=&gt;</b> %
           </p>
           <blockquote>
             Adds all the mappings in the source dictionary to the
@@ -1876,19 +1935,16 @@ terms of unnecessarily allocated storage. <br>
 
     <H1><a name="implementation">Implementation</a></H1>
 
-
     <p>
       This SRFI behaves more as a meta-SRFI for future SRFIs to
       define concrete collection types. However, a reference
       implementation for the collections wrapper around the common
-      Scheme types is provided in the archive <a href=
-      "http://www.bloodandcoffee.net/campbell/code/srfi-44.tar.gz">srfi-44.tar.gz</a>.
+      Scheme types is provided in the archive <a href="srfi-44.tar.gz">srfi-44.tar.gz</a>.
       It requires SRFI's 1 (list-lib), 23 (error), and the
       Tiny-CLOS portable object system to provide type dispatch.
     </p>
 
     <H1>Copyright</H1>
-
 
     <p>
       Copyright (C) Scott G. Miller (2003). All Rights Reserved.
