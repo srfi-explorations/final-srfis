@@ -1,6 +1,5 @@
 ;;;;;; Vector library
 
-;;; --------------------
 ;;; Copyright (C) 2003, 2004 Taylor Campbell.
 ;;; All rights reserved.
 ;;;
@@ -12,6 +11,8 @@
 ;;; Send questions or bugs or anything of the sort to the author or the
 ;;; mailing list, whose addresses can be found at
 ;;;   http://srfi.schemers.org/srfi-43/srfi-43.html
+
+
 
 ;;; --------------------
 ;;; Exported procedure index
@@ -55,6 +56,8 @@
 ;;; vector->list                    reverse-vector->list
 ;;; list->vector                    reverse-list->vector
 
+
+
 ;;; --------------------
 ;;; Commentary on efficiency of the code
 
@@ -68,8 +71,19 @@
 ;;; internal routines' loops are lambda-lifted so as to never cons a
 ;;; closure in their body (VECTOR-PARSE-START+END doesn't have a loop).
 ;;;
+;;; Fast paths are provided for common cases in most of the loops in
+;;; this library.
+;;;
+;;; All calls to primitive vector operations are protected by a prior
+;;; type check; they can be safely converted to use unsafe equivalents
+;;; of the operations, if available.  Ideally, the compiler should be
+;;; able to determine this, but the state of Scheme compilers today is
+;;; not a happy one.
+;;;
 ;;; Efficiency of the actual algorithms is a rather mundane point to
 ;;; mention; vector operations are rarely beyond being straightforward.
+
+
 
 ;;; --------------------
 ;;; Utilities
@@ -125,6 +139,8 @@
 ;++ be reused.
 (define (vectors-ref vectors i)
   (map (lambda (v) (vector-ref v i)) vectors))
+
+
 
 ;;; --------------------
 ;;; Error checking
@@ -199,14 +215,14 @@
 ;;;   while calling CALLEE.  Also ensure that VEC is in fact a vector.
 ;;;   Returns no useful value.
 (define (check-indices vec start start-name end end-name callee)
-  (define (die . things)
-    (apply error "Vector range out of bounds"
-           (append things
-                   `(vector was ,vec)
-                   `(,start-name was ,start)
-                   `(,end-name was ,end)
-                   `(while calling ,callee))))
-  (let ((start (check-type integer? start callee))
+  (let ((lose (lambda things
+                (apply error "Vector range out of bounds"
+                       (append things
+                               `(vector was ,vec)
+                               `(,start-name was ,start)
+                               `(,end-name was ,end)
+                               `(while calling ,callee)))))
+        (start (check-type integer? start callee))
         (end   (check-type integer? end   callee)))
     (cond ((> start end)
            ;; I'm not sure how well this will work.  The intent is that
@@ -214,33 +230,35 @@
            ;; new START & a new END by returning multiple values
            ;; somewhere.
            (receive (new-start new-end)
-                    (die `(,end-name < ,start-name))
+                    (lose `(,end-name < ,start-name))
              (check-indices vec
                             new-start start-name
                             new-end end-name
                             callee)))
           ((< start 0)
            (check-indices vec
-                          (die `(,start-name < 0))
+                          (lose `(,start-name < 0))
                           start-name
                           end end-name
                           callee))
           ((>= start (vector-length vec))
            (check-indices vec
-                          (die `(,start-name > len)
-                               `(len was ,(vector-length vec)))
+                          (lose `(,start-name > len)
+                                `(len was ,(vector-length vec)))
                           start-name
                           end end-name
                           callee))
           ((> end (vector-length vec))
            (check-indices vec
                           start start-name
-                          (die `(,end-name > len)
-                               `(len was ,(vector-length vec)))
+                          (lose `(,end-name > len)
+                                `(len was ,(vector-length vec)))
                           end-name
                           callee))
           (else
            (values start end)))))
+
+
 
 ;;; --------------------
 ;;; Internal routines
@@ -423,6 +441,8 @@
                          (loop f target vectors j))))))
     (lambda (f target vectors len)
       (loop f target vectors (- len 1)))))
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;; ***** vector-lib ***** ;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -634,33 +654,30 @@
                                     callee)))))
            (concatenate!
             (lambda (vectors target to)
-              (cond ((null? vectors) target)
-                    (else
-                     (let* ((vec1 (car vectors))
-                            (len (vector-length vec1)))
-                       (%vector-copy! target to vec1 0 len)
-                       (concatenate! (cdr vectors) target
-                                     (+ to len))))))))
+              (if (null? vectors)
+                  target
+                  (let* ((vec1 (car vectors))
+                         (len (vector-length vec1)))
+                    (%vector-copy! target to vec1 0 len)
+                    (concatenate! (cdr vectors) target
+                                  (+ to len)))))))
     (lambda (vectors callee)
       (cond ((null? vectors)            ;+++
              (make-vector 0))
             ((null? (cdr vectors))      ;+++
              ;; Blech, we still have to allocate a new one.
-             (let* ((len (vector-length
-                          (check-type vector? (car vectors) callee)))
+             (let* ((vec (check-type vector? (car vectors) callee))
+                    (len (vector-length vec))
                     (new (make-vector len)))
-               (%vector-copy! new 0 (car vectors) 0 len)
+               (%vector-copy! new 0 vec 0 len)
                new))
             (else
              (let ((new-vector
-                    (make-vector
-                     (compute-length vectors
-                                     (check-type vector?
-                                                 (car vectors)
-                                                 callee)
-                                     callee))))
+                    (make-vector (compute-length vectors 0 callee))))
                (concatenate! vectors new-vector 0)
                new-vector))))))
+
+
 
 ;;; --------------------
 ;;; Predicates
@@ -691,7 +708,7 @@
 ;;;   insignificant.)
 ;;;   
 ;;;   If the number of vector arguments is zero or one, then #T is
-;;;   automatically returned.  If there are N vector arguments, then
+;;;   automatically returned.  If there are N vector arguments,
 ;;;   VECTOR_1 VECTOR_2 ... VECTOR_N, then VECTOR_1 & VECTOR_2 are
 ;;;   compared; if they are equal, the vectors VECTOR_2 ... VECTOR_N
 ;;;   are compared.  The precise order in which ELT=? is applied is not
@@ -714,21 +731,20 @@
   (or (eq? vector-a vector-b)           ;+++
       (let ((length-a (vector-length vector-a))
             (length-b (vector-length vector-b)))
+        (letrec ((loop (lambda (i)
+                         (or (= i length-a)
+                             (and (< i length-b)
+                                  (test (vector-ref vector-a i)
+                                        (vector-ref vector-b i)
+                                        i)))))
+                 (test (lambda (elt-a)
+                         (and (or (eq? elt-a elt-b) ;+++
+                                  (elt=? elt-a elt-b))
+                              (loop (+ i 1))))))
+          (and (= length-a length-b)
+               (loop 0))))))
 
-        (define (loop i)
-          (if (= i length-a)
-              (= i length-b)
-              (and (< i length-b)
-                   (check (vector-ref vector-a i)
-                          (vector-ref vector-b i)
-                          i))))
-        (define (check elt-a elt-b i)
-          (and (or (eq? elt-a elt-b)    ;+++
-                   (elt=? elt-a elt-b))
-               (loop (+ i 1))))
-
-        (and (= length-a length-b)
-             (loop 0)))))
+
 
 ;;; --------------------
 ;;; Selectors
@@ -741,6 +757,8 @@
 ;;; (VECTOR-LENGTH <vector>) -> exact, nonnegative integer
 ;;;   [R5RS] Return the length of VECTOR.
 (define vector-length vector-length)
+
+
 
 ;;; --------------------
 ;;; Iteration
@@ -874,7 +892,7 @@
 
 ;;; (VECTOR-COUNT <predicate?> <vector> ...)
 ;;;       -> exact, nonnegative integer
-;;;     (PREDICATE? <value> ...) ; N vectors -> N args
+;;;     (PREDICATE? <index> <value> ...) ; N vectors -> N+1 args
 ;;;   PREDICATE? is applied element-wise to the elements of VECTOR ...,
 ;;;   and a count is tallied of the number of elements for which a
 ;;;   true value is produced by PREDICATE?.  This count is returned.
@@ -898,6 +916,8 @@
                                           (vector-length vec)
                                           vector-count)
                         (cons vec vectors)))))
+
+
 
 ;;; --------------------
 ;;; Searching
@@ -1072,6 +1092,8 @@
                                          vector-every)))
               (loop2+ pred? (cons vec vectors) 0 len (- len 1))))))))
 
+
+
 ;;; --------------------
 ;;; Mutators
 
@@ -1118,31 +1140,28 @@
          (tstart (check-index target tstart vector-copy!)))
     (let-vector-start+end vector-copy! source maybe-sstart+send
                           (sstart send)
-      (let ((source-length (vector-length source)))
-        (define (die thing)
-          ;; It's too complicated to figure out how best to suit the
-          ;; user at the debugger prompt for proceeding here, so I
-          ;; leave it at a plain (tail, unfortunately) call to ERROR.
-          (error "Vector range out of bounds"
-                 thing
-                 `(while calling ,vector-copy!)
-                 `(target was ,target)
-                 `(target-length was ,(vector-length target))
-                 `(tstart was ,tstart)
-                 `(source was ,source)
-                 `(source-length was ,source-length)
-                 `(sstart was ,sstart)
-                 `(send   was ,send)))
+      (let ((source-length (vector-length source))
+            (lose (lambda (argument)
+                    (error "Vector range out of bounds"
+                           argument
+                           `(while calling ,vector-copy!)
+                           `(target was ,target)
+                           `(target-length was ,(vector-length target))
+                           `(tstart was ,tstart)
+                           `(source was ,source)
+                           `(source-length was ,source-length)
+                           `(sstart was ,sstart)
+                           `(send   was ,send)))))
         (cond ((< sstart 0)
-               (die '(sstart < 0)))
+               (lose '(sstart < 0)))
               ((< send 0)
-               (die '(send < 0)))
+               (lose '(send < 0)))
               ((> sstart send)
-               (die '(sstart > send)))
+               (lose '(sstart > send)))
               ((>= sstart source-length)
-               (die '(sstart >= source-length)))
+               (lose '(sstart >= source-length)))
               ((> send source-length)
-               (die '(send > source-length)))
+               (lose '(send > source-length)))
               (else
                (%vector-copy! target tstart
                               source sstart send)))))))
@@ -1153,28 +1172,28 @@
          (tstart (check-index target tstart vector-reverse-copy!)))
     (let-vector-start+end vector-reverse-copy source maybe-sstart+send
                           (sstart send)
-      (let ((source-length (vector-length source)))
-        (define (die thing)
-          (error "Vector range out of bounds"
-                 thing
-                 `(while calling ,vector-reverse-copy!)
-                 `(target was ,target)
-                 `(target-length was ,(vector-length target))
-                 `(tstart was ,tstart)
-                 `(source was ,source)
-                 `(source-length was ,source-length)
-                 `(sstart was ,sstart)
-                 `(send   was ,send)))
+      (let ((source-length (vector-length source))
+            (lose (lambda (argument)
+                    (error "Vector range out of bounds"
+                           thing
+                           `(while calling ,vector-reverse-copy!)
+                           `(target was ,target)
+                           `(target-length was ,(vector-length target))
+                           `(tstart was ,tstart)
+                           `(source was ,source)
+                           `(source-length was ,source-length)
+                           `(sstart was ,sstart)
+                           `(send   was ,send)))))
         (cond ((< sstart 0)
-               (die '(sstart < 0)))
+               (lose '(sstart < 0)))
               ((< send 0)
-               (die '(send < 0)))
+               (lose '(send < 0)))
               ((> sstart send)
-               (die '(sstart > send)))
+               (lose '(sstart > send)))
               ((>= sstart source-length)
-               (die '(sstart >= source-length)))
+               (lose '(sstart >= source-length)))
               ((> send source-length)
-               (die '(send > source-length)))
+               (lose '(send > source-length)))
               ((and (eq? target source)
                     (= sstart tstart))
                (%vector-reverse! target tstart send))
@@ -1200,6 +1219,8 @@
   (let-vector-start+end vector-reverse! vec start+end
                         (start end)
     (%vector-reverse! vec start end)))
+
+
 
 ;;; --------------------
 ;;; Conversion
