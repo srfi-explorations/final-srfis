@@ -15,7 +15,6 @@
     <H1>Author</H1>
 
     Scott G. Miller 
-
     <H1>Status</H1> 
 
     This SRFI is currently in ``draft'' status.  To see an explanation
@@ -41,11 +40,12 @@
       <li>Revised: 2003/08/27
       <li>Revised: 2003/09/11
       <li>Revised: 2003/10/07
+      <li>Revised: 2003/10/08
     </ul></p>
-
 
     <H1>Abstract</H1>
 
+    
     <p>
       A Collections API which defines a common naming scheme and
       set of operations for creating, accessing, and manipulating
@@ -58,6 +58,7 @@
     </p>
 
     <H1>Table of Contents</H1>
+
     <blockquote>
        <a href="#issues">Issues</a><br>
        <a href="#rationale">Rationale</a><br>
@@ -111,6 +112,8 @@ Mutable Collections</a><br>
 
     <H1><a name="issues">Issues</a></H1>
 
+      
+
     <p>
       Several functions in this SRFI are required to take arbitrary
       collections or major collection subtypes as input. This
@@ -121,7 +124,7 @@ Mutable Collections</a><br>
     <p>
       As standard Scheme lacks the ability to automatically
       dispatch on different function behaviors based on the types
-      of arguments, it difficult to devise a portable
+      of arguments, it is difficult to devise a portable
       implementation of this SRFI which allows arbitrary future
       collections. It is expected that Scheme system implementors
       will take advantage of generic function, module system, or
@@ -145,6 +148,8 @@ Mutable Collections</a><br>
     </p>
 
     <H1><a name="rationale">Rationale</a></H1>
+
+      
 
     <p>
       The Scheme language provides two basic datastructures for
@@ -203,9 +208,11 @@ Mutable Collections</a><br>
       may obviate the need to transfer many unaccessed future
       elements.
     </p>
-    <h1>
-      <a name="specification">Specification</a>
-    </h1>
+
+    <H1><a name="specification">Specification</a></H1>
+
+      
+
     <blockquote>
       <h2>
         <a name="chier">Collections Hierarchy</a>
@@ -272,7 +279,7 @@ Mutable Collections</a><br>
           </h4>
           <p>
             A sequence extends a bag with the ability to access and
-            replace all of its its members using a contiguous sequence of
+            replace all of its members using a contiguous sequence of
             non-negative exact integers.
             Sequences are <i>stable.</i> That is, if no mutation
             operation occurs on a sequence, its elements must
@@ -308,7 +315,7 @@ Mutable Collections</a><br>
         <p>
           In addition to the type hierarchy which dictates the
           available functions for a given collection, collections
-          also may posses one of two (in this SRFI) attributes
+          also may possess one of two (in this SRFI) attributes
           which specify whether certain global functions are well
           defined for the collection. Attributes may also add
           additional parameters to the collection's constructor.
@@ -324,7 +331,7 @@ Mutable Collections</a><br>
           Ordered collections maintain an ordering to their values
           (or in the case of dictionaries, their keys). The
           collection left fold is guaranteed to enumerate over the
-          collections values/keys in increasing value precedence as
+          collection's values/keys in increasing value precedence as
           defined by the collection's <i>ordering function</i>.
         </p>
         <p>
@@ -469,9 +476,9 @@ terms of unnecessarily allocated storage. <br>
         </p>
         <p>
           For sequences, the ordering of the contained values must
-          also be equivalent. For dictionaries, each key in one
-          collection must be equal to the a key compared
-          collection, and the value(s) mapped to by that key must
+          also be equivalent. For dictionaries, each key in the first
+          dictionary must be equal to a key in the second dictionary, 
+          and the value(s) mapped to by that key in each dictionary must
           also be equivalent. If the dictionary is ordered, the
           order of the mappings must also be the same.
         </p>
@@ -609,7 +616,7 @@ terms of unnecessarily allocated storage. <br>
           at the index <tt>(- (collection-size <i>seq</i>) 1)</tt>.
         </p>
         <p>
-          Sequences may allow other indicies outside the range specified
+          Sequences may allow other indices outside the range specified
           above to retrieve values that can also be retrieved with indices
           inside the normal range.  For example, a circular list sequence
           may allow you to retrieve the last value at position 
@@ -706,7 +713,7 @@ terms of unnecessarily allocated storage. <br>
           but have the bang (!) character appended. They too return
           a collection, which is allowed to be the same as and/or
           share structure with the input collection. However,
-          side-effects to the the input collection are allowed. The
+          side-effects to the input collection are allowed. The
           caller <i>must</i> use the returned collection to view
           the effects of the update. The structure of the input
           collection after the modification is undefined.
@@ -758,7 +765,7 @@ terms of unnecessarily allocated storage. <br>
             accepts a single collection value as its first
             argument, and the seeds as remaining arguments. It must
             then return a <i>proceed</i> value, which if false
-            halts the enumeration, as well as an equal numer of
+            halts the enumeration, as well as an equal number of
             returned seed values as arguments. These seed values
             are then passed to the next call to the fold function
             on the next collection value.<br>
@@ -860,7 +867,7 @@ terms of unnecessarily allocated storage. <br>
             [absence-thunk]<b>=&gt;</b> value
           </p>
           <blockquote>
-            Returns a value the given collection.  For an arbitrary
+            Returns a value from the given collection.  For an arbitrary
             collection, it is unspecified which of its values is 
             returned.  More specific collection types may 
             have more rigorous requirements.
@@ -883,10 +890,10 @@ terms of unnecessarily allocated storage. <br>
             <b>=&gt;</b> boolean
           </p>
           <blockquote>
-            Returns a non-fale value iff the given collection is known to be
-            empty. This function should return false if it is known
-            that there are values within the collection, or if it
-            is unknown whether any values exist.
+            Returns a non-fasle value iff the given collection is 
+	    known to be empty. This function should return false if 
+            it is known that there are values within the collection, 
+            or if it is unknown whether any values exist.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-&gt;list</b> collection
@@ -899,7 +906,7 @@ terms of unnecessarily allocated storage. <br>
             this function to behave more efficiently on certain
             collections. If the collection is ordered, the list
             must contain the values of the collection in the same
-            order as a left enumeration.
+            order as the left collection fold.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-clear</b> collection
@@ -948,7 +955,7 @@ terms of unnecessarily allocated storage. <br>
             <i>procedure:</i> <b>%</b> value ... <b>=&gt; %</b>
           </p>
           <blockquote>
-            Constructs a % collection with the zero or more values
+            Constructs a % collection with zero or more values
             provided as its initial contents.
           </blockquote>
           <p>
@@ -976,6 +983,14 @@ terms of unnecessarily allocated storage. <br>
           <blockquote>
             Returns a non-false value if the provided value is an
             ordered collection.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-ordering-function</b> *
+            <b>=&gt; procedure</b>
+          </p>
+          <blockquote>
+	    Returns the ordering function of the provided ordered 
+	    collection.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-get-left</b> %
@@ -1053,6 +1068,13 @@ terms of unnecessarily allocated storage. <br>
           <blockquote>
             Returns a non-false value if the provided value is a
             bag.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-equivalence-function</b> bag 
+            <b>=&gt; procedure</b>
+          </p>
+          <blockquote>
+            Returns the equivalence function for the given bag.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-contains?</b> bag value
@@ -1198,6 +1220,13 @@ terms of unnecessarily allocated storage. <br>
           <blockquote>
             Returns a non-false value if the provided value is a
             set.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-equivalence-function</b> set 
+            <b>=&gt; procedure</b>
+          </p>
+          <blockquote>
+            Returns the equivalence function for the given set.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-contains?</b> set value
@@ -1388,10 +1417,10 @@ terms of unnecessarily allocated storage. <br>
           </p>
           <blockquote>
             Deletes the current value at the given index in the
-            flexible sequence. If index is not equal to the
-            <tt>collection-size</tt> - 1 of the sequence, this will
-            result in the subsequent values' indices to decrease by
-            one, filling the newly created gap.
+            flexible sequence. If index is not equal to the element at 
+            index <tt>(- (collection-size *) 1)</tt> of the sequence, 
+            this will result in the subsequent values' indices to 
+	    decrease by one, filling the newly created gap.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-insert-left</b> *
@@ -1442,12 +1471,19 @@ terms of unnecessarily allocated storage. <br>
             <i>procedure:</i> <b>%</b> pair ... <b>=&gt; %</b>
           </p>
           <blockquote>
-            Constructs a % dictionary with the zero or more
-            bindings provided as it's initial values. 
+            Constructs a % dictionary with zero or more
+            bindings provided as its initial values. 
             Each operand (after an equivalence and/or ordering function 
 	    if present) to a dictionary constructor must be a Scheme pair
 	    whose car is the new key and whose cdr is the value to which
 	    the key will map.
+          </blockquote>
+          <p>
+            <i>procedure:</i> <b>*-equivalence-function</b> dictionary
+            <b>=&gt; procedure</b>
+          </p>
+          <blockquote>
+            Returns the equivalence function for the given dictionary.
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-key-count</b> dict value <b>=&gt; exact integer</b>
@@ -1487,7 +1523,7 @@ terms of unnecessarily allocated storage. <br>
             key value [absence-thunk] <b>=&gt;</b> % value
           </p>
           <blockquote>
-            Sets the value the mapping for the given key to the
+            Set the value mapped by the given key to the
             given value, returning the updated dictionary as the
             first of two values.
             If the mapping previously existed, the second return value
@@ -1499,7 +1535,7 @@ terms of unnecessarily allocated storage. <br>
           <p>
             <i>procedure:</i> <b>*-update</b> dictionary key func
             [absence-thunk] <b>=&gt;</b> %<br>
-             <i>procedure:</i> <b>*-update!</b> dictionary key func
+             <i>procedure:</i> <b>*-update![!]</b> dictionary key func
             [absence-thunk] <b>=&gt;</b> %
           </p>
           <blockquote>
@@ -1532,7 +1568,7 @@ terms of unnecessarily allocated storage. <br>
           </p>
           <blockquote>
             Removes any existing mappings for the given key. If
-            there weren't any such mappings, this call makes
+            that mapping does not exist, this call makes
             no changes. This procedure is equivalent to 
 	    <tt>*-remove</tt> if the dictionary supports
 	    only one binding per key.
@@ -1599,7 +1635,9 @@ terms of unnecessarily allocated storage. <br>
           </blockquote><i>procedure:</i> <b>list</b> value ...
           =&gt; list<br>
           <br>
-           
+          <p>
+            <i>procedure:</i> <b>list-equivalence-function</b> list =&gt; procedure<br>
+          </p>           
           <p>
             <i>procedure:</i> <b>list-copy</b> list <b>=&gt;</b>
             <i>procedure:</i> <b>list->list</b> list =&gt; list
@@ -1735,6 +1773,9 @@ terms of unnecessarily allocated storage. <br>
             (key . value) ... =&gt; alist
           </p>
           <p>
+            <i>procedure:</i> <b>alist-equivalence-function</b> alist =&gt; procedure<br>
+          </p>
+          <p>
             <i>procedure:</i> <b>alist-count</b> alist value =&gt; exact integer<br>
             <i>procedure:</i> <b>alist-key-count</b> alist value =&gt; exact integer<br>
             <i>procedure:</i> <b>alist-size</b> alist value =&gt; exact integer
@@ -1838,7 +1879,9 @@ terms of unnecessarily allocated storage. <br>
           </blockquote><i>procedure:</i> <b>vector</b> value ...
           =&gt; vector<br>
           <br>
-           
+          <p>
+            <i>procedure:</i> <b>vector-equivalence-function</b> vector =&gt; procedure<br>
+          </p>           
           <p>
             <i>procedure:</i> <b>vector-copy</b> vector =&gt; vector<br>
             <i>procedure:</i> <b>vector->list</b> vector =&gt; list<br>
@@ -1892,6 +1935,9 @@ terms of unnecessarily allocated storage. <br>
             string
           </p>
           <p>
+            <i>procedure:</i> <b>string-equivalence-function</b> string =&gt; procedure<br>
+          </p>
+          <p>
             <i>procedure:</i> <b>string-copy</b> string =&gt;
             string<br>
             <i>procedure:</i> <b>string->list</b> string =&gt;
@@ -1922,7 +1968,7 @@ terms of unnecessarily allocated storage. <br>
           <p>
             <i>procedure:</i> <b>string-set</b> string index character
             =&gt; value<br>
-            <i>procedure:</i> <b>vector-set!</b> vector index character
+            <i>procedure:</i> <b>string-set!</b> vector index character
             =&gt; value<br>
           </p>
           <p>
@@ -1935,6 +1981,7 @@ terms of unnecessarily allocated storage. <br>
 
     <H1><a name="implementation">Implementation</a></H1>
 
+
     <p>
       This SRFI behaves more as a meta-SRFI for future SRFIs to
       define concrete collection types. However, a reference
@@ -1945,6 +1992,7 @@ terms of unnecessarily allocated storage. <br>
     </p>
 
     <H1>Copyright</H1>
+
 
     <p>
       Copyright (C) Scott G. Miller (2003). All Rights Reserved.
