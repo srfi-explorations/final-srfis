@@ -29,17 +29,26 @@ href="http://srfi.schemers.org/srfi-58/mail-archive/maillist.html">the
 archive of the mailing list</A>.
 <P>
 <UL>
-  <LI>Received: 2004/11/26</LI>
+  <LI>Received: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-58/srfi-58.html?rev=1.2">2004/11/26</A></LI>
   <LI>Draft: 2004/11/26 - 2005/01/24</LI>
+  <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-58/srfi-58.html?rev=1.4">2004/12/31</A></LI>
+  <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-58/srfi-58.html?rev=1.5">2005/01/02</A></LI>
+  <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-58/srfi-58.html?rev=1.6">2005/01/03</A></LI>
+  <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-58/srfi-58.html?rev=1.7">2005/01/05</A></LI>
+  <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-58/srfi-58.html?rev=1.7">2005/01/05</A></LI>
+  <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-58/srfi-58.html?rev=1.8">2005/01/07</A></LI>
+  <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-58/srfi-58.html?rev=1.10">2005/01/17</A></LI>
 </UL>
 
 <H1>Abstract</H1>
 
 <A HREF="http://srfi.schemers.org/srfi-47/srfi-47.html">SRFI-47</A>
-provides both uniform-typed and heterogeneous multidimensional arrays
-which subsume Scheme vectors.  The notation presented here builds upon
-Common-Lisp array sytnax to represent heterogeneous and uniform-typed
-arrays.
+and its successor
+<A HREF="http://srfi.schemers.org/srfi-63/srfi-63.html">SRFI-63</A>
+provide both homogeneous numeric and heterogeneous multidimensional
+arrays which subsume Scheme vectors.  The notation presented here
+builds upon Common-Lisp array sytnax to represent heterogeneous and
+homogeneous numeric arrays.
 <P>
 
 <H1>Issues</H1>
@@ -96,7 +105,8 @@ for the integers.
     "<CODE>#*</CODE>" followed by a sequence of ones and zeros;
     "<CODE>1</CODE>" for "<CODE>#t</CODE>", "<CODE>0</CODE>" for
     "<CODE>#f</CODE>".  Common-Lisp's bit-array accessor functions
-    return "<CODE>1</CODE>" and "<CODE>0</CODE>"; but SRFI-47's
+    return "<CODE>1</CODE>" and "<CODE>0</CODE>"; but <A
+    HREF="http://srfi.schemers.org/srfi-47/srfi-47.html">SRFI-47</A>'s
     "<CODE>array-ref</CODE>" returns "<CODE>#t</CODE>" or "<CODE>#f</CODE>".
     I don't think that difference invalidates this notation for
     Scheme, but others may.
@@ -133,28 +143,25 @@ for the integers.
 <!--   <LI>It's prior art.<P> -->
 <!--   </UL> -->
 
+  <LI>
+  In Common Lisp, <CODE>#<VAR>n</VAR>(v<SUB>1</SUB> v<SUB>2</SUB>
+  ... v<SUB>k</SUB>)</CODE> creates a vector of size N, with the final
+  value, v<SUB>k</SUB>, repeated (N - K) times. It's an error if (K >
+  N) or if (K = 0 and N > 0).  Examples:
+
+<PRE>
+#5(1 2) ==> #(1 2 2 2 2)
+#2(1 2) ==> #(1 2)
+#0()    ==> #()
+#1(1 2) ==> error: too many values
+#5()    ==> error: no values for non-empty array
+</PRE>
+
+  <LI>
+  PLT Scheme adds two extensions: If (K = 0), the vector is filled
+  with 0, and if (K > N) the reader raises a specific exception.
+
 </UL>
-
-<P>
-<A HREF="http://srfi.schemers.org/srfi-47/srfi-47.html">SRFI-47</A>,
-"Array", incorporates all the uniform vector types from
-
-<A HREF="http://srfi.schemers.org/srfi-4/srfi-4.html">SFRI-4</A>
-"Homogeneous numeric vector datatypes", and adds a boolean array type,
-shorter and longer floating-point numbers, decimal floating-point
-reals, and array types of complex numbers composed of two
-floating-point numbers.  Multi-dimensional arrays subsume homogeneous
-vectors as the one-dimensional case, obviating the need for SRFI-4.
-<P>
-Implementations are required to accept all of the type denotations.
-Uniform types of matching sizes which the platform supports will be
-used; the others will be represented as the next larger format of the
-same type implemented.  If there is no larger format of the same type
-and there is a bignum format for that element type, then the array
-format defaults to <CODE>vector</CODE>; otherwise the largest uniform
-format of that type is used.  This arrangement has platforms
-supporting uniform array types using them, with less capable platforms
-using vectors; both from the same source code.
 <P>
 The rank and dimension of the literal array can be specified several
 ways.
@@ -173,8 +180,11 @@ ways.
 Both rank and dimensions can be supplied on opposite sides of
 <CODE>A</CODE>.
 <P>
-Aliases for the array-prototype-procedures of SRFI-47 are defined
-whose identifiers are the <CODE>#<I>n</I>A:<I>typename</I></CODE>
+The array-prototype-procedures of <A
+HREF="http://srfi.schemers.org/srfi-63/srfi-63.html">SRFI-63</A> and
+aliases for the array-prototype-procedures of <A
+HREF="http://srfi.schemers.org/srfi-47/srfi-47.html">SRFI-47</A> are
+defined whose identifiers are the <CODE>#<I>n</I>A:<I>typename</I></CODE>
 prefix sans the <CODE>#<I>n</I></CODE>.  Having the
 array-prototype-procedure names match the array prefixes reduces the
 memory load for users.
@@ -228,11 +238,11 @@ The prefix syntax is:
 
   dimension :: nonnegative-integer
 
-  rank :: positive-integer
+  rank :: nonnegative-integer
 
-  type-specifier :: `flo' { `c' | `r' } flowidth `b' |
-                    `fix' { `z' | `n' } fixwidth `b' |
-                    `flo' `r' decwidth `d'
+  type-specifier :: `flo' { `C' | `R' } flowidth `b' |
+                    `fix' { `Z' | `N' } fixwidth `b' |
+                    `flo' `Q' decwidth `d'
 
   flowidth :: `16' | `32' | `64' | `128'
 
@@ -249,27 +259,27 @@ The prefix syntax is:
     <TH>element type
     <TH>type<BR>specifier
 <TR><TD><CODE>vector   </CODE><TD>        <TD>any                          <TD><CODE>        </CODE>
-<TR><TD><CODE>A:floc128b</CODE><TD>inexact<TD>128.bit binary flonum complex<TD><CODE>floc128b</CODE>
-<TR><TD><CODE>A:floc64b </CODE><TD>inexact<TD>64.bit binary flonum complex <TD><CODE>floc64b </CODE>
-<TR><TD><CODE>A:floc32b </CODE><TD>inexact<TD>32.bit binary flonum complex <TD><CODE>floc32b </CODE>
-<TR><TD><CODE>A:floc16b </CODE><TD>inexact<TD>16.bit binary flonum complex <TD><CODE>floc16b </CODE>
-<TR><TD><CODE>A:flor128b</CODE><TD>inexact<TD>128.bit binary flonum real   <TD><CODE>flor128b</CODE>
-<TR><TD><CODE>A:flor64b </CODE><TD>inexact<TD>64.bit binary flonum real    <TD><CODE>flor64b </CODE>
-<TR><TD><CODE>A:flor32b </CODE><TD>inexact<TD>32.bit binary flonum real    <TD><CODE>flor32b </CODE>
-<TR><TD><CODE>A:flor16b </CODE><TD>inexact<TD>16.bit binary flonum real    <TD><CODE>flor16b </CODE>
+<TR><TD><CODE>A:floC128b</CODE><TD>inexact<TD>128.bit binary flonum complex<TD><CODE>floC128b</CODE>
+<TR><TD><CODE>A:floC64b </CODE><TD>inexact<TD>64.bit binary flonum complex <TD><CODE>floC64b </CODE>
+<TR><TD><CODE>A:floC32b </CODE><TD>inexact<TD>32.bit binary flonum complex <TD><CODE>floC32b </CODE>
+<TR><TD><CODE>A:floC16b </CODE><TD>inexact<TD>16.bit binary flonum complex <TD><CODE>floC16b </CODE>
+<TR><TD><CODE>A:floR128b</CODE><TD>inexact<TD>128.bit binary flonum real   <TD><CODE>floR128b</CODE>
+<TR><TD><CODE>A:floR64b </CODE><TD>inexact<TD>64.bit binary flonum real    <TD><CODE>floR64b </CODE>
+<TR><TD><CODE>A:floR32b </CODE><TD>inexact<TD>32.bit binary flonum real    <TD><CODE>floR32b </CODE>
+<TR><TD><CODE>A:floR16b </CODE><TD>inexact<TD>16.bit binary flonum real    <TD><CODE>floR16b </CODE>
 <TR>
-<TR><TD><CODE>A:flor128d</CODE><TD>exact  <TD>128.bit decimal flonum real  <TD><CODE>flor128d</CODE>
-<TR><TD><CODE>A:flor64d </CODE><TD>exact  <TD>64.bit decimal flonum real   <TD><CODE>flor64d </CODE>
-<TR><TD><CODE>A:flor32d </CODE><TD>exact  <TD>32.bit decimal flonum real   <TD><CODE>flor32d </CODE>
+<TR><TD><CODE>A:floQ128d</CODE><TD>exact  <TD>128.bit decimal flonum rational<TD><CODE>floQ128d</CODE>
+<TR><TD><CODE>A:floQ64d </CODE><TD>exact  <TD>64.bit decimal flonum rational <TD><CODE>floQ64d </CODE>
+<TR><TD><CODE>A:floQ32d </CODE><TD>exact  <TD>32.bit decimal flonum rational <TD><CODE>floQ32d </CODE>
 <TR>
-<TR><TD><CODE>A:fixz64 </CODE><TD>exact<TD>64.bit binary fixnum            <TD><CODE>fixz64b </CODE>
-<TR><TD><CODE>A:fixz32 </CODE><TD>exact<TD>32.bit binary fixnum            <TD><CODE>fixz32b </CODE>
-<TR><TD><CODE>A:fixz16 </CODE><TD>exact<TD>16.bit binary fixnum            <TD><CODE>fixz16b </CODE>
-<TR><TD><CODE>A:fixz8  </CODE><TD>exact<TD>8.bit  binary fixnum            <TD><CODE>fixz8b  </CODE>
-<TR><TD><CODE>A:fixn64 </CODE><TD>exact<TD>64.bit nonnegative binary fixnum<TD><CODE>fixn64b </CODE>
-<TR><TD><CODE>A:fixn32 </CODE><TD>exact<TD>32.bit nonnegative binary fixnum<TD><CODE>fixn32b </CODE>
-<TR><TD><CODE>A:fixn16 </CODE><TD>exact<TD>16.bit nonnegative binary fixnum<TD><CODE>fixn16b </CODE>
-<TR><TD><CODE>A:fixn8  </CODE><TD>exact<TD>8.bit  nonnegative binary fixnum<TD><CODE>fixn8b  </CODE>
+<TR><TD><CODE>A:fixZ64b</CODE><TD>exact<TD>64.bit binary fixnum            <TD><CODE>fixZ64b </CODE>
+<TR><TD><CODE>A:fixZ32b</CODE><TD>exact<TD>32.bit binary fixnum            <TD><CODE>fixZ32b </CODE>
+<TR><TD><CODE>A:fixZ16b</CODE><TD>exact<TD>16.bit binary fixnum            <TD><CODE>fixZ16b </CODE>
+<TR><TD><CODE>A:fixZ8b </CODE><TD>exact<TD>8.bit  binary fixnum            <TD><CODE>fixZ8b  </CODE>
+<TR><TD><CODE>A:fixN64b</CODE><TD>exact<TD>64.bit nonnegative binary fixnum<TD><CODE>fixN64b </CODE>
+<TR><TD><CODE>A:fixN32b</CODE><TD>exact<TD>32.bit nonnegative binary fixnum<TD><CODE>fixN32b </CODE>
+<TR><TD><CODE>A:fixN16b</CODE><TD>exact<TD>16.bit nonnegative binary fixnum<TD><CODE>fixN16b </CODE>
+<TR><TD><CODE>A:fixN8b </CODE><TD>exact<TD>8.bit  nonnegative binary fixnum<TD><CODE>fixN8b  </CODE>
 <TR><TD><CODE>A:bool   </CODE><TD>     <TD>boolean                         <TD><CODE>bool    </CODE>
 <!-- <TR><TD><CODE>string   </CODE><TD>    <TD>char                             <TD><CODE>char   </CODE> -->
 </TABLE>
@@ -278,80 +288,94 @@ A two-by-three array of nonnegative 16.bit integers can be written
 several ways:
 
 <PRE>
-#2A:fixn16b((0 1 2) (3 5 4))
-#2A2*3:fixn16b((0 1 2) (3 5 4))
-#A2*3:fixn16b((0 1 2) (3 5 4))
-#2*3:fixn16b((0 1 2) (3 5 4))
+#2A:fixN16b((0 1 2) (3 5 4))
+#2A2*3:fixN16b((0 1 2) (3 5 4))
+#A2*3:fixN16b((0 1 2) (3 5 4))
+#2*3:fixN16b((0 1 2) (3 5 4))
 </PRE>
 <P>
 Note that these are external representations of an array, not
 expressions evaluating to arrays.  Like vector constants, array
-constants must be quoted:
+constants should be quoted:
 
 <PRE>
 '#2a:FIXN16b((0 1 2) (3 5 4))
-               ==> #2A:fixn16b((0 1 2) (3 5 4))
+               ==> #2A:fixN16b((0 1 2) (3 5 4))
 </PRE>
 <P>
 Rank 0 arrays:
 <PRE>
 #0a sym
-#0A:flor32b 237.0
+#0A:floR32b 237.0
+</PRE>
+<P>
+Empty arrays:
+<PRE>
+#A0*2()
+#A2*0(() ())
+#A2*0*3(() ())
+#A2*3*0((() () ()) (() () ()))
 </PRE>
 <P>
 
 <H2>Semantics</H2>
 
 <PRE>
-(array-dimensions '#2A:fixn16b((0 1 2) (3 5 4))) ==> (2 3)
+(array-dimensions '#2A:fixN16b((0 1 2) (3 5 4))) ==> (2 3)
 </PRE>
 <P>
 An equivalent array could have been created by
 <PRE>
-(define ra (make-array (A:fixn16b) 2 3))
+(define ra (make-array (A:fixN16b) 2 3))
 (array-set! ra 0 0 0)
 (array-set! ra 1 0 1)
 (array-set! ra 2 0 2)
 (array-set! ra 3 1 0)
 (array-set! ra 5 1 1)
 (array-set! ra 4 1 2)
-ra             ==> #2A2*3:fixn32b((0 1 2) (3 5 4))
+ra             ==> #2A:fixN32b((0 1 2) (3 5 4))
 </PRE>
 <P>
 In this example, the uniform type returned is wider than requested due
 to implementation restrictions.
 <P>
+It is an error for the rank specified in array syntax to be different
+from the number of dimensions when they are explicitly given.
+<P>
 Literal array constants are immutable objects.  It is an error to
 attempt to store a new value into a location that is denoted by an
 immutable object.
-
 <P>
-The following equivalences will be defined to alias SRFI-47 names to
-the new ones.  SRFI-47 should be replaced to make these be the
-array-prototype-procedures:
-
+The following equivalences will be defined to alias <A
+HREF="http://srfi.schemers.org/srfi-47/srfi-47.html">SRFI-47</A> names to
+the new ones.  <A
+HREF="http://srfi.schemers.org/srfi-63/srfi-63.html">SRFI-63</A>, which
+supersedes <A
+HREF="http://srfi.schemers.org/srfi-47/srfi-47.html">SRFI-47</A>, already
+defines these array-prototype-procedures.
 <PRE>
-(define A:floc128b ac64)
-(define A:floc64b ac64)
-(define A:floc32b ac32)
-(define A:floc16b ac32)
-(define A:flor128b ar64)
-(define A:flor64b ar64)
-(define A:flor32b ar32)
-(define A:flor16b ar32)
-
-(define A:flor128d ac64)
-(define A:flor64d ac64)
-(define A:flor32d ac32)
-
-(define A:fixz64b as64)
-(define A:fixz32b as32)
-(define A:fixz16b as16)
-(define A:fixz8b  as8)
-(define A:fixn64b au64)
-(define A:fixn32b au32)
-(define A:fixn16b au16)
-(define A:fixn8b  au8)
+;; flonums
+(define A:floC128b ac64)
+(define A:floC64b ac64)
+(define A:floC32b ac32)
+(define A:floC16b ac32)
+(define A:floR128b ar64)
+(define A:floR64b ar64)
+(define A:floR32b ar32)
+(define A:floR16b ar32)
+;; decimal flonums
+(define A:floQ128d ar64)
+(define A:floQ64d ar64)
+(define A:floQ32d ar32)
+;; fixnums
+(define A:fixZ64b as64)
+(define A:fixZ32b as32)
+(define A:fixZ16b as16)
+(define A:fixZ8b  as8)
+(define A:fixN64b au64)
+(define A:fixN32b au32)
+(define A:fixN16b au16)
+(define A:fixN8b  au8)
 (define A:bool    at1)
 </PRE>
 <P>
@@ -399,19 +423,19 @@ type (or the next larger compatible type).
          (define chr (read-char port))
          (if (and (char? chr) (not (memv (char-downcase chr) chrs)))
              (error 'array-type? (symbol-append ":" typ wid chr))))
-       (define prot (assq typ '((floc (128 . +64.0i)
+       (define prot (assq typ '((floC (128 . +64.0i)
                                       (64  . +64.0i)
                                       (32  . +32.0i)
                                       (16  . +32.0i))
-                                (flor (128 . 64.0)
+                                (floR (128 . 64.0)
                                       (64  . 64.0)
                                       (32  . 32.0)
                                       (16  . 32.0))
-                                (fixz (64 . -64)
+                                (fixZ (64 . -64)
                                       (32 . -32)
                                       (16 . -16)
                                       (8  . -8))
-                                (fixn (64 . 64)
+                                (fixN (64 . 64)
                                       (32 . 32)
                                       (16 . 16)
                                       (8  . 8))
@@ -490,7 +514,7 @@ PARTICULAR PURPOSE.
     <ADDRESS>Editor: <A HREF="mailto:srfi-editors@srfi.schemers.org">David Van Horn</A></ADDRESS>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Thu Jan  6 22:53:26 EST 2005
+Last modified: Mon Jan 17 13:29:55 EST 2005
 <!-- hhmts end -->
   </BODY>
 </HTML>
