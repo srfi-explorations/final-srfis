@@ -1,0 +1,366 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 24: Define-syntax in local lexical scopes</title>
+  </head>
+
+  <body>
+
+<H1>Title</H1>
+
+<p>Define-syntax in local lexical scopes
+
+<H1>Author</H1>
+
+<p>Antti Huima
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status. To see an explanation of
+each status that a SRFI can hold, see <a
+href="http://srfi.schemers.org/srfi-process.html">here</a>.  It will
+remain in draft until 2001-08-23, or as amended.  to provide input on
+this SRFI, please
+<a href="mailto:srfi-24@srfi.schemers.org">
+mail to <code>srfi-24@srfi.schemers.org</code></a>.
+See <a href="http://srfi.schemers.org/srfi-list-subscribe.html">
+instructions here</a> to subscribe to the list.  You can access
+previous messages via
+<a href="http://srfi.schemers.org/srfi-24/mail-archive/maillist.html">
+the archive of the mailing list</a>.
+<P>
+<UL>
+<LI>Draft: 2001/06/25-2001/08/23 </LI>
+</UL>
+</P>
+
+<H1>Abstract</H1>
+
+<p>This document specifies a proper extension to Scheme which allows
+<b>define-syntax</b> forms to appear in those places where local
+definitions can appear (R5RS, 5.2.2). A corresponding letrec-variant
+is described.
+
+<H1>Issues</H1>
+
+<p>None yet...
+
+<H1>Rationale</H1>
+
+<p>Local lexical scopes are often used to hide internal data.  Module
+and object systems have been built on the idea of hiding internal
+state into a local lexical scope.  R5RS explicitly prohibits
+<b>define-syntax</b> from appearing in local scopes (R5RS, 5.3).  This
+gives to the top-level environment more syntactical power than to the
+local scopes, because on the top-level it is possible to create a
+mutually recursive pair of a procedure and a macro, whereas in local
+scopes it cannot be done conveniently.  It is shown in this document
+that a simple transformation exists that can be used to mimic this
+behaviour in local scopes.  The aim of this SRFI is to make this
+transformation explicit and give it a name, namely,
+<b>define-syntax</b>. A partial reference implementation is provided;
+full implementation requires system-specific features.
+
+<H1>Specification</H1>
+
+<p>The following productions are added to the syntax of Scheme (R5RS, 7.1)
+
+<blockquote>
+<p>  &lt;definition&gt; -&gt;  &lt;syntax-definition&gt; <br>
+<p>  &lt;derived expression&gt; -&gt;
+  (<b>letrec-mixed</b>
+     (&lt;syntax spec&gt;*)
+     (&lt;binding spec&gt;*) &lt;body&gt;)
+</blockquote>
+
+<p>The restriction that <b>define-syntax</b> cannot appear in a local
+scope is lifted (R5RS, 5.3).  Instead, <b>define-syntax</b> can appear
+wherever a local definition of a value can.
+
+<p>The following equivalence is used to describe <b>letrec-mixed</b>.
+#unspecified denotes an undefined value:
+
+<pre>
+(<b>letrec-mixed</b> ((macro-name transformer) ...)
+              ((variable init) ...)
+   body body2 ...)
+
+=
+
+(let ((variable #unspecified) ...)
+  (<b>letrec-syntax</b> ((macro-name transformer) ...)
+    (set! variable init) ...
+    body body2 ...))
+</pre>
+
+More precisely, the order in which the variables receive their real
+values is unspecified in the manner as for letrec (R5RS, 7.3).  Every
+init expression must be able to evaluate without making a reference to
+the other bound (run-time) variables. Every macro transformer is
+defined in the scope in which the bound variables are defined, and the
+initializing expressions as well as the body sequence are
+macro-expanded in a scope where the defined macros are visible.  So
+the macros and the init-expressions can be mutually recursive.
+
+<p>It is an error for any symbol to appear in both the list of
+macro-names and variables.
+
+<p>The description of internal definitions (R5RS, 5.2.2) is changed to
+be given in the terms of <b>letrec-mixed</b>: A body containing
+internal definitions and internal syntax definitions can be converted
+into a completely equivalent <b>letrec-mixed</b> expression.  For
+example,
+
+<pre>
+(let ((x 5))
+  (<b>define-syntax</b> foo
+    (syntax-rules ()
+      ((foo y) (bar x y))))
+  (define bar (lambda (a b) (+ (* a b) a)))
+  (foo (+ x 3))) ==> 45
+</pre>
+
+is equivalent to
+
+<pre>
+(let ((x 5))
+  (<b>letrec-mixed</b> ((foo (syntax-rules ()
+                        ((foo y) (bar x y)))))
+                ((bar (lambda (a b) (+ (* a b) a))))
+    (foo (+ x 3))))
+</pre>
+
+<!-- <h2>Notes</h2>
+
+<font size=-1>
+
+Because <b>letrec-syntax</b> and the variants create new lexical
+scopes, it is not possible to capture a local macro and use it outside
+its lexical scope.  The following example thus is not a valid
+expression:
+
+<pre>
+(let ()
+  (<b>let-syntax</b> ((x ...))
+    (<b>define-syntax</b> y (syntax-rules () (... (... (x ...) ...)))))
+  (y ...))
+</pre>
+
+Unfortunately, there is no syntactic counter-part to
+
+<pre>
+(let ()
+  (define y
+    (let ((x ...))
+      ... x ...))
+  ...)
+</pre>
+
+which is still a defect.  If another SRFI later is used to extend
+<b>define-syntax</b> to allow to capture macros defined with
+<b>letrec-syntax</b> and the variants, then the author makes a
+provision that the same behaviour should be extended to local
+<b>define-syntax</b>es on systems that support them.
+
+<p>In this kind of a hypothetical Scheme environment, thus,
+the syntax example above would be valid, and would correspond to
+
+<pre>
+(let ()
+  (<b>define-syntax</b> ((x* ...))
+  (<b>define-syntax</b> y (syntax-rules () (... (... (x* ...) ...)))))
+  (y ...))
+</pre>
+
+where x* is a freshly generated (= alpha-converted) symbol.
+
+-->
+
+</font>
+
+<H1>Implementation</H1>
+
+The following reference implementation represents the idea but is not
+full implementation.  The author believes strongly that a complete
+implementation is impossible to write by using the macro system of
+R5RS alone.  The problem here is that in order to make the process of
+expanding internal definitions visible, the keyword lambda must be
+redefined.  However, the new expansion of lambda must refer to the
+original definition of lambda.  Therefore <b>define-syntax</b> cannot
+be used to rebind lambda, so we need to resort to describing the
+effect upon a single expression E by putting it inside a series of
+<b>let-syntax</b>es and <b>letrec-syntax</b>es.  Also, all derived
+forms must be redefined to use the new lambda form.  The place for
+this is denoted below but the details are omitted.  Moreover, only
+literally appearing begin, define and <b>define-syntax</b> forms are
+recognized.  If a macro expands to begin, define or
+<b>define-syntax</b> form the expansion of internal definitions stops
+[although R5RS is not completely clear on whether allowing internal
+definitions as results of macro expansion is mandatory].
+
+<p>This being explained, let E be a Scheme expression.  The effects of
+the extension above can be implemented by (<b>letrec-mixed</b>
+incorrectly fixes evaluation order):
+
+<pre>
+(<b>define-syntax</b> <b>letrec-mixed</b>
+  (syntax-rules ()
+    ((letrec-mixed ((?s ?d) ...) ((?v ?e) ...) ?b ?b2 ...)
+     (let ((?v #f) ...)
+       (<b>letrec-syntax</b> ((?s ?d) ...)
+	 (set! ?v ?e) ...
+	 ?b ?b2 ...)))))
+</pre>
+
+<pre>
+(<b>letrec-syntax</b>
+    ((expand-internal-definitions
+      (syntax-rules (begin define <b>define-syntax</b>)
+
+	((expand-internal-definitions ?syntaxes ?values
+	    (begin ?expr ...) ?later ...)
+	 (expand-internal-definitions
+	  ?syntaxes ?values
+	  ?expr ... ?later ...))
+
+	((expand-internal-definitions ?syntaxes ?values
+	    (define (?variable . ?args) ?body ?body2 ...) ?later ...)
+	 (expand-internal-definitions
+	  ?syntaxes ?values
+	  (define ?variable (lambda ?args ?body ?body2 ...))
+	  ?later ...))
+
+	((expand-internal-definitions ?syntaxes ?values
+                                      (define ?variable ?value) ?later ...)
+	 (expand-internal-definitions
+	  ?syntaxes
+	  ((?variable ?value) . ?values)
+	  ?later ...))
+
+	((expand-internal-definitions ?syntaxes ?values
+            (<b>define-syntax</b> ?macro ?expansion) ?later ...)
+	 (expand-internal-definitions
+	  ((?macro ?expansion) . ?syntaxes)
+	  ?values
+	  ?later ...))
+
+	((expand-internal-definitions ((?macro ?expansion) ...)
+	    ((?variable ?value) ...)
+	    ?other ...)
+	 (<b>letrec-mixed</b> ((?macro ?expansion) ...)
+		       ((?variable ?value) ...)
+	    ?other ...)))))
+  (<b>let-syntax</b>
+      ((lambda
+	   (syntax-rules ()
+	     ((lambda ?args ?body ?body2 ...)
+	      (lambda ?args
+		(expand-internal-definitions () () ?body ?body2 ...))))))
+      (<b>letrec-syntax</b> REDEFINE DERIVED FORMS ...
+         E)))
+</pre>
+
+<p> This has been tested to work on <a
+href="http://www.scheme.com/">Petite Scheme</a>.
+
+Here is an example that has mutually recursive
+macros and procedures:
+
+<pre>
+(let ()
+  (define (x n)
+    (if (> n 0) (+ 1 (call-y (- n 1))) 0))
+  (define (y n)
+    (if (> n 0) (* 2 (call-x-indirectly (- n 1))) 1))
+  (<b>define-syntax</b> call-x-indirectly
+    (syntax-rules () ((_ arg ...) (call-x arg ...))))
+  (<b>define-syntax</b> call-x
+    (syntax-rules () ((_ arg ...) (x arg ...))))
+  (<b>define-syntax</b> call-y
+    (syntax-rules () ((_ arg ...) (y arg ...))))
+  (call-x 10)) ==> 31
+</pre>
+
+<p> On a conforming implementation the expression evaluates to 31,
+and is completely equivalent to
+
+<pre>
+(let ()
+  (define (x n) (if (> n 0) (+ 1 (y (- n 1))) 0))
+  (define (y n) (if (> n 0) (* 2 (x (- n 1))) 1))
+  (x 10))
+</pre>
+
+<h2>Note on set!-free implementations</h2>
+
+<p>A Scheme implementation can prefer to implement the expansion of
+letrec without employing set!. The expansion of <b>letrec-mixed</b> is
+also easy to describe in terms of alpha-conversion and (conceptually)
+created environment frames.  The standard letrec-form
+
+<pre>
+(letrec ((v e) ...) b b2 ...)
+</pre>
+
+<p>can be though to work as follows: every variable v is
+alpha-converted to v* inside all the e's and the bodies.  Upon
+run-time, an environment frame (a set of locations) is created when
+the evaluation of letrec starts, and the alpha-converted variables v*
+denote each one slot in this frame.  The frame contains originally
+undefined values.  The initializing expressions e are evaluated in
+some order and the resulting values are written to the environment
+frame.  If a reference to the frame is made such that the initial,
+undefined value is returned, an error occurs.
+
+<p>Then
+
+<pre>
+(<b>letrec-mixed</b> ((m x) ...) ((v e) ...) b b2 ...)
+</pre>
+
+can be described by first performing the alpha-conversion of v's to
+v*'s inside x's, e's and the bodies.  After that, the form is handled
+by macro-expanding the e's and bodies by applying the alpha-converted
+macro expanders.
+
+<H1>Copyright</H1>
+Copyright (C) Antti Huima (2001). All Rights Reserved.
+<i>
+<p>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<p>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<p>
+<b>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+</b>
+</i>
+
+
+    <hr>
+    <address>Editor:
+<a href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
+<!-- hhmts start -->
+Last modified: Mon Jun 25 17:35:36 MST 2001
+<!-- hhmts end -->
+  </body>
+</html>
+
+
