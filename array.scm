@@ -8,26 +8,28 @@
 ;;; version in SLIB). This is a complete rewrite, to be consistent
 ;;; with the rest of Scheme and to make arrays independent of lists.
 
-;;; This implementation uses the same names since the names are right.
+;;; Some modifications are due to discussion in srfi-25 mailing list.
 
 ;;; (array? obj)
 ;;; (make-array shape [obj])             changed arguments
 ;;; (shape bound ...)                    new
 ;;; (array shape obj ...)                new
-;;; (array-dimensions array)             changed name
-;;; (array-shape array)                  shape is an array
-;;; (array-ref array k ...) 
+;;; (array-rank array)                   changed name back
+;;; (array-start array dimension)        new
+;;; (array-end array dimension)          new
+;;; (array-ref array k ...)
+;;; (array-ref array index)              new variant
 ;;; (array-set! array k ... obj)         changed argument order
+;;; (array-set! array index obj)         new variant
 ;;; (share-array array shape proc)       changed arguments
 
 ;;; All other variables in this file have names in "array:".
 
 ;;; Should there be a way to make arrays with initial values mapped
-;;; from indices. Sure. The current "initial object" is lame.
+;;; from indices? Sure. The current "initial object" is lame.
 ;;;
-;;; Should there be a way to make immutable arrays?
-;;;
-;;; What should array-dimensions really be called?
+;;; Removed (array-shape array) from here. There is a new version
+;;; in arlib though.
 
 ;;; --- Representation type dependencies ---
 
@@ -35,22 +37,19 @@
 ;;; is whatever array:optimize returns. The file "opt" provides three
 ;;; representations:
 ;;; 
-;;; type1) mapping is a procedure that allows optional arguments
-;;; type2) mapping is a procedure that takes exactly the indices
-;;; type3) mapping is a list of a constant term and coefficients
+;;; mbda) mapping is a procedure that allows an optional argument
+;;; tter) mapping is two procedures that takes exactly the indices
+;;; ctor) mapping is a vector of a constant term and coefficients
 ;;;
 ;;; Choose one in "opt" to make the optimizer. Then choose the matching
-;;; implementation of ixr and ixs here (for array-ref and array-set!).
-;;; The idea behing type2 is that a fixed number of arguments is faster.
-;;; Unfortunately, that requires the dispatch in ixs to get rid of the
-;;; extra argument, so the good idea turns out rather messy in the end.
+;;; implementation of array-ref and array-set!.
 ;;;
 ;;; These should be made macros to inline them. Or have a good compiler
 ;;; and plant the package as a module.
 
 ;;; 1. Pick an optimizer.
 ;;; 2. Pick matching index representation.
-;;; 3. Pick a record implementation; as-vector is generic; syntax inlines.
+;;; 3. Pick a record implementation; as-procedure is generic; syntax inlines.
 ;;; 3. This file is otherwise portable.
 
 ;;; --- Portable R5RS (R4RS and multiple values) ---
@@ -68,17 +67,21 @@
 (define (make-array shape . rest)
   (or (array:good-shape? shape)
       (error "make-array: shape is not a shape"))
+  (apply array:make-array shape rest))
+
+(define (array:make-array shape . rest)
   (let ((size (array:size shape)))
     (array:make
      (if (pair? rest)
          (apply (lambda (o) (make-vector size o)) rest)
          (make-vector size))
-     (array:optimize
-      (array:make-index shape)
-      (array:dimensions shape)
-      (zero? size))
-     shape
-     #t)))
+     (if (= size 0)
+         (array:optimize-empty
+          (vector-ref (array:shape shape) 1))
+         (array:optimize
+          (array:make-index shape)
+          (vector-ref (array:shape shape) 1)))
+     (array:shape->vector shape))))
 
 ;;; (shape bound ...)
 ;;; makes a shape. Bounds must be an even number of exact, pairwise
@@ -91,13 +94,11 @@
                               (array:list->string bounds))))
     (let ((shp (array:make
                 v
-                (if (pair? bounds) (array:shape-ixr) (array:empty-ixr))
-                (array:make
-                 `#(0 ,(quotient (vector-length v) 2) 0 2)
-                 (array:shape-ixr)
-                 #f
-                 #f)
-                #f)))
+                (if (pair? bounds)
+                    (array:shape-index)
+                    (array:empty-shape-index))
+                (vector 0 (quotient (vector-length v) 2)
+                        0 2))))
       (or (array:good-shape? shp)
           (error (string-append "shape: bounds are not pairwise "
                                 "non-decreasing exact integers: "
@@ -109,7 +110,7 @@
 
 (define (array shape . elts)
   (or (array:good-shape? shape)
-      (error (string-append "array: shape " (array:to-string shape)
+      (error (string-append "array: shape " (array:thing->string shape)
                             " is not a shape")))
   (let ((size (array:size shape)))
     (let ((vector (list->vector elts)))
@@ -125,58 +126,35 @@
                                 (array:list->string elts))))
       (array:make
        vector
-       (array:optimize
-        (array:make-index shape)
-        (array:dimensions shape)
-        (zero? size))
-       shape
-       #t))))
+       (if (= size 0)
+           (array:optimize-empty
+            (vector-ref (array:shape shape) 1))
+           (array:optimize
+            (array:make-index shape)
+            (vector-ref (array:shape shape) 1)))
+       (array:shape->vector shape)))))
 
-;;; (array-dimensions array)
+;;; (array-rank array)
 ;;; returns the number of dimensions of `array'.
 
-(define (array-dimensions array)
-   (array:dimensions (array:shape array)))
+(define (array-rank array)
+   (quotient (vector-length (array:shape array)) 2))
 
-(define (array:dimensions shape)
-   (vector-ref (array:vector (array:shape shape)) 1))
+;;; (array-start array k)
+;;; returns the lower bound index of array along dimension k. This is
+;;; the least valid index along that dimension if the dimension is not
+;;; empty.
 
-;;; (array-shape array)
-;;; returns the shape of `array' as a dimensions times two, zero-based
-;;; array.  It is an error to modify a shape.
+(define (array-start array d)
+  (vector-ref (array:shape array) (+ d d)))
 
-(define (array-shape array)
-   (array:shape array))
+;;; (array-end array k)
+;;; returns the upper bound index of array along dimension k. This is
+;;; not a valid index. If the dimension is empty, this is the same as
+;;; the lower bound along it.
 
-;;; (array-ref array k ...)
-;;; returns the contents of the element of `array' at `k ...'. The
-;;; error check seems expensive.
-
-(define (array-ref array . ks)
-  (or (array:good-indices? ks (array:vector (array:shape array)))
-      (error (array:not-in "array-ref"
-                           ks
-                           (array:vector (array:shape array)))))
-  (vector-ref (array:vector array) (array:ixr (array:index array) ks)))
-
-;;; (array-set! array k ... obj)
-;;; replaces the contents of the element of `array' at `k ...' with
-;;; `obj'. The error check seems expensive.
-
-(define (array-set! array . spec)
-  (or (array:mutable? array)
-      (error "array-set!: array is not mutable"))
-  (or (array:good-indices/value? spec (array:vector (array:shape array)))
-      (error (array:not-in "array-set!"
-                           (reverse (cdr (reverse spec)))
-                           (array:vector (array:shape array)))))
-   (vector-set! (array:vector array)
-                (array:ixs (array:index array)
-			   (array:dimensions (array:shape array))
-			   spec)
-		(do ((_ (car spec) (car r))
-                     (r (cdr spec) (cdr r)))
-                  ((null? r) _))))
+(define (array-end array d)
+  (vector-ref (array:shape array) (+ d d 1)))
 
 ;;; (share-array array shape proc)
 ;;; makes an array that shares elements of `array' at shape `shape'.
@@ -197,51 +175,158 @@
                                (array:vector subshape))
                               " does not map into supershape "
                               (array:shape-vector->string
-                               (array:vector (array:shape array)))
-                              " under mapping")))
+                               (array:shape array))
+                              " under mapping "
+                              (array:map->string
+                               f
+                               (vector-ref (array:shape subshape) 1)))))    
     (let ((g (array:index array)))
       (array:make
        (array:vector array)
-       (array:optimize
-        (lambda ks
-          (call-with-values
-           (lambda () (apply f ks))
-           (lambda ks (array:ixr g ks))))
-        (array:dimensions subshape)
-        (zero? subsize))
-       subshape
-       (array:mutable? array)))))
+       (if (= subsize 0)
+           (array:optimize-empty
+            (vector-ref (array:shape subshape) 1))
+           (array:optimize
+            (lambda ks
+              (call-with-values
+               (lambda () (apply f ks))
+               (lambda ks (array:vector-index g ks))))
+            (vector-ref (array:shape subshape) 1)))
+       (array:shape->vector subshape)))))
 
+;;; --- Hrmph ---
+
+;;; (array:share/index! ...)
+;;; reuses a user supplied index object when recognising the
+;;; mapping. The mind balks at the very nasty side effect that
+;;; exposes the implementation. So this is not in the spec.
+;;; But letting index objects in at all creates a pressure
+;;; to go the whole hog. Arf.
+
+;;; Use array:optimize-empty for an empty array to get a
+;;; clearly invalid vector index.
+
+;;; Surely it's perverse to use an actor for index here? But
+;;; the possibility is provided for completeness.
+
+(define (array:share/index! array subshape proc index)
+  (array:make
+   (array:vector array)
+   (if (= (array:size subshape) 0)
+       (array:optimize-empty
+        (quotient (vector-length (array:shape array)) 2))
+       ((if (vector? index)
+            array:optimize/vector
+            array:optimize/actor)
+        (lambda (subindex)
+          (let ((superindex (proc subindex)))
+            (if (vector? superindex)
+                (array:index/vector
+                 (quotient (vector-length (array:shape array)) 2)
+                 (array:index array)
+                 superindex)
+                (array:index/array
+                 (quotient (vector-length (array:shape array)) 2)
+                 (array:index array)
+                 (array:vector superindex)
+                 (array:index superindex)))))
+        index))
+   (array:shape->vector subshape)))
+
+(define (array:optimize/vector f v)
+  (let ((r (vector-length v)))
+    (do ((k 0 (+ k 1)))
+      ((= k r))
+      (vector-set! v k 0))
+    (let ((n0 (f v))
+          (cs (make-vector (+ r 1)))
+          (apply (array:applier-to-vector (+ r 1))))
+      (vector-set! cs 0 n0)
+      (let wok ((k 0))
+        (if (< k r)
+            (let ((k1 (+ k 1)))
+              (vector-set! v k 1)
+              (let ((nk (- (f v) n0)))
+                (vector-set! v k 0)
+                (vector-set! cs k1 nk)
+                (wok k1)))))
+      (apply (array:maker r) cs))))
+
+(define (array:optimize/actor f a)
+  (let ((r (array-end a 0))
+        (v (array:vector a))
+        (i (array:index a)))
+    (do ((k 0 (+ k 1)))
+      ((= k r))
+      (vector-set! v (array:actor-index i k) 0))
+    (let ((n0 (f a))
+          (cs (make-vector (+ r 1)))
+          (apply (array:applier-to-vector (+ r 1))))
+      (vector-set! cs 0 n0)
+      (let wok ((k 0))
+        (if (< k r)
+            (let ((k1 (+ k 1))
+                  (t (array:actor-index i k)))
+              (vector-set! v t 1)
+              (let ((nk (- (f a) n0)))
+                (vector-set! v t 0)
+                (vector-set! cs k1 nk)
+                (wok k1)))))
+      (apply (array:maker r) cs))))
 
 ;;; --- Internals ---
+
+(define (array:shape->vector shape)
+  (let ((idx (array:index shape))
+        (shv (array:vector shape))
+        (rnk (vector-ref (array:shape shape) 1)))
+    (let ((vec (make-vector (* rnk 2))))
+      (do ((k 0 (+ k 1)))
+        ((= k rnk)
+         vec)
+        (vector-set! vec (+ k k)
+                     (vector-ref shv (array:shape-vector-index idx k 0)))
+        (vector-set! vec (+ k k 1)
+                     (vector-ref shv (array:shape-vector-index idx k 1)))))))
 
 ;;; (array:size shape)
 ;;; returns the number of elements in arrays of shape `shape'.
 
 (define (array:size shape)
-   (let ((shv (array:vector shape)))
-      (let ((shp (vector-length shv)))
-	 (do   ((k 0 (+ k 2))
-		(s 1 (* s (- (vector-ref shv (+ k 1))
-			     (vector-ref shv k)))))
-	       ((= k shp) s)))))
+   (let ((idx (array:index shape))
+         (shv (array:vector shape))
+         (rnk (vector-ref (array:shape shape) 1)))
+     (do   ((k 0 (+ k 1))
+            (s 1 (* s
+                    (- (vector-ref shv (array:shape-vector-index idx k 1))
+                       (vector-ref shv (array:shape-vector-index idx k 0))))))
+       ((= k rnk) s))))
 
 ;;; (array:make-index shape)
 ;;; returns an index function for arrays of shape `shape'. This is a
 ;;; runtime composition of several variable arity procedures, to be
-;;; passed to array:optimize for recognition as a linear function of
+;;; passed to array:optimize for recognition as an affine function of
 ;;; as many variables as there are dimensions in arrays of this shape.
 
 (define (array:make-index shape)
-   (let ((shv (array:vector shape)))
-      (do   ((f (lambda () 0)
-		(lambda (k . ks)
-		   (+ (* s (- k (vector-ref shv (- j 2))))
-		      (apply f ks))))
-	     (s 1 (* s (- (vector-ref shv (- j 1))
-			  (vector-ref shv (- j 2)))))
-	     (j (vector-length shv) (- j 2)))
-	    ((= j 0) f))))
+   (let ((idx (array:index shape))
+         (shv (array:vector shape))
+         (rnk (vector-ref (array:shape shape) 1)))
+     (do ((f (lambda () 0)
+             (lambda (k . ks)
+               (+ (* s (- k (vector-ref
+                             shv
+                             (array:shape-vector-index idx (- j 1) 0))))
+                  (apply f ks))))
+          (s 1 (* s (- (vector-ref
+                        shv
+                        (array:shape-vector-index idx (- j 1) 1))
+                       (vector-ref
+                        shv
+                        (array:shape-vector-index idx (- j 1) 0)))))
+          (j rnk (- j 1)))
+       ((= j 0)
+        f))))
 
 
 ;;; --- Error checking ---
@@ -252,22 +337,27 @@
 
 (define (array:good-shape? shape)
   (and (array:array? shape)
-       (let ((u (array:vector (array:shape shape))))
+       (let ((u (array:shape shape))
+             (v (array:vector shape))
+             (x (array:index shape)))
          (and (= (vector-length u) 4)
               (= (vector-ref u 0) 0)
               (= (vector-ref u 2) 0)
-              (= (vector-ref u 3) 2)))
-       (let ((v (array:vector shape)))
-         (let ((p (vector-length v)))
-           (do   ((k 0 (+ k 2))
-                  (true #t (let ((lo (vector-ref v k))
-                                 (hi (vector-ref v (+ k 1))))
-                             (and true
-                                  (integer? lo)
-                                  (exact? lo)
-                                  (integer? hi)
-                                  (exact? hi)
-                                  (<= lo hi)))))
+              (= (vector-ref u 3) 2))
+         (let ((p (vector-ref u 1)))
+           (do ((k 0 (+ k 1))
+                (true #t (let ((lo (vector-ref
+                                    v
+                                    (array:shape-vector-index x k 0)))
+                               (hi (vector-ref
+                                    v
+                                    (array:shape-vector-index x k 1))))
+                           (and true
+                                (integer? lo)
+                                (exact? lo)
+                                (integer? hi)
+                                (exact? hi)
+                                (<= lo hi)))))
              ((= k p) true))))))
 
 ;;; (array:good-share? subv subsize mapping superv)
@@ -278,58 +368,145 @@
 ;;; image under `f' is empty and it is trivially alright.  One must
 ;;; not call `f', though.
 
-(define (array:good-share? subshape subsize f supershape)
+(define (array:good-share? subshape subsize f super)
   (or (zero? subsize)
       (letrec
           ((sub (array:vector subshape))
-           (super (array:vector supershape))
+           (dex (array:index subshape))
            (ck (lambda (k ks)
 		 (if (zero? k)
                      (call-with-values
                       (lambda () (apply f ks))
                       (lambda qs (array:good-indices? qs super)))
-                     (and (ck (- k 2)
-                              (cons (vector-ref sub (- k 2)) ks))
-                          (ck (- k 2)
-                              (cons (- (vector-ref sub (- k 1)) 1) ks)))))))
-        (ck (vector-length sub) '()))))
+                     (and (ck (- k 1)
+                              (cons (vector-ref
+                                     sub
+                                     (array:shape-vector-index
+                                      dex
+                                      (- k 1)
+                                      0))
+                                    ks))
+                          (ck (- k 1)
+                              (cons (- (vector-ref
+                                        sub
+                                        (array:shape-vector-index
+                                         dex
+                                         (- k 1)
+                                         1))
+                                       1)
+                                    ks)))))))
+        (let ((rnk (vector-ref (array:shape subshape) 1)))
+          (or (array:unchecked-share-depth? rnk)
+              (ck rnk '()))))))
 
-;;; (array:good-indices? indices shape-vector)
+;;; Check good-share on 10 dimensions at most. The trouble is,
+;;; the cost of this check is exponential in the number of dimensions.
+
+(define (array:unchecked-share-depth? rank)
+  (if (> rank 10)
+      (begin
+        (display `(warning: unchecked depth in share:
+                            ,rank subdimensions))
+        (newline)
+        #t)
+      #f))
+
+;;; (array:check-indices caller indices shape-vector)
+;;; (array:check-indices.o caller indices shape-vector)
+;;; (array:check-index-vector caller index-vector shape-vector)
+;;; return if the index is in bounds, else signal error.
+;;;
+;;; Shape-vector is the internal representation, with
+;;; b and e for dimension k at 2k and 2k + 1.
+
+(define (array:check-indices who ks shv)
+  (or (array:good-indices? ks shv)
+      (error (array:not-in who ks shv))))
+
+(define (array:check-indices.o who ks shv)
+  (or (array:good-indices.o? ks shv)
+      (error (array:not-in who (reverse (cdr (reverse ks))) shv))))
+
+(define (array:check-index-vector who ks shv)
+  (or (array:good-index-vector? ks shv)
+      (error (array:not-in who (vector->list ks) shv))))
+
+(define (array:check-index-actor who ks shv)
+  (let ((shape (array:shape ks)))
+    (or (and (= (vector-length shape) 2)
+             (= (vector-ref shape 0) 0))
+        (error "not an actor"))
+    (or (array:good-index-actor?
+         (vector-ref shape 1)
+         (array:vector ks)
+         (array:index ks)
+         shv)
+        (array:not-in who (do ((k (vector-ref shape 1) (- k 1))
+                               (m '() (cons (vector-ref
+                                             (array:vector ks)
+                                             (array:actor-index
+                                              (array:index ks)
+                                              (- k 1)))
+                                            m)))
+                            ((= k 0) m))
+                      shv))))
 
 (define (array:good-indices? ks shv)
    (let ((d2 (vector-length shv)))
-      (do   ((kp ks (cdr kp))
-	     (k 0 (+ k 2))
-             (true #t (and true (array:good-index? kp shv k))))
+      (do ((kp ks (if (pair? kp)
+                      (cdr kp)))
+           (k 0 (+ k 2))
+           (true #t (and true (pair? kp)
+                         (array:good-index? (car kp) shv k))))
         ((= k d2)
          (and true (null? kp))))))
 
-;;; (array:good-indices/value? indices/value shape-vector)
-
-(define (array:good-indices/value? ksv shv)
+(define (array:good-indices.o? ks.o shv)
    (let ((d2 (vector-length shv)))
-     (do   ((kp ksv (cdr kp))
+     (do   ((kp ks.o (if (pair? kp)
+                         (cdr kp)))
             (k 0 (+ k 2))
-            (true #t (and true (array:good-index? kp shv k))))
+            (true #t (and true (pair? kp)
+                          (array:good-index? (car kp) shv k))))
        ((= k d2)
         (and true (pair? kp) (null? (cdr kp)))))))
 
-;;; (array:good-index? indices-tail shape-vector dimension)
-;;; returns true if first index is valid for dimension index.
+(define (array:good-index-vector? ks shv)
+  (let ((r2 (vector-length shv)))
+    (and (= (* 2 (vector-length ks)) r2)
+         (do ((j 0 (+ j 1))
+              (k 0 (+ k 2))
+              (true #t (and true
+                            (array:good-index? (vector-ref ks j) shv k))))
+           ((= k r2) true)))))
 
-(define (array:good-index? kp shv k)
-   (and (pair? kp)
-        (let ((w (car kp)))
-          (and (integer? w)
-               (exact? w)
-               (<= (vector-ref shv k) w (- (vector-ref shv (+ k 1)) 1))))))
+(define (array:good-index-actor? r v i shv)
+  (and (= (* 2 r) (vector-length shv))
+       (do ((j 0 (+ j 1))
+            (k 0 (+ k 2))
+            (true #t (and true
+                          (array:good-index? (vector-ref
+                                              v
+                                              (array:actor-index i j))
+                                             shv
+                                             k))))
+         ((= j r) true))))
+
+;;; (array:good-index? index shape-vector 2d)
+;;; returns true if index is within bounds for dimension 2d/2.
+
+(define (array:good-index? w shv k)
+  (and (integer? w)
+       (exact? w)
+       (<= (vector-ref shv k) w)
+       (< w (vector-ref shv (+ k 1)))))
 
 (define (array:not-in who ks shv)
   (let ((index (array:list->string ks))
         (bounds (array:shape-vector->string shv)))
-    (array:error (string-append who
-                                ": index " index
-                                " not in bounds " bounds))))
+    (error (string-append who
+                          ": index " index
+                          " not in bounds " bounds))))
 
 (define (array:list->string ks)
   (do ((index "" (string-append index (array:thing->string (car ks)) " "))
@@ -369,3 +546,92 @@
        ((#f) "#f")
        (else
         "#<whatsit>")))))
+
+;;; And to grok an affine map, vector->vector type. Column k of arr
+;;; will contain coefficients n0 ... nm of 1 k1 ... km for kth value.
+;;; 
+;;; These are for the error message when share fails.
+
+(define (array:index-ref ind k)
+  (if (vector? ind)
+      (vector-ref ind k)
+      (vector-ref
+       (array:vector ind)
+       (array:actor-index (array:index ind) k))))
+
+(define (array:index-set! ind k o)
+  (if (vector? ind)
+      (vector-set! ind k o)
+      (vector-set!
+       (array:vector ind)
+       (array:actor-index (array:index ind) k)
+       o)))
+
+(define (array:index-length ind)
+  (if (vector? ind)
+      (vector-length ind)
+      (vector-ref (array:shape ind) 1)))
+
+(define (array:map->string proc r)
+  (let* ((m (array:grok/arguments proc r))
+         (s (vector-ref (array:shape m) 3)))
+    (do ((i "" (string-append i c "k" (number->string k)))
+         (c "" ", ")
+         (k 1 (+ k 1)))
+      ((< r k)
+       (do ((o "" (string-append o c (array:map-column->string m r k)))
+            (c "" ", ")
+            (k 0 (+ k 1)))
+         ((= k s)
+          (string-append i " => " o)))))))
+
+(define (array:map-column->string m r k)
+  (let ((v (array:vector m))
+        (i (array:index m)))
+    (let ((n0 (vector-ref v (array:vector-index i (list 0 k)))))
+      (let wok ((j 1)
+                (e (if (= n0 0) "" (number->string n0))))
+        (if (<= j r)
+            (let ((nj (vector-ref v (array:vector-index i (list j k)))))
+              (if (= nj 0)
+                  (wok (+ j 1) e)
+                  (let* ((nj (if (= nj 1) ""
+                                 (if (= nj -1) "-"
+                                     (string-append (number->string nj)
+                                                    " "))))
+                         (njkj (string-append nj "k" (number->string j))))
+                    (if (string=? e "")
+                        (wok (+ j 1) njkj)
+                        (wok (+ j 1) (string-append e " + " njkj))))))
+            (if (string=? e "") "0" e))))))
+
+(define (array:grok/arguments proc r)
+  (array:grok/index!
+   (lambda (vec)
+     (call-with-values
+      (lambda ()
+        (array:apply-to-vector r proc vec))
+      vector))
+   (make-vector r)))
+
+(define (array:grok/index! proc in)
+  (let ((m (array:index-length in)))
+    (do ((k 0 (+ k 1)))
+      ((= k m))
+      (array:index-set! in k 0))
+    (let* ((n0 (proc in))
+           (n (array:index-length n0)))
+      (let ((arr (make-array (shape 0 (+ m 1) 0 n))))  ;BAD - be lower level
+        (do ((k 0 (+ k 1)))
+          ((= k n))
+          (array-set! arr 0 k (array:index-ref n0 k))) ;BAAD
+        (do ((j 0 (+ j 1)))
+          ((= j m))
+          (array:index-set! in j 1)
+          (let ((nj (proc in)))
+            (array:index-set! in j 0)
+            (do ((k 0 (+ k 1)))
+              ((= k n))
+              (array-set! arr (+ j 1) k (- (array:index-ref nj k) ;BAAAD
+                                           (array:index-ref n0 k))))))
+        arr))))

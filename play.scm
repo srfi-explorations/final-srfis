@@ -6,7 +6,7 @@
 ;;; Jussi Piitulainen, October 2001.
 
 (define (play arr)
-  (let ((low (- (array-dimensions arr) 1))
+  (let ((low (- (array-rank arr) 1))
         (shp (array-shape arr)))
     (define (play ks dim)
       (let* ((b (array-ref shp dim 0))
@@ -31,7 +31,7 @@
       (write k) (write-char #\.) (write-char #\.)
       (do ((cs cs (- cs 1))) ((= cs 0)) (write-char #\:))
       (if (> cs 0) (newline)))
-    (if (zero? (array-dimensions arr))
+    (if (zero? (array-rank arr))
         (begin
           (write (array-ref arr))
           (newline))
