@@ -17,11 +17,10 @@ Ray Dillinger
 
 <H1>Status</H1>
 
-This SRFI is currently in ``draft'' status. To see an explanation of
+This SRFI is currently in ``final'' status. To see an explanation of
 each status that a SRFI can hold, see <a
-href="http://srfi.schemers.org/srfi-process.html">here</a>.  It will
-remain in draft until 2003-02-14, or as amended.  To provide input on
-this SRFI, please mail to 
+href="http://srfi.schemers.org/srfi-process.html">here</a>.  
+To provide input on this SRFI, please mail to 
 <a href="mailto:srfi-38@srfi.schemers.org">
 <code>srfi-38@srfi.schemers.org</code></a>.
 See <a href="http://srfi.schemers.org/srfi-list-subscribe.html">
@@ -31,7 +30,7 @@ the discussion via
 the archive of the mailing list</a>.
 
 <UL>
-      <LI>Draft: 2002/12/16-2003/02/14</LI>
+      <LI>Final: 2003/04/02</LI>
 </UL>
 
 <H1>Abstract</H1>
@@ -183,9 +182,9 @@ Write-with-shared-structure returns an unspecified value. The port
 argument may be omitted, in which case it defaults to the value
 returned by <tt>(current-output-port)</tt>.  The optarg argument may
 also be omitted.  If present, its effects on the output and return
-value are unspecified but <tt>write-with-shared-structure</tt> must
+value are unspecified but <tt>(write-with-shared-structure)</tt> must
 still write a representation that can be read by
-<tt>read-with-shared-structure</tt>.  Some implementations may wish to
+<tt>(read-with-shared-structure)</tt>.  Some implementations may wish to
 use optarg to specify formatting conventions, numeric radixes, or
 return values. The reference implementation ignores optarg.
 
@@ -215,7 +214,7 @@ cell whose cdr contains itself.
 
 <tt>(read-with-shared-structure)</tt> converts the external
 representations of Scheme objects produced by
-<tt>(write-with-shared-structure)</tt>into scheme objects.  That is,
+<tt>(write-with-shared-structure)</tt> into scheme objects.  That is,
 it is a parser for the nonterminal &lt;datum&gt; in the augmented
 external representation grammar defined above.
 <tt>(read-with-shared-structure)</tt> returns the next object parsable
@@ -224,8 +223,8 @@ character past the end of the external representation of the object.
 
 </P> <P>
 
-If an end of file is encountered in the input before any characters
-are found that can begin an object, then and end of file object is
+If an end-of-file is encountered in the input before any characters
+are found that can begin an object, then an end-of-file object is
 returned.  The port remains open, and further attempts to read it (by
 <tt>(read-with-shared-structure)</tt> or <tt>(read)</tt> will also
 return an end-of-file object.  If an end of file is encountered after
@@ -284,8 +283,7 @@ operations if you have access to the system's internals.
 <PRE>
 ;;; A printer that shows all sharing of substructures.  Uses the Common
 ;;; Lisp print-circle notation: #n# refers to a previous substructure
-;;; labeled with #n=.  Returns a string rather than printing anything.
-;;; Takes O(n^2) time.
+;;; labeled with #n=.   Takes O(n^2) time.
 
 
   (define (write-with-shared-structure obj . optional-port)
@@ -293,7 +291,7 @@ operations if you have access to the system's internals.
       (cons (cons key val) alist))
     (define outport (if (eq? '() optional-port)
 			(current-output-port)
-			(car optional-port))
+			(car optional-port)))
     ;; We only track duplicates of pairs, vectors, and strings.  We
     ;; ignore zero-length vectors and strings because r5rs doesn't
     ;; guarantee that eq? treats them sanely (and they aren't very
@@ -532,7 +530,7 @@ operations if you have access to the system's internals.
 	    (case (car first-token)
 	      ((#\() (read-list-tail))
 	      ((#\#) (list->vector (read-list-tail)))
-	      ((#\. #\)) (error (string-append "Unexpected \"" token "\"")))
+	      ((#\. #\)) (error (string-append "Unexpected \"" first-token "\"")))
 	      (else
 	       (list (caadr (assv (car first-token)
 				  '((#\' 'x) (#\, ,x) (#\` `x) (#\@ ,@x))))
@@ -637,7 +635,7 @@ PARTICULAR PURPOSE.
     href="mailto:srfi-editors@srfi.schemers.org">David Rush</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Tue Mar 11 10:25:07 GMT 2003
+Last modified: Wed Apr  2 09:23:03 BST 2003
 <!-- hhmts end -->
   </body>
 </html>
