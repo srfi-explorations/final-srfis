@@ -861,10 +861,11 @@ same order as they were in the input stream, and are tested by
 prefers simplicity and clarity to efficiency, and though a reasonable
 attempt is made to be safe-for-space, no promises are made.  The reference
 implementation relies on the mechanism for defining record types of <a
-href="">SRFI-9</a>, and the functions <code>any</code> and
-<code>every</code> from <a href="">SRFI-1</a>.  The
-<code>stream-error</code> function aborts by calling <code>error</code>
-and should be rewritten to call the native error handler.
+href="http://srfi.schemers.org/srfi-9/">SRFI-9</a>, and the functions
+<code>any</code> and <code>every</code> from <a
+href=""http://srfi.schemers.org/srfi-1/">SRFI-1</a>.  The
+<code>stream-error</code> function aborts by calling <code>error</code> as
+defined in <a href="http://srfi.schemers.org/srfi-23/">SRFI 23</a>.
 
 <pre>;;; PROMISES A LA SRFI-45:
 
@@ -970,7 +971,7 @@ and should be rewritten to call the native error handler.
   (syntax-rules ()
     ((stream-delay expr)
       (make-stream
-        (stream-low-level-lazy expr)))))
+        (srfi-40:delay expr)))))
 
 ;; STREAM object ... -- new stream whose elements are object ...
 (define (stream . objs)
