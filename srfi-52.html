@@ -1,0 +1,665 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 52: Permitting and Supporting  Extended Character Sets</title>
+  </head>
+
+  <body>
+
+<H1>Title</H1>
+
+Permitting and Supporting  Extended Character Sets
+
+<H1>Author</H1>
+
+Thomas Lord (<code>lord@emf.net</code> aka <code>lord@gnu.org</code>)
+
+<H1>Status</H1> 
+
+<p>This SRFI is currently in ``draft'' status.  To see an explanation
+    of each status that a SRFI can hold, see <A
+    HREF="http://srfi.schemers.org/srfi-process.html">here</A>.  It
+    will remain in draft status until 2003/07/28, or as amended.
+
+<p>To provide input on this SRFI, please <code><A
+    HREF="mailto:srfi-52@srfi.schemers.org">mail to
+    &lt;srfi-52@srfi.schemers.org&gt;</A></code>.  See <A
+    HREF="../srfi-list-subscribe.html">instructions here</A> to
+    subscribe to the list.  You can access previous messages via <A
+    HREF="mail-archive/maillist.html">the archive of the mailing
+    list</A>.
+
+
+    <p><ul>
+      <li>Received: 2004/01/25</li>
+      <li>Draft: 2004/02/09-2004/05/09</li>
+      </ul>
+
+<H1>Abstract</H1>
+
+<p>This SRFI describes how to modify the <i>Revised Report</i> (<a
+href="http://www.schemers.org/Documents/Standards/R5RS/">R5RS</a>) in
+order to enable conforming implementations to use an extended
+character set such as (but not limited to) <a
+href="http://www.unicode.org">Unicode</a>.
+
+
+<p>Changes to some requirements of the report are recommended.
+Currently, the <i>Revised Report</i> contains requirements which are
+difficult or impossible to satisfy with some extended character sets.
+
+<p>New required procedures are proposed, specified, and included
+in the reference implementation.  These procedures enable portable
+Scheme programs to manipulate Scheme source texts and source data
+accurately, even in implementations using extended character sets.
+
+<p>This SRFI concludes with some suggestions for implementors
+interested in providing good Unicode support, using these suggestions
+to illustrate how the proposed changes to the <i>Revised Report</i> can "play
+out" in Unicode-based Scheme.
+
+<p>This SRFI does <b>not</b> attempt to provide a comprehensive
+library for global text processing.   For example, one issue in global
+text processing is the need for linguistically-sensitive,
+locale-sensitive procedures for sorting strings.   Such procedures are
+beyond the scope of this SRFI.    On the other hand, by making Scheme
+compatible with extended character sets, this SRFI is a step in the
+direction of permitting global text processing standard libraries to
+be developed in a form portable across all conforming implementations.
+
+<p>This SRFI does <b>not</b> propose that implementations be required
+to support Unicode or any other extended character set.  It does not
+specify a representation for Unicode characters or strings.  It
+<b>does</b> revise the specifications of the report so that
+<code>char?</code> values <i>may be</i> Unicode (or other) characters.
+
+<p>The reference implementation included should prove to be easily
+ported to and effective for all ASCII-only implementations and for
+many implementations using an 8-bit character set which is an
+extension of ASCII (it will require very minor modifications for each
+particular implementation).  Other implementations may need to use a
+different implementation.
+
+
+
+<H1>Issues</H1>
+
+The reference implementation is currently untested.
+
+
+<H1>Rationale</H1>
+
+<p>The current edition of the <i>Revised Report</i> effectively defines a
+<i>portable character set</i> for Scheme.  Portable programs should be
+expressed using only these characters in their source text, character
+constants, and string constants:
+
+<pre>
+        alphabetic letters:    a..z  A..Z
+
+        digits:                0..9
+
+        punctuation:           ( ) # ' ` , @ . " 
+                               ; $ % & * / : + -
+                               ^ _ ~ \ &lt; = &gt; ?
+
+        whitespace:            newline space
+</pre>
+
+<p>In what follows, we will often be considering what happens if a
+particular implementation permits additional characters.   Most
+importantly, are we able to write <i>portable</i> Scheme programs that
+behave reasonably even when running on an implementation that uses an
+extended character set?
+
+
+<H2>Problems With <code>char?</code>, <code>string?</code>, and
+<code>symbol?</code></H2>
+
+<p>The <i>Revised Report</i> imposes some structural requirements on
+the <code>char?</code>, <code>string?</code>, and <code>symbol?</code>
+types, relating these to the syntax of Scheme data representations.
+For example, it contains requirements about case-mappings of alphabetic
+characters.  The primary importance of the structural requirements in
+the context of the report is that they enable portable, "metacircular"
+Scheme programs.  For example, the structural requirements make it
+possible to write a portable Scheme program which can accurately
+implement a version of the procedure <code>read</code> which is able
+to read data written using only the portable character set.
+
+<p>There are problems with the structural requirements.
+
+<p><b><i>The case-mapping problem:</i></b> The <i>Revised Report</i>'s
+requirements for case mapping can not be satisfied for some extended
+character sets.  For example, the requirements state that for a
+<code>char-alphabetic?</code> character the procedure
+<code>char-upcase</code> <i>must</i> return an uppercase character.
+Yet for a character set containing the alphabetic character eszett (or
+"lowercase sharp S"), that requirement can not necessarily be
+satisfied in a pleasing way (if at all).
+
+<p><b><i>The portable reader problem:</i></b> The existing character
+class predicates such as <code>char-alphabetic?</code> are
+insufficient for recognizing which extended characters may be part of
+an identifier.
+
+<p><b><i>The identifier equality and canonicalization problem:</i></b>
+The case mapping and string comparison functions provided by the
+<i>Revised Report</i> are insufficient for computing whether two
+identifier names differ only by case distinctions.  They are not
+suitable for converting an identifier name into the name of the symbol
+that would yield if read by the native <code>read</code> procedure of
+an implementation using an extended character set.
+
+<p><b><i>The identifier concatenation problem:</i></b> The <i>Revised
+Report</i> provides only <code>string-append</code> for deriving a new
+identifier name by concatenating two more existing identifier names.
+Unfortunately, <code>string-append</code> is an inappropriate
+operation for concatenating identifiers which may use an extended
+character set (as, for example, when sandhi rules apply).
+
+<p><b><i>The character and string constant problem</i></b> The
+<i>Revised Report</i> provides a syntax for character and string
+constants however, it does not specify how that syntax should be
+extended for larger character sets and does not provide sufficient
+mechanism for a program to convert a character or string source form
+to an internal representation if the source form contains or refers to
+extended characters.
+
+<p>Several of those problems (<i>portable reader</i>, <i>identifier
+equality and canonicalization</i>, <i>identifier concatenation</i>,
+and <i>string and character constants</i>) could be grouped into a
+larger, more general category: <b><i>the metacircularity
+problem</i></b>.  This SRFI is based in part on the presumption that
+one should be able to write a portable Scheme program which can
+accurately read and manipulate source texts in any implementation,
+even if those source texts contain characters specific to that
+implementation.
+
+
+<H1>Specification</H1>
+
+<p>The specification is divided into two parts.
+
+<p>The first part, <b>Changes to the <i>Revised Report</i></b>,
+describes how the report should be modified to permit extended
+character sets.
+
+<p>The second part, <b>New Procedures</b>, specifies the new
+procedures defined by this report and included in the reference
+implementation.  Because these procedures can not be implemented in a
+way that is portable to all systems using extended character sets, and
+because they are essential for solving the <b><i>metacircularity
+problem</i></b>, the author recommends that these procedures be
+included in future editions of the <i>Revised Report</i> as required
+procedures.
+
+
+
+<H2>Changes to the <i>Revised Report</i></H2>
+
+<H3>Chapter 2, Introduction:</H3>
+
+<p>Rather than:
+
+<blockquote>Upper and lower case forms of a letter are never distinguished
+except within character and string constants. For example, Foo is the
+same identifier as FOO, and #x1AB is the same number as
+#X1ab.</blockquote>
+
+say:
+
+<blockquote>Case distinctions are not significant except within
+character and string constants. For example, Foo is the same
+identifier as FOO, and #x1AB is the same number as #X1ab.</blockquote>
+
+<p><i><b>Rationale:</b> The corrected text is consistent with what was
+apparently intended however it is more appropriate for extended
+character sets because in some systems using extended character sets,
+ignoring distinctions between upper and lower forms of the letters in
+a string is not the same thing as ignoring case distinctions in the
+string.</i>
+
+
+<H3>Section 6.3.3, Symbols:</H3> 
+
+<p>The specification of <code>symbol->string</code> says:
+
+<blockquote>Returns the name of <i>symbol</i> as a string. If the
+symbol was part of an object returned as the value of a literal
+expression (section 4.1.2) or by a call to the <code>read</code>
+procedure, and its name contains alphabetic characters, then the
+string returned will contain characters in the implementation's
+preferred standard case -- some implementations will prefer upper
+case, others lower case. If the symbol was returned by
+<code>string->symbol</code>, the case of characters in the string
+returned will be the same as the case in the string that was passed to
+<code>string->symbol</code>. It is an error to apply mutation
+procedures like <code>string-set!</code> to strings returned by this
+procedure.</blockquote>
+
+<p>It should say:
+
+<blockquote>Returns the name of <i>symbol</i> as a string. If the
+symbol was part of an object returned as the value of a literal
+expression (section 4.1.2) or by a call to the <code>read</code>
+procedure, its name will be in the implementation's preferred standard
+case -- some implementations will prefer upper case, others lower
+case. If the symbol was returned by <code>string->symbol</code>, the
+string returned will be <code>string=?</code> to the string that was
+passed to <code>string->symbol</code>. It is an error to apply
+mutation procedures like <code>string-set!</code> to strings returned
+by this procedure.</blockquote>
+
+<p><i><b>Rationale:</b> (see previous).</i>
+
+<H3>Section 6.3.4, Characters:</H3> 
+
+<h4>character constant syntax</h4>
+
+<p>The specification of character syntax says:
+
+<blockquote>
+<i>[...]</i> If <code>&lt;character&gt;</code> in
+<code>#\&lt;character&gt;</code> is alphabetic, then the character
+following &lt;character&gt; must be a delimiter character such as a
+space or parenthesis.
+</blockquote>
+
+It should say: 
+
+<blockquote>
+<i>[...]</i> If <code>&lt;character&gt;</code> in
+<code>#\&lt;character&gt;</code> is not one of the characters:
+
+<pre>
+        digits:                0..9
+
+        punctuation:           ( ) # ' ` , @ . " 
+                               ; $ % & * / : + -
+                               ^ _ ~ \ &lt; = &gt; ?
+
+        whitespace:            newline space
+</pre>
+
+then the character following &lt;character&gt; must be a delimiter
+character such as a space or parenthesis.
+</blockquote>
+
+<p><i><b>Rationale:</b> For the portable character set, this change to
+the <i>Revised Report</i> makes no difference -- the meaning is the
+same.  However, this change makes it possible for a character name to
+consist of more than one ideographic (hence non-alphabetic) character
+without creating an ambiguous syntax.</i>
+
+
+<h4>character order</h4>
+
+<p>The specification of <code>char&lt;?</code> and related procedures 
+says:
+
+<blockquote>
+<ul>
+<li>The upper case characters are in order. For example, <code>(char&lt;? #\A #\B)</code> returns <code>#t</code>. 
+<li> The lower case characters are in order. For example, <code>(char&lt;? #\a #\b)</code> returns <code>#t</code>. 
+<li> The digits are in order. For example, <code>(char&lt;? #\0 #\9)</code> returns <code>#t</code>. 
+<li> Either all the digits precede all the upper case letters, or vice versa. 
+<li> Either all the digits precede all the lower case letters, or vice versa. 
+</ul>
+</blockquote>
+
+<p>It should say:
+
+<blockquote>
+<ul>
+
+<li>The upper case characters <code>A..Z</code> are in order. For
+    example, <code>(char&lt;? #\A #\B)</code> returns <code>#t</code>.
+    However, implementations may provide additional upper case letters
+    which are not in order.
+
+<li>The lower case characters <code>a..z</code> are in order. For
+    example, <code>(char&lt;? #\a #\b)</code> returns
+    <code>#t</code>. However, implementations may provide additional
+    lower case letters which are not in order.
+
+<li>The digits <code>0..9</code> are in order. For example,
+    <code>(char&lt;? #\0 #\9)</code> returns <code>#t</code>.
+    However, implementations may provide additional digits which are
+    not in order.
+
+<li>Either all the digits <code>0..9</code> precede the upper case
+    letters <code>A..Z</code>, or vice versa.
+
+<li>Either all the digits <code>0..9</code> precede the lower case
+    letters <code>a..z</code>, or vice versa.
+
+</ul>
+</blockquote>
+
+
+<p><i><b>Rationale:</b> The changes permit implementations to use the
+"natural" ordering of an extended character set so long as that order
+is consistent with the order required for the small set portable
+characters.  For example, a Unicode implementation might order
+characters by their assigned codepoint values -- but that would result
+in (extended character set) upper case letters that follow
+<code>a..z</code> while <code>A..Z</code> precede
+<code>a..z</code>.</i>
+
+
+<h4>character classes</h4>
+
+<p>With regard to character class predicates such as
+<code>char-alphabetic?</code> the <i>Revised Report</i> says:
+
+<blockquote>
+These procedures return <code>#t</code> if their arguments are
+alphabetic, numeric, whitespace, upper case, or lower case characters,
+respectively, otherwise they return <code>#f</code>.  The following
+remarks, which are specific to the ASCII character set, are intended
+only as a guide: The alphabetic characters are the 52 upper and lower
+case letters. The numeric characters are the ten decimal digits. The
+whitespace characters are space, tab, line feed, form feed, and
+carriage return.
+</blockquote>
+
+It should instead say:
+
+<blockquote>
+These procedures return <code>#t</code> if their arguments are
+alphabetic, numeric, whitespace, upper case, or lower case characters,
+respectively, otherwise they return <code>#f</code>.  The characters
+<code>a..z</code> and <code>A..Z</code> must be alphabetic.  The
+digits <code>0..9</code> must be numeric.  Space and newline must be
+whitespace.
+
+<p>The procedure <code>read</code>, the syntax accepted by a
+particular implementation, and the procedure
+<code>char-whitespace?</code> must all agree about whitespace
+characters.  For example, if a character causes
+<code>char-whitespace?</code> to return <code>#t</code>, then that
+character must serve as a delimiter.
+</blockquote>
+
+<p><i><b>Rationale:</b> Most of the guidance formerly provided
+regarding ASCII should really apply to the portable character set.
+This enables portable Scheme programs to use these procedures in a
+parser for Scheme data that consists only of portable characters.
+The new requirement for <code>char-whitespace?</code> allows a
+portable Scheme program to recognize the same set of whitespace
+delimiters as its host implementation.</i>
+
+<h4>character case-mapping</h4>
+
+<p>With regard to case-mapping, the specification of
+<code>char-upcase</code> and <code>char-upcase</code> says:
+
+<blockquote>
+These procedures return a character <code>char<sub>2</sub></code> such
+that <code>(char-ci=? char char<sub>2</sub>)</code>. In addition, if
+<code>char</code> is alphabetic, then the result of
+<code>char-upcase</code> is upper case and the result of
+<code>char-downcase</code> is lower case.
+</blockquote>
+
+<p>It should say
+
+<blockquote>
+
+These procedures return a character <code>char<sub>2</sub></code> such
+that <code>(char-ci=? char char<sub>2</sub>)</code>. In addition, 
+<code>char-upcase</code> must map <code>a..z</code> to
+<code>A..Z</code> and <code>char-downcase</code> must map
+<code>A..Z</code> to <code>a..z</code>.
+</blockquote>
+
+<p><i><b>Rationale:</b> In some extended character sets, not all
+lowercase alphabetic characters have a corresponding uppercase
+character and not all uppercase alphabetic characters have a
+corresponding lowercase letter.   This change recognizes that while
+preserving the required behavior of these procedures for the portable
+character set.</i>
+
+
+<H3>Section 6.3.5, Strings:</H3> 
+
+The introduction to strings says:
+
+<blockquote>
+Some of the procedures that operate on strings ignore the difference
+between upper and lower case. The versions that ignore case have
+``-ci'' (for ``case insensitive'') embedded in their names.
+</blockquote>
+
+<p>It should say:
+
+<blockquote>
+Some of the procedures that operate on strings ignore the difference
+between strings in which upper and lower case variants of the same
+character occur in corresponding positions. The versions that ignore case
+have ``-ci'' (for ``case insensitive'') embedded in their names.
+</blockquote>
+
+<p><i><b>Rationale:</b> The string ordering predicates, in general,
+are based on a lexical ordering induced by the constituent characters
+and their order of appearance within the strings.  At the same time,
+"case insensitive string comparison" has a different meaning
+linguistically -- a character-based lexical ordering is not
+appropriate.  This change simply makes it clear that the simple
+character-wise lexical ordering is the one intended.   For example,
+this change emphasizes that <code>string-ci=?</code> may be portably
+and correctly implemented in terms of <code>char-ci=?</code>.
+</i>
+
+
+
+<H2>New Procedures</H2>
+
+<p>This SRFI proposes the addition of a new section to the <i>Revised
+Report</i>, <b>6.6.5 Parsing Scheme Data</b>, requiring
+the functions specified below.
+
+<p><u>procedure:</u><code>(string->character <i>string</i>)</code>
+<blockquote>
+If the string formed by <code>(string-append "#\\"
+<i>string</i>)</code>, if suitably delimited, would be read by
+<code>read</code> as a character constant, then return the character
+it denotes.  Otherwise, return <code>#f</code>.
+</blockquote>
+
+<p><u>procedure:</u><code>(string->string <i>string</i>)</code>
+<blockquote> If the string formed by <code>(string-append "\""
+<i>string</i> "\"")</code> would be read by <code>read</code> as a
+string constant, then return a string which is <code>string=?</code>
+to the string it denotes.  Otherwise, return <code>#f</code>.
+</blockquote>
+
+<p><u>procedure:</u><code>(string->symbol-name <i>string</i>)</code>
+<blockquote> If <code><i>string</i></code> would, if suitably
+delimited, be read by <code>read</code> as an identifier, then return
+a string which is <code>string=?</code> to what would be returned by
+<code>symbol->string</code> for that symbol.  Otherwise, return
+<code>#f</code>.
+</blockquote>
+
+<p><u>procedure:</u><code>(form-identifier <i>string<sub>1</sub></i> ...)</code>
+<blockquote> The arguments must be <i>valid identifiers</i> (see
+below).
+
+<p>This procedure should return a valid identifier (conceptually)
+formed by concatenating the arguments, then making any adjustments
+necessary to form a valid identifier.
+
+<p><code>form-identifier</code> must preserve the following invariant
+for all arguments for which it is defined:
+
+<pre>
+    (string=? (apply form-identifier (map string->symbol-name <i>s<sub>1</sub></i> ...))
+              (string->symbol-name (form-identifier <i>s<sub>1</sub></i> ...)))
+    => #t
+</pre>
+
+<p>A <i>valid identifier</i> for these purposes is any string for
+which <code>string->symbol-name</code> would not return false.
+</blockquote>
+
+
+<p><u>procedure:</u><code>(char-delimiter? <i>char</i>)</code>
+<blockquote> Return <code>#t</code> if <code>read</code> would treat
+<code><i>char</i></code> as a delimiter, <code>#f</code> otherwise.
+</blockquote>
+
+<p><i><b>New Procedures Rationale:</b> These procedures enable
+programs to parse Scheme data that may use an extended
+character set. Absent these or equivalent procedures, portable
+programs can only parse Scheme data written only using the portable
+character set.</i>
+
+
+<H1>Illustrating a Unicode-based Scheme</H1>
+
+<p>Let us suppose that one wanted to make a Scheme implementation with
+two properties:
+
+<p><b>Standard Scheme:</b>  The implementation should meet the
+requirements of the latest edition of the <i>Revised Report</i>.
+
+<p><b>Global Scheme:</b> The implementation should allow users to
+write character constants, string constants, and identifier names in
+their native language.   For example, German speaking users should be
+free to use eszett in their identifier names and Chinese speaking
+users should be free to use identifier names composed of ideographs.
+
+<p>How might we do accomplish this?   Let's assume that the changes to
+the <i>Revised Report</i> recommended above have been made.  This
+sketch isn't the <i>only</i> way to do it --- just a reasonable way.
+
+<p><b>Characters as Unicode codepoints</b> One natural approach to
+take is to make each Unicode codepoint representable as a Scheme
+<code>char?</code> value.  Absent the changes to the <i>Revised
+Report</i> we could not easily do this -- for example, <i>R5RS</i>
+requirements for the character ordering and case-mapping procedures
+would be difficult to satisfy.  With the proposed changes, there is no
+problem.
+
+<p><b>Unicode <i>Best Practices</i> for Identifier Equivalence</b> Some of
+the author's of the Unicode standard and related technical reports
+have thought very hard about how decide <i>identifier equivalence</i>
+in programming languages which ignore distinctions of case but allow
+people to write identifier names in their native languages.  (For
+example, see <a
+href="http://www.unicode.org/reports/tr15/#Programming_Language_Identifiers">
+Annex 7 ("Programming Language Identifiers") of Unicode Technical
+Report 15 ("Unicode Normalization Forms")</a>.
+
+<p>We can adopt those best practices for our Scheme fairly directly.
+Most especially, the new procedure <code>string->string</code> reifies
+our concept of identifier equality in a form that will allow portable
+Scheme programs to access the identifier equality relation used by our
+implementation.
+
+<p><b>Character Constants and String Constants</b>  We can choose
+whatever syntax we like for our extended character set Scheme, just so
+long as it is consistent with the requirements for delimiters.
+Portable programs can use procedures such as <code>string->char</code>
+to access our extended namespace of characters.
+
+
+
+<H1>Implementation</H1>
+
+The enclosed implementation is suitable for a hypothetical Scheme
+which supports <i>only</i> the portable character set.  The odds are
+good that it will run correctly with only very minor modifications on
+most other implementations.
+
+<p>Ambitious implementations using extended character sets may need to
+use a different implementation entirely.
+
+<pre>
+
+;;; SRFI-?? reference implementation
+
+;;; WARNING UNTESTED CODE
+
+
+(define (string->character s)
+  (cond
+    ((= 1 (string-length s))    (string-ref s 0))
+    ((string-ci=? "newline" s)  #\newline)
+    ((string-ci=? "space" s)    #\space)
+    (#t                         #f)))
+
+
+(define (string->string s)
+  (let loop ((todo              (string->list s))
+             (rev-output        '()))
+
+     (cond
+       ((null? todo)
+        (apply string (reverse rev-output)))
+
+       ((not (char=? #\\ (car todo)))   
+         (loop (cdr todo) (cons (car todo) rev-output)))
+
+       ((or (null? (cdr todo))
+            (not (char=? #\\ (cadr todo))))
+        (error "ill formed string"))
+
+       (#t
+        (loop (cddr todo) (cons #\\ rev-output))))))
+
+(define (string->symbol-name s)
+  (if (char=? #\a (string-ref (symbol-name 'A) 0))
+      (apply string (map char-downcase (string->list s)))
+      (apply string (map char-upcase (string->list s)))))
+
+(define (form-identifier . strings)
+  (apply string-append strings))
+
+(define (char-delimiter? c)
+  (or (char-whitespace? c)
+      (not (not (memv c '(#\( #\) #\" #\;))))))
+</pre>
+
+
+<H1>Copyright</H1>
+Copyright (C) Thomas Lord (2004). All Rights Reserved. 
+<p>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<p>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<p>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+
+    <hr>
+    <address>Author: <a href="mailto:lord@emf.net">Thomas Lord</a></address>
+    <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Francisco Solsona</a></address>
+<!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
+<!-- hhmts start -->
+Last modified: Sat Oct  9 17:43:25 EDT 1999
+<!-- hhmts end -->
+  </body>
+</html>
+
+<!-- arch-tag: Tom Lord Mon Jan 26 16:27:21 2004 (scm/=strings.srfi)
+-->
