@@ -1,7 +1,7 @@
 ..............................   SRFI 40 -- Streams   ..............................
 ..............................   by Philip L. Bewig   ..............................
 ..............................    pbewig@swbell.net   ..............................
-..............................      2 August 2003     ..............................
+..............................    23 December 2003    ..............................
 
 
 
@@ -30,8 +30,8 @@ lazy evaluation through its delay keyword.  A primary manifestation of lazy eval
 is lazy lists, generally called streams by Scheme programmers, where evaluation of a
 list element is delayed until its value is needed.  Streams can be used, among other
 things, to compute with infinities, conveniently process simulations, program with
-coroutines, and reduce the number of passes over data.  This library defines a
-practical set of functions and syntax for programming with streams.
+coroutines, and reduce the number of passes over data.  This library defines a minimal
+set of functions and syntax for programming with streams.
  
 Scheme has a long tradition of computing with streams.  The great computer science
 textbook "Structure and Interpretation of Computer Programs" (known by its acronym
@@ -243,9 +243,9 @@ the predicate; it can be simply defined as follows:
 
     (stream-define (stream-filter pred? strm)
       (cond ((stream-null? strm) strm)
-            ((pred? (stream-car strm)
+            ((pred? (stream-car strm))
               (stream-cons (stream-car strm)
-                           (stream-filter pred? (stream-cdr strm)))
+                           (stream-filter pred? (stream-cdr strm))))
             (else (stream-filter pred? (stream-cdr strm)))))
 
 But this implementation of stream-filter has a problem:
@@ -480,36 +480,8 @@ stream-promise, stream-error, unfold-result-stream, result-stream->output-stream
 result-stream->output-stream-helper-1, result-stream->output-stream-helper-2, result-
 stream->output-stream-helper-3, and result-stream->output-streams.
 
-The low-level representation of streams used below was suggested by Richard Kelsey
-during the discussion of an earlier version of the reference implementation, and
-differs somewhat from the traditional representation of streams using R5RS-native
-promises, as in Figure 3 above.  According to Kelsey (msg00022 of the srfi-40-list
-archive):
-
-    The problem is that the Scheme 48 version of delay, as well as the R5RS version,
-    keeps the delayed thunk around in case it is reentrant:
-
-    > (define f
-        (let ((first? #t))
-          (delay
-            (if first?
-                (begin
-                  (set! first? #f)
-                  (force f))
-                'second))))
-    ; no values returned
-    > (force f)
-    'second
-
-    In the case of the SRFI version of stream-filter the thunk is closed over
-    the filtered stream.  The new version drops that thunk's reference to the
-    stream before forcing it.  Delay and force can be modified to plug the leak,
-    at the cost of making promises non-reentrant.
-
-Kelsey goes on to describe the low-level implementations of delay and force that
-are ultimately used in the reference implementation.  As Kelsey explains, "the
-promise's thunk clears the promise's reference to itself before executing the
-closed-over expression."
+The low-level representation of streams used below was adapted from a preliminary
+version of Andre von Tonder's SRFI-45.  See that SRFI for a discussion of how it works.
 
 The implementation of stream-unfoldn attempts to solve the safe-for-space problem
 as cleanly and portably as possible.  The final implementation is derived from this
@@ -648,12 +620,12 @@ below.
 ;;; STREAM -- LIBRARY OF SYNTAX AND FUNCTIONS TO MANIPULATE STREAMS
 
 ;;; A stream is a new data type, disjoint from all other data types, that
-;;; contains a low-level promise that, when forced, is either nil (a single
-;;; object distinguishable from all other objects) or consists of an object
-;;; (the stream element) followed by a stream.  Each stream element is
-;;; evaluated exactly once, when it is first retrieved (not when it is
-;;; created); once evaluated its value is saved to be returned by subsequent
-;;; retrievals without being evaluated again.
+;;; contains a promise that, when forced, is either nil (a single object
+;;; distinguishable from all other objects) or consists of an object (the
+;;; stream element) followed by a stream.  Each stream element is evaluated
+;;; exactly once, when it is first retrieved (not when it is created); once
+;;; evaluated its value is saved to be returned by subsequent retrievals
+;;; without being evaluated again.
 
 ;; STREAM-TYPE -- type of streams
 ;; STREAM? object -- #t if object is a stream, #f otherwise
@@ -683,33 +655,32 @@ below.
         (else (and (pred? (car lst)) (all pred? (cdr lst))))))
 
 
-;;; LOW-LEVEL STREAM FUNCTIONS
+;;; LOW-LEVEL STREAM FUNCTIONS by Andre von Tonder (private e-mail 13-SEP-2003)
 
-;; STREAM-LOW-LEVEL-MAKE-PROMISE
-(define (stream-low-level-make-promise thunk)
-  (let ((already-run? #f) (thunk-then-result (list thunk)))
-    (lambda ()
-      (if already-run?
-          (car thunk-then-result)
-          (cond ((procedure? (car thunk-then-result))
-                  (let ((result ((car thunk-then-result) thunk-then-result)))
-                    (cond ((not already-run?)
-                           (set! already-run? #t)
-                           (set-car! thunk-then-result result)))
-                    (car thunk-then-result)))
-                (else (error "circular promise")))))))
+;; STREAM-LOW-LEVEL-LAZY -- an "atomic" (delay (force ...))
+(define-syntax stream-low-level-lazy
+  (syntax-rules ()
+    ((stream-low-level-lazy exp)
+        (cons 'suspension (lambda () exp)))))
 
-;; STREAM-LOW-LEVEL-DELAY
+;; STREAM-LOW-LEVEL-STRICT -- make a value into a low-level promise
+(define (stream-low-level-strict x)
+  (make-stream (cons 'value x)))
+
+;; STREAM-LOW-LEVEL-DELAY -- make an expression into a low-level promise
 (define-syntax stream-low-level-delay
   (syntax-rules ()
-    ((delay exp)
-      (stream-low-level-make-promise
-        (lambda (clear-me)
-          (set-car! clear-me #f)
-          exp)))))
+    ((stream-low-level-delay exp)
+      (stream-low-level-lazy (stream-low-level-strict exp)))))
 
-;; STREAM-LOW-LEVEL-FORCE
-(define (stream-low-level-force promise) (promise))
+;; STREAM-LOW-LEVEL-FORCE -- force the value from a low-level promise
+(define (stream-low-level-force prom)
+    (case (car prom)
+      ((value)      (cdr prom))
+      ((suspension) (let ((val (stream-promise ((cdr prom)))))
+                      (set-car! prom (car val))
+                      (set-cdr! prom (cdr val))
+                      (stream-low-level-force prom)))))
 
 
 ;;; STREAM SYNTAX AND FUNCTIONS
@@ -750,11 +721,9 @@ below.
 ;; STREAM-DELAY object -- the essential stream mechanism
 (define-syntax stream-delay
   (syntax-rules ()
-    ((stream-delay obj)
+    ((stream-delay expr)
       (make-stream
-        (stream-low-level-delay
-          (stream-low-level-force
-            (stream-promise obj)))))))
+        (stream-low-level-lazy expr)))))
 
 ;; STREAM object ... -- new stream whose elements are object ...
 (define (stream . objs)
@@ -764,66 +733,40 @@ below.
           stream-null
           (stream-cons (car objs) (loop (cdr objs)))))))
 
-;; STREAM-UNFOLDN generator seed n -- n streams from (generator seed)
-(define (unfold-result-stream gen seed)
-  (let loop ((seed seed))
-    (stream-delay
-     (call-with-values
-       (lambda () (gen seed))
-       (lambda (next . results)
-         (stream-cons (list->vector results) (loop next)))))))
-(define (result-stream->output-stream-helper-2 stream i prom)
-  (lambda ()
-    (result-stream->output-stream
-     (stream-low-level-force (stream-promise stream)) i prom)))
-(define (result-stream->output-stream-helper-3 prom)
-  (make-stream (stream-low-level-delay ((car prom)))))
-(define (result-stream->output-stream stuff i prom)
-  (let ((result (vector-ref (car stuff) i)))
-    (vector-set! (car stuff) i 'done-with)
-    (cond
-     ((pair? result)
-      (cons
-       (car result)
-       (let ((prom (list #f)))
-         (set-car! prom (result-stream->output-stream-helper-2 (cdr stuff) i prom))
-         (result-stream->output-stream-helper-3 prom))))
-     ((not result)
-      (let ((more (result-stream->output-stream-helper-2 (cdr stuff) i prom)))
-        (if prom
-            (set-car! prom more))
-        (more)))
-     ((null? result) '())
-     (else (stream-error "stream-unfoldn: can't happen")))))
-(define (result-stream->output-stream-helper-1 result-stream i)
-  (make-stream
-   (stream-low-level-delay
-    (let ((result-stream* result-stream))
-      (set! result-stream 'done-with)
-      (result-stream->output-stream
-       (stream-low-level-force (stream-promise result-stream*)) i #f)))))
-(define (result-stream->output-streams result-stream n)
-  (let loop ((i 0) (outputs '()))
-    (if (= i n)
-      (apply values (reverse outputs))
-      (loop (+ i 1)
-            (cons (result-stream->output-stream-helper-1 result-stream i)
-                  outputs)))))
+;; STREAM-UNFOLDN generator seed n -- n+1 streams from (generator seed)
 (define (stream-unfoldn gen seed n)
-  (cond ((not (procedure? gen))
-          (stream-error "non-functional argument to stream-unfoldn"))
-        ((not (and (integer? n) (positive? n)))
-          (stream-error "non-positive or non-integral argument to stream-unfoldn"))
-        (else (result-stream->output-streams (unfold-result-stream gen seed) n))))
+  (define (unfold-result-stream gen seed)
+    (let loop ((seed seed))
+      (stream-delay
+        (call-with-values
+          (lambda () (gen seed))
+          (lambda (next . results)
+            (stream-cons results (loop next)))))))
+  (define (result-stream->output-stream result-stream i)
+    (stream-delay
+      (let ((result (list-ref (stream-car result-stream) i)))
+        (cond ((pair? result)
+                (stream-cons (car result)
+                             (result-stream->output-stream
+                               (stream-cdr result-stream) i)))
+              ((not result)
+                (result-stream->output-stream (stream-cdr result-stream) i))
+              ((null? result) stream-null)
+              (else (stream-error "can't happen"))))))
+  (define (result-stream->output-streams result-stream n)
+    (let loop ((i 0) (outputs '()))
+      (if (= i n)
+        (apply values (reverse outputs))
+        (loop (+ i 1)
+              (cons (result-stream->output-stream result-stream i)
+                    outputs)))))
+  (result-stream->output-streams (unfold-result-stream gen seed) n))
 
 ;; STREAM-MAP func stream ... -- stream produced by applying func element-wise
 (define (stream-map func . strms)
-  (cond ((not (procedure? func))
-          (stream-error "non-functional argument to stream-map"))
-        ((null? strms)
-          (stream-error "no stream arguments to stream-map"))
-        ((not (all stream? strms))
-          (stream-error "non-stream argument to stream-map"))
+  (cond ((not (procedure? func)) (stream-error "non-functional argument to stream-map"))
+        ((null? strms) (stream-error "no stream arguments to stream-map"))
+        ((not (all stream? strms)) (stream-error "non-stream argument to stream-map"))
         (else (let loop ((strms strms))
                 (stream-delay
                   (if (any stream-null? strms)
@@ -833,12 +776,9 @@ below.
 
 ;; STREAM-FOR-EACH proc stream ... -- apply proc element-wise for side-effects
 (define (stream-for-each proc . strms)
-  (cond ((not (procedure? proc))
-          (stream-error "non-functional argument to stream-for-each"))
-        ((null? strms)
-          (stream-error "no stream arguments to stream-for-each"))
-        ((not (all stream? strms))
-          (stream-error "non-stream argument to stream-for-each"))
+  (cond ((not (procedure? proc)) (stream-error "non-functional argument to stream-for-each"))
+        ((null? strms) (stream-error "no stream arguments to stream-for-each"))
+        ((not (all stream? strms)) (stream-error "non-stream argument to stream-for-each"))
         (else (let loop ((strms strms))
                 (if (not (any stream-null? strms))
                     (begin (apply proc (map stream-car strms))
@@ -846,10 +786,8 @@ below.
 
 ;; STREAM-FILTER pred? stream -- new stream including only items passing pred?
 (define (stream-filter pred? strm)
-  (cond ((not (procedure? pred?))
-          (stream-error "non-functional argument to stream-filter"))
-        ((not (stream? strm))
-          (stream-error "attempt to apply stream-filter to non-stream"))
+  (cond ((not (procedure? pred?)) (stream-error "non-functional argument to stream-filter"))
+        ((not (stream? strm)) (stream-error "attempt to apply stream-filter to non-stream"))
         (else (stream-unfoldn
                 (lambda (s)
                   (values
@@ -859,6 +797,7 @@ below.
                           (else #f))))
                 strm
                 1))))
+
 
 
 
@@ -874,20 +813,18 @@ Thanks are due to:
     by our e-mail discussions.  This SRFI is as much his as mine.
 
     Richard Kelsey for suggesting stream-unfoldn and the low-level representation
-    finally selected for the reference implementation.  Richard Kelsey and Joe
-    Marshall for providing early versions of the stream-filter function.  Eli
+    used in an early version of the reference implementation.  Richard Kelsey and
+    Joe Marshall for providing early versions of the stream-filter function.  Eli
     Barzilay for lessons in macrology.
 
-    All those who responded to my discussions of streams on comp.lang.scheme and
-    by private e-mail:  Eli Barzilay, Matthias Blume, Andrew Cady, George Caswell,
-    Dave Feuer, Brian Harvey, Richard Kelsey, Stephen McCracken, Joe Marshall, Al
-    Petrofsky, David Rush, Alex Shinn, Michael Sperber, Anton von Straaten,
-    Panagiotis Vossos, and Noel Welsh.  My apologies to anyone I may have missed.
-
-    All those who participated in the discussions on srfi-40-list:  Taylor Campbell,
-    Anthony Carrico, Martin Gasbichler, Sven Hartrumpf, Richard Kelsey, Stephen
-    McCracken, Matthias Neubauer, Al Petrofsky, Michael Sperber, and Felix
-    Winkelmann.  My apologies to anyone I may have missed.
+    All those who participated in discussions of streams on srfi-40-list,
+    comp.lang.scheme and by private e-mail:  Eli Barzilay, Matthias Blume, Andrew
+    Cady, Taylor Campbell, Anthony Carrico, George Caswell, Alejandro Forero
+    Cuervo, Sebastian Egner, Dave Feuer, Martin Gasbichler, Sven Hartrumpf, Brian
+    Harvey, Richard Kelsey, Stephen McCracken, Joe Marshall, Matthias Neubauer,
+    Al Petrofsky, David Rush, Alex Shinn, Michael Sperber, Anton von Straaten,
+    Andre von Tonder, Panagiotis Vossos, Noel Welsh, and Felix Winkelmann.  My
+    apologies to anyone I may have missed.
 
     My daughters Anne and Kate, for tolerating my obsession during the months of
     writing and defending this SRFI.  It has been a far greater time sink than I
