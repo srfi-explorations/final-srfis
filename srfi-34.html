@@ -55,27 +55,21 @@ by William Clinger, R. Kent Dybvig, Matthew Flatt, and Marc Feeley.</p>
 <h1>Specification</h1>
 <p>Exception handlers are one-argument procedures that determine the action the program takes when an exceptional situation is signalled. The system implicitly maintains a <i>current exception handler</i>.</p>
 <p>The program raises an exception by invoking the current exception handler, passing to it an object encapsulating information about the exception. Any procedure accepting one argument may serve as an exception handler and any object may be used to represent an exception.</p>
-<p>The system maintains the current exception handler as part of  the <i>dynamic environment</i> of the program, akin to the current input or output port, or the context for <code>dynamic-wind</code>
-. The dynamic environment can be thought of as that part of a continuation that does not specify the destination of any returned values.  It includes the current input and output ports, the <code>dynamic-wind</code>
+<p>The system maintains the current exception handler as part of  the <i>dynamic environment</i> of the program, akin to the current input or output port, or the context for <code>dynamic-wind</code>. The dynamic environment can be thought of as that part of a continuation that does not specify the destination of any returned values.  It includes the current input and output ports, the <code>dynamic-wind</code>
  context, and this SRFI's current exception handler.  See the reference implementation for portable definitions of <code>current-dynamic-environment</code>
- and <code>with-dynamic-environment</code>
-.</p>
+ and <code>with-dynamic-environment</code>.</p>
 <p>The initial current exception handler of the program is implementation-dependent. However, it should interrupt the program in some way visible to the user, either by aborting it, invoking a debugger, or some similar action.</p>
 <h2>Establishing Exception Handlers</h2>
 <dl><dt><code>(with-exception-handler </code><var>handler</var>
- <var>thunk</var>
-<code>)</code></dt>
-<dd><p>Returns the result(s) of invoking <var>thunk</var>
-. <var>Handler</var>
- must be a procedure that accepts one argument. It is installed as the current exception handler for the dynamic extent (as determined by <code>dynamic-wind</code>
-) of the invocation of <var>thunk</var>
-.</p>
+ <var>thunk</var><code>)</code></dt>
+<dd><p>Returns the result(s) of invoking <var>thunk</var>. <var>Handler</var>
+ must be a procedure that accepts one argument. It is installed as the current exception handler for the dynamic extent (as determined by <code>dynamic-wind</code>) of the invocation of <var>thunk</var>.</p>
 </dd>
 </dl>
 <dl><dt><code>(guard </code><code>(</code>
- &lt;var&gt; &lt;clause<sub>1</sub>
+&lt;var&gt; &lt;clause<sub>1</sub>
 &gt; &lt;clause<sub>2</sub>
-&gt; ... <code>)</code>
+&gt; ...<code>)</code>
  &lt;body&gt;<code>)</code> (syntax)</dt>
 <dd><p><em>Syntax:</em>
  Each &lt;clause&gt; should have the same form as a <code>cond</code>
@@ -93,11 +87,8 @@ by William Clinger, R. Kent Dybvig, Matthew Flatt, and Marc Feeley.</p>
 </dd>
 </dl>
 <h2>Raising Exceptions</h2>
-<dl><dt><code>(raise </code><var>obj</var>
-<code>)</code></dt>
-<dd><p>Invokes the current exception handler on <var>obj</var>
-. The handler is called in the dynamic environment of the call to <code>raise</code>
-, except that the current exception handler is that in place for the call to <code>with-exception-handler</code>
+<dl><dt><code>(raise </code><var>obj</var><code>)</code></dt>
+<dd><p>Invokes the current exception handler on <var>obj</var>. The handler is called in the dynamic environment of the call to <code>raise</code>, except that the current exception handler is that in place for the call to <code>with-exception-handler</code>
  that installed the handler being called.  The handler's continuation is otherwise unspecified.</p>
 </dd>
 </dl>
