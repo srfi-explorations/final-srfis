@@ -244,53 +244,54 @@ and <code>letrec</code> forms, respectively.
 
 <H1>Implementation</H1>
 
-Here is an implementation, a macro written in Clinger's explicit-renaming
-style.
-
-<p>In explanation...  A symbol in the bindings position, or a
-symbol as the first element of the bindings, indicates that a
-named-let expander should be used.  Otherwise, a normal let
-expander is used, which generates the equivalent lambda
-expression.  The named-let expander traverses the bindings
-supplied to it, accumulating parameters and arguments. Note that
-a symbol as a binding indicates that it is a rest parameter, and the
-remaining list of bindings are actually the rest arguments.
-</p>
+Here is an implementation using <code>SYNTAX-RULES</code>.
 
 <p>
 <pre>
 (define-syntax let
-   
-  (lambda (form rename compare)
-    (let (($lambda (rename 'lambda))
-          ($letrec (rename 'letrec)))
+  (syntax-rules ()
 
-      (define (expand-let bindings body)
-        (define (expand parameters arguments)
-          `((,$lambda ,parameters . ,body) . ,arguments))
-        (expand (map car bindings) (map cadr bindings)))
+    ;; In the (let 0 name normals rest arguments body bindings) form:
+    ;;     name:      The name to assign to the lambda, or #f if none.
+    ;;     normals:   The normal parameters of the lambda.
+    ;;     rest:      The rest parameter for the lambda, or () if none.
+    ;;                Using () saves a rule for (normal ... rest ...).
+    ;;     arguments: The arguments to the lambda.
+    ;;     body:      The body of the lambda.
+    ;;     bindings:  Bindings remaining to be processed.
 
-      (define (expand-named-let name bindings body)
-        (define (expand parameters arguments rest-parameter rest-arguments)
-          `(,$letrec ((,name (,$lambda (,@parameters . ,rest-parameter) . ,body)))
-             (,name ,@arguments . ,rest-arguments)))
-        (let loop ((i bindings) (parameters '()) (arguments '()))
-          (cond ((null? i)
-                 (expand (reverse parameters) (reverse arguments) '() '()))
-                ((symbol? (car i))
-                 (expand (reverse parameters) (reverse arguments) (car i) (cdr i)))
-                (else
-                 (loop (cdr i) (cons (caar i) parameters) (cons (cadar i) arguments))))))
+    ;; Terminating cases
+    ;; No name, use an anonymous lambda call
+    ((let 0 #f (normal ...) (rest ...) (argument ...) (body ...) ())
+     ((lambda (normal ... rest ...) body ...) argument ...))
+    ;; Name, use a letrec and call
+    ((let 0 name (normal ...) (rest ...) (argument ...) (body ...) ())
+     (letrec ((name (lambda (normal ... rest ...) body ...))) (name argument ...)))
 
-      (let ((bindings (cadr form)))
-        (cond ((null? bindings)
-               (expand-let bindings (cddr form)))
-              ((symbol? bindings)
-               (expand-named-let bindings (caddr form) (cdddr form)))
-              ((symbol? (car bindings))
-               (expand-named-let (car bindings) (cdr bindings) (cddr form)))
-              (else
-               (expand-let bindings (cddr form))))))))
+    ;; Deconstructing bindings
+    ;; Shuffle a normal binding
+    ((let 0 name (normal ...) () (argument ...) body ((variable value) binding ...))
+     (let 0 name (normal ... variable) () (argument ... value) body (binding ...)))
+    ;; Shuffle a rest binding (its values are shuffled below)
+    ((let 0 name normals () arguments body (rest-variable rest-value ...))
+     (let 0 name normals rest-variable arguments body (rest-value ...)))
+    ;; Shuffle a rest value
+    ((let 0 name normals rest (argument ...) body (rest-value1 rest-value2 ...))
+     (let 0 name normals rest (argument ... rest-value1) body (rest-value2 ...)))
+
+    ;; Top-level interface
+    ;; Straight let, no bindings
+    ((let () body ...)
+     (let 0 #f () () () (body ...) ()))
+    ;; Straight let, bindings
+    ((let ((variable value) bindings ...) body ...)
+     (let 0 #f (variable) () (value) (body ...) (bindings ...)))
+    ;; Signature-style named let
+    ((let (name bindings ...) body ...)
+     (let 0 name () () () (body ...) (bindings ...)))
+    ;; Non-signature-style named let
+    ((let name bindings body ...)
+     (let 0 name () () () (body ...) bindings))))
 </pre>
 
 
