@@ -1,0 +1,127 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 3.2//EN">
+<html>
+<head>
+  <title>SRFI 22: Running Scheme Scripts on Unix</title>
+</head>
+<body>
+
+<H1>Title</H1>
+
+Running Scheme Scripts on Unix
+
+<H1>Authors</H1>
+
+Martin Gasbichler and Michael Sperber
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status. To see an explanation of
+each status that a SRFI can hold, see <a
+href="http://srfi.schemers.org/srfi-process.html">here</a>.  It will
+remain in draft until 2001-06-08, or as amended.  to provide input on
+this SRFI, please
+<a href="mailto:srfi-22@srfi.schemers.org">
+mail to <code>srfi-22@srfi.schemers.org</code></a>.
+See <a href="http://srfi.schemers.org/srfi-list-subscribe.html">
+instructions here</a> to subscribe to the list.  You can access
+previous messages via
+<a href="http://srfi.schemers.org/srfi-22/mail-archive/maillist.html">
+the archive of the mailing list</a>.
+<P>
+<UL>
+<LI>Draft: 2001/03/08-2001/06/08 </LI>
+</UL>
+</P>
+
+<h1>Abstract</h1><p>This SRFI describes basic prerequisites for running Scheme programs
+as Unix scripts in a uniform way.  Specifically, it describes:</p><ul><li>the syntax of Unix scripts written in Scheme,</li><li>a uniform convention for calling the Scheme script
+     interpreter, and</li><li>a method for accessing the Unix command line arguments from
+     within the Scheme script.</li></ul><h1>Rationale</h1><p>A user, given a Scheme program, has no standard way of running
+it, even if it is a single file written in R5RS-conformant Scheme, and
+if the underlying platform is known to be Unix.  Almost every Scheme
+implementation provides an executable capable of starting up the Scheme
+system and load a particular file, but
+few pairs of Scheme implementation exist which share a convention for
+this.</p><p>This lack of de-facto standardization makes it impossible
+to write even a simple end-user program without also shipping a particular
+Scheme implementation with it or providing elaborate implementation-specific
+machinery.  This SRFI describes a set of conventions
+which allow the creation of Unix scripts written in Scheme.</p><p>Unfortunately, the set of existing conventions among Scheme implementation makes it impossible to formulate these conventions in such a way
+as to remain compatible with the various ad-hoc solutions to the
+problem.  The <a href="#design rationale">Design Rationale</a> section gives a brief
+overview.</p><h1>Specification</h1><h2>Script Syntax</h2><pre>&lt;script&gt; --&gt; &lt;script prelude&gt; &lt;program&gt;
+&lt;script prelude&gt; --&gt; #! &lt;any character including newline&gt; !#</pre><h2>Script Interpreter Invocation</h2><p>Systems supporting this SRFI provide an executable called <code>scheme-script</code> in the regular path.  Its invocation syntax is as follows:</p><pre>scheme-script -r5rs  &lt;file&gt; -call &lt;identifier&gt; &lt;argument&gt; ...
+scheme-script -srfi0 &lt;file&gt; -call &lt;identifier&gt; &lt;argument&gt; ...
+scheme-script -srfi7 &lt;file&gt; -call &lt;identifier&gt; &lt;argument&gt; ...</pre><h2>Semantics</h2><p><code>scheme-script</code> loads the file specified by <code>&lt;file&gt;</code>.  It ignores the script prelude and interprets the rest of
+the file according to the first command-line switch.</p><p>The first switch specifies the language of the <code>&lt;program&gt;</code> section of the script. <code>-r5rs </code> stands for code written in R5RS Scheme. <code>-srfi0</code> stands for code using the extensions specified in <a href="../srfi-0">SRFI 0</a>. <code>-srfi7</code> stands for code written in the configuration language
+specified in <a href="../srfi-7">SRFI 7</a>.</p><p><code>&lt;identifier&gt;</code> refers to the nonterminal of the same name in R5RS.  It is the name
+of a globally defined procedure to call upon invocation of a script. <code>scheme-script</code> calls this procedure with one argument, a list of the remaining
+Unix command-line arguments.</p><p>A Scheme implementation supporting this SRFI
+does not have to provide all of these alternatives.  However, Scheme
+implementations are encouraged to support <code>-r5rs</code> if they implement R5RS, <code>-srfi0</code> if they implement <a href="../srfi-0">SRFI 0</a>, and <code>-srfi7</code> if they implement <a href="../srfi-7">SRFI 7</a>.</p><p>Moreover, Scheme implementations are encouraged to provide intelligible
+error messages for the unsupported options from this set.</p><p>In the case of <code>-srfi7</code> all specifications of filenames (marked by <code>&lt;filename&gt;</code> in the syntax of SRFI 7) are strings containing Unix-style filenames
+relative to the directory the script resides in.</p><h1>Example</h1><p>Here is a Scheme version of the Unix <code>cat</code> utility:</p><pre>#!/bin/sh
+IFS=" "
+exec scheme-script -r5rs "$0" -call cat "$@"
+!#
+(define (cat arguments)
+  (for-each display-file argument))
+
+(define (display-file filename)
+  (call-with-input-file filename
+    (lambda (port)
+      (let loop ()
+	(let ((thing (read-char port)))
+	  (if (not (eof-object? thing))
+	      (begin
+		(write-char thing)
+		(loop))))))))</pre><p>For an explanation of the <code>IFS</code> line, see the <a href="http://www.whitefang.com/sup/secure-faq.html#LOCAL">Secure UNIX Programming FAQ</a>.</p><a name="design rationale" /><h1>Design Rationale</h1><p>Most Unix Scheme implementation support writing Unix scripts in one form 
+or another.  Unfortunately, the invocation syntax as well as the syntax
+of the script itself vary from one implementation for another.  However,
+the design decisions for this SRFI were made with some care:</p><h2>Single-Line vs. Multi-Line Invocation</h2><p>Another common convention for implementing Unix scripts
+is simply to treat an initial line starting with <code>#!</code>specially and using the terminating newline as the delimiter.
+However, some Unix implementations limit the length of this line
+and/or the number of command-line parameters available on it.
+Therefore, a special terminating delimiter different from newline
+is necessary.</p><h2>Comment Syntax and Script Invocation</h2><p>Since <code>scheme-script</code> effectively
+ignores the prelude, it is tempting to make <pre>#! ... !#</pre> a general syntax for multi-line comments.  However, this has
+consequences reaching beyond the scope of this SRFI.  Moreover, <pre>#| ... |#</pre> is already a well-established convention
+for comments in other Scheme implementations, and thus better left
+to another SRFI entirely without conflating these two unrelated
+notions.</p><h2>Absolute Script Location vs. Shell Trampoline</h2><p>This SRFI specifies a name but not an absolute
+location for the <code>scheme-script</code> executable.  Since most Unix
+implementations require the interpreter in a script to be an
+absolute filename, the only way to portably start <code>scheme-script</code> is via a shell trampoline as
+shown in the example.</p><p>The problem is that there is no well-established convention
+for the location of third-party software on Unix systems.  A convention
+common on one system or in one environment might be unimplementable in
+another.  Moreover, shell trampolines are generally <em>very</em> cheap on Unix, and it is expected that the cost
+of Scheme script interpretation and execution will almost always dominate
+the cost of the trampoline.</p><h2>Implicit vs. Explicit Command-Line-Parameter Access</h2><p>This SRFI specifies that <code>scheme-script</code> will
+communicate the command-line arguments to the script as arguments
+to the procedure specified after <code>-call</code>.
+Some Scheme implementations use a special global variable that holds
+the arguments.  It is not clear that one alternative is inherently
+preferable to another.  Neither is it clear whether a vector or a list
+is the more natural data structure.</p><p>However, explicitly specifying an entry point has the advantage
+that scripts are easier to debug with a REPL-type Scheme implementation -
+it is easily possible to call the script entry point explicitly from the REPL,
+demonstrably achieving the same effect as loading the script from <code>scheme-script</code>.</p><h1>Implementation</h1><p>An implementation is necessarily very implementation-dependent.
+Moreover, it should be clear that an implementation of this SRFI is not very
+difficult in any Scheme implementation callable from a Unix shell.  Therefore,
+this SRFI contains no reference implementation.</p><h1>Copyright</h1><p>Copyright (C) Michael Sperber (2001). All Rights Reserved.</p><p>This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it or
+assist in its implementation may be prepared, copied, published and distributed,
+in whole or in part, without restriction of any kind, provided that the
+above copyright notice and this paragraph are included on all such copies
+and derivative works. However, this document itself may not be modified
+in any way, such as by removing the copyright notice or references to the
+Scheme Request For Implementation process or editors, except as needed
+for the purpose of developing SRFIs in which case the procedures for copyrights
+defined in the SRFI process must be followed, or as required to translate
+it into languages other than English.</p><p>The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.</p><p>This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL WARRANTIES,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTY THAT THE
+USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED
+WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.</p><hr /><address>Editor:<a href="mailto:srfi-editors@srfi.schemers.org">Shriram Krishnamurthi</a></address></body></html>
