@@ -1,7 +1,7 @@
 The SRFI-13 string libraries					-*- outline -*-
 Olin Shivers
 99/10/2
-Last Update: 99/11/13
+Last Update: 99/11/22
 
 Emacs should display this document in outline mode. Say c-h m for
 instructions on how to move through it by sections (e.g., c-c c-n, c-c c-p).
@@ -58,25 +58,42 @@ both case-sensitive and case-insensitive forms.
 
 All functionality is available in substring and full-string forms.
 
-The procedures are spec'd so as to permit efficient implementation in a
-Scheme that provided shared-text substrings (e.g., guile). This means that
-you should not rely on many of the substring-selecting procedures to return
-freshly-allocated strings. Careful attention is paid to the issue of which
-procedures allocate fresh storage, and which are permitted to return results
-that share storage with the arguments.
+The procedures are spec'd so as to permit efficient implementation in
+a Scheme that provided shared-text substrings (e.g., guile).  Careful
+attention is paid to the issue of which procedures allocate fresh
+storage, and which are permitted to return results that share storage
+with the arguments.
 
 On the other hand, the functionality is present to allow one to write
-efficient code *without* shared-text substrings. You can write efficient code
-that works by passing around start/end ranges indexing into a string instead
-of simply building a shared-text substring. The API would be much smaller and
-simpler without this consideration -- If we had cheap shared-text substrings,
-all the substring procedures would go away, and the start/end arguments would
-vanish. Nonetheless, this is important functionality, so we support it.
+efficient code *without* shared-text substrings. You can write
+efficient code that works by passing around start/end ranges indexing
+into a string instead of simply building a shared-text substring. The
+API would be much simpler without this consideration -- if we had
+cheap shared-text substrings, all the start/end index parameters would
+vanish. Nonetheless, this is important functionality, so we support
+it.
+
+Here is a list of the procedures that are allowed to return values that
+share storage with their parameters:
+    string-take string-take-right
+    string-drop string-drop-right
+    substring/shared
+        (For fresh-copy semantics, use STRING-COPY instead of these procs.)
+
+    string-append/shared string-concatenate/shared 
+    reverse-string-concatenate/shares
+	(Fresh-copy variants all exist -- drop the /SHARED suffix.)
+
+    string-pad   string-pad-right
+    string-trim  string-pad-right string-pad-both
+    string-filter string-delete
+        (No equivalent guaranteeing fresh copy; not deemed worth it.
+	 For fresh copies, wrap a call to STRING-COPY around the application.)
 
 Common Lisp theft: 
-  - inequality functions return mismatch index.
+  - comparison functions return mismatch index.
     I generalised this so that this "protocol" is extended even to 
-    the equality functions. This means that clients can be handed any generic
+    equality. This means that clients can be handed any generic
     string-comparison function and rely on the meaning of the true value.
 
   - Common Lisp capitalisation definition
@@ -84,9 +101,7 @@ Common Lisp theft:
 The library addresses some problems with the R5RS string procedures:
   - Question marks after string-comparison functions (string=?, etc.)
     This is inconsistent with numeric comparison functions, and ugly, too.
-  - String-comparison functions do not provide a useful true value.
   - STRING-COPY should have optional start/end args;
-    SUBSTRING shouldn't specify if it copies or returns shared bits.
   - STRING-FILL! and STRING->LIST should take optional start/end args.
   - No <> function provided.
 
@@ -107,8 +122,8 @@ particular
 =======================
 
 The R4RS and R5RS reports define 22 string procedures. The string-lib
-package includes 8 of these exactly as defined, 4 in an extended,
-backwards-compatible way, and drops the remaining 10 (whose functionality
+package includes 8 of these exactly as defined, 3 in an extended,
+backwards-compatible way, and drops the remaining 11 (whose functionality
 is available via other bindings).
 
 The 8 procedures provided exactly as documented in the reports are
@@ -121,23 +136,22 @@ The 8 procedures provided exactly as documented in the reports are
     string-append
     list->string
 
-The ten functions not included are the R4RS string-comparison functions:
+The eleven functions not included are the R4RS string-comparison functions:
     string=?  string-ci=?
     string<?  string-ci<?
     string>?  string-ci>?
     string<=? string-ci<=?
     string>=? string-ci>=?
+    substring
 The string-lib package provides alternate bindings & extended functionality.
 
-Additionally, the four extended procedures are
+Additionally, the three extended procedures are
     string-fill! s char [start end] -> unspecific
     string->list s [start end] -> char-list
-    substring s start [end] -> string
     string-copy s [start end] -> string
 
 They are uniformly extended to take optional start/end parameters specifying
-substring ranges; Additionally, SUBSTRING is allowed to return a value that
-shares storage with its argument.
+substring ranges.
 
 
 -------------------------------------------------------------------------------
@@ -165,12 +179,13 @@ List & string conversion
 +   string->list 
 #   list->string
     reverse-list->string
-    join-strings
+    string-join
 
 Selection
 #   string-length
 #   string-ref
-+   substring string-copy
++   string-copy
+    substring/shared
     string-copy! 
     string-take string-take-right
     string-drop string-drop-right
@@ -182,39 +197,28 @@ Modification
 #   string-set!
 
 Comparison
-    string-compare    substring-compare
-    string-compare-ci substring-compare-ci
+    string-compare string-compare-ci
 
     string<>     string=    string<    string>    string<=    string>=
     string-ci<>  string-ci= string-ci< string-ci> string-ci<= string-ci>=
-
-    substring=  substring<> substring-ci=  substring-ci<>
-    substring<  substring>  substring-ci<  substring-ci>
-    substring<= substring>= substring-ci<= substring-ci>=
 
 Matching
     string-prefix-length    string-suffix-length
     string-prefix-length-ci string-suffix-length-ci
 
-    substring-prefix-length    substring-suffix-length
-    substring-prefix-length-ci substring-suffix-length-ci
-
     string-prefix?    string-suffix?    
     string-prefix-ci? string-suffix-ci? 
-
-    substring-prefix?    substring-suffix? 
-    substring-prefix-ci? substring-suffix-ci?
 
 Searching
     string-index string-index-right
     string-skip  string-skip-right 
-    substring? substring-ci? 
+    string-contains string-contains-ci
     string-count 
 
 Alphabetic case
     string-upper-case? string-lower-case?
-    capitalize-string  capitalize-words  string-upcase  string-downcase
-    capitalize-string! capitalize-words! string-upcase! string-downcase
+    string-capitalize string-upcase  string-downcase
+    string-capitalize!string-upcase! string-downcase
 
 Reverse & append
     string-reverse string-reverse!
@@ -227,7 +231,7 @@ Fold, unfold & map
     string-map     string-map!
     string-fold    string-fold-right
     string-unfold  string-unfold-right
-    string-for-each string-iter
+    string-for-each string-do-each
 
 Replicate & rotate
     xsubstring 
@@ -244,7 +248,9 @@ Low-level procedures
     string-parse-start+end
     string-parse-final-start+end
     let-string-start+end
+
     check-substring-spec
+    substring-spec-ok?
 
     make-kmp-restart-vector kmp-step string-search-kmp
 
@@ -272,7 +278,6 @@ In the following procedure specifications:
 
 ** Higher-level procedures
 ==========================
-
 In a Scheme system that has a module or package system, these procedures
 should be contained in a module named "string-lib".
 
@@ -415,11 +420,10 @@ string-tabulate proc len -> string
     specified.
 
 string-for-each  proc s [start end] -> unspecified
-string-iter      proc s [start end] -> unspecified
+string-do-each   proc s [start end] -> unspecified
     Apply PROC to each character in S.
-    STRING-FOR-EACH has no specified iteration order.
-    STRING-ITER is required to iterate from START to END
-    in increasing order. 
+    STRING-FOR-EACH is required to iterate from START to END
+    in increasing order. STRING-DO-EACH has no specified iteration order.
 
 string-every pred s [start end] -> boolean
 string-any   pred s [start end] -> value
@@ -436,33 +440,34 @@ string-any   pred s [start end] -> value
     selected sequence (i.e., S[END]), that final application is a tail
     call.
 
-string-compare    s1 s2 lt-proc eq-proc gt-proc -> values
-string-compare-ci s1 s2 lt-proc eq-proc gt-proc -> values
-   Apply LT-PROC, EQ-PROC, GT-PROC to the mismatch index, depending
+string-compare    s1 s2 proc< proc= proc> [start1 end1 start2 end2] -> values
+string-compare-ci s1 s2 proc< proc= proc> [start1 end1 start2 end2] -> values
+   Apply PROC<, PROC=, PROC> to the mismatch index, depending
    upon whether S1 is less than, equal to, or greater than S2.
    The "mismatch index" is the largest index i such that for
    every 0 <= j < i, s1[j] = s2[j] -- that is, I is the first 
-   position that doesn't match. If S1 = S2, the mismatch index
-   is simply the length of the strings; we observe the protocol
-   in this redundant case for uniformity.
+   position that doesn't match.
    
-substring-compare    s1 start1 end1 s2 start2 end2 lt-proc eq-proc gt-proc -> values
-substring-compare-ci s1 start1 end1 s2 start2 end2 lt-proc eq-proc gt-proc -> values
-    The continuation procedures are applied to S1's mismatch index (as defined
-    above). The mismatch index is an index into the entire string. In the case
-    of EQ-PROC, it is always END1.
+   STRING-COMPARE-CI is the case-insensitive variant.
 
-    (substring-compare "The cat in the hat" 4 6		; "ca"
-                       "abcdefgh" 2 4			; "cd"
-		       values values values) => 5	; Index of S1's "a"
+   The optional start/end indices restrict the comparison to the indicated
+   substrings of S1 and S2. The mismatch index is always an index into S1;
+   in the case of PROC=, it is always END1; we observe the protocol
+   in this redundant case for uniformity.
+
+   (string-compare "The cat in the hat" "abcdefgh" 
+                   values values values
+                   4 6		; Select "ca" 
+                   2 4)		; & "cd"
+       => 5	; Index of S1's "a"
 
 
-string=  s1 s2 -> boolean
-string<> s1 s2 -> boolean
-string<  s1 s2 -> boolean
-string>  s1 s2 -> boolean
-string<= s1 s2 -> boolean
-string>= s1 s2 -> boolean
+string=  s1 s2 [start1 end1 start2 end2] -> boolean
+string<> s1 s2 [start1 end1 start2 end2] -> boolean
+string<  s1 s2 [start1 end1 start2 end2] -> boolean
+string>  s1 s2 [start1 end1 start2 end2] -> boolean
+string<= s1 s2 [start1 end1 start2 end2] -> boolean
+string>= s1 s2 [start1 end1 start2 end2] -> boolean
     These procedures are the lexicographic extensions to strings of the
     corresponding orderings on characters.  For example, STRING< is the
     lexicographic ordering on strings induced by the ordering CHAR<? on
@@ -470,69 +475,45 @@ string>= s1 s2 -> boolean
     the length of the shorter string, the shorter string is considered to 
     be lexicographically less than the longer string.
 
-string-ci=  s1 s2 -> boolean
-string-ci<> s1 s2 -> boolean
-string-ci<  s1 s2 -> boolean
-string-ci>  s1 s2 -> boolean
-string-ci<= s1 s2 -> boolean
-string-ci>= s1 s2 -> boolean
-    Case-insensitive variants.
-
-substring=     s1 start1 end1 s2 start2 end2 -> boolean
-substring<>    s1 start1 end1 s2 start2 end2 -> boolean
-substring<     s1 start1 end1 s2 start2 end2 -> boolean
-substring>     s1 start1 end1 s2 start2 end2 -> boolean
-substring<=    s1 start1 end1 s2 start2 end2 -> boolean
-substring>=    s1 start1 end1 s2 start2 end2 -> boolean
-
-substring-ci=  s1 start1 end1 s2 start2 end2 -> boolean
-substring-ci<> s1 start1 end1 s2 start2 end2 -> boolean
-substring-ci<  s1 start1 end1 s2 start2 end2 -> boolean
-substring-ci>  s1 start1 end1 s2 start2 end2 -> boolean
-substring-ci<= s1 start1 end1 s2 start2 end2 -> boolean
-substring-ci>= s1 start1 end1 s2 start2 end2 -> boolean
-    These variants restrict the comparison to the indicated 
+    The optional start/end indices restrict the comparison to the indicated
     substrings of S1 and S2.
+
+string-ci=  s1 s2 [start1 end1 start2 end2] -> boolean
+string-ci<> s1 s2 [start1 end1 start2 end2] -> boolean
+string-ci<  s1 s2 [start1 end1 start2 end2] -> boolean
+string-ci>  s1 s2 [start1 end1 start2 end2] -> boolean
+string-ci<= s1 s2 [start1 end1 start2 end2] -> boolean
+string-ci>= s1 s2 [start1 end1 start2 end2] -> boolean
+    Case-insensitive variants.
 
 string-upper-case? s [start end] -> boolean
 string-lower-case? s [start end] -> boolean
     STRING-UPPER-CASE? returns true iff the string contains
     no lower-case characters. STRING-LOWER-CASE returns true
     iff the string contains no upper-case characters.
-    (string-upper-case? "") => #t
-    (string-lower-case? "") => #t
+
     (string-upper-case? "FOOb") => #f
     (string-upper-case? "U.S.A.") => #t
 
-capitalize-string  s [start end] -> string
-capitalize-string! s [start end] -> unspecified
+    (string-upper-case? "") => #t
+    (string-lower-case? "") => #t
+    (string-upper-case? "137") => #t
+    (string-lower-case? "137") => #t
+
+string-capitalize  s [start end] -> string
+string-capitalize! s [start end] -> unspecified
     Capitalize the string: upcase the first alphanumeric character,
-    and downcase the rest of the string. CAPITALIZE-STRING returns
+    and downcase the rest of the string. STRING-CAPITALIZE returns
     a freshly allocated string.
 
-    (capitalize-string "--capitalize tHIS sentence.") =>
+    (string-capitalize "--capitalize tHIS sentence.") =>
       "--Capitalize this sentence."
     
-    (capitalize-string "see Spot run. see Nix run.") =>
+    (string-capitalize "see Spot run. see Nix run.") =>
       "See spot run. see nix run."
     
-    (capitalize-string "3com makes routers.") =>
+    (string-capitalize "3com makes routers.") =>
       "3com makes routers."
-
-capitalize-words  s [start end] -> string
-capitalize-words! s [start end] -> unspecified
-    A "word" is a maximal contiguous sequence of alphanumeric characters.
-    Upcase the first character of every word; downcase the rest of the word.
-    CAPITALIZE-WORDS returns a freshly allocated string.
-
-    (capitalize-words "HELLO, 3THErE, my nAME IS roland") =>
-	"Hello, 3there, My Name Is Roland"
-
-    More sophisticated capitalisation procedures can be synthesized
-    using CAPITALIZE-STRING and pattern matchers. In this context,
-    the REGEXP-SUBSTITUTE/GLOBAL procedure may be useful for picking
-    out the units to be capitalised and applying CAPITALIZE-STRING to
-    their components.
 
 string-upcase    s [start end] -> string
 string-upcase!   s [start end] -> unspecified
@@ -553,6 +534,15 @@ string-drop-right s nchars -> string
     S or a copy of S; in some implementations, proper substrings may share
     memory with S.
 
+	(string-take "Pete Szilagyi" 6) => "Pete S"
+	(string-drop "Pete Szilagyi" 6) => "zilagyi"
+
+	(string-take-right "Beta rules" 5) => "rules"
+	(string-drop-right "Beta rules" 5) => "Beta "
+
+    It is an error to take or drop more characters than are in the string:
+        (string-take "foo" 37) => error
+
 string-pad       s k [char start end] -> string
 string-pad-right s k [char start end] -> string
     Build a string of length K comprised of S padded on the left (right)
@@ -560,8 +550,8 @@ string-pad-right s k [char start end] -> string
     than K chars, it is truncated on the left (right) to length k. CHAR
     defaults to #\space.
 
-    If K is exactly the length of S, these functions may return 
-    either S or a copy of S.
+    If K <= END-START, the returned value is allowed to share storage
+    with S, or be exactly S (if K = END-START).
 
 string-trim       s [char/char-set/pred start end] -> string
 string-trim-right s [char/char-set/pred start end] -> string
@@ -604,18 +594,27 @@ string-count s char/char-set/pred [start end] -> integer
     used in an equality test.
 
 string-index       s char/char-set/pred [start end] -> integer or #f
-string-index-right s char/char-set/pred [end start] -> integer or #f
+string-index-right s char/char-set/pred [start end] -> integer or #f
 string-skip        s char/char-set/pred [start end] -> integer or #f
-string-skip-right  s char/char-set/pred [end start] -> integer or #f
-    Note the inverted start/end ordering of index-right and skip-right's 
-    parameters.
-
-    Index (index-right) searches through the string from the left (right), 
-    returning the index of the first occurrence of a character which
+string-skip-right  s char/char-set/pred [start end] -> integer or #f
+    STRING-INDEX (STRING-INDEX-RIGHT) searches through the string from the 
+    left (right), returning the index of the first occurrence of a character 
+    which
 	- equals CHAR/CHAR-SET/PRED (if it is a character);
 	- is in CHAR/CHAR-SET/PRED (if it is a char-set);
 	- satisfies the predicate CHAR/CHAR-SET/PRED (if it is a procedure).
     If no match is found, the functions return false.
+
+    The start and end parameters specify the beginning and end indices of
+    the search; the search includes the start index, but not the end index.
+    Be careful of "fencepost" considerations: when searching right-to-left, 
+    the first index considered is
+	  END-1
+    whereas when searching left-to-right, the first index considered is
+	  START
+    That is, the start/end indices describe a same half-open interval
+    [start,end) in these procedures that they do in all the other string-lib
+    procedures.
 
     The skip functions are similar, but use the complement of the criteria:
     they search for the first char that *doesn't* satisfy the test. E.g., 
@@ -625,38 +624,42 @@ string-skip-right  s char/char-set/pred [end start] -> integer or #f
                  ;; (string-ref s i) is not whitespace.
 		 ...)))
 
-string-prefix-length    s1 s2 -> integer
-string-suffix-length    s1 s2 -> integer
-string-prefix-length-ci s1 s2 -> integer
-string-suffix-length-ci s1 s2 -> integer
+string-prefix-length    s1 s2 [start1 end1 start2 end2] -> integer
+string-suffix-length    s1 s2 [start1 end1 start2 end2] -> integer
+string-prefix-length-ci s1 s2 [start1 end1 start2 end2] -> integer
+string-suffix-length-ci s1 s2 [start1 end1 start2 end2] -> integer
     Return the length of the longest common prefix/suffix of the two strings.
-    This is equivalent to the "mismatch index" for the strings.
+    This is equivalent to the "mismatch index" for the strings (modulo
+    the STARTi index offsets).
 
-substring-prefix-length    s1 start1 end1 s2 start2 end2 -> integer
-substring-suffix-length    s1 start1 end1 s2 start2 end2 -> integer
-substring-prefix-length-ci s1 start1 end1 s2 start2 end2 -> integer
-substring-suffix-length-ci s1 start1 end1 s2 start2 end2 -> integer
-    Substring variants.
+    The optional start/end indices restrict the comparison to the indicated
+    substrings of S1 and S2.
 
-string-prefix?    s1 s2 -> boolean
-string-suffix?    s1 s2 -> boolean
-string-prefix-ci? s1 s2 -> boolean
-string-suffix-ci? s1 s2 -> boolean
+string-prefix?    s1 s2 [start1 end1 start2 end2] -> boolean
+string-suffix?    s1 s2 [start1 end1 start2 end2] -> boolean
+string-prefix-ci? s1 s2 [start1 end1 start2 end2] -> boolean
+string-suffix-ci? s1 s2 [start1 end1 start2 end2] -> boolean
     Is S1 a prefix/suffix of S2?
 
-substring-prefix?    s1 start1 end1 s2 start2 end2 -> boolean
-substring-suffix?    s1 start1 end1 s2 start2 end2 -> boolean
-substring-prefix-ci? s1 start1 end1 s2 start2 end2 -> boolean
-substring-suffix-ci? s1 start1 end1 s2 start2 end2 -> boolean
-    Substring variants.
+    The optional start/end indices restrict the comparison to the indicated
+    substrings of S1 and S2.
 
-substring?    s1 s2 [start end] -> integer or false
-substring-ci? s1 s2 [start end] -> integer or false
-    Return the index in S2 where S1 occurs as a substring, or false.
-    The returned index is in the range [start,end). A successful match
-    must lie entirely in the [start,end) range of S2.
+string-contains    s1 s2 [start1 end1 start2 end2] -> integer or false
+string-contains-ci s1 s2 [start1 end1 start2 end2] -> integer or false
+    Does string S1 contain string S2?
+
+    Return the index in S1 where S2 occurs as a substring, or false.
+    The optional start/end indices restrict the operation to the
+    indicated substrings.
+
+    The returned index is in the range [start1,end1). A successful match
+    must lie entirely in the [start1,end1) range of S1.
 
     The current implementation uses the Knuth-Morris-Pratt algorithm.
+
+    (string-contains "eek -- what a geek." "ee"
+                     12 18) ; Searches "a geek"
+        => 14
 
 string-fill! s char [start end] -> unspecified				R5RS+
     Stores CHAR in every element of the given STRING and returns an
@@ -671,13 +674,20 @@ string-copy! target tstart s [start end] -> unspecified
     are copied left-to-right or right-to-left as needed -- the copy is
     guaranteed to work, even if TARGET and S are the same string.
 
-substring   s start [end] -> string					R5RS+
+    It is an error if the copy operation runs off the end of the target
+    string, e.g.
+	(string-copy! (string-copy "Microsoft") 0
+                      "Regional Microsoft Operating Companies") => error
+
+
+substring/shared   s start [end] -> string
 string-copy s [start end] -> string					R5RS+
-    SUBSTRING returns a string whose contents are the characters of S
+    SUBSTRING/SHARED returns a string whose contents are the characters of S
     beginning with index START (inclusive) and ending with index END
-    (exclusive). It differs from its R5RS definition in two ways:
+    (exclusive). It differs from the R5RS SUBSTRING in two ways:
       - The END parameter is optional, not required.
-      - SUBSTRING may return a value that shares memory with S.
+      - SUBSTRING/SHARED may return a value that shares memory with S or
+        is EQ? to S.
     
     STRING-COPY performs essentially the same function as SUBSTRING,
     with two differences:
@@ -689,8 +699,8 @@ string-copy s [start end] -> string					R5RS+
     its optional START/END parameters.
 
     Use STRING-COPY when you want to indicate explicitly in your code that you
-    wish to allocate new storage; use SUBSTRING when you don't care if you
-    get a fresh copy or share storage with the original string.
+    wish to allocate new storage; use SUBSTRING/SHARED when you don't care if 
+    you get a fresh copy or share storage with the original string.
     E.g.:
 	(string-copy "Beta substitution") => "Beta substitution"
 	(string-copy "Beta substitution" 1 10) 
@@ -705,7 +715,8 @@ reverse-list->string char-list -> string
     An efficient implementation of (compose string->list reverse):
 	(reverse-list->string '(#\a #\B #\c)) -> "cBa"
     This is a common idiom in the epilog of string-processing loops
-    that accumulate an answer in a reverse-order list.
+    that accumulate an answer in a reverse-order list. (See also
+    REVERSE-STRING-CONCATENATE for the "chunked" variant.)
 
 string-append string1 ... -> string					R5RS
   Returns a newly allocated string whose characters form the
@@ -716,7 +727,7 @@ string-concatenate string-list -> string
     Guaranteed to return a freshly allocated string.
 
     Note that the (apply string-append string-list) idiom is
-    not robust for long lists of strings, as many Scheme implementations
+    not robust for long lists of strings, as some Scheme implementations
     limit the number of arguments that may be passed to an n-ary procedure.
 
 string-concatenate/shared string-list -> string
@@ -740,7 +751,7 @@ reverse-string-concatenate/shared string-list [final-string end] -> string
 
     If the optional argument END is given, only the first END characters
     of FINAL-STRING are added to the string list, thus producing
-        (string-concatenate (reverse (cons (substring final-string 0 end)
+        (string-concatenate (reverse (cons (substring/shared final-string 0 end)
                                            string-list)))
     E.g.
 	(reverse-string-concatenate '("must be " "Hello, I") "going.XXXX" 6))
@@ -761,7 +772,7 @@ list->string list -> string
     STRING->LIST is extended from the R5RS definition to take optional
     START/END arguments.
 
-join-strings string-list [delimiter grammar] -> string
+string-join string-list [delimiter grammar] -> string
     This procedure is a simple unparser---it pastes strings together using
     the delimiter string. 
 
@@ -780,6 +791,9 @@ join-strings string-list [delimiter grammar] -> string
       - 'suffix means a suffix or terminator grammar: insert the delimiter
         after every list element. This grammar has no ambiguities.
 
+      - 'prefix means a prefix grammar: insert the delimiter
+        before every list element. This grammar has no ambiguities.
+
     The delimiter is the string used to delimit elements; it defaults to
     a single space " ".
 
@@ -790,18 +804,18 @@ join-strings string-list [delimiter grammar] -> string
 	(join-strings '()   ":") => ""
 	(join-strings '("") ":") => ""
 
-	;; but suffix grammar is not.
+	;; but suffix & prefix grammars are not.
 	(join-strings '()   ":" 'suffix) => ""
 	(join-strings '("") ":" 'suffix) => ":"
 
 string-null? s -> bool
     Is S the empty string?
 
-string-replace s1 start1 end1 s2 [start2 end2] -> string
+string-replace s1 s2 [start1 end1 start2 end2] -> string
     Returns
-	(string-append (substring s1 0 start1)
-                       (substring s2 start2 end2)
-                       (substring s1 end1 (string-length s1)))
+	(string-append (substring/shared s1 0 start1)
+                       (substring/shared s2 start2 end2)
+                       (substring/shared s1 end1 (string-length s1)))
 
     That is, the segment of characters in S1 from START1 to END1
     is replaced by the segment of characters in S2 from START2 to END2.
@@ -809,11 +823,11 @@ string-replace s1 start1 end1 s2 [start2 end2] -> string
     specified index.
 
     Examples:
-	(string-replace "The TCL programmer endured daily ridicule." 4 7
-                        "another miserable perl drone" 8 22 ) =>
+	(string-replace "The TCL programmer endured daily ridicule."
+                        "another miserable perl drone" 4 7 8 22 ) =>
             "The miserable perl programmer endured daily ridicule."
 
-	(string-replace "It's easy to code it up in Scheme." 5 5 "really ") =>
+	(string-replace "It's easy to code it up in Scheme." "really " 5 5) =>
             "It's really easy to code it up in Scheme."
 
 string-tokenize s [token-set start end] -> list
@@ -888,7 +902,6 @@ string-set! string i char -> unspecified				R5RS
 
 ** Lower-level procedures
 =========================
-
 The following procedures are useful for writing other string-processing
 functions. In a Scheme system that has a module or package system, these
 procedures should be contained in a module named "string-lib-internals".
@@ -896,16 +909,16 @@ procedures should be contained in a module named "string-lib-internals".
 *** START/END optional argument parsing & checking utilities
 ============================================================
 
-string-parse-start+end proc s args -> [start end rest]
+string-parse-start+end proc s args -> [rest start end]
 string-parse-final-start+end proc s args -> [start end]
     STRING-PARSE-START+END may be used to parse a pair of optional START/END 
     arguments from an argument list, defaulting them to 0 and the length of 
     some string S, respectively. Let the length of string S be SLEN.
-    - If ARGS = (), the function returns (values 0 slen '())
+    - If ARGS = (), the function returns (values '() 0 slen)
     - If ARGS = (i), I is checked to ensure it is an integer, and
-      that 0 <= i <= slen. Returns (values i slen (cdr rest)).
+      that 0 <= i <= slen. Returns (values (cdr args) i slen).
     - If ARGS = (i j ...), I and J are checked to ensure they are
-      integers, and that 0 <= i <= j <= slen. Returns (values i j (cddr rest)).
+      integers, and that 0 <= i <= j <= slen. Returns (values (cddr args) i j).
     If any of the checks fail, an error condition is raised, and PROC is used
     as part of the error condition -- it should be the name of the client
     procedure whose argument list STRING-PARSE-START+END is parsing.
@@ -922,12 +935,18 @@ let-string-start+end (start end) proc s-exp args-exp body ...		 Syntax
         (LAMBDA (start end) body ...))
         
 check-substring-spec proc s start end -> unspecific
+substring-spec-ok? s start end -> boolean
     Check values START and END to ensure they specify a valid substring 
     in S. This means that START and END are exact integers, and 
 	0 <= START <= END <= (STRING-LENGTH S)
-    If this is not the case, an error condition is raised. PROC is used
-    as part of error condition, and should be the procedure whose START/END
-    parameters we are checking.
+
+    If the start/end indices are not proper
+        - CHECK-SUBSTRING-SPEC raises an error condition. PROC is used
+          as part of error condition, and should be the procedure whose 
+          START/END parameters we are checking.
+	- SUBSTRING-SPEC-OK? returns false.
+    Otherwise, CHECK-SUBSTRING-SPEC returns some unspecific value, and
+    SUBSTRING-SPEC-OK? returns true.
 
 
 *** Knuth-Morris-Pratt searching
@@ -1092,8 +1111,8 @@ string-search-kmp pat rv c= i s [start end] -> integer
 ----------------
 
 A reference implementation has been written, but is not in complete
-compliance with some late changes to the SRFI draft.  It will be
-available soon.
+compliance with some late changes to the SRFI draft. It will be available
+soon.
 
 -------------------------------------------------------------------------------
 * Copyright
