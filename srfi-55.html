@@ -23,6 +23,7 @@ HREF="mailto:srfi-55@srfi.schemers.org">mail to
 <P><UL>
 <LI>Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-55/srfi-55.html?rev=1.2">2004/05/03</a>
 <LI>Draft: 2004/06/07-2004/08/05
+<LI>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-55/srfi-55.html?rev=1.3">2004/06/16</a>
 </UL>
 
 <H1>Abstract</H1>
@@ -43,7 +44,7 @@ specified extension in this case, but some do not.  Second, the SRFI 7
 language is most appropriate as an annotation to program text.  It is
 not designed for interactive use.
 
-<p> This SRFI therefore defines a simple mechanism specifically for
+</p><p> This SRFI therefore defines a simple mechanism specifically for
 requiring that extensions be made immediately available to subsequent
 code at compile-time or runtime, as appropriate.  In particular, the
 intent is that a trivial, portable means exist for loading SRFI
@@ -60,40 +61,42 @@ extension available in one is implementation-defined, but we expect
 likely scopes will include the default scope in which program
 expressions are evaluated; the scope in which program expressions within
 a module are evaluated, as defined by a module system; and the
-interactive REPL.  When <tt>require-extension</tt> is used to make an
+interactive REPL ("read-eval-print loop"). 
+When <tt>require-extension</tt> is used to make an
 extension available in a non-interactive context, it is
 implementation-defined whether the extension will be available to code
 lexically preceding the <tt>require-extension</tt> form in the same
 scope, but it should be available to code in the same scope lexically
 succeeding the <tt>require-extension</tt> form.  An implementation
 should default to signalling a warning or an error in the event that a
-requested extension cannot be made available.
+requested extension cannot be made available. An implementation is encouraged 
+but not required to signal a warning or an error if the user attempts
+to access incompatible extensions simultaneously.
 
-<p> An implementation claiming to support this SRFI must support
-<tt>require-extension</tt> in at least one context.
+</p><p> An implementation claiming to support this SRFI must support
+<tt>require-extension</tt> in at least one scope.
 
-<p> The syntax of <tt>require-extension</tt> is as follows:
+</p><p> The syntax of <tt>require-extension</tt> is as follows:
 
-<p> <tt>(require-extension &lt;clause&gt; ...)</tt>
+</p><p> <tt>(require-extension &lt;clause&gt; ...)</tt>
 
-<p> A clause has the form:
+</p><p> A clause has the form:
 
-<p> <tt>(&lt;extension-identifier&gt; &lt;extension-argument&gt; ...)</tt>
+</p><p> <tt>(&lt;extension-identifier&gt; &lt;extension-argument&gt; ...)</tt>
 
-<p> where <tt>&lt;extension-identifier&gt;</tt> is a symbol and the zero or
+</p><p> where <tt>&lt;extension-identifier&gt;</tt> is a symbol and the zero or
 more <tt>&lt;extension-argument&gt;</tt>s may be any Scheme values.
 
-<p> This SRFI defines only one <tt>extension-identifier</tt>, the identifier
+</p><p> This SRFI defines only one <tt>extension-identifier</tt>, the identifier
 <tt>srfi</tt>, which implementations purporting to conform to this SRFI must
-support.  The <tt>extension-argument</tt>s of an <tt>srfi</tt> clause may be
+support.  The <tt>extension-argument</tt>s of a <tt>srfi</tt> clause may be
 any Scheme values, at an implementation's discretion, but an implementation
 must support nonnegative integer <tt>extension-argument</tt>s and should
 treat them as a directive to make the functionality of the indicated SRFIs
 available in the context in which the <tt>require-extension</tt> form
 appears.  For example:
 
-<pre>
-(require-extension (srfi 1))              ; Make the SRFI 1 List Library available
+</p><pre>(require-extension (srfi 1))              ; Make the SRFI 1 List Library available
 (require-extension (srfi 1 13 14))        ; Make the SRFI 1, 13 and 14 libraries available
 </pre>
 
@@ -106,8 +109,7 @@ that is based on the optional
 <a href="http://www.schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-9.html#%_sec_6.6.4">R5RS</a>
 <tt>load</tt> procedure:
 
-<pre>
-;;;; Reference implementation for SRFI-???
+</p><pre>;;;; Reference implementation for SRFI-55
 ;
 ; Requirements: SRFI-23 (error reporting)
 
@@ -177,7 +179,7 @@ PARTICULAR PURPOSE.
     href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Sun Jun  6 16:13:11 MST 2004
+Last modified: Sun Jun 20 10:16:56 MST 2004
 <!-- hhmts end -->
   </body>
 </html>
