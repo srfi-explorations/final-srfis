@@ -79,58 +79,85 @@ and that it is easy to implement in most major implementations.
 <p>
 The following procedure should be provided:
 <p>
-<code>(error</code> &lt;message&gt;<code>)</code>
+<code>(error</code> &lt;message&gt;<code> [&lt;obj1&gt; [&lt;obj2&gt; ...]])</code>
 <p>
-The argument &lt;message&gt should be a string.
-The procedure <code>error</code> will <em>signal an error</em>,
-as described in R5RS, and it will report the message &lt;message&gt;.
+The argument &lt;message&gt; should be a string.
+The procedure or special form <code>error</code> will <em>signal an error</em>,
+as described in R5RS, and it will report the message &lt;message&gt;
+and the objects &lt;obj1&gt, &lt;obj1&gt. 
+What exactly consitutes "signalling" and "reporting" is not prescribed, because of the large variation in Scheme systems. So it is left to the implementor
+to do something reasonable. To that end, a few examples of possible behaviour
+are given.
+<ol>
+ <li>
+   Display &lt;message&gt; and &lt;obj1&gt;... on the screen and terminate
+   the Scheme program. (This might be suitable for a Scheme system
+   implemented as a batch compiler.)
+ <li>  
+  Display &lt;message&gt; and &lt;obj1&gt;... on the screen and  
+  go back to the read-evaluate-print loop. (This might be suitable for
+  an interactive implementation).
+ <li>
+  In the case of a multi-threaded system: terminate the current
+  thread, but do not terminate the other threads. Possibly make the
+  arguments to <code>error</code> available to other threads in some
+  way. See the <code>thread-join!</code> mechanism in SRFI-18 on
+  how this could be done.
+ <li>
+  Package &lt;message&gt; and &lt;obj1&gt;... up into an error object
+  and pass this error object to an exception handler. The default
+  exception handler then might do something as described in points 1 to 3.
+ <li>
+  In the case of a Scheme system that returns completely unattended
+  and that has no way to notify a human, the only reasonable
+  course of action might be to do nothing at all. However, this should
+  be considered a last resort. Clearly, if all implementors would choose
+  this strategy, this SRFI would not be very useful.
+</ol>  
 An implementation might report more information than just 
-&lt;message&gt;; for instance, it might report the procedure name in which
-the error occured or even print a stack trace. Whatever happens exactly
-when an error is signalled is left to the implementation, but a reasonable
-behaviour might be to terminate the application (for a batch compiler)
-or to go back to the read-evaluate-print loop (for an interactive
-implementation).
+&lt;message&gt; and &lt;obj1&gt;... . For instance, it might report the procedure name in which
+the error occured or even print a stack trace.
+To make is easier for implementors to add such useful information, it is not
+required for <code>error</code> to be a procedure. However, it is
+still allowed to be a procedure.
+
 
 <H1>Implementation</H1>
 
 An implementation that works in almost any R5RS Scheme is the following:
 <pre>
-  (define (error message)
+  (define (error message . objs)
       (display "Error: ")
       (display message)
+      (for-each display objs)
       (newline)
-      (car #t))  ;; we hope that (car #t) will signal an error
+      (scheme-report-environment -1))  ;; we hope that this will signal an error
 </pre>
-This implementation has 2 flaws. The first one is that <code>(car #t)</code>
-is not required to signal an error, although I am not aware of an
-implementation in which it does not.
-The second one is that in many implementations, this
-will actually print 2 messages: the message <code>message</code> and
-a message about <code>car</code> getting an invalid argument. This might be
-confusing to the user.
+This implementation has a flaw,
+namely, in many implementations this
+will actually print 2 messages.
+<ol>
+ <li> The message <code>message</code>, followed by <code>objs</code>, and
+ <li> A message about <code>scheme-report-environment</code> getting an invalid argument. 
+</ol> 
+This might be confusing to the user.
 
 <p>
 The SLIB procedure <code>slib:error</code> works like the <code>error</code>
-procedure described in this document (actually, it is more general).
+procedure described in this document.
 Thus, when SLIB is loaded, <code>error</code> can be defined as:
 <pre>
   (define error slib:error)
 </pre>  
 
 <p>
-In Bigloo Scheme, there already is an <code>error</code> procedure.
-However, this expects 3 arguments instead of 1. This is easy to fix:
-the following definition will extend Bigloo's <code>error</code> to also
-allow a single argument.
+If SRFI-18 is supported, it is allowed to implement <code>error</code> in
+terms of the exception mechanism of SRFI-18.
 <pre>
-(define error
-   (let ((old-error error)) 
-       (lambda args 
-           (if (= 1 (length args)) 
-	      (error "<unknown>" (car args) '()) 
-	      (apply old-error args)))))
+  (define (error message . objs)
+    (raise (make-error-exception msg objs)))
 </pre>
+Here, <code>make-error-exception</code> is implementation dependent.
 
 <H1>Copyright</H1>
 Copyright (C) <a href="mailto:stephanh@win.tue.nl">Stephan Houben</a> (2001). All Rights Reserved. 
