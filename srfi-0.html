@@ -27,11 +27,63 @@ HREF="mailto:srfi-0@srfi.schemers.org">mail to
 
 <H1>Abstract</H1>
 
-This SRFI describes a mechanism to check at macro-expansion time for
-the existence of a particular feature of the Scheme system and to
-enable and/or disable a piece of Scheme code based on this.  This
-allows a Scheme program to be written in such a way that it adapts its
-code to the features provided by the Scheme system.
+<p>
+It is desirable that programs which depend on additions to standard
+Scheme name those additions.  SRFIs provide the specifications of
+these additions ("features"), and SRFI 0 provides the means to
+actually check that these features are present in the Scheme system by
+means of the <code>cond-expand</code> construct.  It is anticipated
+that there will be two main classes of features:
+</p>
+
+<p>
+<ul>
+<li>sets of value and syntax bindings</li>
+<li>reader syntax extensions</li>
+</ul>
+</p>
+
+<p>
+("Reader syntax" refers to aspects of the syntax described by the
+grammars in the Scheme reports.)
+</p>
+
+<p>
+The former class of features will probably include most SRFIs,
+exemplified by the list library specified in <a href="../srfi-1/">SRFI
+1</a>.  The latter class includes Unicode source code support and
+different kinds of parentheses.
+</p>
+
+<p>
+Control over the presence of individual features will vary over
+different Scheme systems.  A given feature may be absent or
+provided by default in some Scheme systems and in others some
+mechanism (such as an "import" clause in the code or a program
+configuration file, a command line option, a dependency declaration in
+a module definition, etc.) will be required for the feature to
+be present in the system.
+</p>
+
+<p>
+Moreover, in some systems a given feature may be in effect
+throughout the entire program if it is in effect anywhere at all.  Other
+systems may have more precise mechanisms to control the scope of a
+feature (this might be the case for example when a module system is
+supported).  In general it is thus possible that a feature is
+in effect in some parts of the program and not in others.  This
+allows conflicting SRFIs to be present in a given program as long
+as their scope do not intersect.
+</p>
+
+<p>
+SRFI 0 does not prescribe a particular mechanism for controling the
+presence of a feature as it is our opinion that this should be the
+role of a module system.  We expect that future module system SRFIs
+will need to extend the semantics of SRFI 0 for their purposes, for
+example by defining feature scoping rules or by generalizing the
+feature testing construct.
+</p>
 
 <H1>Rationale</H1>
 
@@ -47,19 +99,21 @@ procedure or special-form, name, number of parameters, etc).  To write
 code that will run on several Scheme systems, it is useful to have a
 common construct to enable or disable sections of code based on the
 existence or absence of a feature in the Scheme system being used.
-For example, the construct could be use to check if a particular
-binary I/O API is available, and if not, load a portable library which
-implements that API.
+For example, the construct could be used to check if a particular
+binary I/O procedure is present, and if not, load a portable library which
+implements that procedure.
 </p>
 
 <p>
-The construct is parameterized by a feature-identifier which denotes
-the feature that is being checked.  In order for the semantics of this
-construct to be well defined, the feature-identifier must of course
-refer to a feature which has a well defined meaning.  There is thus a
-need for a registry, independent of this SRFI, to keep track of the
-formal specification associated with each valid feature-identifier.
-The SRFI registry is used for this purpose.
+Features are identified by <em>feature identifiers</em>.  In order for
+the semantics of this construct to be well-defined, the feature
+identifier must of course refer to a feature which has a well-defined
+meaning.  There is thus a need for a registry, independent of this
+SRFI, to keep track of the formal specification associated with each
+valid feature-identifier.  The SRFI registry is used for this purpose.
+It is expected that features will eventually be assigned meaningful
+names (aliases) by the SRFI editors to make reading and writing code
+less tedious than when using "srfi-N" feature identifiers.
 </p>
 
 <p>
@@ -67,38 +121,68 @@ Another issue is the binding time of this construct (i.e. the moment
 when it operates).  It is important that the binding time be early so
 that a compiler can discard the sections of code that are not needed,
 and perform better static analyses.  Expressing this construct through
-a procedure returning a boolean, such as
-<code>(feature-implemented? 'SRFI-5)</code>,
-would not achieve this goal, as its binding time is too late
-(i.e. program run-time).  A read-time construct, such as CommonLisp's
-<code>#+</code> read-macro, is very early but would require non-trivial changes
-to the reader of existing Scheme systems and the syntax is not
-particularly human friendly.  Instead, a macro-expansion-time
-construct is used.
+a procedure returning a boolean, such as <code>(feature-implemented?
+'srfi-5)</code>, would not achieve this goal, as its binding time is
+too late (i.e. program run-time).  A read-time construct, such as
+Common Lisp's <code>#+</code> read-macro, is very early but would
+require non-trivial changes to the reader of existing Scheme systems
+and the syntax is not particularly human friendly.  Instead, a
+macro-expansion-time construct is used.
+</p>
+
+<p>
+The construct is restricted to the top level of a program in order to
+simplify its implementation and to force a more disciplined use of the
+construct (to facilitate reading and understanding programs) and to
+avoid (some) misunderstandings related to the scope of features.
+These restrictions can of course be lifted by some Scheme systems or
+by other SRFIs (in particular module system SRFIs).
 </p>
 
 <H1>Specification</H1>
 
+Syntax:
+
 <p>
-The following special-form is added to the Scheme syntax:
+<pre>
+&lt;command or definition&gt;
+    --&gt; &lt;command&gt;
+      | &lt;definition&gt;
+      | &lt;syntax definition&gt;
+      | (begin &lt;command or definition&gt;+)
+      | &lt;conditional expansion form&gt;
+&lt;conditional expansion form&gt;
+    --&gt; (cond-expand &lt;cond-expand clause&gt;+)
+      | (cond-expand &lt;cond-expand clause&gt;* (else &lt;command or definition&gt;*))
+&lt;cond-expand clause&gt;
+    --&gt; (&lt;feature requirement&gt; &lt;command or definition&gt;*)
+&lt;feature requirement&gt;
+    --&gt; &lt;feature identifier&gt;
+      | (and &lt;feature requirement&gt;*)
+      | (or &lt;feature requirement&gt;*)
+      | (not &lt;feature requirement&gt;)
+&lt;feature identifier&gt;
+    --&gt; a symbol which is the name or alias of a SRFI
+</pre>
 </p>
 
-<PRE>
-  &lt;definition&gt; --&gt; (if-implements &lt;feature-id&gt; &lt;definition&gt; [ &lt;definition&gt; ] )
-  &lt;expression&gt; --&gt; (if-implements &lt;feature-id&gt; &lt;expression&gt; [ &lt;expression&gt; ] )
-  &lt;feature-id&gt; --&gt; a symbol which is the name or alias of a SRFI
-</PRE>
+<p>
+The <code>cond-expand</code> form tests for the existence of
+features at macro-expansion time.  It either expands into the body of
+one of its clauses or signals an error during syntactic processing.
+<code>cond-expand</code> expands into the body of the first clause whose
+feature requirement is currently satisfied (the <code>else</code> clause,
+if present, is selected if none of the previous clauses is selected).
+</p>
 
 <p>
-At macro-expansion time the <code>if-implements</code> form expands
-into the second argument if the Scheme system implements the feature
-as specified in the SRFI registry, otherwise the
-<code>if-implements</code> form expands into the third argument.  Note
-that the third argument is optional.  If it is not given it is as
-though an empty <code>begin</code> form was specified when
-<code>if-implements</code> is used as a definition, otherwise it is as
-though a side-effect free expression yielding an unspecified value was
-specified.
+A feature requirement has an obvious interpretation as a logical
+formula, where the <code>&lt;feature identifier&gt;</code> variables
+have meaning TRUE if the feature corresponding to the feature
+identifier, as specified in the SRFI registry, is in effect at the
+location of the <code>cond-expand</code> form, and FALSE otherwise.  A
+feature requirement is satisfied if its formula is true under this
+interpretation.
 </p>
 
 <p>
@@ -106,71 +190,79 @@ Examples:
 </p>
 
 <PRE>
-  (write (if-implements SRFI-0 (* 1 2) (+ 3 4)))  => writes 2
+  (cond-expand
+    ((and srfi-1 srfi-10)
+     (write 1))
+    ((or srfi-1 srfi-10)
+     (write 2))
+    (else))
 
-  (if-implements Gambit-C-3.0
-    (define (command-line-arguments) (argv))
-    (define (command-line-arguments) '()))
+  (cond-expand
+    (command-line
+     (define (program-name) (car (argv)))))
 </PRE>
 
 <p>
-The second example assumes that <code>Gambit-C-3.0</code> is an alias
-for the SRFI associated with the specification of Gambit-C version 3.0
-(i.e.  the documentation for that Scheme system).
-</p>
-
-<p>
-When writing portable code, the case used for the feature identifier
-should match the one in the SRFI registry.  This is to ensure that the
-feature identifier will be correctly recognized whether or not the
-Scheme system is case-sensitive.  To support case-insensitive Scheme
-systems, the feature identifiers in the SRFI registry are guaranteed
-to be unique even when ignoring the case.
+The second example assumes that <code>command-line</code> is an alias
+for some feature which gives access to command line arguments.  Note that
+an error will be signaled at macro-expansion time if this feature
+is not present.
 </p>
 
 <H1>Implementation</H1>
 
 <p>
-The Scheme system must maintain a table of the feature-identifiers
-that it implements.  At macro-expansion time this table is checked to
-decide what the "if-implements" form expands into.  Except for the
-table which is obviously system dependent, the
-<code>if-implements</code> construct could be defined as a macro along
-these lines (assuming <code>SRFI-0</code> and <code>SRFI-5</code> are
-the only implemented features):
+The simplest implementation of SRFI 0 assumes that all existent
+features are built-in (here we assume <code>srfi-0</code> and
+<code>srfi-5</code> are present):
 </p>
 
-<PRE>
-(define-syntax if-implements
-  (syntax-rules (SRFI-0 SRFI-5)
-    ((if-implements SRFI-0 yes)    yes)
-    ((if-implements SRFI-0 yes no) yes)
-    ((if-implements SRFI-5 yes)    yes)
-    ((if-implements SRFI-5 yes no) yes)
-    ((if-implements other yes)     (begin)) ; note: (begin) not an expression
-    ((if-implements other yes no)  no)))
-</PRE>
-
 <p>
-If Scheme defined that <code>(begin)</code> was a valid expression
-that returned an unspecified value then this definition would be
-correct.  However, in Scheme, <code>(begin)</code> is not a valid
-expression.  For example this is an error in R5RS, if
-<code>SRFI-9</code> is not implemented:
+<pre>
+(define-syntax cond-expand
+  (syntax-rules (and or not else srfi-0 srfi-5)
+    ((cond-expand) (syntax-error "Unfulfilled cond-expand"))
+    ((cond-expand (else body ...))
+     (begin body ...))
+    ((cond-expand ((and) body ...) more-clauses ...)
+     (begin body ...))
+    ((cond-expand ((and req1 req2 ...) body ...) more-clauses ...)
+     (cond-expand
+       (req1
+         (cond-expand
+           ((and req2 ...) body ...)
+           more-clauses ...))
+       more-clauses ...))
+    ((cond-expand ((or) body ...) more-clauses ...)
+     (cond-expand more-clauses ...))
+    ((cond-expand ((or req1 req2 ...) body ...) more-clauses ...)
+     (cond-expand
+       (req1
+        (begin body ...))
+       (else
+        (cond-expand
+           ((or req2 ...) body ...)
+           more-clauses ...))))
+    ((cond-expand ((not req) body ...) more-clauses ...)
+     (cond-expand
+       (req
+         (cond-expand more-clauses ...))
+       (else body ...)))
+    ((cond-expand (srfi-0 body ...) more-clauses ...)
+       (begin body...))
+    ((cond-expand (srfi-5 body ...) more-clauses ...)
+       (begin body...))
+    ((cond-expand (feature-id body ...) more-clauses ...)
+       (cond-expand more-clauses ...))))
+</pre>
 </p>
 
-<PRE>
-(lambda (x)
-  (write x)
-  (if-implements SRFI-9 (write-char (integer->char 999))) ; expands to (begin)
-  (newline))
-</PRE>
-
 <p>
-So to properly implement the <code>if-implements</code> construct, the
-Scheme system must also know at macro-expansion time if the form is
-used as a definition or expression, just like the implementation of
-the <code>begin</code> construct must know this.
+Note that the specification requires a macro-expansion time error to
+be signalled if a <code>cond-expand</code> form has no fulfilled
+clause.  There is no standard way to do that, so this implementation
+uses the <code>syntax-error</code> form, with the assumption that an
+actual implementation would provide some way to do this.
 </p>
 
 <H1>Copyright</H1>
@@ -207,3 +299,4 @@ Last modified: Fri Mar  5 14:48:53 MET 1999
 <!-- hhmts end -->
   </body>
 </html>
+
