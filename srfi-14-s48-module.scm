@@ -1,8 +1,24 @@
-(define-interface xchar-set-interface
+;;; SRFI-14 interface for Scheme48				-*- Scheme -*-
+;;; 
+;;; Complete interface spec for the SRFI-14 char-set-lib library in the
+;;; Scheme48 interface and module language. The interface is fully typed, in
+;;; the Scheme48 type notation. The structure definitions also provide a
+;;; formal description of the external dependencies of the source code.
+
+(define-interface char-set-interface
   (export (char-set? (proc (:value) :boolean))
-	  ((char-set= char-set<=) (proc (:value &rest :value) :boolean))
+	  ((char-set= char-set<=) (proc (&rest :value) :boolean))
 
 	  (char-set-hash (proc (:value &opt :exact-integer) :exact-integer))
+
+	  ;; Cursors are exact integers in the reference implementation.
+	  ;; These typings would be different with a different cursor
+	  ;; implementation.
+	  ;; Too bad Scheme doesn't have abstract data types.
+	  (char-set-cursor      (proc (:value) :exact-integer))
+	  (char-set-ref         (proc (:value :exact-integer) :char))
+	  (char-set-cursor-next (proc (:value :exact-integer) :exact-integer))
+	  (end-of-char-set?     (proc (:value) :boolean))
 
 	  (char-set-fold (proc ((proc (:char :value) :value) :value :value)
 			       :value))
@@ -39,8 +55,8 @@
 				      :boolean :value)
 				     :value))
 
-	  (predicate->char-set  (proc ((proc (:char) :boolean) &opt :value) :value))
-	  (predicate->char-set! (proc ((proc (:char) :boolean) :value) :value))
+	  (char-set-filter  (proc ((proc (:char) :boolean) :value &opt :value) :value))
+	  (char-set-filter! (proc ((proc (:char) :boolean) :value :value) :value))
 
 	  (->char-set (proc (:value) :value))
 
@@ -58,22 +74,22 @@
 	  (char-set->list   (proc (:value) :value))
 	  (char-set->string (proc (:value) :string))
 
-	  (char-set-invert (proc (:value) :value))
+	  (char-set-complement (proc (:value) :value))
 	  ((char-set-union char-set-intersection char-set-xor)
 	   (proc (&opt :value) :value))
 	  
 	  (char-set-difference (proc (:value &opt :value) :value))
 
-	  (char-set-diff+intersection (proc (:value :value)
+	  (char-set-diff+intersection (proc (:value &rest :value)
 					    (some-values :value :value)))
 
-	  (char-set-invert! (proc (:value) :value))
+	  (char-set-complement! (proc (:value) :value))
 
 	  ((char-set-union! char-set-intersection!
 	    char-set-xor! char-set-difference!)
 	   (proc (:value &opt :value) :value))
 
-	  (char-set-diff+intersection! (proc (:value :value)
+	  (char-set-diff+intersection! (proc (:value :value &rest :value)
 					     (some-values :value :value)))
 
 	  char-set:lower-case
@@ -94,7 +110,7 @@
 	  char-set:full
 	  ))
 
-(define-structure xchar-set-lib xchar-set-interface
+(define-structure char-set-lib char-set-interface
   (open error-package	; ERROR procedure
 	nlet-opt	; LET-OPTIONALS* and :OPTIONAL
 	ascii		; CHAR->ASCII ASCII->CHAR
@@ -116,7 +132,7 @@
              ((define-record-type ?name ?stuff ...)
 	      (define-record-type/jar ?name ?name ?stuff ...)))))
 
-  (files cset-lib)
+  (files srfi-14)
   (optimize auto-integrate))
 
 ;;; Import jar's DEFINE-RECORD-TYPE macro, and export it under the

@@ -1,11 +1,10 @@
 The SRFI 14 character-set library				-*- outline -*-
 Olin Shivers
 98/11/8
-Last Update: 2000/6/9
+Last Update: 2000/12/23
 
 Emacs should display this document in outline mode. Say c-h m for
 instructions on how to move through it by sections (e.g., c-c c-n, c-c c-p).
-
 
 * Table of contents
 -------------------
@@ -16,13 +15,14 @@ Rationale
   Extra-SRFI recommendations
 Specification
   General procedures
-  Folding & mapping character sets
+  Iterating over character sets
   Creating character sets
   Querying character sets
   Character-set algebra
   Standard character sets
 Unicode, Latin-1 and ASCII definitions of the standard character sets
 Reference implementation
+Acknowledgements
 References & links
 Copyright
 
@@ -39,7 +39,7 @@ general library that provides this functionality.
 
 It is accompanied by a reference implementation for the spec. The reference
 implementation is fairly efficient, straightforwardly portable, and has a
-"free software" copyright. The implementations are tuned for "small" 7 or 8
+"free software" copyright. The implementation is tuned for "small" 7 or 8
 bit character types, such as ASCII or Latin-1; the data structures and
 algorithms would have to be altered for larger 16 or 32 bit character types
 such as Unicode -- however, the specs have been carefully designed with these
@@ -62,16 +62,17 @@ char-set? char-set= char-set<=
 
 char-set-hash
 
+char-set-cursor char-set-ref char-set-cursor-next end-of-char-set?
 char-set-fold char-set-unfold char-set-unfold!
 char-set-for-each char-set-map
 
-char-set-copy
+char-set-copy char-set
 
-char-set  list->char-set  string->char-set 
-char-set! list->char-set! string->char-set!
+list->char-set  string->char-set 
+list->char-set! string->char-set!
     
-predicate->char-set  ucs-range->char-set 
-predicate->char-set! ucs-range->char-set!
+char-set-filter  ucs-range->char-set 
+char-set-filter! ucs-range->char-set!
 
 ->char-set
 
@@ -84,11 +85,11 @@ char-set-every char-set-any
 char-set-adjoin  char-set-delete 
 char-set-adjoin! char-set-delete!
 
-char-set-invert  char-set-union  char-set-intersection  char-set-difference
-char-set-invert! char-set-union! char-set-intersection! char-set-difference!
+char-set-complement  char-set-union  char-set-intersection  
+char-set-complement! char-set-union! char-set-intersection! 
 
-char-set-xor  char-set-diff+intersection
-char-set-xor! char-set-diff+intersection!
+char-set-difference  char-set-xor  char-set-diff+intersection
+char-set-difference! char-set-xor! char-set-diff+intersection!
 
 char-set:lower-case	char-set:upper-case	char-set:title-case
 char-set:letter		char-set:digit		char-set:letter+digit
@@ -131,9 +132,9 @@ The linear-update routines all have names ending with "!".
 Clients of these procedures *may not* rely upon these procedures working by
 side effect. For example, this is not guaranteed to work:
     
-    (let ((cs (char-set #\a #\b #\c)))
-      (char-set-adjoin! cs #\d)	; Add d to {a,b,c}.
-      cs) ; Could be either {a,b,c} or {a,b,c,d}.
+    (let* ((cs1 (char-set #\a #\b #\c))      ; cs1 = {a,b,c}.
+           (cs2 (char-set-adjoin! cs1 #\d))) ; Add d to {a,b,c}.
+      cs1) ; Could be either {a,b,c} or {a,b,c,d}.
 
 However, this is well-defined:
 
@@ -183,7 +184,7 @@ may or may not be in agreement with the SRFI 14 base character sets
     CHAR-SET:WHITESPACE
     CHAR-SET:UPPER-CASE
     CHAR-SET:LOWER-CASE
-Implementators are strongly encouraged to bring these predicates into
+Implementors are strongly encouraged to bring these predicates into
 agreement with the base character sets of this SRFI; not to do so risks
 major confusion.
 
@@ -201,7 +202,7 @@ In the following procedure specifications:
 
     - A CHAR-LIST parameter is a list of characters.
 
-    - A PRED paramter is a unary character predicate procedure, returning 
+    - A PRED parameter is a unary character predicate procedure, returning 
       a true/false value when applied to a character.
 
     - An OBJ parameter may be any value at all.
@@ -215,29 +216,76 @@ of the linear-update operations) from the parameter character sets. For
 example, CHAR-SET-ADJOIN is guaranteed to provide a fresh character set,
 even if it is not given any character parameters.
 
+Parameters given in square brackets are optional. Unless otherwise noted in
+the text describing the procedure, any prefix of these optional parameters may
+be supplied, from zero arguments to the full list. When a procedure returns
+multiple values, this is shown by listing the return values in square
+brackets, as well. So, for example, the procedure with signature
+
+    halts? f [x init-store] -> [boolean integer]
+
+would take one (F), two (F, X) or three (F, X, INPUT-STORE) input parameters,
+and return two values, a boolean and an integer.
+
+A parameter followed by "..." means zero-or-more elements. So the procedure
+with the signature
+    sum-squares x ... -> number
+takes zero or more arguments (X ...), while the procedure with signature
+    spell-check doc dict1 dict2 ... -> string-list
+takes two required parameters (DOC and DICT1) and zero or more
+optional parameters (DICT2 ...).
+
 
 ** General procedures
 =====================
 char-set? obj -> boolean
     Is the object OBJ a character set?
 
-char-set= cs1 cs2 ... -> boolean
+char-set= cs1 ... -> boolean
     Are the character sets equal?
 
-char-set<= cs1 cs2 ... -> boolean
-    Returns true if every character set CSi is 
-    a subset of character set CSi+1.
+    Boundary cases:
+      (char-set=) => true
+      (char-set= cs) => true
+
+    Rationale: transitive binary relations are generally extended to n-ary
+    relations in Scheme, which enables clearer, more concise code to be
+    written. While the zero-argument and one-argument cases will almost
+    certainly not arise in first-order uses of such relations, they may well
+    arise in higher-order cases or macro-generated code. E.g., consider
+        (apply char-set= cset-list)
+    This is well-defined if the list is empty or a singleton list. Hence
+    we extend these relations to any number of arguments. Implementors
+    have reported actual uses of n-ary relations in higher-order cases
+    allowing for fewer than two arguments. The way of Scheme is to handle the
+    general case; we provide the fully general extension.
+
+    A counter-argument to this extension is that R5RS's transitive binary
+    arithmetic relations (=, <, etc.) require at least two arguments, hence
+    this decision is a break with the prior convention -- although it is
+    at least one that is backwards-compatible.
+
+char-set<= cs1 ... -> boolean
+    Returns true if every character set CSi is a subset of character set CSi+1.
+
+    Boundary cases:
+      (char-set<=) => true
+      (char-set<= cs) => true
+
+    Rationale: See CHAR-SET= for discussion of zero- and one-argument
+    applications. Consider testing a list of char-sets for monotonicity
+    with (APPLY CHAR-SET<= CSET-LIST).
 
 char-set-hash cs [bound] -> integer
-    Compute a hash value for the character set CS. BOUND is either false or
-    a non-negative exact integer. If an integer, it gives the target 
-    range of the hash function -- the returned value will be in the range 
-    [0,BOUND).
+    Compute a hash value for the character set CS. BOUND is a non-negative
+    exact integer specifying the range of the hash function. A positive
+    value restricts the return value to the range [0,BOUND).
 
-    If BOUND is either false or not given, the implementation may use
-    an implementation-specific default value, which might be chosen, 
-    for instance, to map all strings into the range of integers that
-    can be efficiently represented in a single machine word.
+    If BOUND is either zero or not given, the implementation may use
+    an implementation-specific default value, chosen to be as large as
+    is efficiently practical. For instance, the default range might be chosen
+    for a given implementation to map all character sets into the range of
+    integers that can be represented with a single machine word.
 
     Invariant:
        (char-set= cs1 cs2) => (= (char-set-hash cs1 b) (char-set-hash cs2 b))
@@ -245,9 +293,73 @@ char-set-hash cs [bound] -> integer
     A legal but nonetheless discouraged implementation:
         (define (char-set-hash cs . maybe-bound) 1)
 
+    Rationale: allowing the user to specify an explicit bound simplifies user
+    code by removing the mod operation that typically accompanies every hash
+    computation, and also may allow the implementation of the hash function to
+    exploit a reduced range to efficiently compute the hash value. E.g., for
+    small bounds, the hash function may be computed in a fashion such that
+    intermediate values never overflow into bignum integers, allowing the
+    implementor to provide a fixnum-specific "fast path" for computing the
+    common cases very rapidly.
 
-** Folding & mapping character sets
+** Iterating over character sets
 ===================================
+
+char-set-cursor cset -> cursor
+char-set-ref cset cursor -> char
+char-set-cursor-next cset cursor -> cursor
+end-of-char-set? cursor -> boolean
+    Cursors are a low-level facility for iterating over the characters in a
+    set. A cursor is a value that indexes a character in a char set.
+    CHAR-SET-CURSOR produces a new cursor for a given char set. The set
+    element indexed by the cursor is fetched with CHAR-SET-REF. A cursor index
+    is incremented with CHAR-SET-CURSOR-NEXT; in this way, code can step
+    through every character in a char set. Stepping a cursor "past the end" of
+    a char set produces a cursor that answers true to END-OF-CHAR-SET?. It is
+    an error to pass such a cursor to CHAR-SET-REF or to CHAR-SET-CURSOR-NEXT.
+
+    A cursor value may not be used in conjunction with a different character
+    set; if it is passed to CHAR-SET-REF or CHAR-SET-CURSOR-NEXT with
+    a character set other than the one used to create it, the results and
+    effects are undefined.
+
+    Cursor values are *not* necessarily distinct from other types. They may be
+    integers, linked lists, records, procedures or other values. This license
+    is granted to allow cursors to be very "lightweight" values suitable for
+    tight iteration, even in fairly simple implementations.
+
+    Note that these primitives are necessary to export an iteration facility
+    for char sets to loop macros.
+
+    Example:
+
+	(define cs (char-set #\G #\a #\T #\e #\c #\h))
+
+	;; Collect elts of CS into a list.
+	(let lp ((cur (char-set-cursor cs)) (ans '()))
+	  (if (end-of-char-set? cur) ans
+	      (lp (char-set-cursor-next cs cur)
+		  (cons (char-set-ref cs cur) ans))))
+	  => (#\G #\T #\a #\c #\e #\h)
+
+	;; Equivalently, using a list unfold (from SRFI 1):
+	(unfold-right end-of-char-set? 
+	              (curry char-set-ref cs)
+		      (curry char-set-cursor-next cs)
+		      (char-set-cursor cs))
+	  => (#\G #\T #\a #\c #\e #\h)
+
+    Rationale: Note that the cursor API's four functions "fit" the functional
+    protocol used by the unfolders provided by the list, string and char-set
+    SRFIs (see the example above). By way of contrast, here is a simpler,
+    two-function API that was rejected for failing this criterion. Besides
+    CHAR-SET-CURSOR, it provided a single function that mapped a cursor and a
+    character set to two values, the indexed character and the next cursor. If
+    the cursor had exhausted the character set, then this function returned
+    false instead of the character value, and another end-of-char-set cursor.
+    In this way, the other three functions of the current API were combined
+    together.
+
 char-set-fold kons knil cs -> object
     This is the fundamental iterator for character sets.  Applies the function
     KONS across the character set CS using initial state value KNIL.  That is,
@@ -309,11 +421,13 @@ char-set-for-each proc cs -> unspecified
     set is not specified, and may even change from one procedure application
     to another.
 
-    Nothing at all is specified about what this procedure returns, not even
-    the number of return values. It is not even required to be consistent from
-    call to call in the nature or number of its return values. It is
-    specifically permitted for this procedure to return zero values, e.g., by
-    calling (VALUES).
+    Nothing at all is specified about the value returned by this procedure; it
+    is not even required to be consistent from call to call. It is simply
+    required to be a value (or values) that may be passed to a command
+    continuation, e.g. as the value of an expression appearing as a
+    non-terminal subform of a BEGIN expression. Note that in R5RS, this
+    restricts the procedure to returning a single value; non-R5RS systems may
+    not even provide this restriction.
 
 char-set-map proc cs -> char-set
     PROC is a char->char procedure. Apply it to all the characters in
@@ -346,9 +460,9 @@ list->char-set! char-list  base-cs  -> char-set
     Return a character set containing the characters in the list of
     characters CHAR-LIST.
 
-    If character set BASE-CS is provided, the characters from CHAR
-    are added to it. CHARS->CHAR-SET! is allowed, but not required,
-    to side-effect and reuse the storage in BASE-CS; CHARS->CHAR-SET
+    If character set BASE-CS is provided, the characters from CHAR-LIST
+    are added to it. LIST->CHAR-SET! is allowed, but not required,
+    to side-effect and reuse the storage in BASE-CS; LIST->CHAR-SET
     produces a fresh character set.
 
 string->char-set  s [base-cs] -> char-set
@@ -360,24 +474,29 @@ string->char-set! s  base-cs  -> char-set
     reuse the storage in BASE-CS; STRING->CHAR-SET produces a fresh character
     set.
 
-predicate->char-set  pred [base-cs] -> char-set
-predicate->char-set! pred  base-cs  -> char-set
-    Returns a character set containing every character c such that
-    (PRED c) returns true.
+char-set-filter  pred cs [base-cs] -> char-set
+char-set-filter! pred cs  base-cs  -> char-set
+    Returns a character set containing every character c in CS
+    such that (PRED c) returns true.
 
     If character set BASE-CS is provided, the characters specified by PRED
-    are added to it. PREDICATE->CHAR-SET! is allowed, but not required,
-    to side-effect and reuse the storage in BASE-CS; PREDICATE->CHAR-SET
+    are added to it. CHAR-SET-FILTER! is allowed, but not required,
+    to side-effect and reuse the storage in BASE-CS; CHAR-SET-FILTER
     produces a fresh character set.
 
-    The implementation may not save away a reference to PRED and
-    invoke it after PREDICATE->CHAR-SET returns -- that is, "lazy,"
-    on-demand implementations are not allowed, as PRED may have
-    external dependencies on mutable data or have other side-effects.
+    An implementation may not save away a reference to PRED and invoke it
+    after CHAR-SET-FILTER or CHAR-SET-FILTER! returns -- that is, "lazy,"
+    on-demand implementations are not allowed, as PRED may have external
+    dependencies on mutable data or have other side-effects.
 
-    This may not be an especially efficient procedure to use in a
-    Scheme implementation that has a large character type, such as
-    16-bit Unicode. 
+    Rationale: This procedure provides a means of converting a character
+    predicate into its equivalent character set; the CS parameter allows the
+    programmer to bound the predicate's domain. Programmers should be aware
+    that filtering a character set such as CHAR-SET:FULL could be a very
+    expensive operation in an implementation that provided an extremely large
+    character type, such as 32-bit Unicode. An earlier draft of this library
+    provided a simple PREDICATE->CHAR-SET procedure, which was rejected in
+    favor of CHAR-SET-FILTER for this reason.
 
 ucs-range->char-set  lower upper [error? base-cs] -> char-set
 ucs-range->char-set! lower upper  error? base-cs  -> char-set
@@ -396,7 +515,7 @@ ucs-range->char-set! lower upper  error? base-cs  -> char-set
       transparently.
     
     - If any code from the requested range specifies a valid, assigned
-      UCS character but has no corresponding representative in the
+      UCS character that has no corresponding representative in the
       implementation's character type, then (1) an error is raised if ERROR?
       is true, and (2) the code is ignored if ERROR? is false (the default).
       This might happen, for example, if the implementation uses ASCII
@@ -417,12 +536,11 @@ ucs-range->char-set! lower upper  error? base-cs  -> char-set
     representation when possible, and report errors when not possible.
 
 ->char-set x -> char-set
-    Coerces X into a char-set. X may be a string, character, char-set, or
-    predicate. A string is converted to the set of its constituent characters;
-    a character is converted to a singleton set; a char-set is returned
-    as-is; a predicate is converted to a char-set using PREDICATE->CHAR-SET.
-    This procedure is intended for use by other procedures that want to 
-    provide "user-friendly," wide-spectrum interfaces to their clients.
+    Coerces X into a char-set. X may be a string, character or char-set. A
+    string is converted to the set of its constituent characters; a character
+    is converted to a singleton set; a char-set is returned as-is. This
+    procedure is intended for use by other procedures that want to provide
+    "user-friendly," wide-spectrum interfaces to their clients.
 
 
 ** Querying character sets
@@ -436,14 +554,18 @@ char-set-count pred cs -> integer
 
 char-set->list cs -> character-list
     This procedure returns a list of the members of character set CS.
+    The order in which CS's characters appear in the list is not defined,
+    and may be different from one call to another.
 
-char-set->string cs -> character-list
+char-set->string cs -> string
     This procedure returns a string containing the members of character set CS.
+    The order in which CS's characters appear in the string is not defined,
+    and may be different from one call to another.
 
 char-set-contains? cs char -> boolean
     This procedure tests CHAR for membership in character set CS.
 
-    The MIT Scheme character set package called this procedure
+    The MIT Scheme character-set package called this procedure
     CHAR-SET-MEMBER?, but the argument order isn't consistent with the name.
 
 char-set-every pred cs -> boolean
@@ -476,35 +598,51 @@ char-set-delete! cs char1 ... -> char-set
     Linear-update variants. These procedures are allowed, but not
     required, to side-effect their first parameter.
 
-char-set-invert cs                 -> char-set
-char-set-union cs1 ...             -> char-set
-char-set-intersection cs1 ...      -> char-set
-char-set-difference cs1 cs2 ...    -> char-set
-char-set-xor cs1 ...               -> char-set
-char-set-diff+intersection cs1 cs2 -> [char-set char-set]
+char-set-complement cs                 -> char-set
+char-set-union cs1 ...                 -> char-set
+char-set-intersection cs1 ...          -> char-set
+char-set-difference cs1 cs2 ...        -> char-set
+char-set-xor cs1 ...                   -> char-set
+char-set-diff+intersection cs1 cs2 ... -> [char-set char-set]
     These procedures implement set complement, union, intersection,
-    difference, and exclusive-or for character sets. The union, intersection,
-    difference and xor operations are n-ary, associating to the left; the
-    difference function requires at least one argument, while union,
-    intersection and xor may be applied to zero arguments.
+    difference, and exclusive-or for character sets. The union, intersection
+    and xor operations are n-ary. The difference function is also n-ary, 
+    associates to the left (that is, it computes the difference between
+    its first argument and the union of all the other arguments),
+    and requires at least one argument.
+
+    Boundary cases:
+      (char-set-union) => char-set:empty
+      (char-set-intersection) => char-set:all
+      (char-set-xor) => char-set:empty
+      (char-set-difference cs) => cs
 
     CHAR-SET-DIFF+INTERSECTION returns both the difference and the
     intersection of the arguments -- it partitions its first parameter.
+    It is equivalent to 
+        (values (char-set-difference cs1 cs2 ...)
+	        (char-set-intersection cs1 (char-set-union cs2 ...)))
+    but can be implemented more efficiently.
 
-char-set-invert! cs		    -> char-set
-char-set-union! cs1 cs2 ...  	    -> char-set
-char-set-intersection! cs1 cs2 ...  -> char-set
-char-set-difference! cs1 cs2 ...    -> char-set
-char-set-xor! cs1 cs2 ...           -> char-set
-char-set-diff+intersection! cs1 cs2 -> [char-set char-set]
-    These procedures implement set complement, union, intersection, difference
-    and exclusive-or for character sets.  They are allowed, but not required,
-    to side-effect their first parameter.  The union, intersection, 
-    difference and xor operations are n-ary, associating to the left.
+    Programmers should be aware that CHAR-SET-COMPLEMENT could potentially
+    be a very expensive operation in Scheme implementations that provide
+    a very large character type, such as 32-bit Unicode. If this is a
+    possibility, sets can be complimented with respect to a smaller
+    universe using CHAR-SET-DIFFERENCE.
+
+char-set-complement! cs		            -> char-set
+char-set-union! cs1 cs2 ...  	            -> char-set
+char-set-intersection! cs1 cs2 ...          -> char-set
+char-set-difference! cs1 cs2 ...            -> char-set
+char-set-xor! cs1 cs2 ...                   -> char-set
+char-set-diff+intersection! cs1 cs2 cs3 ... -> [char-set char-set]
+    These are linear-update variants of the set-algebra functions.
+    They are allowed, but not required, to side-effect their first 
+    (required) parameter.
+
     
-    CHAR-SET-DIFF+INTERSECTION! returns both the difference and the
-    intersection of the arguments -- it partitions its first parameter.
-    It is allowed to side-effect both of its parameters.
+    CHAR-SET-DIFF+INTERSECTION! is allowed to side-effect both of
+    its two required parameters, CS1 and CS2.
 
 ** Standard character sets
 ==========================
@@ -551,6 +689,9 @@ Note that the existence of the CHAR-SET:ASCII set implies that the underlying
 character set is required to be at least as rich as ASCII (including
 ASCII's control characters).
 
+Rationale: The name choices reflect a shift from the older
+"alphabetic/numeric" terms found in R5RS and Posix to newer,
+Unicode-influenced "letter/digit" lexemes.
 
 -------------------------------------------------------------------------------
 * Unicode, Latin-1 and ASCII definitions of the standard character sets
@@ -565,11 +706,11 @@ attempt to preserve the sense or spirit of these definitions.
 The following descriptions frequently make reference to the "Unicode character
 database." This is a file, available at URL
     ftp://ftp.unicode.org/Public/UNIDATA/UnicodeData.txt
-In particular, each line contains a description of a Unicode character.
-The first semicolon-delimited field of the line gives the hex value of
-the character's code; the second field gives the name of the character,
-and the third field gives a two-letter category. Other fields give
-simple 1-1 case-mappings for the character and other information; see
+Each line contains a description of a Unicode character. The first
+semicolon-delimited field of the line gives the hex value of the character's
+code; the second field gives the name of the character, and the third field
+gives a two-letter category. Other fields give simple 1-1 case-mappings for
+the character and other information; see
     ftp://ftp.unicode.org/Public/UNIDATA/UnicodeData.html
 for further description of the file's format. Note in particular the
 two-letter category specified in the the third field, which is referenced
@@ -842,7 +983,7 @@ and excluding
 Java's excluding the no-break space means that tokenizers can simply break
 character streams at "whitespace" boundaries. However, the exclusion introduces
 exceptions in other places, e.g. CHAR-SET:PRINTING is no longer simply the
-union of CHAR-SET:GRAPHIC and CHAR-SET:WHITESPACE.)
+union of CHAR-SET:GRAPHIC and CHAR-SET:WHITESPACE.
 
 
 ** char-set:iso-control	
@@ -882,8 +1023,8 @@ They are "symbols."
 ** char-set:symbol
 ==================
 In Unicode, a symbol is any character that has one of the symbol categories
-in the Unicode character database (Sm, Sc, Sk, or So). There
-are nine ASCII symbol characters:
+in the Unicode character database (Sm, Sc, Sk, or So). There are nine ASCII 
+symbol characters:
     $+<=>^`|~
 
 Latin-1 adds 18 more:
@@ -946,17 +1087,15 @@ compatibility issues.
 --------------------------
 
 This SRFI comes with a reference implementation. It resides at:
-
-http://srfi.schemers.org/srfi-14/srfi-14.scm
-
-I have placed this source on the Net with an unencumbered, "open"
-copyright. Some of the code in the reference implementation bears a
-distant family relation to the MIT Scheme implementation, and being
-derived from that code, is covered by the MIT Scheme copyright (which
-is a generic BSD-style open-source copyright -- see the source file
-for details). The remainder of the code was written by myself for for
-scsh or for this SRFI; I have placed this code under the scsh
-copyright, which is also a generic BSD-style open-source copyright.
+    http://srfi.schemers.org/srfi-14/srfi-14.scm
+I have placed this source on the Net with an unencumbered, "open" copyright.
+Some of the code in the reference implementation bears a distant family
+relation to the MIT Scheme implementation, and being derived from that code,
+is covered by the MIT Scheme copyright (which is a generic BSD-style
+open-source copyright -- see the source file for details). The remainder of
+the code was written by myself for scsh or for this SRFI; I have placed this
+code under the scsh copyright, which is also a generic BSD-style open-source
+copyright.
 
 The code is written for portability and should be simple to port to
 any Scheme. It has only the following deviations from R4RS, clearly
@@ -966,16 +1105,21 @@ discussed in the comments:
   - a simple CHECK-ARG procedure for argument checking;
   - LET-OPTIONALS* and :OPTIONAL macros for for parsing, checking & defaulting
     optional arguments from rest lists;
-  - a simple DEFINE-RECORD-TYPE record macro;
-  - BITWISE-AND for the hash function
+  - The SRFI-19 DEFINE-RECORD-TYPE form;
+  - BITWISE-AND for the hash function;
   - %LATIN1->CHAR & %CHAR->LATIN1.
 
-The library is written for clarity and well-commented.It is also
-written for efficiency. Fast paths are provided for common cases.
+The library is written for clarity and well-commented; the current source is
+about 375 lines of source code and 375 lines of comments and white space.
+It is also written for efficiency. Fast paths are provided for common cases.
 
 This is not to say that the implementation can't be tuned up for
 a specific Scheme implementation. There are notes in comments addressing
 ways implementors can tune the reference implementation for performance.
+
+In short, I've written the reference implementation to make it as painless
+as possible for an implementor -- or a regular programmer -- to adopt this
+library and get good results with it.
 
 The code uses a rather simple-minded, inefficient representation for
 ASCII/Latin-1 char-sets -- a 256-character string. The character whose code is
@@ -990,28 +1134,36 @@ dense 32-byte bit set.
 
 
 -------------------------------------------------------------------------------
+* Acknowledgements
+------------------
+
+The design of this library benefited greatly from the feedback provided during
+the SRFI discussion phase. Among those contributing thoughtful commentary and
+suggestions, both on the mailing list and by private discussion, were Paolo
+Amoroso, Lars Arvestad, Alan Bawden, Jim Bender, Dan Bornstein, Per Bothner,
+Will Clinger, Brian Denheyer, Kent Dybvig, Sergei Egorov, Marc Feeley,
+Matthias Felleisen, Will Fitzgerald, Matthew Flatt, Arthur A. Gleckler, Ben
+Goetter, Sven Hartrumpf, Erik Hilsdale, Shiro Kawai, Richard Kelsey, Oleg
+Kiselyov, Bengt Kleberg, Donovan Kolbly, Bruce Korb, Shriram Krishnamurthi,
+Bruce Lewis, Tom Lord, Brad Lucier, Dave Mason, David Rush, Klaus Schilling,
+Jonathan Sobel, Mike Sperber, Mikael Staldal, Vladimir Tsyshevsky, Donald
+Welsh, and Mike Wilson. I am grateful to them for their assistance.
+
+I am also grateful the authors, implementors and documentors of all the systems
+mentioned in the introduction. Aubrey Jaffer and Kent Pitman should be noted
+for their work in producing Web-accessible versions of the R5RS and Common
+Lisp spec, which was a tremendous aid.
+
+This is not to imply that these individuals necessarily endorse the final
+results, of course. 
+
+During this document's long development period, great patience was exhibited
+by Mike Sperber, who is the editor for the SRFI, and by Hillary Sullivan,
+who is not.
+
+-------------------------------------------------------------------------------
 * References & links
 --------------------
-
-This SRFI:
-    http://srfi.schemers.org/srfi-14/
-
-Source code for the reference implementation:
-    http://srfi.schemers.org/srfi-14/srfi-14.scm
-
-SRFI web site:
-    http://srfi.schemers.org/
-
-[R5RS]
-    Revised^5 Report on the Algorithmic Language Scheme, 
-    R. Kelsey, W. Clinger, J. Rees (editors).
-    Higher-Order and Symbolic Computation, Vol. 11, No. 1, September, 1998.
-    and ACM SIGPLAN Notices, Vol. 33, No. 9, October, 1998.
-
-    Available at http://www.schemers.org/Documents/Standards/
-
-[MIT-Scheme]
-    http://www.swiss.ai.mit.edu/projects/scheme/
 
 [Java]
     The following URLs provide documentation on relevant Java classes.
@@ -1022,17 +1174,42 @@ SRFI web site:
     http://java.sun.com/products/jdk/1.2/docs/api/java/text/Collator.html
     http://java.sun.com/products/jdk/1.2/docs/api/java/text/package-summary.html
 
-The Unicode character database
-    ftp://ftp.unicode.org/Public/UNIDATA/UnicodeData.html
-    ftp://ftp.unicode.org/Public/UNIDATA/UnicodeData.txt
+[MIT-Scheme]
+    http://www.swiss.ai.mit.edu/projects/scheme/
+
+[R5RS]
+    Revised^5 report on the algorithmic language Scheme.
+    R. Kelsey, W. Clinger, J. Rees (editors).
+    Higher-Order and Symbolic Computation, Vol. 11, No. 1, September, 1998.
+    and ACM SIGPLAN Notices, Vol. 33, No. 9, October, 1998.
+
+    Available at http://www.schemers.org/Documents/Standards/
 
 [SRFI]
+    The SRFI web site.
     http://srfi.schemers.org/
+
+[SRFI-14]
+    SRFI-14: Character-set library.
+    http://srfi.schemers.org/srfi-14/
+
+    This document, in HTML:
+        http://srfi.schemers.org/srfi-14/srfi-14.html
+    This document, in plain text format:
+        http://srfi.schemers.org/srfi-14/srfi-14.txt
+    Source code for the reference implementation:
+        http://srfi.schemers.org/srfi-14/srfi-14.scm
+    Scheme 48 module specification, with typings: 
+        http://srfi.schemers.org/srfi-14/srfi-14-s48-module.scm 
+    Regression-test suite:
+        http://srfi.schemers.org/srfi-14/srfi-14-tests.scm 
 
 [Unicode]
     http://www.unicode.org/
 
 [UnicodeData]
+    The Unicode character database.
+    ftp://ftp.unicode.org/Public/UNIDATA/UnicodeData.html
     ftp://ftp.unicode.org/Public/UNIDATA/UnicodeData.txt
 
 

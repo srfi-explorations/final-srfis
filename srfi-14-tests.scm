@@ -1,24 +1,28 @@
 ;;; This is a regression testing suite for the SRFI-14 char-set library.
 ;;; Olin Shivers
 
-(define-syntax test
-  (syntax-rules ()
-    ((test form ...)
-     (cond ((not form) (error "Test failed" 'form)) ...
-	   (else 'OK)))))
-
-(define (vowel? c) (member c '(#\a #\e #\i #\o #\u)))
+(let-syntax ((test (syntax-rules ()
+		     ((test form ...)
+		      (cond ((not form) (error "Test failed" 'form)) ...
+			    (else 'OK))))))
+  (let ((vowel (lambda (c) (member c '(#\a #\e #\i #\o #\u)))))
 
 (test
  (not (char-set? 5))
 
  (char-set? (char-set #\a #\e #\i #\o #\u))
 
+ (char-set=)
+ (char-set= (char-set))
+
  (char-set= (char-set #\a #\e #\i #\o #\u)
 	    (string->char-set "ioeauaiii"))
 
  (not (char-set= (char-set #\e #\i #\o #\u)
 		 (string->char-set "ioeauaiii")))
+
+ (char-set<=)
+ (char-set<= (char-set))
 
  (char-set<= (char-set #\a #\e #\i #\o #\u)
 	     (string->char-set "ioeauaiii"))
@@ -79,14 +83,14 @@
 		 (list->char-set! '(#\x #\y) (string->char-set "12345"))))
 
  (char-set= (string->char-set "aeiou12345")
-	    (predicate->char-set vowel? (string->char-set "12345")))
+	    (char-set-filter vowel? char-set:ascii (string->char-set "12345")))
  (not (char-set= (string->char-set "aeou12345")
-		 (predicate->char-set vowel? (string->char-set "12345"))))
+		 (char-set-filter vowel? char-set:ascii (string->char-set "12345"))))
 
  (char-set= (string->char-set "aeiou12345")
-	    (predicate->char-set! vowel? (string->char-set "12345")))
+	    (char-set-filter! vowel? char-set:ascii (string->char-set "12345")))
  (not (char-set= (string->char-set "aeou12345")
-		 (predicate->char-set! vowel? (string->char-set "12345"))))
+		 (char-set-filter! vowel? char-set:ascii (string->char-set "12345"))))
 
 
  (char-set= (string->char-set "abcdef12345")
@@ -102,14 +106,11 @@
 
  (char-set= (->char-set #\x)
 	    (->char-set "x")
-	    (->char-set (lambda (c) (char=? c #\x)))
 	    (->char-set (char-set #\x)))
 
  (not (char-set= (->char-set #\x)
 		 (->char-set "y")
-		 (->char-set (lambda (c) (char=? c #\x)))
 		 (->char-set (char-set #\x))))
-
 
  (= 10 (char-set-size (char-set-intersection char-set:ascii char-set:digit)))
 
@@ -129,6 +130,14 @@
  (char-set-any char-lower-case? (->char-set "abcd"))
  (not (char-set-any char-lower-case? (->char-set "ABCD")))
 
+ (char-set= (->char-set "ABCD")
+	    (let ((cs (->char-set "abcd")))
+	      (let lp ((cur (char-set-cursor cs)) (ans '()))
+		(if (end-of-char-set? cur) (list->char-set ans)
+		    (lp (char-set-cursor-next cs cur)
+			(cons (char-upcase (char-set-ref cs cur)) ans))))))
+
+
  (char-set= (char-set-adjoin (->char-set "123") #\x #\a)
 	    (->char-set "123xa"))
  (not (char-set= (char-set-adjoin (->char-set "123") #\x #\a)
@@ -147,9 +156,9 @@
  (not (char-set= (char-set-delete! (->char-set "123") #\2 #\a #\2)
 		 (->char-set "13a")))
 
- (char-set= (char-set-intersection char-set:hex-digit (char-set-invert char-set:digit))
+ (char-set= (char-set-intersection char-set:hex-digit (char-set-complement char-set:digit))
 	    (->char-set "abcdefABCDEF"))
- (char-set= (char-set-intersection! (char-set-invert! (->char-set "0123456789"))
+ (char-set= (char-set-intersection! (char-set-complement! (->char-set "0123456789"))
 				    char-set:hex-digit)
 	    (->char-set "abcdefABCDEF"))
 
@@ -187,3 +196,5 @@
    (lambda (d i)
      (and (char-set= d (->char-set "0123456789"))
 	  (char-set= i (->char-set "abcdefABCDEF"))))))
+
+))
