@@ -19,19 +19,20 @@ operation:
 1. it processes a rest list after checking its elements with default values or
    predicate procedures,
 
-2. it processes a rest list with default values without checking its elements;
-   the ARG-AND, ARG-ANDS, ERR-AND, and ERR-ANDS macros check the rest
-   arguments that are returned by REST-VAULES that functions as the latter.
+2. it processes a rest list with default values without checking its elements,
 
 3. it processes a default list whose elements are lists or pairs, after
    checking their elements that are default values or predicate procedures
-   with the elements of a rest list.
+   with the elements of a rest list,
+
+and eight macros which additionally check the rest arguments that are returned
+by REST-VALUES.
 
 Rationale
 
 When defining a procedure with a variable number of arguments, REST-VALUES
-with or without ARG-AND (or ARG-ANDS or ERR-AND or ERR-ANDS) reduces the
-clutter of various conditionals and error conditions.
+with or without the checking macros reduces the clutter of various
+conditionals and error conditions.
 
 Specification
 
@@ -41,9 +42,8 @@ Specification
     * <args-number-limit> should be an integer, +, -, or a boolean.
 
     * 1. When the <args-number-limit> is + or a positive integer,
-    	 each <default> should be a list that contains default value(s), or a
-	 pair whose car is a default value and whose cdr is a predicate
-	 procedure.
+         each <default> should be a list that contains default value(s), or a
+    	 pair whose car is a default value and cdr is a predicate procedure.
       2. When the <args-number-limit> is - or a negative integer,
 	 each <default> is any scheme expression. 
       3. When the <args-number-limit> is a boolean,
@@ -74,7 +74,7 @@ Specification
    the <default> doesn't pass, REST-VALUES returns the car value of the
    <default>.  When any elements of the <rest-list> are remained after the
    above processing, REST-VALUES either signals an error if the
-   <args-number-limit> is #t, or return the remaining elements of the
+   <args-number-limit> is #t, or returns the remaining elements of the
    <rest-list> if the <args-number-limit> is #f.
 
 (ARG-AND [<caller>] <variable> <expr> ...)
@@ -105,30 +105,31 @@ rest-list => (x 1)
 (rest-values rest-list 2)	         => x 1
 (rest-values caller rest-list)           => x 1
 (rest-values caller rest-list -3)        => x 1
-(rest-values rest-list -2 'y 3 "str")
-    => error too many defaults (y 3 "str") (<= (length (y 3 "str")) 2)
-(rest-values caller rest-list 1 '(x y z))
-    => error too many arguments (x 1) (<= (length (x 1)) 1) <procedure caller>
-(rest-values 'caller rest-list 2 (list 'x 'y 'z) (cons "str" string?))
-    => error incorrect argument 1 (<procedure string?> 1) caller
+(rest-values rest-list -2 'y 3 1)
+ => error too many defaults (y 3 1) default-list (<= (length default-list) 2)
+(rest-values 'caller rest-list 1 '(x y z))
+ => error too many arguments (x 1) rest-list (<= (length rest-list) 1) caller
+(rest-values caller rest-list 2 (list 'x 'y 'z) (cons "str" string?))
+ => error incorrect argument 1 arg (<procedure string?> arg) <procedure caller>
 (rest-values rest-list 2 '(y z) `(100 . ,number?))
-    => error unmatched argument x (member x (y z))
-(rest-values `(caller ,@rest-list) rest-list 2 '(y z) `(100 . ,number?))
-    => error unmatched argument x (member x (y z)) (caller x 1)
+ => error unmatched argument x arg (member arg (y z))
 (rest-values "caller: bad argument" rest-list 2 '(y z) `(100 . ,number?))
-    => error caller: bad argument x (member x (y z))
+ => error caller: bad argument x arg (member arg (y z))
+(rest-values 'caller rest-list (list 'x 'y) (cons 1 number?))
+ => error bad optional argument (x y) option
+    (or (boolean? option) (integer? option) (memq option (list + -))) caller
 (rest-values rest-list - 'y 100 "str")
-    => x 1 "str"
+ => x 1 "str"
 (rest-values rest-list + `(x y z) `(100 . ,number?) `("str" . ,string?))
-    => x 1 "str"
+ => x 1 "str"
 (rest-values rest-list #t `(x y z) `(100 . ,number?) `("str" . ,string?))
-    => x 1 "str"
+ => x 1 "str"
 (rest-values rest-list #t `(100 . ,number?) `("str" . ,string?) `(x y z))
-    => 1 "str" x
+ => 1 "str" x
 (rest-values rest-list #t `(100 . ,number?) `("str" . ,string?) `(y z))
-    => error bad argument (x) (null? (x))
+ => error bad argument (x) rest-list (null? rest-list)
 (rest-values rest-list #f `(100 . ,number?) `("str" . ,string?) `(y z))
-    => 1 "str" y x
+ => 1 "str" y x
 
 caller => <procedure caller>
 str    => "string"
@@ -139,8 +140,6 @@ num    => 2
        => error incorrect argument 2 num (< num 2) <procedure caller>
 (arg-and 'caller num (number? num) (< num 2))
        => error incorrect argument 2 num (< num 2) caller
-(arg-and `(caller ,str ,num) num (number? num) (< num 2))
-       => error incorrect argument 2 num (< num 2) (caller "string" 2)
 (arg-and "caller: bad argument" num (number? num) (< num 2))
        => error caller: bad argument 2 num (< num 2)
 (arg-ands (str (string? str) (< (string-length str) 7))
@@ -152,10 +151,6 @@ num    => 2
 (arg-ands common 'caller
 	  (str (string? str) (< (string-length str) 7))
 	  (num (number? num) (< num 2)))
-       => error incorrect argument 2 num (< num 2) caller
-(arg-ands common `(caller ,str ,num)
-	  (str (string? str) (< (string-length str) 7))
-	  ('caller num (number? num) (< num 2)))
        => error incorrect argument 2 num (< num 2) caller
 (arg-ands common "caller: bad argument"
 	  (str (string? str) (< (string-length str) 7))
@@ -202,79 +197,98 @@ num    => 2
 		(end (integer? end) (<= start end str-len)))
       ...)))
 
+(define (procedure-with-sequential-binding-arguments . a-b-c)
+  (receive (a b c) (rest-values a-b-c -3 10 #f #f)
+    (let* ((b (or b (+ a 10)))
+	   (c (or c (+ a b))))
+      ...)))
+
 Implementation
 
-ERROR (SRFI 23) and TAKE (SRFI 1) are used in implementation of this SRFI.
+The implementation below requires SRFI-1 (List library) and SRFI-23 (Error
+reporting mechanism).
 
-(define (rest-values rest-list . default-list)
-  (let* ((caller (if (or (null? default-list)
-			 (boolean? (car default-list))
-			 (memq (car default-list) (list + -))
-			 (number? (car default-list)))
+(define (rest-values rest . default)
+  (let* ((caller (if (or (null? default)
+			 (boolean? (car default))
+			 (integer? (car default))
+			 (memq (car default) (list + -)))
 		     '()
-		     (if (string? rest-list) rest-list (list rest-list))))
-	 (rest (if (null? caller) rest-list (car default-list)))
-	 (rest-length (if (list? rest)
-			  (length rest)
+		     (if (string? rest) rest (list rest))))
+	 (rest-list (if (null? caller) rest (car default)))
+	 (rest-length (if (list? rest-list)
+			  (length rest-list)
 			  (if (string? caller)
-			      (error caller rest `(list? ,rest))
-			      (apply error "bad rest list" rest `(list? ,rest)
-				     caller))))
-	 (default (if (null? caller) default-list (cdr default-list)))
+			      (error caller rest-list 'rest-list
+				     '(list? rest-list))
+			      (apply error "bad rest list" rest-list 'rest-list
+				     '(list? rest-list) caller))))
+	 (default (if (null? caller) default (cdr default)))
+	 (default-list (if (null? default) default (cdr default)))
+	 (default-length (length default-list))
 	 (number
 	  (and (not (null? default))
-	       (let ((d (car default)))
-		 (or (and (number? d)
-			  (or (and (> rest-length (abs d))
+	       (let ((option (car default)))
+		 (or (and (integer? option)
+			  (or (and (> rest-length (abs option))
 				   (if (string? caller)
-				       (error caller rest
-					      `(<= (length ,rest) ,(abs d)))
-				       (apply error "too many arguments" rest
-					      `(<= (length ,rest) ,(abs d))
+				       (error caller rest-list 'rest-list
+					      `(<= (length rest-list)
+						   ,(abs option)))
+				       (apply error "too many arguments"
+					      rest-list 'rest-list
+					      `(<= (length rest-list)
+						   ,(abs option))
 					      caller)))
-			      (and (> (length (cdr default)) (abs d))
+			      (and (> default-length (abs option))
 				   (if (string? caller)
-				       (error caller (cdr default)
-					      `(<= (length ,(cdr default))
-						   ,(abs d)))
+				       (error caller default-list
+					      'default-list
+					      `(<= (length default-list)
+						   ,(abs option)))
 				       (apply error "too many defaults"
-					      (cdr default)
-					      `(<= (length ,(cdr default))
-						   ,(abs d))
+					      default-list 'default-list
+					      `(<= (length default-list)
+						   ,(abs option))
 					      caller)))
-			      d))
-		     (and (eq? d +) +)
-		     (and (eq? d -) -)
-		     (and (eq? d #f) 'false)
-		     (eq? d #t)
+			      option))
+		     (eq? option #t)
+		     (and (not option) 'false)
+		     (and (eq? option +) +)
+		     (and (eq? option -) -)
 		     (if (string? caller)
-			 (error caller d `(or (boolean? ,d)
-					      (number? ,d)
-					      (memq ,d (list + -))))
-			 (apply error "bad optional argument" d
-				`(or (boolean? ,d)
-				     (number? ,d)
-				     (memq ,d (list + -)))
-				caller))))))
-	 (default (if number (cdr default) default))
-	 (default-length (length default)))
+			 (error caller option 'option
+				'(or (boolean? option)
+				     (integer? option)
+				     (memq option (list + -))))
+			 (apply error "bad optional argument" option 'option
+				'(or (boolean? option)
+				     (integer? option)
+				     (memq option (list + -)))
+				caller)))))))
     (cond
-     ((or (eq? 'false number) (eq? #t number))
-      (let loop ((rest-list rest)
-		 (default-list default)
+     ((or (eq? #t number) (eq? 'false number))
+      (and (not (every pair? default-list))
+	   (if (string? caller)
+	       (error caller default-list 'default-list
+		      '(every pair? default-list))
+	       (apply error "bad default list" default-list 'default-list
+		      '(every pair? default-list) caller)))
+      (let loop ((rest-list rest-list)
+		 (default-list default-list)
 		 (result '()))
 	(if (null? default-list)
-	    (if (eq? #t number)
-		(if (null? rest-list)
-		    (apply values (reverse result))
+	    (if (null? rest-list)
+		(apply values (reverse result))
+		(if (eq? #t number)
 		    (if (string? caller)
-			(error caller rest-list `(null? ,rest-list))
-			(apply error "bad argument" rest-list
-			       `(null? ,rest-list) caller)))
-		(apply values (append (reverse result) rest-list)))
-	    (let ((default (car default-list)))
-	      (if (or (list? default)
-		      (and (pair? default) (procedure? (cdr default))))
+			(error caller rest-list 'rest-list '(null? rest-list))
+			(apply error "bad argument" rest-list 'rest-list
+			       '(null? rest-list) caller))
+		    (apply values (append-reverse result rest-list))))
+	    (if (null? rest-list)
+		(apply values (append-reverse result (map car default-list)))
+		(let ((default (car default-list)))
 		  (let lp ((rest rest-list)
 			   (head '()))
 		    (if (null? rest)
@@ -283,68 +297,50 @@ ERROR (SRFI 23) and TAKE (SRFI 1) are used in implementation of this SRFI.
 			      (cons (car default) result))
 			(if (list? default)
 			    (if (member (car rest) default)
-				(loop (append (reverse head) (cdr rest))
+				(loop (append-reverse head (cdr rest))
 				      (cdr default-list)
 				      (cons (car rest) result))
 				(lp (cdr rest) (cons (car rest) head)))
 			    (if ((cdr default) (car rest))
-				(loop (append (reverse head) (cdr rest))
+				(loop (append-reverse head (cdr rest))
 				      (cdr default-list)
 				      (cons (car rest) result))
-				(lp (cdr rest) (cons (car rest) head))))))
-		  (if (string? caller)
-		      (error caller default
-			     `(or (list? ,default)
-				  (and (pair? ,default)
-				       (procedure? (cdr ,default)))))
-		      (apply error "bad default" default
-			     `(or (list? ,default)
-				  (and (pair? ,default)
-				       (procedure? (cdr ,default))))
-			     caller)))))))
-     ((or (and (number? number) (> number 0))
+				(lp (cdr rest) (cons (car rest) head)))))))))))
+     ((or (and (integer? number) (> number 0))
 	  (eq? number +))
-      (let ((number (min rest-length default-length)))
-	(for-each (lambda (r d)
-		    (cond
-		     ((list? d)
-		      (if (not (member r d))
-			  (if (string? caller)
-			      (error caller r `(member ,r ,d))
-			      (apply error "unmatched argument"
-				     r `(member ,r ,d) caller))))
-		     ((and (pair? d) (procedure? (cdr d)))
-		      (if (not ((cdr d) r))
-			  (if (string? caller)
-			      (error caller r `(,(cdr d) ,r))
-			      (apply error "incorrect argument"
-				     r `(,(cdr d) ,r) caller))))
-		     (else
+      (and (not (every pair? default-list))
+	   (if (string? caller)
+	       (error caller default-list 'default-list
+		      '(every pair? default-list))
+	       (apply error "bad default list" default-list 'default-list
+		      '(every pair? default-list) caller)))
+      (let loop ((rest rest-list)
+		 (default default-list))
+	(if (or (null? rest) (null? default))
+	    (apply values
+		   (if (> default-length rest-length)
+		       (append rest-list
+			       (map car (list-tail default-list rest-length)))
+		       rest-list))
+	    (let ((arg (car rest))
+		  (par (car default)))
+	      (if (list? par)
+		  (if (member arg par)
+		      (loop (cdr rest) (cdr default))
 		      (if (string? caller)
-			  (error caller d
-				 `(or (list? ,d)
-				      (and (pair? ,d) (procedure? (cdr ,d)))))
-			  (apply error "bad default" d
-				 `(or (list? ,d)
-				      (and (pair? ,d) (procedure? (cdr ,d))))
-				 caller)))))
-		  (take rest number) (take default number))
-	(apply values
-	       (if (> default-length rest-length)
-		   (append rest
-			   (map (lambda (x)
-				  (if (pair? x)
-				      (car x)
-				      (if (string? caller)
-					  (error caller x `(pair? ,x))
-					  (apply error "bad default" x
-						 `(pair? ,x) caller))))
-				(list-tail default rest-length)))
-		   rest))))
+			  (error caller arg 'arg `(member arg ,par))
+			  (apply error "unmatched argument"
+				 arg 'arg `(member arg ,par) caller)))
+		  (if ((cdr par) arg)
+		      (loop (cdr rest) (cdr default))
+		      (if (string? caller)
+			  (error caller arg 'arg `(,(cdr par) arg))
+			  (apply error "incorrect argument"
+				 arg 'arg `(,(cdr par) arg) caller))))))))
      (else
       (apply values (if (> default-length rest-length)
-			(append rest (list-tail default rest-length))
-			rest))))))
+			(append rest-list (list-tail default-list rest-length))
+			rest-list))))))
 
 (define-syntax arg-and
   (syntax-rules()
