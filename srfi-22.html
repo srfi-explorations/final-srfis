@@ -1,4 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 3.2//EN">
+
 <html>
 <head>
   <title>SRFI 22: Running Scheme Scripts on Unix</title>
@@ -34,8 +35,11 @@ the archive of the mailing list</a>.
 <LI>Revised: 2001/04/30
 <LI>Revised: 2001/06/11
 <LI>Revised: 2001/06/22
+<Li>Revised: 2001/06/22
+<Li>Revised: 2001/08/06
 </UL>
 </P>
+
 
 <h1>Abstract</h1><p>This SRFI describes basic prerequisites for running Scheme programs
 as Unix scripts in a uniform way.  Specifically, it describes:</p><ul><li>the syntax of Unix scripts written in Scheme,</li><li>a uniform convention for calling the Scheme script
@@ -50,43 +54,47 @@ this.</p><p>This lack of de-facto standardization makes it impossible
 to write even a simple end-user program without also shipping a particular
 Scheme implementation with it or providing elaborate implementation-specific
 machinery.  This SRFI describes a set of conventions
-which allow the creation of Unix scripts written in Scheme.</p><p>Unfortunately, the set of existing conventions among Scheme implementation makes it impossible to formulate these conventions in such a way
-as to remain compatible with the various ad-hoc solutions to the
+which allow the creation of portable Unix scripts written in Scheme.</p><p>Unfortunately, the set of existing conventions among Scheme implementation makes it impossible to formulate these conventions in such a way
+as to remain compatible with all existing solutions to the
 problem.  The <a href="#design rationale">Design Rationale</a> section gives a brief
-overview.</p><h1>Specification</h1><h2>Script Syntax</h2><pre>&lt;script&gt; --&gt; &lt;script prelude&gt;? &lt;program&gt;
+overview.</p><h1>Specification</h1><h3>Script Syntax</h3><pre>&lt;script&gt; --&gt; &lt;script prelude&gt;? &lt;program&gt;
 &lt;script prelude&gt; --&gt; #! &lt;space&gt; &lt;any character that isn't a line break&gt;* &lt;line break&gt;</pre><p>The <code>&lt;script prelude&gt;</code> line may not be longer than
-64 characters.</p><h2>Script Interpreter Invocation</h2><p>Systems supporting this SRFI provide a selection of binary executables
+64 characters.  (See <a href="#sixtyfour">here</a> for a rationale.)</p><h3>Script Interpreter Invocation</h3><p>Systems supporting this SRFI provide a selection of binary executables
 called <em>Scheme script interpreters</em> depending on the language dialects they support.  They 
-provide any of <code>scheme-r4rs</code>, <code>scheme-ieee-1178-90</code>, <code>scheme-r5rs</code>, <code>scheme-srfi-0</code>, and <code>scheme-srfi-7</code> in the regular path.  The invocation syntax for these interpreters
-is always as follows:<pre>&lt;executable&gt; &lt;file&gt; &lt;argument&gt; ...</pre></p><p>The first line of the script may contain no more than 64 characters.</p><p>It is recommended the Scheme script interpreter resides somewhere
+provide any of <code>scheme-r<i>n</i>rs</code>, <code>scheme-ieee-<i>n</i>-<i>y</i></code>, <code>scheme-srfi-0</code>, and <code>scheme-srfi-7</code> in the regular path.  The invocation syntax for these interpreters
+is always as follows:<pre>&lt;executable&gt; &lt;file&gt; &lt;argument&gt; ...</pre></p><p>It is recommended that the Scheme script interpreter resides somewhere
 in the standard Unix path.  Moreover, the recommended way to invoke
-the Scheme script interpreter from the script is via a <code>/usr/bin/env</code> trampoline, like this:</p><pre>#! /usr/bin/env &lt;executable&gt;</pre><h2>Semantics</h2><p>A Scheme script interpreter loads the file specified by <code>&lt;file&gt;</code>.  It ignores the script prelude and interprets the rest of
+the Scheme script interpreter from the script is via a <code>/usr/bin/env</code> trampoline, like this:</p><pre>#! /usr/bin/env &lt;executable&gt;</pre><h3>Semantics</h3><p>A Scheme script interpreter loads the file specified by <code>&lt;file&gt;</code>.  It ignores the script prelude and interprets the rest of
 the file according to the language dialect specified by the name
 of the interpreter.</p><p>The Scheme script interpreter may also load a different file
 after making a reasonable check that loading it is semantically
 equivalent to loading <code>&lt;file&gt;</code>.  For example, the script interpreter may assume that
 a file with a related name (say, with an additional extension) is a
-compiled version of <code>&lt;file&gt;</code>.  (See also <a href="#compilability">below</a> under "Compilability".)</p><p><code>scheme-r4rs</code> expects code written in R4RS Scheme. <code>scheme-ieee-1178-90</code> expects code written in IEEE 1178-1990 Scheme. <code>scheme-r5rs</code> expects code written in R5RS Scheme. <code>scheme-srfi-0</code> expects code written in R5RS Scheme using the extensions specified in <a href="../srfi-0">SRFI 0</a>. <code>scheme-srfi-7</code> expects code written in R5RS Scheme using the extensions specified in <a href="../srfi-7">SRFI 7</a>. </p><p>Upon invocation of a script, the Scheme system calls a procedure named <code>main</code> with one argument,
-a list of strings containing the remaining Unix command-line arguments.
-The <code>main</code> procedure must return an integer which becomes the exit status of
+compiled version of <code>&lt;file&gt;</code>.  (See also <a href="#compilability">below</a> under "Compilability".)</p><p><code>scheme-r<i>n</i>rs</code> expects code written in R<i>n</i>RS Scheme. <code>scheme-ieee-<i>n</i>-<i>y</i></code> expects code written in IEEE <i>n</i>-<i>y</i> Scheme. Specifically, <code>scheme-r4rs</code> expects code written in R4RS Scheme, <code>scheme-r5rs</code> expects code written in R5RS Scheme, and <code>scheme-ieee-1178-1990</code> expects code written in IEEE 1178-1990 Scheme. <code>scheme-srfi-0</code> expects code written in R5RS Scheme using the extensions specified in <a href="../srfi-0">SRFI 0</a>. <code>scheme-srfi-7</code> expects code written in R5RS Scheme using the extensions specified in <a href="../srfi-7">SRFI 7</a>. </p><p>Upon invocation of a script, the Scheme system calls a procedure named <code>main</code> with one argument,
+a list of strings containing the Unix command-line arguments <em>to the script</em>, i.e. the
+elements of the <code>argv</code> vector of the Scheme script interpreter process from index 1 on.
+Thus, the first element of the list is the name of the script.</p><p>The <code>main</code> procedure should return an integer which becomes the exit status of
 the script.</p><p>When, during the execution of the script, an error
-is signalled (in the sense of <a href="http://www.schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-4.html#%_sec_1.3.2">R5RS, Section 1.3.2</a>) the script returns immediately with the value of the C <a href="http://www.FreeBSD.org/cgi/man.cgi?query=sysexits&amp;apropos=0&amp;sektion=0&amp;manpath=FreeBSD+4.3-RELEASE&amp;format=html"><code>sysexits.h</code></a> macro <code>EX_SOFTWARE</code> as its exit status or 70, if <code>sysexits.h</code> is unavailable.</p><p>In the above error situations, implementations are encouraged to
+is signalled (in the sense of <a href="http://www.schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-4.html#%_sec_1.3.2">R5RS, Section 1.3.2</a>) the script returns immediately with the value of the C <a href="http://www.FreeBSD.org/cgi/man.cgi?query=sysexits&amp;apropos=0&amp;sektion=0&amp;manpath=FreeBSD+4.3-RELEASE&amp;format=html"><code>sysexits.h</code></a> macro <code>EX_SOFTWARE</code> as its exit status or 70, if <code>sysexits.h</code> is unavailable.</p><p>Should <code>main</code> return anything other than an integer which would be a valid
+exit status, the script also returns <code>EX_SOFTWARE</code>.</p><p>In the above error situations, implementations are encouraged to
 display a meaningful error message on <code>stderr</code>.</p><p>If the script interpreter allows the script access to the
 environment (via a future SRFI yet to be written), the environment
 seen by the script must be identical to that of the script
 interpreter upon its invocation.</p><p>A Scheme implementation supporting this SRFI
 does not have to provide all of these script interpreters.
 However, Scheme
-implementations are encouraged to provide <code>scheme-r4rs</code> if they implement R4RS, <code>scheme-ieee-1178-90</code> if they implement IEEE 1178-1990 or R5RS, <code>scheme-r5rs</code> if they implement R5RS, <code>scheme-srfi-0</code> if they implement <a href="../srfi-0">SRFI 0</a>, and <code>scheme-srfi-7</code> if they implement <a href="../srfi-7">SRFI 7</a>.</p><p>In the case of <code>scheme-srfi-7</code> all specifications of filenames (marked by <code>&lt;filename&gt;</code> in the syntax of SRFI 7) are string literals containing Unix-style filenames
-relative to the directory the script resides in.</p><a name="compilability" /><h2>Compilability</h2><p>Programmers who want their scripts to be compilable to
+implementations are encouraged to provide <code>scheme-ieee-1178-1990</code> if they implement IEEE 1178-1990 or R5RS, <code>scheme-ieee-<i>n</i>-<i>y</i></code> if they implement another IEEE standard for Scheme, <code>scheme-r<i>n</i>rs</code> if they implement R<i>n</i>RS for <i>n</i>&gt;=4, <code>scheme-srfi-0</code> if they implement <a href="../srfi-0">SRFI 0</a>, and <code>scheme-srfi-7</code> if they implement <a href="../srfi-7">SRFI 7</a>.</p><p>In the case of <code>scheme-srfi-7</code> all specifications of filenames (marked by <code>&lt;filename&gt;</code> in the syntax of SRFI 7) are string literals containing Unix-style filenames
+which are absolute or relative to the directory the script resides in.</p><h3>Interactive Loading of Scripts</h3><p>Scheme implementations with an interactive development environment
+which support SRFI 22 are encouraged to also support loading Scheme
+scripts into that environment.</p><a name="compilability" /><h3>Compilability</h3><p>Programmers who want their scripts to be compilable to
 native code are encouraged
 to provide an initial invocation line of the format <pre>#! ... &lt;executable&gt;</pre></p><p><code>&lt;executable&gt;</code> is the name of one of the script interpreters from
 the above list; it may carry a directory prefix such as in <code>/usr/local/bin/scheme-r5rs</code>.</p><p>It is expected that Scheme systems supporting compilation to native
 executables will use the first such line appearing in a script
-to determine language dialect.</p><h1>Example</h1><p>Here is a Scheme version of the Unix <code>cat</code> utility:</p><pre>#! /usr/bin/env scheme-r5rs
+to determine the language dialect.</p><h1>Example</h1><p>Here is a Scheme version of the Unix <code>cat</code> utility:</p><pre>#! /usr/bin/env scheme-r5rs
 
 (define (main arguments)
-  (for-each display-file arguments)
+  (for-each display-file (cdr arguments))
   0)
 
 (define (display-file filename)
@@ -100,31 +108,31 @@ to determine language dialect.</p><h1>Example</h1><p>Here is a Scheme version of
 		(loop))))))))</pre><a name="design rationale" /><h1>Design Rationale</h1><p>Most Unix Scheme implementation support writing Unix scripts in one form 
 or another.  Unfortunately, the invocation syntax as well as the syntax
 of the script itself vary from one implementation for another.  However,
-the design decisions for this SRFI were made with some care:</p><h2>Script Interpreters must be Binaries</h2><p>Script interpreters adhering to this SRFI must be binary
+the design decisions for this SRFI were made with some care:</p><h3>Script Interpreters must be Binaries</h3><p>Script interpreters adhering to this SRFI must be binary
 executables.  They cannot be shell scripts because that would
 preclude them from being used directly in the invocation line
 of the prelude: most Unix variants require the script interpreter
-in the invocation line to be a binary.</p><h2>Optional Invocation Line</h2><p>The invocation line is optional to make it possible
+in the invocation line to be a binary.</p><h3>Optional Invocation Line</h3><p>The invocation line is optional to make it possible
 to write scripts which are standard Scheme files, and by
 invoking the Scheme script interpreter explicitly.  This could
 make it possible (provided future script SRFIs for other environments
 follow the example) to write, say, makefiles which are portable
-among different environments.</p><h2>Absolute Script Location vs. Trampoline</h2><p>This SRFI specifies a name but not an absolute
+among different environments.</p><h3>Absolute Script Location vs. Trampoline</h3><p>This SRFI specifies a name but not an absolute
 location for the Scheme script interpreter.  Since most Unix
 implementations require the interpreter in a script to be an
 absolute filename, the only way to portably start 
-the interpreter is via a trampoline as
-shown in the example.</p><p>The problem is that there is no well-established convention
+the interpreter is by calling a standard Unix program such as <code>/usr/bin/env</code> (a so-called <em>trampoline</em>) as
+shown in the example.</p><p>This is because there is no well-established convention
 for the location of third-party software on Unix systems.  A convention
 common on one system or in one environment might be unimplementable in
 another.  Moreover, trampolines are generally <em>very</em> cheap on Unix, and it is expected that the cost
 of Scheme script interpretation and execution will almost always dominate
-the cost of the trampoline.</p><h2>Portability</h2><p>Portability is a relative term in the context
-of this SRFI: Posix and the Single Unix Specification do not guarantee
+the cost of the trampoline.</p><h3>Portability</h3><p>Portability is a relative term in the context
+of this SRFI: Posix and <a href="http://www.unix-systems.org/single_unix_specification_v2/">The Single Unix Specification</a> do not guarantee
 any method for automatic script execution, even though most Unix
 implementations support the <code>#!</code> convention.  Moreover, neither of the two guarantees the presence
 of an <code>env</code> executable in <code>/usr/bin</code>.  However, a wide range of systems do.  The discussion archive contains
-logs from a number of systems.</p><p>A more pertinent portability issue is the length of the
+logs from a number of systems.</p><a name="sixtyfour" /><p>A more pertinent portability issue is the length of the
 script invocation line.  Until recently, a number of Unix variants
 imposed a 32-character limit on that line.  However, this limit
 seems to have been raised to 64 or disappeared
@@ -133,7 +141,7 @@ these systems.  (In fact, all that we tested.)
 Again, the discussion archive contains more data.  Since
 descriptive names for the Scheme script interpreters tend
 to exceed the 32-character limit on invocation lines, the limit
-it 64.</p><h2>Implicit vs. Explicit Command-Line-Parameter Access</h2><p>This SRFI specifies that the Scheme script interpreters will
+it 64.</p><h3>Implicit vs. Explicit Command-Line-Parameter Access</h3><p>This SRFI specifies that the Scheme script interpreters will
 communicate the command-line arguments to the script as a list argument
 to the <code>main</code> procedure.
 Some Scheme implementations use a special global variable that holds
@@ -143,26 +151,26 @@ is the more natural data structure.</p><p>However, explicitly specifying an entr
 that scripts are easier to debug with a REPL-type Scheme implementation -
 it is easily possible to call <code>main</code> explicitly from the REPL,
 demonstrably achieving the same effect as loading the script from 
-the interpreter.</p><h2>Command-Line Parameters as Arguments vs. as a Data Structure</h2><p>There were several discussions on the mailing list
+the interpreter.</p><h3>Command-Line Parameters as Arguments vs. as a Data Structure</h3><p>There were several discussions on the mailing list
 about whether to pass command-line parameters as separate arguments
 to the <code>main</code> procedure or in a data structure.  Both offer slight usability 
 advantages depending on context.  However, passing the parameters
 as separate arguments opens up a conflict between semantic correctness
 ("What should be the exit code of a script with an arity error in the
-call to <code>main</code>?") and ease of implementation (see <a href="mail-archive/msg00098.html">this message</a> and the subsequent discussion).</p><h2>Positional Command-Line Arguments vs. Explicit Switches</h2><p>A previous draft of this SRFI required that language
+call to <code>main</code>?") and ease of implementation (see <a href="mail-archive/msg00098.html">this message</a> and the subsequent discussion).</p><h3>Positional Command-Line Arguments vs. Explicit Switches</h3><p>A previous draft of this SRFI required that language
 dialect, entry procedure, and script filename be specified via
 Unix-style command-line switches.  This requires additional
 command-line parsing machinery.  Moreover, this precludes
 starting the script interpreter directly instead of going through a
 trampoline on Unix systems which allow only one command-line
-argument to the script interpreter.</p><h2>Windows Compatibility</h2><p>It seems that Windows script syntax is fundamentally
+argument to the script interpreter.</p><h3>Windows Compatibility</h3><p>It seems that Windows script syntax is fundamentally
 incompatible with Unix script syntax, so it is impossible
 to write a single file which will run as a script on both
 Unix and Windows.  (See also <a href="mail-archive/msg00022.html">Marc Feeley's message</a> on the subject.) It is feasible to also specify an 
-alternate Script syntax which will work on.  However, this
-is not in the scope of this SRFI.  We hope and expect that a separate
-SRFI will specify script syntax for Windows, building on this
-SRFI.</p><h1>Implementation</h1><p>An implementation is necessarily very implementation-dependent.
+alternate Script syntax which will work on Windows.  However, this
+is not in the scope of this SRFI.  However, Windows allows associating
+an executable with a file extension which might make Unix Scheme scripts
+runnable on a Windows system. (See  <a href="mail-archive/msg00023.html">Eli Barzilay's message</a> on the subject.)</p><h1>Implementation</h1><p>An implementation is necessarily very implementation-dependent.
 Moreover, it should be clear that an implementation of this SRFI is not very
 difficult in any Scheme implementation callable from a Unix shell.  Therefore,
 this SRFI contains no reference implementation.</p><h1>Copyright</h1><p>Copyright (C) Martin Gasbichler and Michael Sperber (2001). All Rights Reserved.</p><p>This document and translations of it may be copied and furnished to
