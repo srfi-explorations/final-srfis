@@ -43,7 +43,7 @@ Specification
 
 (CAT <object> [[<width@>] [<char@>] [<precision%>] [<radix%>] [<sign%>]
 	       [<exactness%>] [<separator%>] [<override$>] [<writer$>]
-	       [<case$>] [<take$>] [<string@>] ...])
+	       [<case$>] [<take$>] [<pipe@>] [<string@>] ...])
 
      * suffix @ : effective for all types of <object>.
               % : effective only for the number type of <object>.
@@ -69,7 +69,7 @@ Specification
        to the resulting string.
      * <exactness> is a symbol: exact or inexact.
      * <separator> is a list whose first element is a character serving as a
-       separator and second element is a non-negative exact integer.  If the
+       separator and second element is a positive exact integer.  If the
        integer is n, the resulting string is separated in every n-characters
        of the resulting string.  When the integer is omitted, the default
        value is 3.
@@ -82,22 +82,32 @@ Specification
        It writes <object> to the string port.  The default value of <writer>
        is varied according to the type of <object>.  When <object> is a
        self-evaluating constant, it becomes equivalent to DISPLAY procedure,
-       otherwise, it becomes WRITE procedure.
+       otherwise, it becomes WRITE procedure.  So if you want any objects to
+       be displayed in your own way, you have to define your own <writer>,
+       Otherwise, they are displayed simply in their evaluated forms.
      * <case> is a symbol: up (upcase), down (downcase), or title (titlecase).
-     * <take> is a list whose elements are two exact integers; n and m.
+     * <take> is a list whose elements are two exact integers; n and m, and
+       the absolute values of n and m are N and M, respectively.
        First, the resulting string takes from the left n-characters, if it is
-       non-negative, or all the characters but n-characters, if negative.
+       non-negative, or all the characters but N-characters, if negative.
        Second, it takes from the right m-characters, if it is non-negative, or
-       all the characters but m-characters, if negative.  Then, it
+       all the characters but M-characters, if negative.  Then, it
        concatenates two set of characters taken.
+     * <pipe> is a pair whose car value is a predicate procedure that checks
+       whether <object> satisfies it, and cdr value is a procedure that takes
+       the <object> as the first argument with or without a variable number of
+       optional arguments and returns a string.  When <object> satisfies the
+       predicate procedure of <pipe>, all optional arguments are ineffective
+       except <width>, <char>, and <string>s.  If you want one specific
+       <object> to be displayed in your own way, you had better use <pipe>.
      * <string> is a string that is appended to the resulting string.
 
 In general, the order of optional arguments does not matter except <width>
 must be defined prior to defining of <precision>.  The CAT procedure processes
-optional arguments in the following order; <exactness>, <radix>, <precision>,
-<sign>, <separator>, <char>, <width>, <string>, for the number type of
-<object>, or in the following order; <writer>, <case>, <take>, <char>,
-<width>, <string>, <override> for all other types.
+optional arguments in the following order; <pipe>, <exactness>, <radix>,
+<precision>, <sign>, <separator>, <char>, <width>, <string> for the number
+type of <object>, or in the following order; <pipe>, <writer>, <case>, <take>,
+<char>, <width>, <string>, <override> for all other types.
 
 (CONCAT [<object>] ...)
 (PRINT  [<object>] ...)
@@ -123,18 +133,17 @@ Examples
 (cat 1/3 10 -2)					"      0.33"
 (cat 129.995 10 '(#\, 2))			" 1,29.99,5"
 (cat 129995 10 '(#\,) 'sign)			"  +129,995"
+(cat (cat 129.995 0 0) '(0 -1))			"130"
+(cat (cat 129.995) '(3 0))			"129"
 (cat 99.5 10 'sign 'octal 'exact)		"    +307/2"
 (cat (sqrt -5) 10 2)				"0.00+2.24i"
 (cat 3.14159e12 10 2 'sign)			"  +3.14e12"
 (cat #x123 'octal 'sign)			"+443"
 (cat "#o" (cat #x123 'octal 'sign))		"#o+443"
 (cat #x123 -10 2 'sign #\*)			"#e+291.00*"
-(cat "string" 10)	     			"    string"
-(cat "string" '(2 3))				"sting"
-(cat "string" -10 '(-2 0))			"ring      "
-(cat "string" -10 #\-)				"string----"
-(cat "string" -10 #\- 'up '(10 #\* " "))	"****STRING "
-(cat 123456 -10 #\- 'up '(10 #\* " "))		"123456----"
+(cat "string" 10 'up)				"    STRING"
+(cat "string" 10 'up '(-2 0))			"      RING"
+(cat "string" 10 'title '(2 3))			"     Sting"
 (cat #\a 10)					"         a"
 (cat 'symbol 10)				"    symbol"
 (cat '#(12 #\a "str" sym '(a)))			"#(12 #\\a \"str\" sym '(a))"
@@ -147,6 +156,82 @@ Examples
 					        "123 a str \"string\" symbol"
 (print 123 " " #\a " str " (cat "string" write) " " 'symbol)
 						123 a str "string" symbol
+(define-record-type :example
+    (make-example num str)
+    example?
+    (num get-num set-num!)
+    (str get-str set-str!))
+(define ex (make-example 123 "string"))
+(define (record->string object)
+  (concat (get-num object) "-" (get-str object)))
+(define (record-writer object string-port)
+    (if (example? object)
+	(begin (display (get-num object) string-port)
+	       (display "-" string-port)
+	       (display (get-str object) string-port))
+	((or (and (or (string? object)
+		      (char? object)
+		      (boolean? object))
+		  display)
+	     write) object string-port))) 
+ex						'#{:example}
+(cat ex)					"#{:example}"
+(cat ex 20 record-writer)			"          123-string"
+(cat ex 20 record-writer 'up)			"          123-STRING"
+(cat "string" 20 #\* record-writer 'up)		"**************STRING"
+(cat ex 20 (cons example? record->string) 'up)	"          123-string"
+(cat 12 20 (cons example? record->string) 'up)	"                  12"
+(cat "a" 20 (cons example? record->string) 'up) "                   A"
+(cat "string" (cons string? string-upcase) 10)	"    STRING"
+
+(define item '("plus" "minus" "net"))
+(define item-values '(234 -123 111))
+(define mixed-item '("plus" 234 "minus" -123 "net" 111))
+(define item-alist '(("plus" 234) ("minus" -123) ("net" 111)))
+(apply print (map (lambda (x) (cat x 10 "\n" '(5 #\space ":")))
+		  mixed-item))
+ plus:       234
+minus:      -123
+  net:       111
+
+(apply print (map (lambda (x y) (cat x 5 ":" (cat y 10 "\n")))
+		  item item-values))
+ plus:       234
+minus:      -123
+  net:       111
+
+(apply print (map (lambda (x) (cat (car x) 5 ":" (cat (cadr x) 10 "\n")))
+		  item-alist))
+ plus:       234
+minus:      -123
+  net:       111
+
+(define (simple-ordinal-suffix num)
+  (let ((last-num (string->number (cat (cat num) '(0 1)))))
+    (cond
+     ((or (= num 11) (= num 12) (= num 13)) "th")
+     ((= last-num 1) "st")
+     ((= last-num 2) "nd")
+     ((= last-num 3) "rd")
+     (else "th"))))
+(define (pipe-pred num)
+  (and (exact? num) (integer? num)))
+(define (pipe-suffix num)
+  (concat num (simple-ordinal-suffix num)))
+(define (str-suffix num)
+  (if (and (integer? num) (exact? num))
+      (simple-ordinal-suffix num) ""))
+(define a 2)
+(define b 12)
+(define c 22)
+(cat a (str-suffix a))				"2nd"
+(cat b (str-suffix b))				"12th"
+(cat c (str-suffix c))				"22nd"
+(cat 12.5 (str-suffix 12.5))			"12.5"
+(cat (+ a 1) (cons pipe-pred pipe-suffix))	"3rd"
+(cat (+ b 1) (cons pipe-pred pipe-suffix))	"13th"
+(cat (+ c 1) (cons pipe-pred pipe-suffix))	"23rd"
+(cat 12.5 (cons pipe-pred pipe-suffix))		"12.5"
 
 Implementation
 
@@ -181,7 +266,7 @@ list).
 
 (define (cat object . rest)
   (receive (width char precision radix sign exactness separator override writer
-		  case take . str-list)
+		  case take pipe . str-list)
       (rest-values rest #f
 		   (cons 0 (lambda (x) (and (integer? x) (exact? x))))
 		   (cons #\space char?)
@@ -211,9 +296,23 @@ list).
 				   (= (length x) 2)
 				   (every (lambda (x)
 					    (and (integer? x) (exact? x)))
-					  x)))))
+					  x))))
+		   (cons #f (lambda (x)
+			      (and (pair? x)
+				   (procedure? (car x))
+				   (procedure? (cdr x))))))
     (arg-or "cat: bad argument" str-list (not (every string? str-list)))
     (cond
+     ((and pipe
+	   ((car pipe) object))
+      (let* ((str ((cdr pipe) object))
+	     (pad (- (abs width) (string-length str))))
+	(apply string-append
+	       (cond
+		((<= pad 0) str)
+		((< 0 width) (string-append (make-string pad char) str))
+		(else (string-append str (make-string pad char))))
+	       str-list)))
      ((number? object)
       (arg-ors ("cat: non-decimal cannot be inexact" radix
 		(and (memq radix '(binary octal hexadecimal))
@@ -417,11 +516,11 @@ list).
 			   (cddr override)
 			   str-list)))
 	(apply string-append
-	     (cond
-	      ((<= pad 0) str)
-	      ((< 0 width) (string-append (make-string pad char) str))
-	      (else (string-append str (make-string pad char))))
-	     str-list))))))
+	       (cond
+		((<= pad 0) str)
+		((< 0 width) (string-append (make-string pad char) str))
+		(else (string-append str (make-string pad char))))
+	       str-list))))))
 
 References
 
