@@ -1,0 +1,1268 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 21: Real-time multithreading support</title>
+  </head>
+
+  <body>
+
+<H1>Title</H1>
+
+Real-time multithreading support
+
+<H1>Author</H1>
+
+Marc Feeley
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status.  To see an explanation of each status that a SRFI can hold, see <A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+It will remain in draft status until 2000/07/10, or as amended.
+To provide input on this SRFI, please <CODE><A
+HREF="mailto:srfi-21@srfi.schemers.org">mail to
+&lt;srfi-21@srfi.schemers.org&gt;</A></CODE>.  See <A HREF=../srfi-list-subscribe.html>instructions here</A> to subscribe to the list.  You can access previous messages via <A HREF=mail-archive/maillist.html>the archive of the mailing list</A>.
+<P><UL>
+<LI>Received: 2000/05/11</LI>
+<LI>Draft: 2000/05/12-2000/07/11</LI>
+</UL>
+
+
+<H1>Abstract</H1>
+
+<P>
+This SRFI
+is a real-time extension to <a href="../srfi-18/">SRFI 18</a>, "Multithreading support".  It
+defines the following multithreading datatypes for Scheme
+<UL>
+<LI>Thread
+<LI>Mutex
+<LI>Condition variable
+<LI>Time
+</UL>
+</P>
+
+<P>
+It also defines a mechanism to handle exceptions and some
+multithreading exception datatypes.
+</P>
+
+<H1>Issues</H1>
+
+<UL>
+
+<LI>Should the datatypes be distinct from all other Scheme datatypes,
+i.e.  if any of the predicates listed in Section 3.2 of the R5RS is
+true of <CODE><I>obj</I></CODE>, then <CODE>thread?</CODE>,
+<CODE>mutex?</CODE>, etc are false of <CODE><I>obj</I></CODE>.
+
+</UL>
+
+<H1>Rationale</H1>
+
+<P>
+Multithreading is a paradigm that is well suited for building complex
+systems such as: servers, GUIs, and high-level operating systems.  All
+thread systems, including the one proposed here, offer mechanisms for
+creating new threads of execution and for synchronizing them.
+Mechanisms for controlling access privileges for various operations
+are also usually provided by thread systems.  This SRFI does not
+include such access control mechanisms because it aims to provide
+basic mechanisms on top of which higher-level abstractions can be
+built.
+<!--begin srfi21-->
+Special features which are useful in a real-time context, such as
+priorities and priority inheritance, are specified in this SRFI.
+<!--end srfi21-->
+</P>
+
+<P>
+This SRFI also specifies a datatype for time which is useful on its
+own but is also required for specifying absolute synchronization
+timeouts.  Mechanisms to handle exceptions and some multithreading
+exception datatypes are also provided because exceptions are closely
+tied to the multithreading model.
+</P>
+
+<H1>Specification</H1>
+
+<P>
+The thread system provides the following data types:
+<UL>
+<LI>Thread (a virtual processor which shares address space with all other threads)
+<!--
+<LI>Thread group (a collection of threads)
+-->
+<LI>Mutex (a mutual exclusion device, also known as a lock and binary semaphore)
+<LI>Condition variable (a queue of blocked threads)
+<LI>Time (an absolute point on the time line)
+</UL>
+</P>
+
+<P>
+Some multithreading exception datatypes are also specified, and a
+general mechanism for handling exceptions.
+</P>
+
+<H4>Thread</H4>
+
+<P>
+A "running" thread is a thread that is currently executing (there
+could be more than one on a multiprocessor machine).  A "runnable"
+thread is a thread that is not running and that is not blocked waiting
+for a mutex to become unlocked, an I/O operation to become possible, etc.
+<!--begin srfi21-->
+Each thread has a "base priority", which is a real number (where
+higher numerical values mean higher priority), a "quantum", which is a
+non-negative real number representing a duration in seconds, and a
+"priority boost", which is a non-negative real number representing the
+priority increase applied to a thread when it is first created or when
+it unblocks.
+<!--end srfi21-->
+Each thread has a "specific" field which can be used in an application
+specific way to associate data with the thread (some thread systems
+call this "thread local storage").
+</P>
+
+<P>
+The execution of a program is initially under the control of a single
+thread known as the "primordial thread".  The primordial thread has an
+unspecified
+<!--begin srfi21-->
+base priority, quantum, priority boost,
+<!--end srfi21-->
+name and specific field.  The binding of the exception handler in this
+thread is unspecified.  The program's execution terminates when the
+primordial thread terminates (normally or not).
+</P>
+
+<H4>Mutex</H4>
+
+<P>
+A mutex can be in one of four states: locked (either owned or not
+owned) and unlocked (either abandoned or not abandoned).  An attempt
+to lock a mutex only succeeds if the mutex is in an unlocked state,
+otherwise the current thread must wait.  A mutex in the locked/owned
+state has an associated "owner" thread, which by convention is the
+thread that is responsible for unlocking the mutex (this case is
+typical of critical sections implemented as "lock mutex, perform
+operation, unlock mutex").  A mutex in the locked/not-owned state is
+not linked to a particular thread.  A mutex becomes locked when a
+thread locks it using the <CODE>mutex-lock!</CODE> primitive.  A mutex
+becomes unlocked/abandoned when the owner of a locked/owned mutex
+terminates.  A mutex becomes unlocked/not-abandoned when a thread
+unlocks it using the <CODE>mutex-unlock!</CODE> primitive.  Mutexes
+are not recursive (i.e. if a thread tries to lock a mutex that is
+currently locked the thread will block even if it is the owner of the
+mutex).
+</P>
+
+<H4>Condition variable</H4>
+
+<P>
+A condition variable represents a set of blocked threads.  These
+blocked threads are waiting for a certain condition to become true.
+When a thread modifies some program state that might make the
+condition true, the thread unblocks some number of threads (one or all
+depending on the primitive used) so they can check the value of the
+condition.  This allows complex forms of interthread synchronization
+to be expressed more conveniently than with mutexes alone.
+</P>
+
+<H4>Fairness</H4>
+
+<P>
+In various situations the scheduler must select one thread from a set
+of threads (e.g. the next thread to run when the current thread blocks
+or expires its quantum, the thread to wakeup when a mutex unlocks or a
+condition variable is signaled).  The constraints on the selection
+process determine the scheduler's "fairness".  Typically the selection
+depends on the order in which threads blocked on a mutex and on some
+"priority" attached to the threads.
+</P>
+
+<!--begin srfi18
+<P>
+Because we do not wish to preclude extensions to this SRFI (such as
+for real-time multithreading) that require specific fairness
+constraints, there are no fairness constraints imposed by this SRFI.
+It is expected however that implementations of Scheme that support
+this SRFI will document the fairness constraints they provide.
+</P>
+end srfi18-->
+
+<!--begin srfi21-->
+<P>
+The fairness specified by this SRFI requires a notion of time
+ordering, i.e. "event A occured before event B".  For the purpose of
+establishing time ordering, the system uses a clock with a finite
+resolution (a "tick").  Events occuring in a given tick can be
+considered to be simultaneous (i.e. if event A occured before event B
+in real time, then the system can claim that event A occured before
+event B or, if the events fall within the same tick, that they occured
+at the same time).
+</P>
+
+<P>
+Each thread T has the following three priorities which affect
+fairness:
+<OL>
+
+<LI>The <STRONG>base priority</STRONG> is the value contained in T's
+"base priority" field (which is set with the
+<CODE>thread-base-priority-set!</CODE> primitive).
+
+<LI>The <STRONG>boosted priority</STRONG> is equal to T's base
+priority if T stopped running by becoming runnable (i.e. the quantum
+expired or <CODE>thread-yield!</CODE> was called), otherwise
+(including at T's creation) the boosted priority is equal to T's base
+priority plus T's "priority boost" field (which is set with the
+<CODE>thread-priority-boost-set!</CODE> primitive).  By carefully
+choosing the base priority and priority boost it is possible to set up
+an interactive thread so that it has good I/O response time without
+being a CPU hog when it performs long computations.
+
+<LI>The <STRONG>effective priority</STRONG> is equal to the maximum of
+T's boosted priority and the effective priority of all the threads
+that are blocked on a mutex owned by T.  This "priority inheritance"
+avoids priority inversion problems that would prevent a high priority
+thread blocked at the entry of a critical section to progress because
+a low priority thread inside the critical section is preempted for an
+arbitrary long time by a medium priority thread.
+
+</OL>
+In the following the term "priority" will mean "effective priority".
+</P>
+
+<P>
+Let H be the highest priority of the set of runnable threads.  Let P
+be the set of runnable threads with a priority of H.  The scheduler
+will pick a thread in P that has become runnable no later than any
+other thread in P and resume its execution.  When an amount of time
+equal to the thread's quantum has elapsed and the thread has not
+blocked or terminated yet, the scheduler will preempt the thread and
+pick again a thread to schedule.  A thread's quantum is thus an
+indication of the rate of progress of the thread relative to the other
+threads of the same priority.  Moreover, the preemption timer's
+resolution may cause a certain deviation from the quantum, so a
+thread's quantum should only be viewed as an approximation.
+</P>
+
+<P>
+Threads blocked on a given mutex or condition variable will wakeup in
+an order which is consistent with decreasing priority and increasing
+blocking time (i.e.  the highest priority thread wakes up first, and
+among equal priority threads the one that blocked first wakes up
+first).
+</P>
+<!--end srfi21-->
+
+<H4>Memory coherency and lack of atomicity</H4>
+
+<P>
+Read and write operations on the store (such as reading and writing a
+variable, an element of a vector or a string) are not required to be
+atomic.  It is an error for a thread to write a location in the store
+while some other thread reads or writes that same location.  It is the
+responsibility of the application to avoid write/read and write/write
+races through appropriate uses of the synchronization primitives.
+</P>
+
+<P>
+Concurrent reads and writes to ports are allowed (it is the
+responsibility of the implementation to serialize accesses to a given
+port using the appropriate synchronization primitives).
+</P>
+
+<H4>Continuations</H4>
+
+<P>
+A thread can call a continuation captured with a call to
+<CODE>call-with-current-continuation</CODE> by that thread.  A thread
+can also call a continuation captured by a different thread as long as
+the call and the continuation are not in the scope of a
+<CODE>dynamic-wind</CODE>.
+</P>
+
+<P>
+Rationale: The semantics of <CODE>dynamic-wind</CODE> only make
+sense in a single threaded world because it is possible to give
+meaning to the concept "control is currently inside the scope of a
+particular <CODE>dynamic-wind</CODE>".  In a multithreaded world,
+there are more than one threads of control so it is not clear when a
+particular <CODE>dynamic-wind</CODE> scope is being exited or
+reentered.
+</P>
+
+<H4>Time objects and timeouts</H4>
+
+<P>
+A time object represents a point on the time line.  Its resolution is
+implementation dependent.  Using <CODE>time->seconds</CODE> and
+<CODE>seconds->time</CODE>, a time object can be converted to and from
+a real number which corresponds to the number of seconds from a
+reference point on the time line.  The reference point is
+implementation dependent and does not change for a given execution of
+the program (e.g.  the reference point could be the time at which the
+program started).
+</P>
+
+<P>
+All synchronization primitives which take a timeout parameter accept
+three types of values as a timeout, with the following meaning:
+<UL>
+<LI>a time object represents an absolute point in time
+<LI>an exact or inexact real number represents a relative time in
+seconds from the moment the primitive was called
+<LI><CODE>#f</CODE> means that there is no timeout
+</UL>
+</P>
+
+<P>
+When a timeout denotes the current time or a time in the past, the
+synchronization primitive claims that the timeout has been reached
+only after the other synchronization conditions have been checked.
+For example, <CODE>(mutex-lock! m 0)</CODE> will lock mutex
+<CODE>m</CODE> if it is currently unlocked, otherwise <CODE>#f</CODE>
+is returned because the timeout is reached.
+</P>
+
+<H4>Primitives and exceptions</H4>
+
+<P>
+When one of the primitives defined in this SRFI raises an exception,
+the exception handler is called with the same continuation as the
+primitive (i.e. it is a tail call to the exception handler).
+</P>
+
+<H4>Procedures</H4>
+
+<DL>
+
+<DT><PRE>
+(current-thread)                                      ;procedure
+</PRE><DD>
+
+    Returns the current thread.
+
+<PRE>
+    (eq? (current-thread) (current-thread))  ==>  #t
+</PRE>
+
+<DT><PRE>
+(thread? <I>obj</I>)                                         ;procedure
+</PRE><DD>
+
+    Returns <CODE>#t</CODE> if <CODE><I>obj</I></CODE> is a thread,
+    otherwise returns <CODE>#f</CODE>.
+<!--
+    If any of the predicates listed in Section 3.2 of the R5RS is true of
+    <CODE><I>obj</I></CODE>, then <CODE>thread?</CODE> is false of
+    <CODE><I>obj</I></CODE>.
+-->
+
+<PRE>
+    (thread? (current-thread))  ==>  #t
+    (thread? 'foo)              ==>  #f
+</PRE>
+
+<DT><PRE>
+<!--
+(make-thread <I>thunk</I> [<I>name</I> [<I>thread-group</I>]])             ;procedure
+-->
+(make-thread <I>thunk</I> [<I>name</I>])                            ;procedure
+</PRE><DD>
+
+    Returns a newly allocated thread.  This thread is not
+    automatically made runnable (the procedure
+    <CODE>thread-start!</CODE> must be used for this).  A thread has
+    the following fields:
+<!--begin srfi21-->
+    base priority, quantum, priority boost,
+<!--end srfi21-->
+    name, specific, end-result, end-exception, and a list of
+    locked/owned mutexes it owns.  The thread's execution consists of
+    a call to <I>thunk</I> with a continuation that causes the (then)
+    current thread to store the result in its end-result field,
+    abandon all mutexes it owns, and finally terminate.  The optional
+    <CODE><I>name</I></CODE> is an arbitrary Scheme object which
+    identifies the thread (useful for debugging); it defaults to an
+    unspecified value.  The specific field is set to an unspecified
+    value.
+<!--
+    The optional <CODE><I>thread-group</I></CODE> indicates which
+    thread group this thread belongs to; it defaults to the thread
+    group of the current thread.
+-->
+<!--begin srfi21-->
+    The base priority, quantum and priority boost of the thread are
+    set to the same value as the current thread.
+<!--end srfi21-->
+    The thread inherits the dynamic environment from the current
+    thread (i.e. procedures which access the dynamic environment, such
+    as <CODE>(current-input-port)</CODE>, obtain the binding in effect
+    when <CODE>make-thread</CODE> was called).  Moreover, in this
+    dynamic environment the exception handler is bound to the "initial
+    exception handler" which is a unary procedure which causes the
+    (then) current thread to store in its end-exception field an
+    "uncaught exception" object whose "reason" is the argument of the
+    handler, abandon all mutexes it owns, and finally terminate.
+
+<PRE>
+    (make-thread (lambda () (write 'hello)))  ==>  <I>a thread</I>
+</PRE>
+
+<DT><PRE>
+(thread-name <I>thread</I>)                                  ;procedure
+</PRE><DD>
+
+    Returns the name of the <CODE><I>thread</I></CODE>.
+
+<PRE>
+    (thread-name (make-thread (lambda () #f) 'foo))  ==>  foo
+</PRE>
+
+<DT><PRE>
+(thread-specific <I>thread</I>)                              ;procedure
+</PRE><DD>
+
+    Returns the content of the <CODE><I>thread</I></CODE>'s specific
+    field.
+
+<DT><PRE>
+(thread-specific-set! <I>thread</I> <I>obj</I>)                     ;procedure
+</PRE><DD>
+
+    Stores <CODE><I>obj</I></CODE> into the
+    <CODE><I>thread</I></CODE>'s specific field.
+    <CODE>thread-specific-set!</CODE> returns an unspecified value.
+
+<PRE>
+    (thread-specific-set! (current-thread) "hello")  ==>  <I>unspecified</I>
+    (thread-specific (current-thread))               ==>  "hello"
+</PRE>
+
+<!--begin srfi21-->
+<DT><PRE>
+(thread-base-priority <I>thread</I>)                         ;procedure
+</PRE><DD>
+
+    Returns a real number which corresponds to the base priority of
+    the <CODE><I>thread</I></CODE>.
+
+<DT><PRE>
+(thread-base-priority-set! <I>thread</I> <I>priority</I>)           ;procedure
+</PRE><DD>
+
+    Changes the base priority of the <CODE><I>thread</I></CODE> to
+    <CODE><I>priority</I></CODE>.  The <CODE><I>priority</I></CODE>
+    must be a real number.  If <CODE><I>thread</I></CODE> is running,
+    the scheduler may wait until the thread blocks or is preempted
+    before reconsidering scheduling order.
+    <CODE>thread-base-priority-set!</CODE> returns an unspecified
+    value.
+
+<PRE>
+    (thread-base-priority-set! (current-thread) 12.3)  ==>  <I>unspecified</I>
+    (thread-base-priority (current-thread))            ==>  12.3
+</PRE>
+
+<DT><PRE>
+(thread-quantum <I>thread</I>)                               ;procedure
+</PRE><DD>
+
+    Returns a real number which corresponds to the quantum of the
+    <CODE><I>thread</I></CODE>.
+
+<DT><PRE>
+(thread-quantum-set! <I>thread</I> <I>quantum</I>)                  ;procedure
+</PRE><DD>
+
+    Changes the quantum of the <CODE><I>thread</I></CODE> to
+    <CODE><I>quantum</I></CODE>.  The <CODE><I>quantum</I></CODE> must
+    be a non-negative real.  A value of zero selects the smallest
+    quantum supported by the implementation.  If
+    <CODE><I>thread</I></CODE> is running, the scheduler may wait
+    until the thread blocks or is preempted before reconsidering
+    scheduling order.  <CODE>thread-quantum-set!</CODE> returns an
+    unspecified value.
+
+<PRE>
+    (thread-quantum-set! (current-thread) 1.5)  ==>  <I>unspecified</I>
+    (thread-quantum (current-thread))           ==>  1.5
+</PRE>
+
+<DT><PRE>
+(thread-priority-boost <I>thread</I>)                        ;procedure
+</PRE><DD>
+
+    Returns a real number which corresponds to the priority boost of
+    the <CODE><I>thread</I></CODE>.
+
+<DT><PRE>
+(thread-priority-boost-set! <I>thread</I> <I>priority-boost</I>)    ;procedure
+</PRE><DD>
+
+    Changes the priority boost of the <CODE><I>thread</I></CODE> to
+    <CODE><I>priority-boost</I></CODE>.  The
+    <CODE><I>priority-boost</I></CODE> must be a non-negative real.
+    If <CODE><I>thread</I></CODE> is running, the scheduler may wait
+    until the thread blocks or is preempted before reconsidering
+    scheduling order.  <CODE>thread-priority-boost-set!</CODE> returns
+    an unspecified value.
+
+<PRE>
+    (thread-priority-boost-set! (current-thread) 2.5)  ==>  <I>unspecified</I>
+    (thread-priority-boost (current-thread))           ==>  2.5
+</PRE>
+<!--end srfi21-->
+
+<DT><PRE>
+(thread-start! <I>thread</I>)                                 ;procedure
+</PRE><DD>
+
+    Makes <CODE><I>thread</I></CODE> runnable.  A "started thread
+    exception" is raised if the <CODE><I>thread</I></CODE> was
+    previously started or terminated.  <CODE>thread-start!</CODE>
+    returns an unspecified value.
+
+<PRE>
+    (let ((t (make-thread (lambda () (write 'a)))))
+      (thread-start! t)
+      (write 'b)
+      (thread-join! t))             ==>  <I>unspecified</I>
+                                         <I>after writing</I> ab <I>or</I> ba
+</PRE>
+
+    NOTE: It is useful to separate thread creation and thread
+    activation to avoid the race condition that would occur if the
+    created thread tries to examine a table in which the current
+    thread stores the created thread.  See the last example of
+    <CODE>thread-terminate!</CODE> which contains mutually recursive
+    threads.
+
+<DT><PRE>
+(thread-yield!)                                        ;procedure
+</PRE><DD>
+
+    The current thread is preempted as if its quantum had expired.
+    <CODE>thread-yield!</CODE> returns an unspecified value.
+
+<PRE>
+    (let loop ()
+      (if (mutex-lock! m 0) ; try to lock but don't block
+          (begin
+            (display "locked mutex m")
+            (mutex-unlock! m))
+          (begin
+            (do-something-else)
+            (thread-yield!) ; be friendly
+            (loop))))
+</PRE>
+
+<DT><PRE>
+(thread-sleep! <I>timeout</I>)                                ;procedure
+</PRE><DD>
+
+    The current thread blocks.  It will become runnable again when the
+    timeout is reached.  It is an error for <CODE><I>timeout</I></CODE>
+    to be <CODE>#f</CODE>.  <CODE>thread-sleep!</CODE> returns an
+    unspecified value.
+
+<PRE>
+    ; a clock with a gradual drift:
+
+    (let loop ((x 1))
+      (thread-sleep! 1)
+      (write x)
+      (loop (+ x 1)))
+
+    ; a clock with no drift:
+
+    (let ((start (time->seconds (current-time)))
+      (let loop ((x 1))
+        (thread-sleep! (seconds->time (+ x start)))
+        (write x)
+        (loop (+ x 1))))
+</PRE>
+
+<DT><PRE>
+(thread-terminate! <I>thread</I>)                             ;procedure
+</PRE><DD>
+
+    Causes an abnormal termination of the <CODE><I>thread</I></CODE>.
+    If <CODE><I>thread</I></CODE> is not running or it is the current
+    thread, it is terminated immediately, otherwise the scheduler may
+    wait until the thread blocks or is preempted before terminating
+    it.  All mutexes owned by the <CODE><I>thread</I></CODE> become
+    unlocked/abandoned and a "terminated thread exception" object is
+    stored in the <CODE><I>thread</I></CODE>'s end-exception field.
+    It is not an error if <CODE><I>thread</I></CODE> is already
+    terminated, blocked, or not started.
+    <CODE>thread-terminate!</CODE> returns an unspecified value.
+
+<PRE>
+    (thread-terminate! (current-thread))  ==>  <I>does not return</I>
+
+    (define (amb thunk1 thunk2)
+      (let ((result #f)
+            (result-mutex (make-mutex))
+            (done-mutex (make-mutex)))
+        (letrec ((child1
+                  (make-thread
+                    (lambda ()
+                      (let ((x (thunk1)))
+                        (mutex-lock! result-mutex #f #f)
+                        (set! result x)
+                        (thread-terminate! child2)
+                        (mutex-unlock! done-mutex)))))
+                 (child2
+                  (make-thread
+                    (lambda ()
+                      (let ((x (thunk2)))
+                        (mutex-lock! result-mutex #f #f)
+                        (set! result x)
+                        (thread-terminate! child1)
+                        (mutex-unlock! done-mutex))))))
+          (mutex-lock! done-mutex #f #f)
+          (thread-start! child1)
+          (thread-start! child2)
+          (mutex-lock! done-mutex #f #f)
+          result)))
+</PRE>
+
+    NOTE: This operation must be used carefully because it terminates
+    a thread abruptly and it is impossible for that thread to perform
+    any kind of cleanup.  This may be a problem if the thread is in
+    the middle of a critical section where some structure has been put
+    in an inconsistent state.  However, another thread attempting to
+    enter this critical section will raise an "abandoned mutex
+    exception" because the mutex is unlocked/abandoned.  This helps
+    avoid observing an inconsistent state.
+
+<DT><PRE>
+(thread-join! thread [<I>timeout</I> [<I>timeout-val</I>]])         ;procedure
+</PRE><DD>
+
+    The current thread blocks until the <CODE><I>thread</I></CODE>
+    terminates (normally or not) or until the timeout is reached if
+    <CODE><I>timeout</I></CODE> is supplied.  If the timeout is
+    reached, <CODE><I>thread-join!</I></CODE> returns
+    <CODE><I>timeout-val</I></CODE> if it is supplied, otherwise a
+    "join timeout exception" is raised.  If the
+    <CODE><I>thread</I></CODE> terminated normally, the content of the
+    end-result field is returned, otherwise the content of the
+    end-exception field is raised.
+
+<PRE>
+    (let ((t (make-thread (lambda () (expt 2 100)))))
+      (thread-start! t)
+      (do-something-else)
+      (thread-join! t))  ==>  1267650600228229401496703205376
+
+    (let ((t (make-thread (lambda () (raise 123)))))
+      (thread-start! t)
+      (do-something-else)
+      (with-exception-handler
+        (lambda (exc)
+          (if (uncaught-exception? exc)
+              (* 10 (uncaught-exception-reason exc))
+              'foo))
+        (lambda ()
+          (+ 1 (thread-join! t)))))  ==>  1231
+
+    (define thread-alive?
+      (let ((unique (list 'unique)))
+        (lambda (thread)
+          ; note: this procedure raises an exception if
+          ; the thread terminated abnormally
+          (eq? (thread-join! thread 0 unique) unique))))
+</PRE>
+
+<DT><PRE>
+(mutex? <I>obj</I>)                                          ;procedure
+</PRE><DD>
+
+    Returns <CODE>#t</CODE> if <CODE><I>obj</I></CODE> is a mutex,
+    otherwise returns <CODE>#f</CODE>.
+<!--
+    If any of the predicates listed in Section 3.2 of the R5RS is true
+    of <CODE><I>obj</I></CODE>, then <CODE>mutex?</CODE> is false of
+    <CODE><I>obj</I></CODE>.
+-->
+
+<PRE>
+    (mutex? (make-mutex))  ==>  #t
+    (mutex? 'foo)          ==>  #f
+</PRE>
+
+<DT><PRE>
+(make-mutex [<I>name</I>])                                   ;procedure
+</PRE><DD>
+
+    Returns a newly allocated mutex in the unlocked/not-abandoned
+    state.  The optional <CODE><I>name</I></CODE> is an arbitrary
+    Scheme object which identifies the mutex (useful for debugging);
+    it defaults to an unspecified value.
+
+<PRE>
+    (make-mutex)       ==>  <I>an unlocked/not-abandoned mutex</I>
+    (make-mutex 'foo)  ==>  <I>an unlocked/not-abandoned mutex named</I> foo
+</PRE>
+
+<DT><PRE>
+(mutex-name <I>mutex</I>)                                    ;procedure
+</PRE><DD>
+
+    Returns the name of the <CODE><I>mutex</I></CODE>.
+
+<PRE>
+    (mutex-name (make-mutex 'foo))  ==>  foo
+</PRE>
+
+<DT><PRE>
+(mutex-state <I>mutex</I>)                                   ;procedure
+</PRE><DD>
+
+    Returns information about the state of the <CODE><I>mutex</I></CODE>.  The
+    possible results are:
+
+       <UL>
+
+       <LI><STRONG>thread T</STRONG>:
+           the <CODE><I>mutex</I></CODE> is in the locked/owned state
+           and thread T is the owner of the <CODE><I>mutex</I></CODE>
+
+       <LI><STRONG>symbol <CODE>not-owned</CODE></STRONG>:
+           the <CODE><I>mutex</I></CODE> is in the locked/not-owned state
+
+       <LI><STRONG>symbol <CODE>abandoned</CODE></STRONG>:
+           the <CODE><I>mutex</I></CODE> is in the unlocked/abandoned
+           state
+
+       <LI><STRONG>symbol <CODE>not-abandoned</CODE></STRONG>:
+           the <CODE><I>mutex</I></CODE> is in the unlocked/not-abandoned
+           state
+
+       </UL>
+
+<PRE>
+    (mutex-state (make-mutex))  ==>  not-abandoned
+
+    (define (thread-alive? thread)
+      (let ((mutex (make-mutex)))
+        (mutex-lock! mutex #f thread)
+        (let ((state (mutex-state mutex)))
+          (mutex-unlock! mutex) ; avoid space leak
+          (eq? state thread))))
+</PRE>
+
+<DT><PRE>
+(mutex-lock! <I>mutex</I> [<I>timeout</I> [<I>thread</I>]])                ;procedure
+</PRE><DD>
+
+    If the <CODE><I>mutex</I></CODE> is currently locked, the current
+    thread is suspended until the <CODE><I>mutex</I></CODE> is
+    unlocked, or until the timeout is reached if
+    <CODE><I>timeout</I></CODE> is supplied.  If the timeout is
+    reached, <CODE>mutex-lock!</CODE> returns <CODE>#f</CODE>.
+    Otherwise, the state of the <CODE><I>mutex</I></CODE> is changed
+    as follows:
+
+       <UL>
+
+       <LI>if <CODE><I>thread</I></CODE> is <CODE>#f</CODE> the
+           <CODE><I>mutex</I></CODE> becomes locked/not-owned,
+
+       <LI>otherwise, let T be <CODE><I>thread</I></CODE> (or the
+           current thread if <CODE><I>thread</I></CODE> is not
+           supplied),
+
+           <UL>
+
+           <LI>if T is terminated the <CODE><I>mutex</I></CODE>
+               becomes unlocked/abandoned,
+
+           <LI>otherwise <CODE><I>mutex</I></CODE> becomes locked/owned
+               with T as the owner.
+
+           </UL>
+
+        </UL>
+
+    After changing the state of the <CODE><I>mutex</I></CODE>, an
+    "abandoned mutex exception" is raised if the
+    <CODE><I>mutex</I></CODE> was unlocked/abandoned before the state
+    change, otherwise <CODE>mutex-lock!</CODE> returns
+    <CODE>#t</CODE>.  It is not an error if the
+    <CODE><I>mutex</I></CODE> is owned by the current thread (but the
+    current thread will block).
+
+<PRE>
+    ; an implementation of a mailbox object of depth one; this
+    ; implementation does not behave well in the presence of forced
+    ; thread terminations using thread-terminate! (deadlock can occur
+    ; if a thread is terminated in the middle of a put! or get! operation)
+
+    (define (make-empty-mailbox)
+      (let ((put-mutex (make-mutex)) ; allow put! operation
+            (get-mutex (make-mutex))
+            (cell #f))
+
+        (define (put! obj)
+          (mutex-lock! put-mutex #f #f) ; prevent put! operation
+          (set! cell obj)
+          (mutex-unlock! get-mutex)) ; allow get! operation
+
+        (define (get!)
+          (mutex-lock! get-mutex #f #f) ; wait until object in mailbox
+          (let ((result cell))
+            (set! cell #f) ; prevent space leaks
+            (mutex-unlock! put-mutex) ; allow put! operation
+            result))
+
+        (mutex-lock! get-mutex #f #f) ; prevent get! operation
+
+        (lambda (msg)
+          (case msg
+            ((put!) put!)
+            ((get!) get!)
+            (else (error "unknown message"))))))
+
+    (define (mailbox-put! m obj) ((m 'put!) obj))
+    (define (mailbox-get! m) ((m 'get!)))
+
+    ; an alternative implementation of thread-sleep!
+
+    (define (sleep! timeout)
+      (let ((m (make-mutex)))
+        (mutex-lock! m #f #f)
+        (mutex-lock! m timeout #f)))
+
+    ; a procedure that waits for one of two mutexes to unlock
+
+    (define (lock-one-of! mutex1 mutex2)
+      ; this procedure assumes that neither mutex1 or mutex2
+      ; are owned by the current thread
+      (let ((ct (current-thread))
+            (done-mutex (make-mutex)))
+        (mutex-lock! done-mutex #f #f)
+        (let ((t1 (make-thread
+                    (lambda ()
+                      (mutex-lock! mutex1 #f ct)
+                      (mutex-unlock! done-mutex))))
+              (t2 (make-thread
+                    (lambda ()
+                      (mutex-lock! mutex2 #f ct)
+                      (mutex-unlock! done-mutex)))))
+          (thread-start! t1)
+          (thread-start! t2)
+          (mutex-lock! done-mutex #f #f)
+          (thread-terminate! t1)
+          (thread-terminate! t2)
+          (if (eq? (mutex-state mutex1) ct)
+              (begin
+                (if (eq? (mutex-state mutex2) ct)
+                    (mutex-unlock! mutex2)) ; don't lock both
+                mutex1)
+              mutex2))))
+</PRE>
+
+<DT><PRE>
+(mutex-unlock! <I>mutex</I> [<I>condition-variable</I> [<I>timeout</I>]])  ;procedure
+</PRE><DD>
+
+    Unlocks the <CODE><I>mutex</I></CODE> by making it
+    unlocked/not-abandoned.  It is not an error to unlock an unlocked
+    mutex and a mutex that is owned by a thread other than the current
+    thread.  If <CODE><I>condition-variable</I></CODE> is supplied,
+    the current thread is blocked and added to the
+    <CODE><I>condition-variable</I></CODE> before unlocking
+    <CODE><I>mutex</I></CODE>; the thread remains blocked until a call
+    to <CODE>condition-variable-signal!</CODE> or
+    <CODE>condition-variable-broadcast!</CODE> wakes up the thread
+    (see below), or until the timeout is reached if
+    <CODE><I>timeout</I></CODE> is supplied.  If there are threads
+    waiting to lock this <CODE><I>mutex</I></CODE>, the scheduler
+    selects a thread, the mutex becomes locked/owned or
+    locked/not-owned, and the thread is made runnable.
+    <CODE>mutex-unlock!</CODE> returns <CODE>#f</CODE> when the
+    timeout is reached, otherwise it returns <CODE>#t</CODE>.
+
+<DT><PRE>
+(condition-variable? <I>obj</I>)                             ;procedure
+</PRE><DD>
+
+    Returns <CODE>#t</CODE> if <CODE><I>obj</I></CODE> is a condition
+    variable, otherwise returns <CODE>#f</CODE>.
+<!--
+    If any of the predicates listed in Section 3.2 of the R5RS is true
+    of <CODE><I>obj</I></CODE>, then <CODE>condition-variable?</CODE>
+    is false of <CODE><I>obj</I></CODE>.
+-->
+
+<PRE>
+    (condition-variable? (make-condition-variable))  ==>  #t
+    (condition-variable? 'foo)                       ==>  #f
+</PRE>
+
+<DT><PRE>
+(make-condition-variable [<I>name</I>])                      ;procedure
+</PRE><DD>
+
+    Returns a newly allocated empty condition variable.  The optional
+    <CODE><I>name</I></CODE> is an arbitrary Scheme object which
+    identifies the condition variable (useful for debugging); it
+    defaults to an unspecified value.
+
+<PRE>
+    (make-condition-variable)  ==>  <I>an empty condition variable</I>
+</PRE>
+
+<DT><PRE>
+(condition-variable-name <I>condition-variable</I>)          ;procedure
+</PRE><DD>
+
+    Returns the name of the <CODE><I>condition-variable</I></CODE>.
+
+<PRE>
+    (condition-variable-name (make-condition-variable 'foo))  ==>  foo
+</PRE>
+
+<DT><PRE>
+(condition-variable-signal! <I>condition-variable</I>)       ;procedure
+</PRE><DD>
+
+    If there are threads blocked on the
+    <CODE><I>condition-variable</I></CODE>, the scheduler selects a
+    thread and makes it runnable.
+    <CODE>condition-variable-signal!</CODE> returns an unspecified
+    value.
+
+<PRE>
+    ; an implementation of a mailbox object of depth one; this
+    ; implementation behaves gracefully when threads are forcibly
+    ; terminated using thread-terminate! (the "abandoned mutex"
+    ; exception will be raised when a put! or get! operation is attempted
+    ; after a thread is terminated in the middle of a put! or get!
+    ; operation)
+
+    (define (make-empty-mailbox)
+      (let ((mutex (make-mutex))
+            (put-condvar (make-condition-variable))
+            (get-condvar (make-condition-variable))
+            (full? #f)
+            (cell #f))
+
+        (define (put! obj)
+          (mutex-lock! mutex)
+          (if full?
+              (begin
+                (mutex-unlock! mutex put-condvar)
+                (put! obj))
+              (begin
+                (set! cell obj)
+                (set! full? #t)
+                (condition-variable-signal! get-condvar)
+                (mutex-unlock! mutex))))
+
+        (define (get!)
+          (mutex-lock! mutex)
+          (if (not full?)
+              (begin
+                (mutex-unlock! mutex get-condvar)
+                (get!))
+              (let ((result cell))
+                (set! cell #f) ; avoid space leaks
+                (set! full? #f)
+                (condition-variable-signal! put-condvar)
+                (mutex-unlock! mutex))))
+
+        (lambda (msg)
+          (case msg
+            ((put!) put!)
+            ((get!) get!)
+            (else (error "unknown message"))))))
+
+    (define (mailbox-put! m obj) ((m 'put!) obj))
+    (define (mailbox-get! m) ((m 'get!)))
+</PRE>
+
+<DT><PRE>
+(condition-variable-broadcast! <I>condition-variable</I>)    ;procedure
+</PRE><DD>
+
+    Extracts from the <CODE><I>condition-variable</I></CODE> all the
+    threads that are blocked and makes them runnable.
+    <CODE>condition-variable-broadcast!</CODE> returns an unspecified
+    value.
+
+<PRE>
+    (define (make-semaphore n)
+      (vector n (make-mutex) (make-condition-variable)))
+
+    (define (semaphore-wait! sema)
+      (mutex-lock! (vector-ref sema 1))
+      (let ((n (vector-ref sema 0)))
+        (if (> n 0)
+            (begin
+              (vector-set! sema 0 (- n 1))
+              (mutex-unlock! (vector-ref sema 1)))
+            (begin
+              (mutex-unlock! (vector-ref sema 1) (vector-ref sema 2))
+              (semaphore-wait! sema))))
+
+    (define (semaphore-signal-by! sema increment)
+      (mutex-lock! (vector-ref sema 1))
+      (let ((n (+ (vector-ref sema 0) increment)))
+        (vector-set! sema 0 n)
+        (if (> n 0)
+            (condition-variable-broadcast! (vector-ref sema 2)))
+        (mutex-unlock! (vector-ref sema 1))))
+</PRE>
+
+<DT><PRE>
+(current-time)                                        ;procedure
+</PRE><DD>
+
+    Returns the time object corresponding to the current time.
+
+<PRE>
+    (current-time)  ==>  <I>a time object</I>
+</PRE>
+
+<DT><PRE>
+(time? <I>obj</I>)                                           ;procedure
+</PRE><DD>
+
+    Returns <CODE>#t</CODE> if <CODE><I>obj</I></CODE> is a time object,
+    otherwise returns <CODE>#f</CODE>.
+<!--
+    If any of the predicates listed in Section 3.2 of the R5RS is true of
+    <CODE><I>obj</I></CODE>, then <CODE>time?</CODE> is false of
+    <CODE><I>obj</I></CODE>.
+-->
+
+<PRE>
+    (time? (current-time))  ==>  #t
+    (time? 123)             ==>  #f
+</PRE>
+
+<DT><PRE>
+(time->seconds <I>time</I>)                                  ;procedure
+</PRE><DD>
+
+    Converts the time object <CODE><I>time</I></CODE> into an exact or
+    inexact real number representing the number of seconds elapsed
+    since some implementation dependent reference point.
+
+<PRE>
+    (time->seconds (current-time))  ==>  955039784.928075
+</PRE>
+
+<DT><PRE>
+(seconds->time <I>x</I>)                                     ;procedure
+</PRE><DD>
+
+    Converts the exact or inexact real number <CODE><I>x</I></CODE>
+    representing the number of seconds elapsed since some
+    implementation dependent reference point.
+
+<PRE>
+    (seconds->time (+ 10 (time->seconds (current-time)))
+       ==>  <I>a time object representing 10 seconds from now</I>
+</PRE>
+
+<DT><PRE>
+(current-exception-handler)                           ;procedure
+</PRE><DD>
+
+    Returns the current exception handler.
+
+<PRE>
+    (current-exception-handler)  ==>  <I>a procedure</I>
+</PRE>
+
+<DT><PRE>
+(with-exception-handler <I>handler</I> <I>thunk</I>)                ;procedure
+</PRE><DD>
+
+    Returns the result(s) of calling <CODE><I>thunk</I></CODE> with no
+    arguments.  The <CODE><I>handler</I></CODE>, which must be a
+    procedure, is installed as the current exception handler in the
+    dynamic environment in effect during the call to
+    <CODE><I>thunk</I></CODE>.
+
+<PRE>
+    (with-exception-handler
+      list
+      current-exception-handler)  ==>  <I>the procedure</I> list
+</PRE>
+
+<DT><PRE>
+(raise <I>obj</I>)                                           ;procedure
+</PRE><DD>
+
+    Calls the current exception handler with <CODE><I>obj</I></CODE>
+    as the single argument.  <CODE><I>obj</I></CODE> may be any Scheme
+    object.
+
+<PRE>
+    (define (f n)
+      (if (< n 0) (raise "negative arg") (sqrt n))))
+
+    (define (g)
+      (call-with-current-continuation
+        (lambda (return)
+          (with-exception-handler
+            (lambda (exc)
+              (return
+                (if (string? exc)
+                    (string-append "error: " exc)
+                    "unknown error")))
+            (lambda ()
+              (write (f 4.))
+              (write (f -1.))
+              (write (f 9.)))))))
+
+    (g)  ==>  <I>writes</I> 2. <I>and returns</I> "error: negative arg"
+</PRE>
+
+<DT><PRE>
+(join-timeout-exception? <I>obj</I>)                         ;procedure
+</PRE><DD>
+
+    Returns <CODE>#t</CODE> if <CODE><I>obj</I></CODE> is a "join timeout
+    exception" object, otherwise returns <CODE>#f</CODE>.
+    A join timeout exception is raised when <CODE>thread-join!</CODE> is
+    called, the timeout is reached and no <CODE><I>timeout-val</I></CODE>
+    is supplied.
+<!--
+    If any of the predicates listed in Section 3.2 of the R5RS is true of
+    <CODE><I>obj</I></CODE>, then <CODE>join-timeout-exception?</CODE>
+    is false of <CODE><I>obj</I></CODE>.
+-->
+
+<DT><PRE>
+(abandoned-mutex-exception? <I>obj</I>)                      ;procedure
+</PRE><DD>
+
+    Returns <CODE>#t</CODE> if <CODE><I>obj</I></CODE> is an "abandoned
+    mutex exception" object, otherwise returns <CODE>#f</CODE>.
+    An abandoned mutex exception is raised when the current thread locks a
+    mutex that was owned by a thread which terminated
+    (see <CODE>mutex-lock!</CODE>).
+<!--
+    If any of the predicates listed in Section 3.2 of the R5RS is true of
+    <CODE><I>obj</I></CODE>, then <CODE>abandoned-mutex-exception?</CODE>
+    is false of <CODE><I>obj</I></CODE>.
+-->
+
+<DT><PRE>
+(started-thread-exception? <I>obj</I>)                       ;procedure
+</PRE><DD>
+
+    Returns <CODE>#t</CODE> if <CODE><I>obj</I></CODE> is a "started
+    thread exception" object, otherwise returns <CODE>#f</CODE>.
+    A started thread exception is raised when <CODE>thread-start!</CODE>
+    is called and the target thread has already started or terminated.
+<!--
+    If any of the predicates listed in Section 3.2 of the R5RS is true of
+    <CODE><I>obj</I></CODE>, then <CODE>started-thread-exception?</CODE>
+    is false of <CODE><I>obj</I></CODE>.
+-->
+
+<DT><PRE>
+(terminated-thread-exception? <I>obj</I>)                    ;procedure
+</PRE><DD>
+
+    Returns <CODE>#t</CODE> if <CODE><I>obj</I></CODE> is a "terminated
+    thread exception" object, otherwise returns <CODE>#f</CODE>.
+    A terminated thread exception is raised when <CODE>thread-join!</CODE> is
+    called and the target thread has terminated as a result of a call
+    to <CODE>thread-terminate!</CODE>.
+<!--
+    If any of the predicates listed in Section 3.2 of the R5RS is true of
+    <CODE><I>obj</I></CODE>, then <CODE>terminated-thread-exception?</CODE>
+    is false of <CODE><I>obj</I></CODE>.
+-->
+
+<DT><PRE>
+(uncaught-exception? <I>obj</I>)                             ;procedure
+</PRE><DD>
+
+    Returns <CODE>#t</CODE> if <CODE><I>obj</I></CODE> is an "uncaught
+    exception" object, otherwise returns <CODE>#f</CODE>.
+    An uncaught exception is raised when <CODE>thread-join!</CODE> is
+    called and the target thread has terminated because it raised an exception
+    that called the initial exception handler of that thread.
+<!--
+    If any of the predicates listed in Section 3.2 of the R5RS is true of
+    <CODE><I>obj</I></CODE>, then <CODE>uncaught-exception?</CODE>
+    is false of <CODE><I>obj</I></CODE>.
+-->
+
+<DT><PRE>
+(uncaught-exception-reason <I>exc</I>)                       ;procedure
+</PRE><DD>
+
+    <CODE><I>exc</I></CODE> must be an "uncaught exception" object.
+    <CODE>uncaught-exception-reason</CODE> returns the exception
+    object which was passed to the initial exception handler of that
+    thread.
+
+</DL>
+
+<H1>Acknowledgements</H1>
+
+Much of this design has been influenced by other thread systems.  Here
+are the main contributions:
+<UL>
+<LI>Java: names, separation of thread creation and thread start
+<LI>Win32: abandoned mutexes
+<LI>POSIX threads: names
+<!--begin srfi21-->
+<LI>Erlang/Franz Common Lisp: thread advantage/quantum
+<LI>QNX: priority decay
+<!--end srfi21-->
+<!--
+<LI>Modula-3 and Java: thread interrupts
+-->
+</UL>
+
+<H1>Implementation</H1>
+
+The implementation will be provided at a later time.  Due to the
+non-portable nature of this SRFI the implementation will be for
+a particular Scheme implementation, Gambit-C.
+
+<H1>Copyright</H1>
+Copyright (C) Marc Feeley (2000). All Rights Reserved. 
+<P>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<P>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<P>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+
+    <HR>
+    <ADDRESS>Editor: <A href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</A></ADDRESS>
+  </BODY>
+</HTML>
