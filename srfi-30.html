@@ -1,0 +1,230 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+  <head>
+    <title>SRFI 30: Nested Multi-line Comments</title>
+  </head>
+
+  <body>
+
+    <H1>Title</H1>
+    
+    Nested multi-line Comments
+    
+    <H1>Author</H1>
+    
+    Martin Gasbichler
+    
+    <h1>Related SRFIs</h1>
+    
+    <p><a href="http://srfi.schemers.org/srfi-22/">SRFI 22</a> defines
+    a multi line comment that may only appear at the beginning of a
+    file.</p>
+
+    <p><a href="http://srfi.schemers.org/srfi-10/">SRFI 10</a>
+    proposes the notation
+
+    <PRE> "#" &lt;discriminator&gt; &lt;other-char&gt;*</PRE> for further
+    SRFIs that introduce values which may be read and written.</p>
+
+    <H1>Abstract</H1>
+
+    <p>This SRFI extends R5RS by possibly nested, multi-line
+    comments. Multi-line comments start with <code>#|</code> and end
+    with <code>|#</code>.</p>
+    
+    <H1>Rationale</H1>
+    
+    <p>Multi-line comments are common to many programming languages. They
+    provide a convenient mean for adding blocks of text inside a program and
+    support development by fading out incomplete code or alternative
+    implementations.</p>
+    
+    <p>The syntax <code>#|</code> ... <code>|#</code> was chosen
+    because it is already widely used (Chez Scheme, Gamit, MIT Scheme,
+    MzScheme) and since it fits smoothly with R5RS. Nested comments
+    are an important feature for incrementally commenting out
+    code.</p>
+    
+    <H1>Specification</H1>
+
+    <p>This SRFI extends the specification of comments -- <a
+    href="http://www.schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-5.html#%_sec_2.2">R5RS
+    section 2.2</a> -- as follows:</p>
+
+    <p>The sequence <code>#|</code> indicates the start of a
+    multi-line comment. The multi-line comment continues until
+    <code>|#</code> appears. If the closing <code>|#</code> is
+    omitted, an error is signaled. Multi-line comments are visible to
+    Scheme as a single whitespace. Multi-line comments may be nested:
+    Every <code>#|</code> within the comment starts a new multi-line
+    comment, which has to be terminated by a matching
+    <code>|#</code>.</p>
+    
+    <p>This SRFI furthermore extends the production for
+    <code>&lt;comment&gt;</code> in the specification of lexical
+    structure -- <a
+    href="http://www.schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-10.html#%_sec_7.1.1">R5RS
+    section 7.1.1</a> -- to:
+    </p>
+    <pre>
+    &lt;comment&gt; ---&gt; ; &lt;all subsequent characters up to a line break&gt;
+     	    |         #| &lt;comment-text&gt; (&lt;comment&gt; &lt;comment-text&gt;)* |#
+
+    &lt;comment-text&gt; ---&gt; &lt;character sequence not containing #| or |#&gt;
+
+    </pre>
+
+
+    <h1><code>&lt;delimiter&gt;</code> and <code>#</code></h1> 
+
+    <p>The SRFI does not extend the specification of
+    <code>&lt;delimiter&gt;</code> from <a
+    href="http://www.schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-10.html#%_sec_7.1.1">R5RS
+    section 7.1.1</a>. It is therefore required to separate tokens
+    which require implicit termination (identifiers, numbers,
+    characters, and dot) from multi-line comments by a
+    <code>&lt;delimiter&gt;</code> from R5RS.</p>
+
+    <p><em>Rationale</em> An extension of the
+    <code>&lt;delimiter&gt;</code> to <code>#|</code> would be
+    incompatible with existing implementations which allow
+    <code>#</code> as legal character within identifiers.</p>
+
+
+
+   <!--   <h1> Derivation</h1> <p>This SRFI is clearly influenced by existing -->
+<!--      implementations and intended to pin down the current state of the -->
+<!--      art.</p> -->
+    
+<!--      <p>The following table explains why the existing implementations -->
+<!--      impose an additional whitespace before the actual start of the -->
+<!--      comment:</p> -->
+<!--      <table> -->
+<!--        <tbody> -->
+<!--  	<tr> -->
+<!--  	  <th>Implementation</th> -->
+<!--  	  <th><code>a#</code></th> -->
+<!--  	  <th><code>a#|b|#</code></th> -->
+<!--  	  <th><code>#|a|#b</code></th> -->
+<!--  	</tr> -->
+<!--  	<tr> -->
+<!--  	  <td>Scheme 48 0.57</td> -->
+<!--  	  <td>Identifier <code>a#</code></td> -->
+<!--  	  <td>Illegal character <code>|</code></td> -->
+<!--  	  <td>Unknown <code>#</code> syntax: <code>#|</code></td> -->
+<!--  	</tr> -->
+<!--  	<tr> -->
+<!--  	  <td>MzScheme version 103</td> -->
+<!--  	  <td>Identifier <code>a#</code></td> -->
+<!--  	  <td>Identifier <code>a#b#</code></td> -->
+<!--  	  <td>Identifier <code>b</code></td> -->
+<!--  	</tr> -->
+<!--  	<tr> -->
+<!--  	  <td>Gambit Version 3.0 (gsi)</td> -->
+<!--  	  <td>Identifier <code>a#</code></td> -->
+<!--  	  <td>Identifier <code>a#</code>,  -->
+<!--  	    Identifier <code>b</code>, Invalid token: <code>#</code></td> -->
+<!--  	  <td>Identifier <code>b</code></td> -->
+<!--  	</tr> -->
+<!--  	<tr> -->
+<!--  	  <td>MIT Scheme Release 7.5.12</td> -->
+<!--  	  <td>Identifier <code>a#</code></td> -->
+<!--  	  <td> -->
+<!--  	    Identifier <code>a#</code>,  -->
+<!--  	    Undefined atom delimiter <code>|</code>, -->
+<!--  	    Identifier <code>b</code>, -->
+<!--  	    Undefined atom delimiter <code>|</code>, -->
+<!--  	    No such reader macro <code>#\Linefeed</code> -->
+<!--  	  </td> -->
+<!--  	  <td>Identifier <code>b</code></td> -->
+<!--  	</tr> -->
+<!--  	<tr> -->
+<!--  	  <td>Chez Scheme (Petite Chez Scheme Version 6.0a)</td> -->
+<!--  	  <td>Identifier <code>a#</code></td> -->
+<!--  	  <td>Identifier <code>a#b#</code></td> -->
+<!--  	  <td>Identifier <code>b</code></td> -->
+<!--  	</tr> -->
+<!--        </tbody> -->
+<!--      </table> -->
+<!--      All Implementations recognize <code>#</code> as legal character -->
+<!--      within identifiers in contrast to the specification in <a -->
+<!--      href="http://www.schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-10.html#%_sec_7.1.1">R5RS, -->
+<!--      Section 7.1.1</a>. Furthermore the table shows that even the -->
+<!--      implementations that already support multi-line comments fail to -->
+<!--      recognize multi-line comments that directly follow -->
+<!--      identifiers. Therefore an additional whitespace is needed to -->
+<!--      separate comments from identifiers. -->
+    
+    <H1>Implementation</H1>
+    
+    <p>The following procedure <code>skip-comment</code> deletes a
+    leading multi-line comment from the input port specified as the
+    argument. </p>
+
+    <pre>
+(define (skip-comment port)
+  (let lp ((state 'start) (nested-level 0))
+    (define (next-char)
+      (let ((c (read-char port)))
+	(if (eof-object? c)
+	    (error "EOF inside block comment -- #| missing a closing |#")
+	    c)))
+
+    (case state
+      ((start) (case (next-char)
+		 ((#\|) (lp 'read-bar nested-level))
+		 ((#\#) (lp 'read-sharp nested-level))
+		 (else (lp 'start nested-level))))
+      ((read-bar) (case (next-char)
+		    ((#\#) (if (> nested-level 1)
+			       (lp 'start (- nested-level 1))
+			       port))
+		    (else (lp 'start nested-level))))
+      ((read-sharp) (case (next-char)
+		      ((#\|) (lp 'start (+ nested-level 1)))
+		      (else (lp 'start nested-level))))))
+    </pre>
+
+     <p>A number of Scheme implemenations already support this SRFI:
+     Chez Scheme, Gambit-C, MIT Scheme, MzScheme and RScheme. Bigloo
+     supports multi-line comments via
+     <code>#!</code>/<code>!#</code>. Among the major Scheme
+     implementations, Scheme 48 and Guile do not support this SRFI
+     yet.</p>
+
+    <H1>Copyright</H1>
+    Copyright (C) Martin Gasbichler (2002). All Rights Reserved. 
+    <p>
+      This document and translations of it may be copied and furnished
+      to others, and derivative works that comment on or otherwise
+      explain it or assist in its implementation may be prepared,
+      copied, published and distributed, in whole or in part, without
+      restriction of any kind, provided that the above copyright
+      notice and this paragraph are included on all such copies and
+      derivative works. However, this document itself may not be
+      modified in any way, such as by removing the copyright notice or
+      references to the Scheme Request For Implementation process or
+      editors, except as needed for the purpose of developing SRFIs in
+      which case the procedures for copyrights defined in the SRFI
+      process must be followed, or as required to translate it into
+      languages other than English.
+    <p>
+      The limited permissions granted above are perpetual and will not be
+      revoked by the authors or their successors or assigns.
+    <p>
+      This document and the information contained herein is provided on an
+      "AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+      WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+      WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+      RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+      PARTICULAR PURPOSE.
+      
+    <hr>
+    <address>Editor: <a
+    href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
+<!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
+<!-- hhmts start -->
+Last modified: Fri Apr 12 15:25:28 MST 2002
+<!-- hhmts end -->
+  </body>
+</html>
