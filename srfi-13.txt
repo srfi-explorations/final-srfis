@@ -1,7 +1,7 @@
-The SRFI-13 string libraries					-*- outline -*-
+The SRFI 13 string libraries					-*- outline -*-
 Olin Shivers
 1999/10/2
-Last Update: 2000/4/30
+Last Update: 2000/6/9
 
 Emacs should display this document in outline mode. Say c-h m for
 instructions on how to move through it by sections (e.g., c-c c-n, c-c c-p).
@@ -10,11 +10,12 @@ instructions on how to move through it by sections (e.g., c-c c-n, c-c c-p).
 * Table of contents
 -------------------
 Abstract
+Procedure index
 Rationale
   Strings are code-point sequences
   String operations are locale- and context-independent
   Internationalisation & super-ASCII character types
-    Case mapping and case-folding
+    Case mapping and case folding
     String equality & string normalisation
     String inequality
   Naming conventions
@@ -22,7 +23,6 @@ Rationale
   R4RS/R5RS procedures
   Extra-SRFI recommendations
 Procedure Specification
-  Procedure index
   Main procedures
     Predicates
     Constructors
@@ -41,7 +41,7 @@ Procedure Specification
   Low-level procedures
     START/END optional argument parsing & checking utilities
     Knuth-Morris-Pratt searching
-Reference Implementation
+Reference implementation
 References & links
 Copyright
 
@@ -51,10 +51,110 @@ Copyright
 
 R5RS Scheme has an impoverished set of string-processing utilities, which is 
 a problem for authors of portable code.  This SRFI proposes a coherent and
-comprehensive set of string-processing procedures
+comprehensive set of string-processing procedures; it is accompanied by a
+reference implementation of the spec. The reference implementation is
+    - portable
+    - efficient
+    - open source
 
 The routines in this SRFI are backwards-compatible with the string-processing
 routines of R5RS.
+
+-------------------------------------------------------------------------------
+* Procedure index
+-----------------
+Here is a list of the procedures provided by the string-lib 
+and string-lib-internals packages. "#" marks R5RS procedures; "+" 
+marks extended R5RS procedures.
+
+Predicates
+#   string?
+    string-null? 
+    string-every string-any
+
+Constructors
+#   make-string
+#   string
+    string-tabulate
+
+List & string conversion
++   string->list 
+#   list->string
+    reverse-list->string
+    string-join
+
+Selection
+#   string-length
+#   string-ref
++   string-copy
+    substring/shared
+    string-copy! 
+    string-take string-take-right
+    string-drop string-drop-right
+    string-pad  string-pad-right 
+    string-trim string-trim-right string-trim-both 
+
+Modification
+#   string-set!
++   string-fill! 
+
+Comparison
+    string-compare string-compare-ci
+    string<>     string=    string<    string>    string<=    string>=
+    string-ci<>  string-ci= string-ci< string-ci> string-ci<= string-ci>=
+    string-hash  string-hash-ci
+
+Prefixes & suffixes
+    string-prefix-length    string-suffix-length
+    string-prefix-length-ci string-suffix-length-ci
+
+    string-prefix?    string-suffix?    
+    string-prefix-ci? string-suffix-ci? 
+
+Searching
+    string-index string-index-right
+    string-skip  string-skip-right 
+    string-count 
+    string-contains string-contains-ci
+
+Alphabetic case mapping
+    string-titlecase  string-upcase  string-downcase
+    string-titlecase! string-upcase! string-downcase!
+
+Reverse & append
+    string-reverse string-reverse!
+#   string-append
+    string-concatenate
+    string-concatenate/shared string-append/shared
+    string-concatenate-reverse string-concatenate-reverse/shared
+
+Fold, unfold & map
+    string-map      string-map!
+    string-fold     string-fold-right
+    string-unfold   string-unfold-right
+    string-for-each string-for-each-index
+
+Replicate & rotate
+    xsubstring 
+    string-xcopy!
+
+Miscellaneous: insertion, parsing
+    string-replace
+    string-tokenize
+
+Filtering & deleting
+    string-filter string-delete 
+
+Low-level procedures
+    string-parse-start+end
+    string-parse-final-start+end
+    let-string-start+end
+
+    check-substring-spec
+    substring-spec-ok?
+
+    make-kmp-restart-vector kmp-step string-kmp-partial-search
+
 
 -------------------------------------------------------------------------------
 * Rationale
@@ -77,6 +177,14 @@ This SRFI considers strings simply to be a sequence of "code points" or
 character encodings. Operations such as comparison or reversal are always done
 code point by code point. See the comments below on super-ASCII character
 types for implications that follow.
+
+It's entirely possible that a legal string might not be a sensible "text"
+sequence. For example, consider a string comprised entirely of zero-width
+Unicode accent characters with no preceding base character to modify --
+this is a legal string, albeit one that does not make a great deal of "sense"
+when interpreted as a sequence of natural-language text. The routines in
+this SRFI do not handle these "text" concerns; they restrict themselves
+to the underlying view of strings as merely a sequence of "code points."
 
 ** String operations are locale- and context-independent
 ========================================================
@@ -138,7 +246,7 @@ has detailed discussions of the issues. See in particular technical report
 21 on case mappings
     http://www.unicode.org/unicode/reports/tr21/
 
-SRFI-13 makes no attempt to deal with these issues; it uses a simple 1-1
+SRFI 13 makes no attempt to deal with these issues; it uses a simple 1-1
 locale- and context-independent case-mapping, specifically Unicode's 1-1
 case-mappings given in
 
@@ -150,7 +258,7 @@ The format of this file is explained in
 
 Note that this means that German eszet upper-cases to itself, not "SS".
 
-Case-mapping and case-folding operations in SRFI-13 are locale-independent so
+Case-mapping and case-folding operations in SRFI 13 are locale-independent so
 that shifting locales won't wreck hash tables, b-trees, symbol tables, etc.
 
 
@@ -171,7 +279,7 @@ There are multiple ways we might want to compare strings for equality. In
 - we might want a precise comparison of the actual encoding, so that
   <e-acute> would *not* compare equal to <e, acute>.
 
-- we might a "normalised" comparison, where these two sequences would compare
+- We might a "normalised" comparison, where these two sequences would compare
   equal.
 
 - We might want an even more-permissive normalisation, where visually-distinct
@@ -188,7 +296,7 @@ There are multiple ways we might want to compare strings for equality. In
 
 - We might want ways to "normalise" strings into various canonical forms.
 
-This library does not address these complexities. SRFI-13 string equality is
+This library does not address these complexities. SRFI 13 string equality is
 simply based upon comparing the encoding values used for the characters.
 Accent-insensitive and other types of comparison are not provided; only
 a simple form of case-insensitive comparison is provided, which uses the
@@ -219,7 +327,7 @@ Unicode defines a complex set of machinery for ordering or "collating"
 strings, which involves mapping each string to a multi-byte sort key,
 and then doing simple lexicographic sorting with these keys. These rules
 can be overlaid by additional domain- or language-specific rules. Again,
-this SRFI does not address these issues. SRFI-13 string ordering is strictly
+this SRFI does not address these issues. SRFI 13 string ordering is strictly
 based upon a character-by-character comparison of the values used for
 representing the string.
 
@@ -228,7 +336,7 @@ representing the string.
 
 This library contains a large number of procedures, but they follow
 a consistent naming scheme, and are consistent with the conventions
-developed in SRFI-1. The names are composed of smaller lexemes
+developed in SRFI 1. The names are composed of smaller lexemes
 in a regular way that exposes the structure and relationships between the
 procedures. This should help the programmer to recall or reconstitute the name
 of the particular procedure that he needs when writing his own code. In
@@ -237,7 +345,7 @@ particular
     - Procedures whose names end in "-ci" are case-insensitive variants.
 
     - Procedures whose names end in "!" are side-effecting variants.
-      These procedures generally return an unspecified value.
+      What values these procedures return is usually not specified.
 
     - The order of common parameters is consistent across the
       different procedures.
@@ -265,13 +373,13 @@ storage is mutated, then all strings sharing that storage will show the
 change.  However, shared-text substrings are not a common feature; most Scheme
 implementations do not provide them.
 
-SRFI-13 takes a middle ground with respect to shared-text substrings.  In
+SRFI 13 takes a middle ground with respect to shared-text substrings.  In
 particular, a Scheme implementation does not need to have shared-text
 substrings in order to implement this SRFI.
 
-There is an additional form of storage sharing enabled by some SRFI-13
+There is an additional form of storage sharing enabled by some SRFI 13
 procedures, even without the benefit of shared-text substrings. In 
-some cases, some SRFI-13 routines are allowed to return as a result one
+some cases, some SRFI 13 routines are allowed to return as a result one
 of the strings that was passed in as a parameter. For example, when
 constructing a substring with the SUBSTRING/SHARED procedure, if the
 requested substring is the entire string, the procedure is permitted
@@ -283,14 +391,14 @@ whereas the R5RS SUBSTRING function is required to allocate a fresh copy
 
    (eq? s (substring s 0 (string-length s))) => false.
 
-In keeping with SRFI-13's general approach to sharing, compliant
+In keeping with SRFI 13's general approach to sharing, compliant
 implementations are allowed, but not required, to provide this kind of
 sharing. Hence, procedures may not *rely* upon sharing in these cases.
 
 Most procedures that permit results to share storage with inputs have
-equivalent procedures that require copying. If an application wishes to be
-sure a new, fresh string is allocated, then these "pure" procedures should be
-used.
+equivalent procedures that require allocating fresh storage for results. 
+If an application wishes to be sure a new, fresh string is allocated, then 
+these "pure" procedures should be used.
 	Fresh copy guaranteed		Sharing permitted
 	---------------------		-----------------
 	string-copy			substring/shared
@@ -298,8 +406,7 @@ used.
 	string-copy			string-drop string-drop-right
 	string-concatenate		string-concatenate/shared
 	string-append			string-append/shared
-	reverse-string-concatenate	reverse-string-concatenate/shared
-
+	string-concatenate-reverse	string-concatenate-reverse/shared
 					string-pad string-pad-right
 					string-trim string-trim-right string-trim-both
 					string-filter string-delete
@@ -309,7 +416,7 @@ efficient code *without* shared-text substrings. You can write efficient code
 that works by passing around start/end ranges indexing into a string instead
 of simply building a shared-text substring. The API would be much simpler
 without this consideration -- if we had cheap shared-text substrings, all the
-start/end index parameters would vanish. However, since SRFI-13 does not
+start/end index parameters would vanish. However, since SRFI 13 does not
 require implementations to provide shared-text substrings, the extended
 API is provided.
 
@@ -330,7 +437,7 @@ The 8 procedures provided exactly as documented in the reports are
     string-append
     list->string
 
-The eleven functions not included are the R4RS string-comparison functions:
+The eleven functions not included are
     string=?  string-ci=?
     string<?  string-ci<?
     string>?  string-ci>?
@@ -395,114 +502,15 @@ This SRFI recommends the following
     possibly-multi-character strings instead of single characters. These case
     mappings need not be locale- or context-sensitive.
 
-  These recommendations are not a part of the SRFI-13 spec. Note also that
+  These recommendations are not a part of the SRFI 13 spec. Note also that
   requiring a Unicode/Latin-1/ASCII interface to integer/char mapping
   functions does not imply anything about the actual underlying encodings of
   characters.
 
 
 -------------------------------------------------------------------------------
-* Procedure index
------------------
-
-Here is a list of the procedures provided by the string-lib 
-and string-lib-internals packages. "#" marks R5RS procedures; "+" 
-marks extended R5RS procedures.
-
-Predicates
-#   string?
-    string-null? 
-    string-every string-any
-
-Constructors
-#   make-string
-#   string
-    string-tabulate
-
-List & string conversion
-+   string->list 
-#   list->string
-    reverse-list->string
-    string-join
-
-Selection
-#   string-length
-#   string-ref
-+   string-copy
-    substring/shared
-    string-copy! 
-    string-take string-take-right
-    string-drop string-drop-right
-    string-pad  string-pad-right 
-    string-trim string-trim-right string-trim-both 
-
-Modification
-#   string-set!
-+   string-fill! 
-
-Comparison
-    string-compare string-compare-ci
-    string<>     string=    string<    string>    string<=    string>=
-    string-ci<>  string-ci= string-ci< string-ci> string-ci<= string-ci>=
-    string-hash  string-hash-ci
-
-Prefixes & suffixes
-    string-prefix-length    string-suffix-length
-    string-prefix-length-ci string-suffix-length-ci
-
-    string-prefix?    string-suffix?    
-    string-prefix-ci? string-suffix-ci? 
-
-Searching
-    string-index string-index-right
-    string-skip  string-skip-right 
-    string-count 
-    string-contains string-contains-ci
-
-Alphabetic case mapping
-    string-titlecase  string-upcase  string-downcase
-    string-titlecase! string-upcase! string-downcase!
-
-Reverse & append
-    string-reverse string-reverse!
-#   string-append
-    string-concatenate
-    string-concatenate/shared string-append/shared
-    reverse-string-concatenate reverse-string-concatenate/shared
-
-Fold, unfold & map
-    string-map      string-map!
-    string-fold     string-fold-right
-    string-unfold   string-unfold-right
-    string-for-each
-
-Replicate & rotate
-    xsubstring 
-    string-xcopy!
-
-Miscellaneous: insertion, parsing
-    string-replace
-    string-tokenize
-
-Filtering & deleting
-    string-filter string-delete 
-
-Low-level procedures
-    string-parse-start+end
-    string-parse-final-start+end
-    let-string-start+end
-
-    check-substring-spec
-    substring-spec-ok?
-
-    make-kmp-restart-vector kmp-step string-search-kmp
-
--------------------------------------------------------------------------------
-* Specification
----------------
-
-** Procedure specifications
-===========================
+* Procedure Specification
+-------------------------
 
 In the following procedure specifications:
     - An S parameter is a string.
@@ -525,7 +533,7 @@ In the following procedure specifications:
       membership test; if it is a procedure, it is applied to the 
       characters as a test predicate.
 
-    - An I parameter is an exact non-negative integers specifying an index
+    - An I parameter is an exact non-negative integer specifying an index
       into a string.
     
     - LEN and NCHARS parameters are exact non-negative integers specifying a
@@ -536,6 +544,12 @@ In the following procedure specifications:
 Passing values to procedures with these parameters that do not satisfy these
 types is an error.
 
+If a procedure is said to return "unspecified," this means that nothing at all
+is said about what the procedure returns, not even the number of return
+values. Such a procedure is not even required to be consistent from call to
+call in the nature or number of its return values. It is specifically permitted
+for such a procedure to return zero values, e.g., by calling (VALUES).
+
 
 ** Main procedures
 ==================
@@ -544,7 +558,7 @@ In a Scheme system that has a module or package system, these procedures
 should be contained in a module named "string-lib".
 
 *** Predicates
-===============
+==============
 
 string? obj -> boolean						    	R5RS
   Returns #t if OBJ is a string, otherwise returns #f.
@@ -552,27 +566,41 @@ string? obj -> boolean						    	R5RS
 string-null? s -> bool
     Is S the empty string?
 
-string-every pred s [start end] -> boolean
-string-any   pred s [start end] -> value
-    Checks to see if predicate PRED is true of every / any character in S,
+string-every char/char-set/pred s [start end] -> value
+string-any   char/char-set/pred s [start end] -> value
+    Checks to see if the given criteria is true of every / any character in S,
     proceeding from left (index START) to right (index END).
 
-    These procedures are witness-generating.
-      - If STRING-ANY returns true, the returned true value is the one produced
-        by the application of PRED.
-      - If STRING-EVERY returns true, the returned true value is the one
-        produced by the final application of PRED to S[END]. If STRING-EVERY
-	is applied to an empty sequence of characters, it simply returns #T.
+    If CHAR/CHAR-SET/PRED is a character, it is tested for equality with
+    the elements of S.
 
-    If STRING-EVERY or STRING-ANY apply PRED to the final element of the
-    selected sequence (i.e., S[END]), that final application is a tail
-    call.
+    If CHAR/CHAR-SET/PRED is a character set, the elements of S are tested
+    for membership in the set.
+
+    If CHAR/CHAR-SET/PRED is a predicate procedure, it is applied to the 
+    elements of S. The predicate is "witness-generating:"
+    
+      - If STRING-ANY returns true, the returned true value is the one produced
+        by the application of the predicate.
+    
+      - If STRING-EVERY returns true, the returned true value is the one
+        produced by the final application of the predicate to S[END]. 
+        If STRING-EVERY is applied to an empty sequence of characters, 
+        it simply returns #T.
+
+      If STRING-EVERY or STRING-ANY apply the predicate to the final element
+      of the selected sequence (i.e., S[END-1]), that final application is a
+      tail call.
+
+    The names of these procedures do not end with a question mark -- this is to
+    indicate that, in the predicate case, they do not return a simple boolean
+    (#T or #F), but a general value.
 
 
 *** Constructors
 ================
 
-make-string len [char] -> string						R5RS
+make-string len [char] -> string					R5RS
   MAKE-STRING returns a newly allocated string of length LEN.  If
   CHAR is given, then all elements of the string are initialized
   to CHAR, otherwise the contents of the string are unspecified.
@@ -591,7 +619,7 @@ string-tabulate proc len -> string
 ============================
 
 string->list s [start end] -> char-list					R5RS+
-list->string char-list -> string
+list->string char-list -> string					R5RS
     STRING->LIST returns a newly allocated list of the characters
     that make up the given string.  LIST->STRING returns a newly
     allocated string formed from the characters in the list CHAR-LIST,
@@ -606,10 +634,10 @@ reverse-list->string char-list -> string
 	(reverse-list->string '(#\a #\B #\c)) -> "cBa"
     This is a common idiom in the epilog of string-processing loops
     that accumulate an answer in a reverse-order list. (See also
-    REVERSE-STRING-CONCATENATE for the "chunked" variant.)
+    STRING-CONCATENATE-REVERSE for the "chunked" variant.)
 
 string-join string-list [delimiter grammar] -> string
-    This procedure is a simple unparser---it pastes strings together using
+    This procedure is a simple unparser --- it pastes strings together using
     the delimiter string. 
 
     The GRAMMAR argument is a symbol that determines how the delimiter is
@@ -633,16 +661,16 @@ string-join string-list [delimiter grammar] -> string
     The delimiter is the string used to delimit elements; it defaults to
     a single space " ".
 
-        (join-strings '("foo" "bar" "baz") ":")         => "foo:bar:baz"
-        (join-strings '("foo" "bar" "baz") ":" 'suffix) => "foo:bar:baz:"
+        (string-join '("foo" "bar" "baz") ":")         => "foo:bar:baz"
+        (string-join '("foo" "bar" "baz") ":" 'suffix) => "foo:bar:baz:"
 
 	;; Infix grammar is ambiguous wrt empty list vs. empty string,
-	(join-strings '()   ":") => ""
-	(join-strings '("") ":") => ""
+	(string-join '()   ":") => ""
+	(string-join '("") ":") => ""
 
 	;; but suffix & prefix grammars are not.
-	(join-strings '()   ":" 'suffix) => ""
-	(join-strings '("") ":" 'suffix) => ":"
+	(string-join '()   ":" 'suffix) => ""
+	(string-join '("") ":" 'suffix) => ":"
 
 
 *** Selection
@@ -736,7 +764,7 @@ string-trim-both  s [char/char-set/pred start end] -> string
 	  to the characters in S; a character causing it to return true
 	  is skipped.
     CHAR/CHAR/SET-PRED defaults to the character set CHAR-SET:WHITESPACE
-    defined in SRFI-14.
+    defined in SRFI 14.
 
     If no trimming occurs, these functions may return either S or a copy of S;
     in some implementations, proper substrings may share memory with S.
@@ -750,9 +778,8 @@ string-trim-both  s [char/char-set/pred start end] -> string
 
 string-set! s i char -> unspecified					R5RS
   I must be a valid index of S.  STRING-SET! stores CHAR in
-  element I of S and returns an unspecified value. Constant
-  string literals appearing in code are immutable; it is an
-  error to use them in a STRING-SET!.
+  element I of S. Constant string literals appearing in code are 
+  immutable; it is an error to use them in a STRING-SET!.
 
   (define (f) (make-string 3 #\*))
   (define (g) "***")
@@ -763,7 +790,7 @@ string-set! s i char -> unspecified					R5RS
                #\?)                      ==>  *error*
 
 string-fill! s char [start end] -> unspecified				R5RS+
-    Stores CHAR in every element of S and returns an unspecified value.
+    Stores CHAR in every element of S.
 
     STRING-FILL is extended from the R5RS definition to take optional
     START/END arguments.
@@ -847,7 +874,7 @@ string-hash-ci s [bound start end] -> integer
     If BOUND is either false or not given, the implementation may use
     an implementation-specific default value, which might be chosen, 
     for instance, to map all strings into the range of integers that
-    can be efficiently represented.
+    can be efficiently represented with a single machine word.
 
     The optional start/end indices restrict the hash operation to the 
     indicated substring of S.
@@ -878,8 +905,8 @@ string-suffix-length    s1 s2 [start1 end1 start2 end2] -> integer
 string-prefix-length-ci s1 s2 [start1 end1 start2 end2] -> integer
 string-suffix-length-ci s1 s2 [start1 end1 start2 end2] -> integer
     Return the length of the longest common prefix/suffix of the two strings.
-    This is equivalent to the "mismatch index" for the strings (modulo
-    the STARTi index offsets).
+    For prefixes, this is equivalent to the "mismatch index" for the strings
+    (modulo the STARTi index offsets).
 
     The optional start/end indices restrict the comparison to the indicated
     substrings of S1 and S2.
@@ -939,7 +966,7 @@ string-skip-right  s char/char-set/pred [start end] -> integer or #f
     whereas when searching left-to-right, the first index considered is
 	  START
     That is, the start/end indices describe a same half-open interval
-    [start,end) in these procedures that they do in all the other SRFI-13
+    [start,end) in these procedures that they do in all the other SRFI 13
     procedures.
 
     The skip functions are similar, but use the complement of the criteria:
@@ -968,8 +995,6 @@ string-contains-ci s1 s2 [start1 end1 start2 end2] -> integer or false
     The returned index is in the range [start1,end1). A successful match
     must lie entirely in the [start1,end1) range of S1.
 
-    The reference implementation uses the Knuth-Morris-Pratt algorithm.
-
     (string-contains "eek -- what a geek." "ee"
                      12 18) ; Searches "a geek"
         => 15
@@ -984,6 +1009,9 @@ string-contains-ci s1 s2 [start1 end1 start2 end2] -> integer or false
 
     Comparison is simply done on individual code-points of the string. 
 
+    The names of these procedures do not end with a question mark -- this is to
+    indicate that they do not return a simple boolean (#T or #F). Rather,
+    they return either false (#F) or an exact non-negative integer.
 
 *** Alphabetic case mapping
 ===========================
@@ -1036,11 +1064,18 @@ string-reverse  s [start end] -> string
 string-reverse! s [start end] -> unspecified
     Reverse the string.
 
+    STRING-REVERSE returns the result string and does not alter its S
+    parameter. STRING-REVERSE! is the in-place side-effecting variant.
+
     (string-reverse "able was I ere I saw elba") 
         => "able was I ere I saw elba"
 
-    STRING-REVERSE returns the result string and does not alter its S
-    parameter. STRING-REVERSE! is the in-place side-effecting variant.
+    ;;; In-place rotate-left, the Bell Labs way:
+    (lambda (s i)
+      (let ((i (modulo i (string-length s))))
+        (string-reverse! s 0 i)
+        (string-reverse! s i)
+        (string-reverse! s)))
 
     Unicode note: Reversing a string simply reverses the sequence of
     code-points it contains. So a zero-width accent character A coming *after*
@@ -1067,13 +1102,14 @@ string-append/shared s1 ... -> string
     one argument, it may return exactly that argument, whereas STRING-APPEND
     is required to allocate a fresh string.
 
-reverse-string-concatenate string-list [final-string end] -> string
-reverse-string-concatenate/shared string-list [final-string end] -> string
-    With no optional arguments, these two functions are equivalent to
+string-concatenate-reverse        string-list [final-string end] -> string
+string-concatenate-reverse/shared string-list [final-string end] -> string
+    With no optional arguments, these functions are equivalent to
         (string-concatenate (reverse string-list))
     and
         (string-concatenate/shared (reverse string-list))
-    
+    respectively.
+
     If the optional argument FINAL-STRING is specified, it is consed
     onto the beginning of STRING-LIST before performing the list-reverse 
     and string-concatenate operations.
@@ -1083,10 +1119,10 @@ reverse-string-concatenate/shared string-list [final-string end] -> string
         (string-concatenate (reverse (cons (substring/shared final-string 0 end)
                                            string-list)))
     E.g.
-	(reverse-string-concatenate '("must be " "Hello, I") "going.XXXX" 6))
+	(string-concatenate-reverse '(" must be" "Hello, I") " going.XXXX" 7)
           => "Hello, I must be going."
 
-    These procedures are useful in the construction of procedures that 
+    This procedure is useful in the construction of procedures that 
     accumulate character data into lists of string buffers, and wish to
     convert the accumulated data into a single string when done.
 
@@ -1132,7 +1168,7 @@ string-fold-right kons knil s [start end] -> value
 
 	;;; Count the number of lower-case characters in a string.
 	(string-fold (lambda (c count)
-                       (if (char-set-contains? char-set:lower c)
+                       (if (char-lower-case? c)
                            (+ count 1)
                            count))
                      0
@@ -1216,7 +1252,7 @@ string-unfold p f g seed [base make-final] -> string
     This combinator sometimes is called an "anamorphism."
 
     Note: implementations should take care that runtime stack limits do not
-    cause over when constructing large (e.g., megabyte) strings with
+    cause overflow when constructing large (e.g., megabyte) strings with
     STRING-UNFOLD.
 
 
@@ -1265,7 +1301,7 @@ string-unfold-right p f g seed [base make-final] -> string
     or the value produced by MAKE-FINAL.
 
     Note: implementations should take care that runtime stack limits do not
-    cause over when constructing large (e.g., megabyte) strings with
+    cause overflow when constructing large (e.g., megabyte) strings with
     STRING-UNFOLD-RIGHT.
 
 
@@ -1273,6 +1309,20 @@ string-for-each  proc s [start end] -> unspecified
     Apply PROC to each character in S.
     STRING-FOR-EACH is required to iterate from START to END
     in increasing order.
+
+string-for-each-index proc s [start end] -> unspecified
+    Apply PROC to each index of S, in order. The optional START/END
+    pairs restrict the endpoints of the loop. This is simply a
+    method of looping over a string that is guaranteed to be safe
+    and correct.
+
+    Example:
+        (let* ((len (string-length s))
+               (ans (make-string len)))
+          (string-for-each-index
+              (lambda (i) (string-set! ans (- len i) (string-ref s i)))
+              s)
+          ans)
 
 
 *** Replicate & rotate
@@ -1318,7 +1368,7 @@ string-xcopy! target tstart s sfrom [sto start end] -> unspecified
 *** Miscellaneous: insertion, parsing
 =====================================
 
-string-replace s1 s2 [start1 end1 start2 end2] -> string
+string-replace s1 s2 start1 end1 [start2 end2] -> string
     Returns
 	(string-append (substring/shared s1 0 start1)
                        (substring/shared s2 start2 end2)
@@ -1334,10 +1384,10 @@ string-replace s1 s2 [start1 end1 start2 end2] -> string
                         "another miserable perl drone" 4 7 8 22 ) =>
             "The miserable perl programmer endured daily ridicule."
 
-	(string-replace "It's easy to code it up in Scheme." "lots of fun " 5 9) =>
+	(string-replace "It's easy to code it up in Scheme." "lots of fun" 5 9) =>
             "It's lots of fun to code it up in Scheme."
 
-	(define (string-insert s i t) (string-replace s t i i)
+	(define (string-insert s i t) (string-replace s t i i))
 
 	(string-insert "It's easy to code it up in Scheme." 5 "really ") =>
             "It's really easy to code it up in Scheme."
@@ -1348,7 +1398,7 @@ string-tokenize s [token-set start end] -> list
    TOKEN-SET.
 
        - TOKEN-SET defaults to CHAR-SET:GRAPHIC 
-         (see SRFI-14 for more on character sets and CHAR-SET:GRAPHIC).
+         (see SRFI 14 for more on character sets and CHAR-SET:GRAPHIC).
        - If START or START/END indices are provided, they restrict 
          STRING-TOKENIZE to operating on the indicated substring of S.
 
@@ -1382,7 +1432,7 @@ The following procedures are useful for writing other string-processing
 functions. In a Scheme system that has a module or package system, these
 procedures should be contained in a module named "string-lib-internals".
 
-*** START/END optional argument parsing & checking utilities
+*** START/END optional-argument parsing & checking utilities
 ============================================================
 
 string-parse-start+end proc s args -> [rest start end]
@@ -1404,26 +1454,38 @@ string-parse-final-start+end proc s args -> [start end]
     an error condition is raised. It may be used when the optional START/END 
     parameters are final arguments to the procedure.
 
-let-string-start+end (start end) proc s-exp args-exp body ...		 Syntax
-    Syntactic sugar for an application of STRING-PARSE-FINAL-START+END.
-    A use is equivalent to
+    Note that in all cases, these functions ensure that S is a string
+    (by necessity, since all cases apply STRING-LENGTH to S either to
+    default END or to bounds-check it).
+
+let-string-start+end (start end [rest]) proc-exp s-exp args-exp body ... Syntax
+    Syntactic sugar for an application of STRING-PARSE-START+END or
+    STRING-PARSE-FINAL-START+END.
+      
+    If a REST variable is given, the form is equivalent to
       (CALL-WITH-VALUES
-          (LAMBDA () (STRING-PARSE-FINAL-START+END proc s-exp args-exp))
-        (LAMBDA (start end) body ...))
+          (LAMBDA () (STRING-PARSE-START+END proc-exp s-exp args-exp))
+        (LAMBDA (rest start end) body ...))
         
+    If no REST variable is given, the form is equivalent to
+      (CALL-WITH-VALUES
+          (LAMBDA () (STRING-PARSE-FINAL-START+END proc-exp s-exp args-exp))
+        (LAMBDA (start end) body ...))
+
 check-substring-spec proc s start end -> unspecified
 substring-spec-ok? s start end -> boolean
-    Check values START and END to ensure they specify a valid substring 
-    in S. This means that START and END are exact integers, and 
+    Check values S, START and END to ensure they specify a valid substring.
+    This means that S is a string, START and END are exact integers, and 
 	0 <= START <= END <= (STRING-LENGTH S)
 
-    If the start/end indices are not proper
+    If the values are not proper
         - CHECK-SUBSTRING-SPEC raises an error condition. PROC is used
-          as part of error condition, and should be the procedure whose 
-          START/END parameters we are checking.
+          as part of the error condition, and should be the procedure whose 
+          parameters we are checking.
 	- SUBSTRING-SPEC-OK? returns false.
-    Otherwise, CHECK-SUBSTRING-SPEC returns some unspecific value, and
-    SUBSTRING-SPEC-OK? returns true.
+    Otherwise, SUBSTRING-SPEC-OK? returns true, and CHECK-SUBSTRING-SPEC
+    simply returns (what it returns is not specified).
+
 
 
 *** Knuth-Morris-Pratt searching
@@ -1446,12 +1508,13 @@ require the construction of a table with an entry for every possible
 character -- which can be prohibitively expensive in a 16- or 32-bit character
 representation.
 
-make-kmp-restart-vector c= s [start end] -> vector
+make-kmp-restart-vector s [c= start end] -> vector
     Build a Knuth-Morris-Pratt "restart vector," which is useful for quickly
     searching character sequences for the occurrence of string S (or the
     substring of S demarcated by the optional START/END parameters, if
     provided). C= is a character-equality function used to construct the
-    restart vector; it is usefully CHAR=? or CHAR-CI=?.
+    restart vector. It defaults to CHAR=?; use CHAR-CI=? instead for
+    case-folded string search.
     
     The definition of the restart vector RV for string S is:
     If we have matched chars 0..i-1 of S against some search string SS, and
@@ -1473,7 +1536,7 @@ make-kmp-restart-vector c= s [start end] -> vector
 
     (define (find-substring pattern source start end)
       (let ((plen (string-length pattern))
-	    (rv (make-kmp-restart-vector pattern char=?)))
+	    (rv (make-kmp-restart-vector pattern)))
 
 	;; The search loop. SJ & PJ are redundant state.
 	(let lp ((si start) (pi 0)
@@ -1493,27 +1556,40 @@ make-kmp-restart-vector c= s [start end] -> vector
 			     (lp (+ si 1)  0   (- sj 1)  plen)	; Punt.
 			     (lp si        pi  sj        (- plen pi))))))))))
 
-kmp-step pat rv c= c i -> bool or integer
+    The optional START/END parameters restrict the restart vector to the
+    indicated substring of PAT; RV is END - START elements long. If START > 0,
+    then RV is offset by START elements from PAT. That is, RV[I] describes
+    pattern element PAT[I + START]. Elements of RV are themselves indices
+    that range just over [0, END-START), *not* [START, END).
+
+    Rationale: the actual value of RV is "position independent" -- it
+    does not depend on where in the PAT string the pattern occurs, but
+    only on the actual characters comprising the pattern.
+
+kmp-step pat rv c i c= p-start -> bool or integer
     This function encapsulates the work performed by one step of the
     KMP string search; it can be used to scan strings, input ports,
     or other on-line character sources for fixed strings. 
 
     PAT is the non-empty string specifying the text for which we are searching.
-    RV is the Knuth-Morris-Pratt restart vector for PAT, as constructed
-    by MAKE-KMP-RESTART-VECTOR. C= is a character-equality function;
-    typically CHAR=? or CHAR-CI=?.
+    RV is the Knuth-Morris-Pratt restart vector for the pattern, as constructed
+    by MAKE-KMP-RESTART-VECTOR. The pattern begins at PAT[P-START], and is
+    (STRING-LENGTH RV) characters long.
 
-    Suppose PAT is N characters in length. I is a legal index into PAT; it
-    specifies how much of the pattern we have already matched. C is the next
-    character in the input stream. KMP-STEP returns the new I value -- that
-    is, how much of the pattern we have matched, including character C.
-    When I reaches N, the entire pattern has been matched.
+    C= is a character-equality function; typically CHAR=? or CHAR-CI=?.
+
+    Suppose the pattern is N characters in length: PAT[P-START, P-START + N).
+    We have already matched I characters: PAT[P-START, P-START + I). (P-START
+    is typically zero.) C is the next character in the input stream. KMP-STEP
+    returns the new I value -- that is, how much of the pattern we have
+    matched, *including* character C. When I reaches N, the entire pattern has
+    been matched.
 
     Thus a typical search loop looks like this:
         (let lp ((i 0))
 	  (or (= i n)				; Win -- #t
 	      (and (not (end-of-stream))	; Lose -- #f
-	           (lp (kmp-step pat rv char=? (get-next-character) i)))))
+	           (lp (kmp-step pat rv (get-next-character) i char=? 0)))))
 
     Example:
        ;; Read chars from IPORT until we find string PAT or hit EOF.
@@ -1524,33 +1600,40 @@ kmp-step pat rv c= c i -> bool or integer
              (if (= i patlen) nchars			; Win -- nchars skipped
                  (let ((c (read-char iport)))
                    (if (eof-object? c) c		; Fail -- EOF
-                       (lp (kmp-step pat rv char=? c i) ; Continue
+                       (lp (kmp-step pat rv c i char=? 0) ; Continue
                            (+ nchars 1))))))))
 
     This procedure could be defined as follows:
 
-    (define (kmp-step pat rv c= c i)
-      (let ((len (vector-length rv)))
-	(let lp ((i i))
-	  (if (c= c (string-ref pat i))		; Match =>
-	      (+ i 1)				;   Done.
-	      (let ((i (vector-ref rv i)))	; Back up in PAT.
-	        (if (= i -1) 0			; Can't back up further.
-		    (lp i)))))))		; Keep trying for match.
+    (define (kmp-step pat rv c i c= p-start)
+      (let lp ((i i))
+        (if (c= c (string-ref pat (+ i p-start)))     ; Match =>
+            (+ i 1)                                   ;   Done.
+            (let ((i (vector-ref rv i)))              ; Back up in PAT.
+              (if (= i -1) 0                          ; Can't back up more.
+                  (lp i)))))))                        ; Keep going.
 
-string-search-kmp pat rv c= i s [start end] -> integer
-    Applies KMP-STEP across S; optional START/END bounds parameters
-    restrict search to substring of S.
+    Rationale: this procedure takes no optional arguments because it
+    is intended as an inner-loop primitive and we do not want any
+    run-time penalty for optional-argument parsing and defaulting,
+    nor do we wish barriers to procedure integration/inlining.
 
-    I is an integer index into PAT (that is, 0 <= i < (string-length PAT))
-    indicating how much of PAT has already been matched. PAT is non-empty --
-    that is, (string-length PAT) > 0.
+string-kmp-partial-search pat rv s i [c= p-start s-start s-end] -> integer
+    Applies KMP-STEP across S; optional S-START/S-END bounds parameters 
+    restrict search to a substring of S. The pattern is (VECTOR-LENGTH RV)
+    characters long; optional P-START index indicates non-zero start of 
+    pattern in PAT.
+
+    Suppose PLEN = (VECTOR-LENGTH RV) is the length of the pattern.
+    I is an integer index into the pattern (that is, 0 <= I < PLEN)
+    indicating how much of the pattern has already been matched. 
+    (This means the pattern must be non-empty -- PLEN > 0.)
 
     - On success, returns -J, where J is the index in S bounding
       the *end* of the pattern -- e.g., a value that could be used as 
       the END parameter in a call to SUBSTRING.
 
-    - On continue, returns the current search state (an index into PAT)
+    - On continue, returns the current search state I' (an index into RV)
       when the search reached the end of the string. This is a non-negative
       integer.
 
@@ -1571,46 +1654,69 @@ string-search-kmp pat rv c= i s [start end] -> integer
         (let lp ((i 0))
 	  (and (not (end-of-data?))		; Lose -- return #f.
                (let* ((buf (get-next-chunk))	; Get or fill up the buffer.
-                      (i (string-search-kmp pat rv char= i buf)))
+                      (i (string-kmp-partial-search pat rv buf i)))
                  (if (< i 0) (- i) 		; Win -- return end index.
                      (lp i)))))			; Keep looking.
 
     Modulo start/end optional-argument parsing, this procedure could
     be defined as follows:
-        (define (string-search-kmp pat rv c= i s start end)
+        (define (string-kmp-partial-search pat rv s i c= p-start s-start s-end)
 	  (let ((patlen (vector-length rv)))
-            (let lp ((si start)	; An index into S.
-	             (pi i))	; An index into PAT.
-	      (cond ((= pi patlen) (- si))	; Win.
-                    ((= si end) pi)		; Ran off the end.
+            (let lp ((si s-start)	; An index into S.
+	             (vi i))		; An index into RV.
+	      (cond ((= vi patlen) (- si))	; Win.
+                    ((= si end) vi)		; Ran off the end.
                     (else (lp (+ si 1)		; Match s[si] & loop.
-                              (kmp-step pat rv c= (string-ref s si) pi)))))))
+                              (kmp-step pat rv (string-ref s si)
+                                        vi c= p-start)))))))
 
 
 -------------------------------------------------------------------------------
-* Reference Implementation
+* Reference implementation
 --------------------------
 
-A reference implementation has been written, but is not in complete
-compliance with some late changes to the SRFI draft. It will be available
-soon.
+This SRFI comes with a reference implementation. It can be found at:
+
+http://srfi.schemers.org/srfi-13/srfi-13.scm
+
+I have placed this source on the Net with an unencumbered, "open"
+copyright. The prefix/suffix and comparison routines in this code had
+(extremely distant) origins in MIT Scheme's string lib, and was
+substantially reworked by myself. Being derived from that code, is
+covered by the MIT Scheme copyright, which is a generic BSD-style
+open-source copyright. See the source file for details.
+
+The KMP string-search code was influenced by implementations written by
+Stephen Bevan, Brian Dehneyer and Will Fitzgerald. However, this version was
+written from scratch by myself.
+
+The remainder of the code was written by myself for scsh or for this SRFI; I
+have placed this code under the scsh copyright, which is also a generic
+BSD-style open-source copyright.
+
+The code is written for portability and should be straightforward to port to
+any Scheme. The source comments contains detailed notes describing the non-R5RS
+dependencies.
+
+The library is written for clarity and well-commented. It is also
+written for efficiency. Fast paths are provided for common cases.
+This is not to say that the implementation can't be tuned up for a
+specific Scheme implementation. There are notes in the comments
+addressing ways implementors can tune the reference implementation for
+performance.
 
 -------------------------------------------------------------------------------
 * References & links
 --------------------
 
-This document, in HTML:
-    http://srfi.schemers.org/srfi-13/srfi-13.html
-
-This document, in simple text format:
-    http://srfi.schemers.org/srfi-13/srfi-13.txt
-    ftp://ftp.ai.mit.edu/people/shivers/srfi/13/srfi-13.txt (draft)
+This SRFI:
+    http://srfi.schemers.org/srfi-13/
 
 Source code for the reference implementation:
-    <not yet available>
-
-Archive of SRFI-13 discussion-list email:
-    http://srfi.schemers.org/srfi-13/mail-archive/maillist.html
+    Source:
+      http://srfi.schemers.org/srfi-13/srfi-13.scm
+    Scheme 48 module specification, with typings:
+      http://srfi.schemers.org/srfi-13/srfi-13-s48-module.scm
 
 SRFI web site:
     http://srfi.schemers.org/
@@ -1618,7 +1724,7 @@ SRFI web site:
 [char-set]
     http://srfi.schemers.org/srfi-14/
 
-    The SRFI-14 char-set library defines a character-set data type,
+    The SRFI 14 char-set library defines a character-set data type,
     which is used by some procedures in this library.
 
 [CommonLisp]
