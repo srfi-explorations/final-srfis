@@ -1,0 +1,284 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN""http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<body>
+<head>
+<title>SRFI 36: I/O Conditions</title>
+</head>
+
+<body>
+<H1>Title</H1>
+
+I/O Conditions
+
+<H1>Author</H1>
+
+Michael Sperber
+
+<h1>Abstract</h1>
+<p>This SRFI specifies a set of condition types for I/O errors. The condition types are defined in terms of <a href="http://srfi.schemers.org/srfi-35/">SRFI 35</a>
+. Moreover, this SRFI requires a Scheme system implementing it to raise exceptions in the sense of <a href="http://srfi.schemers.org/srfi-34/">SRFI 34</a>
+ for errors occurring during the execution of the <a href="http://www.schemers.org/Documents/Standards/R5RS/">R5RS</a>
+ <a href="http://www.schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-9.html#%_sec_6.6">I/O operations</a>
+.</p>
+<h1>Rationale</h1>
+<p>Currently, the I/O operations specified by R5RS are of only limited use to the practical programmers, as they may fail in a variety of unpredictable ways. <a href="http://www.schemers.org/Documents/Standards/R5RS/">R5RS</a>
+ requires the operations to signal an error if they fail.  This means that the program cannot react to failures at all, even though there is no way to prevent them beforehand, and meaningful recovery may be possible.</p>
+<p>Therefore, this SRFI requires a Scheme system to communicate I/O failures to the program via the <a href="http://srfi.schemers.org/srfi-34/">SRFI 34</a>
+ mechanism.  Moreover, it requires the Scheme system to communicate the nature of the problem through a condition belonging to one of the condition types specified here.  The hierarchy is fairly fine-grained to allow for the precise communication of the nature of a problem.</p>
+<h1>Specification</h1>
+<h2>I/O Condition Types</h2>
+<p>This section specifies a set of I/O-related condition types via their definitions in terms of <a href="http://srfi.schemers.org/srfi-35/">SRFI 35</a>
+along with explanations of their intended meanings.</p>
+<h3>Hierarchy</h3>
+<p>The following list depicts the I/O condition hierarchy; more detailed explanations of the condition types follow.</p>
+<ul><li><code>&amp;error</code>
+<br>
+<ul><li><code>&amp;i/o-error</code>
+<br>
+<ul><li><code>&amp;i/o-port-error</code>
+ (has a <code>port</code>
+ field)<br>
+<ul><li><code>&amp;i/o-read-error</code>
+</li>
+<li><code>&amp;i/o-write-error</code>
+</li>
+<li><code>&amp;i/o-closed-error</code>
+</li>
+</ul>
+</li>
+</ul>
+<br>
+<ul><li><code>&amp;i/o-filename-error</code>
+ (has a <code>filename</code>
+ field)<br>
+<ul><li><code>&amp;i/o-malformed-filename-error</code>
+</li>
+<li><code>&amp;i/o-file-protection-error</code>
+<br>
+<ul><li><code>&amp;i/o-file-is-read-only-error</code>
+</li>
+</ul>
+</li>
+<li><code>&amp;i/o-file-already-exists-error</code>
+</li>
+<li><code>&amp;i/o-no-such-file-error</code>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<br>
+<ul><li><code>&amp;read-error</code>
+ (has various fields, see below)</li>
+</ul>
+</li>
+</ul>
+<h3>Intended Meanings</h3>
+<dl><dt><pre>(define-condition-type &amp;i/o-error &amp;error
+  i/o-error?)
+</pre></dt>
+<dd><p>This is a supertype for a set of more specific I/O errors.</p>
+</dd>
+<dt><p><pre>(define-condition-type &amp;i/o-port-error &amp;i/o-error
+  i/o-port-error?
+  (port i/o-error-port))
+</pre></p>
+</dt>
+<dd><p>This condition type specifies an I/O error that occurred during an operation on a port.  Condition objects belonging to this type must specify a port in the <code>port</code>
+ field.</p>
+</dd>
+<dt><p><pre>(define-condition-type &amp;i/o-read-error &amp;i/o-port-error
+  i/o-read-error?)
+</pre></p>
+</dt>
+<dd><p>This condition type specifies a read error that occurred during an operation on a port.</p>
+</dd>
+<dt><p><pre>(define-condition-type &amp;i/o-write-error &amp;i/o-port-error
+  i/o-write-error?)
+</pre></p>
+</dt>
+<dd><p>This condition type specifies a write error that occurred during an operation on a port.</p>
+</dd>
+<dt><p><pre>(define-condition-type &amp;i/o-closed-error &amp;i/o-port-error
+  i/o-port-error?)
+</pre></p>
+</dt>
+<dd><p>A condition of this type specifies that an operation tried to operate on a closed port under the assumption that it is open.</p>
+</dd>
+<dt><p><pre>(define-condition-type &amp;i/o-filename-error &amp;i/o-error
+  i/o-filename-error?
+  (filename i/o-error-filename))
+</pre></p>
+</dt>
+<dd><p>This condition type specifies an I/O error that occurred during an operation on a named file.  Condition objects belonging to this type must specify a file name in the <code>filename</code>
+ field.</p>
+</dd>
+<dt><p><pre>(define-condition-type &amp;i/o-malformed-filename-error &amp;i/o-filename-error
+  i/o-malformed-filename-error?)
+</pre></p>
+</dt>
+<dd>This condition type indicates that a file name had an invalid format.</dd>
+<dt><p><pre>(define-condition-type &amp;i/o-file-protection-error &amp;i/o-filename-error
+  i/o-file-protection-error?)
+</pre></p>
+</dt>
+<dd><p>A condition of this type specifies that an operation tried to operate on a named file with insufficient access rights.</p>
+</dd>
+<dt><p><pre>(define-condition-type &amp;i/o-file-is-read-only-error &amp;i/o-file-protection-error
+  i/o-file-is-read-only-error?)
+</pre></p>
+</dt>
+<dd><p>A condition of this type specifies that an operation tried to operate on a named read-only file under the assumption that it is writeable.</p>
+</dd>
+<dt><p><pre>(define-condition-type &amp;i/o-file-already-exists-error &amp;i/o-filename-error
+  i/o-file-already-exists-error?)
+</pre></p>
+</dt>
+<dd><p>A condition of this type specifies that an operation tried to operate on an existing named file under the assumption that it does not exist.</p>
+</dd>
+<dt><p><pre>(define-condition-type &amp;i/o-file-exists-not-error &amp;i/o-filename-error
+  i/o-file-exists-not-error?)
+</pre></p>
+</dt>
+<dd><p>A condition of this type specifies that an operation tried to operate on an non-existent named file under the assumption that it exists.</p>
+</dd>
+<dt><p><pre>(define-condition-type &amp;read-error &amp;error
+  read-error
+  (line read-error-line)
+  (column read-error-column)
+  (position read-error-position)
+  (span read-error-span))
+</pre></p>
+</dt>
+<dd><p>A condition of this type specifies that a parse error happened during a <code>read</code>
+ operation. The fields give more information about the nature of the error. However, a Scheme implementation is not obliged to actually provide any information in any of the fields: each field value may be <code>#f</code>
+ in that case.</p>
+<p>The field values that are not <code>#f</code>
+ must contain the following kinds of information:<ul><li><code>line</code>
+ is the line number of the parse error, starting from the beginning of the character sequence accessed through the port of the <code>read</code>
+operation.  The first line has the number 1.</li>
+<li><code>column</code>
+ is the column number of the parse error. The first column has the number 0.</li>
+<li><code>position</code>
+ is the character position of the beginning of the parse error, starting from the beginning of the character sequence accessed through the port of the <code>read</code>
+operation.  The first position is 1.</li>
+<li><code>span</code>
+ is the number of characters involved in the parse error.</li>
+</ul>
+</p>
+</dd>
+</dl>
+<h2>Standard Procedures</h2>
+<p>The procedures listed in the following table must raise conditions of the subtype(s) defined above as appropriate:</p>
+<table border="box" rules="all" cellpadding="5"><tr><td><code>call-with-input-file</code>
+</td>
+<td><code>&amp;i/o-filename-error</code>
+</td>
+</tr>
+<tr><td><code>call-with-output-file</code>
+</td>
+<td><code>&amp;i/o-filename-error</code>
+</td>
+</tr>
+<tr><td><code>with-input-from-file</code>
+</td>
+<td><code>&amp;i/o-filename-error</code>
+</td>
+</tr>
+<tr><td><code>with-output-to-file</code>
+</td>
+<td><code>&amp;i/o-filename-error</code>
+</td>
+</tr>
+<tr><td><code>output-input-file</code>
+</td>
+<td><code>&amp;i/o-filename-error</code>
+</td>
+</tr>
+<tr><td><code>output-output-file</code>
+</td>
+<td><code>&amp;i/o-filename-error</code>
+</td>
+</tr>
+<tr><td><code>close-output-port</code>
+</td>
+<td><code>&amp;i/o-write-error</code>
+</td>
+</tr>
+<tr><td><code>read</code>
+</td>
+<td><code>&amp;i/o-read-error</code>
+<br>
+<code>&amp;read-error</code>
+</td>
+</tr>
+<tr><td><code>read-char</code>
+</td>
+<td><code>&amp;i/o-read-error</code>
+</td>
+</tr>
+<tr><td><code>peek-char</code>
+</td>
+<td><code>&amp;i/o-read-error</code>
+</td>
+</tr>
+<tr><td><code>write</code>
+</td>
+<td><code>&amp;i/o-write-error</code>
+</td>
+</tr>
+<tr><td><code>display</code>
+</td>
+<td><code>&amp;i/o-write-error</code>
+</td>
+</tr>
+<tr><td><code>newline</code>
+</td>
+<td><code>&amp;i/o-write-error</code>
+</td>
+</tr>
+<tr><td><code>write-char</code>
+</td>
+<td><code>&amp;i/o-write-error</code>
+</td>
+</tr>
+</table>
+<p><code>Read</code>
+ must raise a <code>&amp;i/o-read-error</code>
+ condition if a read error occurs, and a <code>&amp;read-error</code>
+ condition if a parsing error occurs.</p>
+<h1>References</h1>
+<ul><li>The &quot;Primitive Exceptions&quot; section of the <i>PLT MzScheme: Language Manual</i>
+, available from <a href="http://download.plt-scheme.org/doc/">this page</a>
+.</li>
+</ul>
+</body><H1>Copyright</H1>
+Copyright (C) Michael Sperber (2002). All Rights Reserved. 
+<p>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<p>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<p>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+    <hr>
+    <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Francisco Solsona</a></address>
+</body></html>
