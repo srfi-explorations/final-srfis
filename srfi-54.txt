@@ -18,8 +18,10 @@ The FMT procedure provides a handy optional and functional interface.
 
 Specification
 
-(FMT <number> [[<width>] [<depth>] [<char>] [<radix>] [<plus>] [<exactness>]])
-(FMT <others> [[<width>] [<count>] [<char>] [<show>]]) 
+(FMT <number> [[<width>] [<depth>] [<char>] [<radix>] [<plus>] [<exactness>]
+	       [<space>] [<string>] ...])
+(FMT <others> [[<width>] [<count>] [<char>] [<show>] [<case>] [<space>]
+	       [<string>] ...]) 
 
      * <number> is any numeric expression.
      * <others> are any expressions except number.
@@ -38,25 +40,41 @@ Specification
      * <show> is a procedure: display, write
      * If <plus> is a procedure + and <number> is a positive number without a
        positive sign, the positive sign is prefixed to the <number>.
+     * <case> is a symbol: u (upcase), d (downcase), t (titlecase)
      * <exactness> is a symbol: e (exact), i (inexact)
+     * <space> is a list whose elements are non-negative exact integer, and
+       the number of elements of the list is 1 or 2.  The resulting string is
+       padded with space character on the left as much as the value of the
+       first element and on the right as much as th value of the second
+       element regardless of <width>.
+     * <string>s are strings that are appended to the resulting string.
 
 The order of optional arguments is ignored except that <depth> or <count> can
 be defined only after <width> is defined.
-       
+
 Examples
 
+(fmt 129.995)				"129.995"
+(fmt 129.995 '(2))			"  129.995"
+(fmt 129.995 '(1 1))			" 129.995 "
 (fmt 129.995 10 2)			"    130.00"
 (fmt 129.995 -10 2)			"130.00    "
 (fmt 129.995  10 #\0 2)			"0000130.00"
 (fmt 129.995 #\0 10 + 2)		"+000130.00"
 (fmt 129.995  #\0 10 + 2 'o 'e)		error
 (fmt 129.995  #\0 10 + 'o 'e)		"+000000202"
+(fmt 129.995  #\0 10 + 'o 'e '(1 2))	" +000202  "
+(fmt 129.995  '(1) #\0 10 + 'o 'e)	" +00000202"
 (fmt (sqrt -5) 10)			"0.0+2.23606797749979i"
 (fmt (sqrt -5) 10 2)			"0.00+2.24i"
 (fmt 3.14159e12 10 2 +)			"  +3.14e12"
 (fmt #x123 'o 10)			"       443"
 (fmt #x123 -10 3 + #\*)			"+291.000**"
 (fmt "string"  10)			"    string"
+(fmt "string"  '(1 1))			" string "
+(fmt "string" -10 '(1 2))		" string   "
+(fmt "The number is 3." 't 10)		"The Number Is 3."
+(fmt "The number is 3." 'u '(1))	" THE NUMBER IS 3."
 (fmt "string"  -10 write)		"\"string\"  "
 (fmt "string" 10 3)			"       str"
 (fmt "string" -10 3)			"str       "
@@ -71,60 +89,119 @@ Examples
 (fmt '(1 #\a "str" sym '(a)) 10 10)	"(1 a str s"
 (fmt #(1 #\a "str" sym '(a)) 10)	"#(1 a str sym (quote (a)))"
 (fmt #(1 #\a "str" sym '(a)) 10 write)	"#(1 #\\a \"str\" sym (quote (a)))"
+(fmt 123 "is an integer." + 0 2 '(0 1))	"+123.00 is an integer."
+(fmt "this" 't (fmt "is" '(1 1)) "A.")	"This is A."
 
 Implementation
 
-The implementation below requires SRFI-6 (Basic string ports), SRFI-8
-(Receive), SRFI-13 (String library), and SRFI-23 (Error reporting mechanism).
+The implementation below requires SRFI-1 (List library), SRFI-6 (Basic string
+ports), SRFI-8 (Receive), SRFI-13 (String library), and SRFI-23 (Error
+reporting mechanism).
 
 (define (opt-values rest-list . default-list)
   (let loop ((rest-list rest-list)
 	     (default-list default-list)
 	     (result '()))
     (if (null? default-list)
-	(if (null? rest-list)
-	    (apply values (reverse result))
-	    (error "fmt: bad argument" rest-list `(null? ,rest-list)))
+	(apply values (append (reverse result) rest-list))
 	(let ((default (car default-list)))
-	  (if (or (list? default)
-		  (and (pair? default) (procedure? (cdr default))))
-	      (let lp ((rest rest-list)
-		       (head '()))
-		(if (null? rest)
-		    (loop (reverse head)
-			  (cdr default-list)
-			  (cons (car default) result))
-		    (if (list? default)
-			(if (member (car rest) default)
-			    (loop (append (reverse head) (cdr rest))
-				  (cdr default-list)
-				  (cons (car rest) result))
-			    (lp (cdr rest) (cons (car rest) head)))
-			(if ((cdr default) (car rest))
-			    (loop (append (reverse head) (cdr rest))
-				  (cdr default-list)
-				  (cons (car rest) result))
-			    (lp (cdr rest) (cons (car rest) head))))))
-	      (error "fmt: bad default" default))))))
+	  (let lp ((rest rest-list)
+		   (head '()))
+	    (if (null? rest)
+		(loop (reverse head)
+		      (cdr default-list)
+		      (cons (car default) result))
+		(if (list? default)
+		    (if (member (car rest) default)
+			(loop (append (reverse head) (cdr rest))
+			      (cdr default-list)
+			      (cons (car rest) result))
+			(lp (cdr rest) (cons (car rest) head)))
+		    (if ((cdr default) (car rest))
+			(loop (append (reverse head) (cdr rest))
+			      (cdr default-list)
+			      (cons (car rest) result))
+			(lp (cdr rest) (cons (car rest) head))))))))))
+
+(define-syntax arg-or
+  (syntax-rules()
+    ((arg-or arg (a1 a2 ...) ...)
+     (or (and (not (symbol? 'arg))
+	      (error "bad syntax" 'arg '(symbol? 'arg)
+		     '(arg-or arg (a1 a2 ...) ...)))
+	 (and (a1 a2 ...)
+	      (error "incorrect argument" arg 'arg '(a1 a2 ...)))
+	 ...))
+    ((arg-or caller arg (a1 a2 ...) ...)
+     (or (and (not (symbol? 'arg))
+	      (error "bad syntax" 'arg '(symbol? 'arg)
+		     '(arg-or caller arg (a1 a2 ...) ...)))
+	 (and (a1 a2 ...)
+	      (if (string? caller)
+		  (error caller arg 'arg '(a1 a2 ...))
+		  (error "incorrect argument" arg 'arg '(a1 a2 ...) caller)))
+	 ...))))
+
+;; accessory macro for arg-ors
+(define-syntax caller-arg-or
+  (syntax-rules()
+    ((caller-arg-or caller arg (a1 a2 ...) ...)
+     (or (and (not (symbol? 'arg))
+	      (error "bad syntax" 'arg '(symbol? 'arg)
+		     '(caller-arg-or caller arg (a1 a2 ...) ...)))
+	 (and (a1 a2 ...)
+	      (if (string? caller)
+		  (error caller arg 'arg '(a1 a2 ...))
+		  (error "incorrect argument" arg 'arg '(a1 a2 ...) caller)))
+	 ...))
+    ((caller-arg-or null caller arg (a1 a2 ...) ...)
+     (or (and (not (symbol? 'arg))
+	      (error "bad syntax" 'arg '(symbol? 'arg)
+		     '(caller-arg-or caller arg (a1 a2 ...) ...)))
+	 (and (a1 a2 ...)
+	      (if (string? caller)
+		  (error caller arg 'arg '(a1 a2 ...))
+		  (error "incorrect argument" arg 'arg '(a1 a2 ...) caller)))
+	 ...))))
+
+(define-syntax arg-ors
+  (syntax-rules (common)
+    ((arg-ors (a1 a2 ...) ...)
+     (or (arg-or a1 a2 ...) ...))
+    ((arg-ors common caller (a1 a2 ...) ...)
+     (or (caller-arg-or caller a1 a2 ...) ...))))
+
 
 (define (fmt expr . rest)
   (if (number? expr)
-      (receive (width depth char radix plus exactness)
+      (receive (width depth char radix plus exactness space . str-list)
 	  (opt-values rest
-		      (cons #f number?) (cons #f number?) (cons #f char?)
+		      (cons #f (lambda (x) (and (integer? x) (exact? x))))
+		      (cons #f (lambda (x)
+				 (and (integer? x) (exact? x) (<= 0 x))))
+		      (cons #f char?)
 		      (list 'd 'b 'o 'x)
 		      (cons #f (lambda (x) (eq? x +)))
-		      (cons #f (lambda (x) (memq x '(e i)))))
-	(and (memq radix '(b o x))
-	     (or depth
-		 (and (inexact? expr) (not (eq? exactness 'e)))
-		 (eq? exactness 'i))
-	     (error "fmt: non-decimal cannot be inexact" radix 'radix))
-	(and depth (eq? exactness 'e)
-	     (error "fmt: exact number cannot have a decimal point"
-		    depth 'depth))
-	(and char (not width)
-	     (error "fmt: unnecessary padding character" char 'char))
+		      (cons #f (lambda (x) (memq x '(e i))))
+		      (cons #f (lambda (x)
+				 (and (list? x)
+				      (<= 1 (length x) 2)
+				      (every (lambda (x)
+					       (and (integer? x)
+						    (exact? x)
+						    (<= 0 x)))
+					     x)))))
+	(arg-ors ("fmt: bad argument"  str-list
+		  (not (every string? str-list)))
+		 ("fmt: non-decimal cannot be inexact" radix
+		  (and (memq radix '(b o x))
+		       (or depth
+			   (and (inexact? expr) (not (eq? exactness 'e)))
+			   (eq? exactness 'i))))
+		 ("fmt: exact number cannot have a decimal point" depth
+		  (and depth (eq? exactness 'e)))
+		 ("fmt: unnecessary padding character" char
+		  (and char (not width))))
 	(let* ((width (or width 0))
 	       (char (or char #\space))
 	       (sign (if (< width 0) '- '+))
@@ -133,7 +210,9 @@ The implementation below requires SRFI-6 (Basic string ports), SRFI-8
 			 (if (eq? exactness 'e)
 			     (if (inexact? expr) (inexact->exact expr) expr)
 			     (if (exact? expr) (exact->inexact expr) expr))
-			 expr)
+			 (if (and depth (exact? expr))
+			     (exact->inexact expr)
+			     expr))
 		     (cdr (assq radix '((b . 2) (d . 10) (o . 8) (x . 16))))))
 	       (str
 		(if depth
@@ -180,30 +259,50 @@ The implementation below requires SRFI-6 (Basic string ports), SRFI-8
 			(mold str depth))))
 		    str))
 	       (str (if (and (< 0 (real-part expr))
-			     (not (eq? #\+ (string-ref str 0)))
+			     (not (eqv? #\+ (string-ref str 0)))
 			     plus)
 			(string-append "+" str)
 			str))
 	       (len (string-length str))
-	       (pad (- (abs width) len)))
-	  (cond
-	   ((<= pad 0) str)
-	   ((eq? sign '+)
-	    (if (and (not (eqv? char #\space))
-		     (or (eqv? #\+ (string-ref str 0))
-			 (eqv? #\- (string-ref str 0))))
-		(string-append (string (string-ref str 0))
-			       (make-string pad char)
-			       (substring str 1 len))
-		(string-append (make-string pad char) str)))
-	   (else
-	    (string-append str (make-string pad char))))))
-      (receive (width depth char show)
+	       (lt (if space (car space) 0))
+	       (rt (if (and space (not (null? (cdr space)))) (cadr space) 0))
+	       (pad (- (abs width) len lt rt)))
+	  (apply string-append
+		 (make-string lt #\space)
+		 (cond
+		  ((<= pad 0) str)
+		  ((eq? sign '+)
+		   (if (and (eqv? char #\0)
+			    (or (eqv? #\+ (string-ref str 0))
+				(eqv? #\- (string-ref str 0))))
+		       (string-append (string (string-ref str 0))
+				      (make-string pad char)
+				      (substring str 1 len))
+		       (string-append (make-string pad char) str)))
+		  (else
+		   (string-append str (make-string pad char))))
+		 (make-string rt #\space)
+		 str-list)))
+      (receive (width depth char show case space . str-list)
 	  (opt-values rest
-		      (cons #f number?) (cons #f number?) (cons #f char?)
-		      (list display write))
-	(and char (not width)
-	     (error "fmt: unnecessary padding character" char 'char))
+		      (cons #f (lambda (x) (and (integer? x) (exact? x))))
+		      (cons #f (lambda (x)
+				 (and (integer? x) (exact? x) (<= 0 x))))
+		      (cons #f char?)
+		      (list display write)
+		      (cons #f (lambda (x) (memq x '(d u t))))
+		      (cons #f (lambda (x)
+				 (and (list? x)
+				      (<= 1 (length x) 2)
+				      (every (lambda (x)
+					       (and (integer? x)
+						    (exact? x)
+						    (<= 0 x)))
+					     x)))))
+	(arg-ors ("fmt: bad argument" str-list
+		  (not (every string? str-list)))
+		 ("fmt: unnecessary padding character" char
+		  (and char (not width))))
 	(let* ((width (or width 0))
 	       (char (or char #\space))
 	       (sign (if (< width 0) '- '+))
@@ -214,12 +313,22 @@ The implementation below requires SRFI-6 (Basic string ports), SRFI-8
 	       (str (if (and depth (< depth (string-length str)))
 			(substring str 0 depth)
 			str))
-	       (pad (- (abs width) (string-length str))))
-	  (cond
-	   ((<= pad 0) str)
-	   ((eq? sign '+) (string-append (make-string pad char) str))
-	   (else (string-append str (make-string pad char))))))))
-
+	       (str (if case
+			((cdr (assq case `((d . ,string-downcase)
+					   (u . ,string-upcase)
+					   (t . ,string-titlecase)))) str)
+			str))
+	       (lt (if space (car space) 0))
+	       (rt (if (and space (not (null? (cdr space)))) (cadr space) 0))
+	       (pad (- (abs width) (string-length str) lt rt)))
+	  (apply string-append
+		 (make-string lt #\space)
+		 (cond
+		  ((<= pad 0) str)
+		  ((eq? sign '+) (string-append (make-string pad char) str))
+		  (else (string-append str (make-string pad char))))
+		 (make-string rt #\space)
+		 str-list)))))
 
 Copyright
 
