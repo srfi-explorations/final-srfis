@@ -1,7 +1,7 @@
 The SRFI-33 integer bitwise-operation library			-*- outline -*-
 Olin Shivers
 First draft: 1996/6/3
-Last Update: 2002/7/12
+Last update: 2002/7/21
 
 Emacs should display this document in outline mode. Say c-h m for
 instructions on how to move through it by sections (e.g., c-c c-n, c-c c-p).
@@ -57,7 +57,7 @@ bit-set? any-bits-set? all-bits-set?
 first-bit-set
 
 extract-bit-field test-bit-field? clear-bit-field 
-insert-bit-field  copy-bit-field
+replace-bit-field  copy-bit-field
 
 
 -------------------------------------------------------------------------------
@@ -85,21 +85,29 @@ bitwise-not i -> exact-integer
   (bitwise-not 10) => -11
   (bitwise-not -37) => 36
 
-Associative -- n-ary operators, for n >= 0
-  bitwise-and i ...
-  bitwise-ior i ...	Inclusive or
-  bitwise-xor i ...	Exclusive or
-  bitwise-eqv i ...	(not (i xor j))
+N-ary operators, for n >= 0
+  Procedure 		Bit function
+  ------------------	---------------------------------
+  bitwise-and  i ...	And
+  bitwise-ior  i ...	Inclusive or
+  bitwise-xor  i ...	Exclusive or
+  bitwise-eqv  i ...	(eqv b1 b2)  =  (not (xor b1 b2))
+  bitwise-nand i ...	(not (and b ...))
+  bitwise-nor  i ...	(not (or b ...))
 
-Non-associative -- exactly two arguments
-  bitwise-nand  i j	(not (and i j))
-  bitwise-nor   i j	(not (ior i j))
-  bitwise-andc1 i j	(and (not i) j)
-  bitwise-andc2 i j	(and i (not j))
-  bitwise-orc1  i j	(ior (not i) j)
-  bitwise-orc2  i j	(ior i (not j))
+  Note that the and, ior, xor and eqv operations are associative.
+
+Exactly two arguments
+  Procedure 		Bit function
+  -----------------	-----------------
+  bitwise-andc1 i j	(and (not bi) bj)
+  bitwise-andc2 i j	(and bi (not bj))
+  bitwise-orc1  i j	(ior (not bi) bj)
+  bitwise-orc2  i j	(ior bi (not bj))
 
 Trivial, hence not provided
+  Procedure 		Definition
+  -----------------	------------------------------
   bitwise-const0 i j	(lambda (i j) 0)
   bitwise-const1 i j	(lambda (i j) -1)
   bitwise-arg1 i j	(lambda (i j) i)
@@ -113,15 +121,18 @@ Trivial, hence not provided
       group of six.
 
     - The n-ary functions have these base, nullary cases:
-      (bitwise-and) => -1     (bitwise-ior) => 0
-      (bitwise-xor) => 0      (bitwise-eqv) => -1
+      (bitwise-and)  => -1     (bitwise-ior) =>  0
+      (bitwise-nand) =>  0     (bitwise-nor) => -1
+      (bitwise-xor)  =>  0     (bitwise-eqv) => -1
 
     - Examples
-      (bitwise-ior 3  10) =>  11
-      (bitwise-and 11 26) =>  10
-      (bitwise-xor 3 10)  =>  10
-      (bitwise-eqv 37 12) => -42
-      (bitwise-and 37 12) =>   4
+      (bitwise-ior 3  10)     =>  11
+      (bitwise-and 11 26)     =>  10
+      (bitwise-xor 3 10)      =>  10
+      (bitwise-eqv 37 12)     => -42
+      (bitwise-and 37 12)     =>   4
+      (bitwise-nand 11 26 12) =>  -9
+      (bitwise-nor  11 26 12) => -32
 
 arithmetic-shift i count -> exact-integer
     Arithmetic left shift when COUNT>0; right shift when COUNT<0.
@@ -209,7 +220,7 @@ first-set-bit i -> exact-integer
 extract-bit-field size position i -> exact-integer
 test-bit-field?   size position i -> boolean
 clear-bit-field   size position i -> exact-integer
-insert-bit-field  size position new-field i -> exact-integer
+replace-bit-field size position new-field i -> exact-integer
 copy-bit-field    size position from to     -> exact-integer
 
     These functions operate on a contiguous field of bits (a "byte," in
@@ -225,7 +236,7 @@ copy-bit-field    size position from to     -> exact-integer
 
     - CLEAR-BIT-FIELD returns I with the selected field's bits zeroed out.
 
-    - INSERT-BIT-FIELD returns I with the designated bit field replaced
+    - REPLACE-BIT-FIELD returns I with the designated bit field replaced
       by the least-significant SIZE bits in NEW-FIELD.
 
     - COPY-BIT-FIELD returns TO with the selected field's bits replaced
@@ -249,7 +260,7 @@ copy-bit-field    size position from to     -> exact-integer
 
   + "load" and "deposit" are the wrong verbs (e.g., Common Lisp's LDB and
      DPB ops), since these guys have nothing to do with the store. I chose
-    "extract" and "insert."
+    "extract" and "replace."
 
   + Common Lisp's byte datatype doesn't seem to buy you anything over just 
     spelling out size & position, or [start,end) values.
@@ -259,7 +270,7 @@ copy-bit-field    size position from to     -> exact-integer
 
   + My name choices are more in tune with Scheme conventions (hyphenation,
     using "?" to mark a predicate, etc.). Common Lisp's name choices were more
-    historically motivated, for reasons of backwards compatibility with
+    historically motivated, for reasons of backward compatibility with
     Maclisp and Zetalisp.
 
   + I punted the prefix "log" in favor of "bitwise-" (e.g, LOGNOT, BITWISE-NOT)
@@ -294,7 +305,7 @@ copy-bit-field    size position from to     -> exact-integer
 
     Most of these derived ops are simple to implement in under three lines of
     code. Providing a basic implementation does not put a burden on the
-    implementor. In fact, all but seven of the ops can be defined in 28 lines
+    implementor. In fact, all but seven of the ops can be defined in 31 lines
     of code, which I append below.  
 
     What we gain is having an agreed-upon set of names by which we can refer
@@ -333,7 +344,7 @@ copy-bit-field    size position from to     -> exact-integer
 
   Alternately, we could define a "general" logical shift operation that
   took as an extra argument the size of the bitstring. At this point,
-  we are bending over backwards to force-fit an operation into Scheme
+  we are bending over backward to force-fit an operation into Scheme
   that fundamentally doesn't belong. Arithmetic shift is the right
   thing for general integers.
 
@@ -359,9 +370,9 @@ copy-bit-field    size position from to     -> exact-integer
   be considered for another SRFI. (See the short summary of the MIT Scheme
   system below.)
 
-  I suggest that the design of such a system be deferred until SRFI's for
+  I suggest that the design of such a system be deferred until SRFIs for
   strings and vectors have been finalised. Than a bit-vector SRFI could
-  be designed that would preserve common structure with these other SRFI's,
+  be designed that would preserve common structure with these other SRFIs,
   as well as the bitwise library in this SRFI.
 
   Note also that finite bit vectors have an isomorphism to finite sets.
@@ -373,7 +384,7 @@ copy-bit-field    size position from to     -> exact-integer
 * Summaries of related designs
 ------------------------------
 Below are summaries of the related libraries currently found in
-Common Lisp, PLT Scheme, slib, Bigloo, Scheme 48, and MIT Scheme.
+Common Lisp, PLT Scheme, slib, Bigloo, Scheme 48, Kawa, and MIT Scheme.
 I was unable to find anything for Gambit.
 
 ** Common Lisp
@@ -500,8 +511,8 @@ Constants are written with a sharp-star prefix, e.g. #*11111.
 (bit-string->unsigned-integer bit-string)
 (bit-string->signed-integer bit-string)
 
-** Guile
-========
+** Guile & Kawa
+===============
 logand i1 ...
 logior i1 ...
 logxor i1 ...
@@ -517,9 +528,12 @@ bit-extract i start end
 * Reference implementation
 --------------------------
 
-There are 24 functions in the spec. 16 can be defined in under two lines of
-code; 17 in under three lines of code (INSERT-BIT-FIELD needs three lines).
-This is not an onerous implementation load; I provide the code below.
+There are 24 functions in the spec. 15 can be defined in under two lines of
+code; REPLACE-BIT-FIELD needs three lines; and BITWISE-EQV needs five. This
+is not an onerous implementation load; I provide the code below. As this is
+only 31 lines of code, it hardly seems reasonable to bother discussing
+copyright. To lay the issue to rest, I am the sole author, and I place it in
+the public domain.
 
 That leaves 7 basic functions that must be primitively defined for each
 implementation: BITWISE-{NOT,AND,IOR,XOR}, ARITHMETIC-SHIFT, BIT-COUNT, and
@@ -530,24 +544,37 @@ inefficient relative to native support and should *not* be used except in case
 of dire emergency. (It's quite clever code, nonetheless, to provide the
 semantics with such little support.)
 
-Here is reference code for the 17 derived functions. A good implementation
-might choose to provide direct compiler support for them, or might simply
-define them to be integrable -- i.e., inline-expanded.
+A good implementation might choose to provide direct compiler/interpreter
+support for these derived functions, or might simply define them to be
+integrable -- i.e., inline-expanded.
 
-Here is the code for all but the seven primitives. As this is only 28 lines of
-code, it hardly seems reasonable to bother discussing copyright. To lay the
-issue to rest, I am the sole author, and I place it in the public domain.
+The n-ary BITWISE-EQV function should also receive primitive
+compiler/interpreter support so that the expensive n-ary mechanism is not
+invoked in the standard cases -- that is, an application of BITWISE-EQV should
+be rewritten into an equivalent tree applying some two-argument primitive to
+the arguments, in the same manner that statically-known n-ary applications of
+associative operations such as + and * are handled efficiently:
+  (bitwise-eqv)         => -1
+  (bitwise-eqv i)       => i
+  (bitwise-eqv i j)     => (%bitwise-eqv i j)
+  (bitwise-eqv i j k)   => (%bitwise-eqv (%bitwise-eqv i j) k)
+  (bitwise-eqv i j k l) => (%bitwise-eqv (%bitwise-eqv (%bitwise-eqv i j) k) l)
 
 ;;; The seven non-trivial boolean functions in terms
 ;;; of not, and, or & xor.
 
-(define (bitwise-eqv . args) (bitwise-not (apply bitwise-xor args)))
 (define (bitwise-nand  i j)  (bitwise-not (bitwise-and i j)))
 (define (bitwise-nor   i j)  (bitwise-not (bitwise-ior i j)))
 (define (bitwise-andc1 i j)  (bitwise-and (bitwise-not i) j))	
 (define (bitwise-andc2 i j)  (bitwise-and i (bitwise-not j)))	
 (define (bitwise-orc1  i j)  (bitwise-ior (bitwise-not i) j))
 (define (bitwise-orc2  i j)  (bitwise-ior i (bitwise-not j)))
+
+(define (bitwise-eqv . args)
+  (let lp ((args args) (ans -1))
+    (if (pair? args)
+        (lp (cdr args) (bitwise-not (bitwise-xor ans (car args))))
+	ans)))
 
 ;;; Helper function -- make a mask of SIZE 1-bits, e.g. (%MASK 3) = #b111.
 ;;; Suppose your Scheme's fixnums are N bits wide (counting the sign bit,
@@ -590,14 +617,14 @@ issue to rest, I am the sole author, and I place it in the public domain.
 
 ;; Integrating i-b-f reduces nicely.
 (define (clear-bit-field size position n)
-  (insert-bit-field size position 0 n))
+  (replace-bit-field size position 0 n))
 
 ;;; Oops -- intermediate ARITHMETIC-SHIFT can fixnum-overflow on fixnum args.
-;(define (insert-bit-field size position newfield n)
+;(define (replace-bit-field size position newfield n)
 ;  (copy-bit-field size position (arithmetic-shift newfield position) n))
 
 ;;; This three-line version won't fixnum-overflow on fixnum args.
-(define (insert-bit-field size position newfield n)
+(define (replace-bit-field size position newfield n)
   (let ((m (%mask size)))
     (bitwise-ior (bitwise-and n (bitwise-not (arithmetic-shift m position)))
 		 (arithmetic-shift (bitwise-and newfield m) position))))
@@ -627,7 +654,7 @@ Several functions in this library
     extract-bit-field size position i -> integer
     test-bit-field?   size position i -> boolean
     clear-bit-field   size position i -> integer
-    insert-bit-field  size position new-field i -> integer
+    replace-bit-field size position new-field i -> integer
     copy-bit-field    size position from to     -> integer
 specify a contiguous "field" of bits in a bitstring. There are two
 conventions we might use to do so: 
@@ -668,7 +695,7 @@ exact operation to perform* on the bitstring parameter(s):
     extract-bit-field size position i -> integer
     test-bit-field?   size position i -> boolean
     clear-bit-field   size position i -> integer
-    insert-bit-field  size position new-field i -> integer
+    replace-bit-field size position new-field i -> integer
     copy-bit-field    size position from to     -> integer
 Note that in all of these functions, with the sole exception of
 ARITHMETIC-SHIFT, the bitstring parameter comes last. This is consistent
@@ -785,4 +812,9 @@ Ispell dumps "buffer local" words here. Please ignore.
  LocalWords:  op neg CL's LDB DPB datatype BOOLE Maclisp Zetalisp LOGNOT Jaffer
  LocalWords:  Clinger lognot boole clr logtest testbits zerop logand logbitp bs
  LocalWords:  logcount int ldb bytespec lsb dpb newbyte slib HTML init ref lib
- LocalWords:  fixnum newfield srfi html txt Rees SIGPLAN movec finalised
+ LocalWords:  fixnum newfield srfi html txt Rees SIGPLAN movec finalised expt
+ LocalWords:  bitstring nullary writability AND's OR's NOT's unboxed PLT
+ LocalWords:  SRFIs Bigloo Kawa lsh rsh Chez Fixnums fxlogand fxlogor fxlogxor
+ LocalWords:  fxlognot fxsll fxsrl fxsla fxsra logior logxor logbit slib's args
+ LocalWords:  inline lp cdr fixnums Feeley bignums bignum Feeley's indices SML
+ LocalWords:  accessor pre empted CommonLisp cltl HyperSpec
