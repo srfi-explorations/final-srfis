@@ -43,8 +43,9 @@ ELLIPSIS-IDENTIFIER specifies the token used for ellipsis.  It defaults
 to the usual R5RS[1] ellipsis identifier, ..., but it can be specified
 to be any identifier, such as :::.  This identifier's specification is
 considered to be a binding whose scope is the rules of the transformer.
-The macro system implementation must make usual hygienic arrangements
-to preserve & protect the lexical scope of these bindings.
+The macro system implementation must make the hygienic arrangements
+described in R5RS's section 4.3 to preserve the lexical scope of these
+bindings.
 
 The syntax-rules pattern language is also extended to allow 'tail
 patterns.'  The following clauses are added to <pattern>:
@@ -73,9 +74,9 @@ pattern matching:
 ;;; Examples of the user-specified ellipsis token extension
 
 ;;; Utility macro for CPS macros
-(define-syntax apply-syntax-cont
+(define-syntax apply-syntactic-continuation
   (syntax-rules ()
-    ((apply-syntax-cont (?k ?env ...) . ?args)
+    ((apply-syntactic-continuation (?k ?env ...) . ?args)
      (?k ?env ... . ?args))))
 
 ;;; Generates a list of temporaries, for example to implement LETREC
@@ -91,7 +92,7 @@ pattern matching:
                  ;; ellipsis in ?K as ellipsis for something in the AUX
                  ;; macro.
                  ((aux ?temps () ?k*)
-                  (apply-syntax-cont ?k* ?temps))
+                  (apply-syntactic-continuation ?k* ?temps))
                  ;; Be careful about the ellipsis!
                  ((aux (?temp :::) (?x ?more :::) ?k*)
                   (aux (?temp ::: new-temp)
@@ -123,17 +124,18 @@ pattern matching:
                     (set! ?var* ?temp) :::
                     (let () ?body1* ?body2* :::)))))))
        (generate-temporaries (?var ...)
-         ;; Pass K the environment.
+         ;; Pass K the environment.  GENERATE-TEMPORARIES will add the
+         ;; temporary variable list argument.
          (k ((?var ?init) ...) (?body1 ?body2 ...)))))))
 
 ;;; The next example uses two other macros that we don't define here:
-;;; SYNTAX-SYMBOL? and UNION.  (SYNTAX-SYMBOL? <x> <sk> <fk>) expands
-;;; to SK if X is a symbol or FK otherwise.  (UNION <s1> <s2> <k>)
-;;; applies K with APPLY-SYNTAX-CONT to the union of the syntax lists
-;;; S1 and S2 with no duplicates.  Both SYNTAX-SYMBOL? and UNION are
-;;; possible to implement here, but we sha'n't bother with them here,
-;;; as we only wish to show an example of macros generating macro-
-;;; generating macros.
+;;; SYNTACTIC-SYMBOL? and UNION.  (SYNTACTIC-SYMBOL? <x> <sk> <fk>)
+;;; expands to SK if X is a symbol or FK otherwise.  (UNION <s1> <s2>
+;;; <k>) applies K with APPLY-SYNTACTIC-CONTINUATION to the union of
+;;; the syntactic lists S1 and S2.  Both of SYNTACTIC-SYMBOL? and UNION
+;;; are possible to implement here, but we sha'n't bother with them, as
+;;; we wish only to demonstrate an example of macros generating macro-
+;;; generating macros, and they provide no such examples.
 
 ;;; ALL-SYMBOLS digs out all the symbols in a syntax.
 (define-syntax all-symbols
@@ -158,8 +160,8 @@ pattern matching:
 
     ((all-symbols ?x ?k)
      (syntax-symbol? ?x
-       (apply-syntax-cont ?k (?x))
-       (apply-syntax-cont ?k ())))))
+       (apply-syntactic-continuation ?k (?x))
+       (apply-syntactic-continuation ?k ())))))
 
 (all-symbols (foo 4 bar #(#t (baz (#f quux)) zot) (mumble #(frotz)))
              (quote)) ; => (frotz mumble zot quux baz bar foo)
@@ -173,17 +175,19 @@ pattern matching:
            (let-syntax
                ((g (syntax-rules ::: ()
                      ((g (??x ?e) (??y :::))
-                      '((??x) ?e (??y :::))))))
+                      '((??x) ?e (??y) :::)))))
              (g (1 2) (3 4)))))))
   (f :::))
-    ; => ((1) 2 (3 4)), if hygienic rules of ellipsis identifiers are
+    ; => ((1) 2 (3) (4)), if hygienic rules of ellipsis identifiers are
     ;      correctly implemented, not ((1) (2) (3) (4))
 
 
 
 ;;; --------------------
-;;; This example of the 'tail pattern' extension is a crippled version
-;;; of R5RS's BEGIN special form.  (It is crippled because it does not
+;;; Examples of tail patterns
+
+;;; This example of the tail pattern extension is a crippled version of
+;;; R5RS's BEGIN special form.  (It is crippled because it does not
 ;;; support internal definitions or commands within its body returning
 ;;; fewer or more than one value.)
 
@@ -205,6 +209,13 @@ pattern matching:
 ;;;     (NEWLINE))
 ;;; where IGNORED~n is a hygienic renaming of the identifier IGNORED
 ;;; from FAKE-BEGIN's output template.
+
+(let-syntax
+    ((foo (syntax-rules ()
+            ((foo ?x ?y ... ?z)
+             (list ?x (list ?y ...) ?z)))))
+  (foo 1 2 3 4 5))
+    ; => (1 (2 3 4) 5)
 
 -- Reference implementation --
 

@@ -1,5 +1,5 @@
 ;; eiod.scm: eval-in-one-define
-;; $Id$
+;; [RCS tag expunged: this is EIOD 1.16 from http://petrofsky.org/src]
 
 ;; A minimal implementation of r5rs eval, null-environment, and
 ;; scheme-report-environment.  (And SRFI-46 extensions, too.)
