@@ -32,11 +32,12 @@ archive of the mailing list</A>.
   <LI>Received: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-60/srfi-60.html?rev=1.1">2005/01/03</A></LI>
   <LI>Draft: 2005/01/03 - 2005/03/03</LI>
   <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-60/srfi-60.html?rev=1.2">2005/01/10</A></LI>
+  <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-60/srfi-60.html?rev=1.4">2005/01/27</A></LI>
 </UL>
 
 <H1>Abstract</H1>
 
-Treating integers as twos-complement strings of bits is an arcane but
+Treating integers as two's-complement strings of bits is an arcane but
 important domain of computer science.  It is used for:
 
 <UL>
@@ -85,6 +86,33 @@ arrays should be explicit; so the boolean array procedures put their
 results into a passed array.  In contrast, these procedures are purely
 functional.
 <P>
+
+<H3>Bits and Complements</H3>
+
+A bit-index in these descriptions is nonnegative with the least
+significant bit at index 0.
+<P>
+The reference implementation is written using only Scheme integer
+operations.  Thus the only exposure of the underlying representation
+is in the ranges of fixnums.
+<P>
+The <DFN>complement</DFN> describes the representation of negative
+integers.  With one's-complement fixnums, the range of integers is
+-(2<SUP><I>n</I></SUP>) to 2<SUP><I>n</I></SUP>, and there are two
+possible representations of 0.  With two's-complement fixnums, the
+range of integers is -(2<SUP><I>n</I></SUP>+1) to
+2<SUP><I>n</I></SUP>.
+<P>
+Since we treat integers as having two's-complement negations,
+the two's-complement of an integer is its negation.
+The one's-complement of an integer is computed by lognot:
+
+<PRE>
+(define (lognot n) (- -1 n))
+</PRE>
+<P>
+
+
 <H3>Bitwise Operations and Integer Properties</H3>
 
 The <TT>logior</TT>, <TT>logxor</TT>, <TT>logand</TT>,
@@ -160,7 +188,9 @@ The <TT>bit-reverse</TT> procedure was then the only one which took a
 <VAR>width</VAR> argument.  So I replaced it with
 <TT>reverse-bit-field</TT>.
 <P>
-The <DFN>Lamination</DFN> functions were moved to slib/phil-spc.scm.
+The <DFN>Lamination</DFN> and <DFN>Gray-code</DFN> functions were
+moved to
+<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/*checkout*/slib/slib/phil-spc.scm?rev=HEAD&amp;content-type=text/vnd.viewcvs-markup">slib/phil-spc.scm</A>
 <P>
 
 <H3>Bits as Booleans</H3>
@@ -170,19 +200,8 @@ integers and lists of booleans.  There is no comparable facility in
 SRFI-33.
 <P>
 
-<H3>Gray code</H3>
-
-<DFN>Gray code</DFN>s are useful for communication between
-asynchronous processes in both hardware and software; and are integral
-to the implementation of the Hilbert-Peano space-filling function.
-There is no comparable facility in SRFI-33.
-<P>
 
 <H1>Specification</H1>
-
-These functions behave as though operating on integers in
-two's-complement representation.
-
 
 
 
@@ -203,7 +222,7 @@ Example:
 
 <PRE>
 (number-&#62;string (logand #b1100 #b1010) 2)
-   => "1000"
+    => "1000"
 </PRE>
 
 </DL>
@@ -222,7 +241,7 @@ Example:
 
 <PRE>
 (number-&#62;string (logior #b1100 #b1010) 2)
-   => "1110"
+    => "1110"
 </PRE>
 
 </DL>
@@ -242,7 +261,7 @@ Example:
 
 <PRE>
 (number-&#62;string (logxor #b1100 #b1010) 2)
-   => "110"
+    => "110"
 </PRE>
 
 </DL>
@@ -253,7 +272,7 @@ Example:
 <DD><A NAME="IDX493"></A>
 <DT><U>Function:</U> <B>bitwise-not</B> <I>n</I>
 <DD><A NAME="IDX494"></A>
-Returns the integer which is the 2s-complement of the integer argument.
+Returns the integer which is the two's-complement of the integer argument.
 
 
 <P>
@@ -261,9 +280,9 @@ Example:
 
 <PRE>
 (number-&#62;string (lognot #b10000000) 2)
-   => "-10000001"
+    => "-10000001"
 (number-&#62;string (lognot #b0) 2)
-   => "-1"
+    => "-1"
 </PRE>
 
 </DL>
@@ -314,11 +333,11 @@ Example:
 
 <PRE>
 (logcount #b10101010)
-   => 4
+    => 4
 (logcount 0)
-   => 0
+    => 0
 (logcount -2)
-   => 1
+    => 1
 </PRE>
 
 </DL>
@@ -335,11 +354,11 @@ Example:
 
 <PRE>
 (integer-length #b10101010)
-   => 8
+    => 8
 (integer-length 0)
-   => 0
+    => 0
 (integer-length #b1111)
-   => 4
+    => 4
 </PRE>
 
 </DL>
@@ -445,9 +464,9 @@ Example:
 
 <PRE>
 (number-&#62;string (bit-field #b1101101010 0 4) 2)
-   => "1010"
+    => "1010"
 (number-&#62;string (bit-field #b1101101010 4 9) 2)
-   => "10110"
+    => "10110"
 </PRE>
 
 </DL>
@@ -467,11 +486,11 @@ Example:
 
 <PRE>
 (number-&#62;string (copy-bit-field #b1101101010 0 0 4) 2)
-        => "1101100000"
+    => "1101100000"
 (number-&#62;string (copy-bit-field #b1101101010 -1 0 4) 2)
-        => "1101101111"
+    => "1101101111"
 (number-&#62;string (copy-bit-field #b110100100010000 -1 5 9) 2)
-        => "110100111110000"
+    => "110100111110000"
 </PRE>
 
 </DL>
@@ -491,9 +510,9 @@ Example:
 
 <PRE>
 (number-&#62;string (ash #b1 3) 2)
-   => "1000"
+    => "1000"
 (number-&#62;string (ash #b1010 -1) 2)
-   => "101"
+    => "101"
 </PRE>
 
 </DL>
@@ -533,7 +552,7 @@ reversed.
 
 <PRE>
 (number-&#62;string (reverse-bit-field #xa7 0 8) 16)
-  => "e5"
+    => "e5"
 </PRE>
 
 </DL>
@@ -576,72 +595,6 @@ Returns the integer coded by the <VAR>bool1</VAR> ... arguments.
 
 
 
-
-<H3><A NAME="SEC102">Gray code</A></H3>
-
-<P>
-<A NAME="IDX514"></A>
-A <EM>Gray code</EM> is an ordering of non-negative integers in which
-exactly one bit differs between each pair of successive elements.  There
-are multiple Gray codings.  An n-bit Gray code corresponds to a
-Hamiltonian cycle on an n-dimensional hypercube.
-
-
-<P>
-Gray codes find use communicating incrementally changing values between
-asynchronous agents.  De-laminated Gray codes comprise the coordinates
-of Peano-Hilbert space-filling curves.
-
-
-<P>
-<DL>
-<DT><U>Function:</U> <B>integer-&#62;gray-code</B> <I>k</I>
-<DD><A NAME="IDX515"></A>
-Converts <VAR>k</VAR> to a Gray code of the same <CODE>integer-length</CODE> as
-<VAR>k</VAR>.
-
-
-<P>
-<DT><U>Function:</U> <B>gray-code-&#62;integer</B> <I>k</I>
-<DD><A NAME="IDX516"></A>
-Converts the Gray code <VAR>k</VAR> to an integer of the same
-<CODE>integer-length</CODE> as <VAR>k</VAR>.
-
-
-<P>
-For any non-negative integer <VAR>k</VAR>,
-
-<PRE>
-(eqv? k (gray-code-&#62;integer (integer-&#62;gray-code k)))
-</PRE>
-
-</DL>
-
-<P>
-<DL>
-<DT><U>Function:</U> <B>=</B> <I>k1 k2</I>
-<DD><A NAME="IDX517"></A>
-<DT><U>Function:</U> <B>gray-code&#60;?</B> <I>k1 k2</I>
-<DD><A NAME="IDX518"></A>
-<DT><U>Function:</U> <B>gray-code&#62;?</B> <I>k1 k2</I>
-<DD><A NAME="IDX519"></A>
-<DT><U>Function:</U> <B>gray-code&#60;=?</B> <I>k1 k2</I>
-<DD><A NAME="IDX520"></A>
-<DT><U>Function:</U> <B>gray-code&#62;=?</B> <I>k1 k2</I>
-<DD><A NAME="IDX521"></A>
-These procedures return #t if their Gray code arguments are
-(respectively): equal, monotonically increasing, monotonically
-decreasing, monotonically nondecreasing, or monotonically nonincreasing.
-
-
-<P>
-For any non-negative integers <VAR>k1</VAR> and <VAR>k2</VAR>, the Gray code
-predicate of <CODE>(integer-&#62;gray-code k1)</CODE> and
-<CODE>(integer-&#62;gray-code k2)</CODE> will return the same value as the
-corresponding predicate of <VAR>k1</VAR> and <VAR>k2</VAR>.
-</DL>
-
-
 <H1>Implementation</H1>
 
 <A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/*checkout*/slib/slib/logical.scm?rev=HEAD&amp;content-type=text/vnd.viewcvs-markup">slib/logical.scm</A>
@@ -680,7 +633,7 @@ PARTICULAR PURPOSE.
     <ADDRESS>Editor: <A HREF="mailto:srfi-editors@srfi.schemers.org">David Van Horn</A></ADDRESS>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Mon Jan 10 13:35:35 EST 2005
+Last modified: Thu Jan 27 09:24:05 EST 2005
 <!-- hhmts end -->
   </BODY>
 </HTML>
