@@ -22,12 +22,12 @@ Rationale
 It is difficult to gain a complete consensus for the design of a generic
 formatting procedure that performs a variety of necessary functions in
 addition to essential functions provided in C's PRINTF and Common lisp's
-FORMAT.  One of such ways would be to devise a free and floating sequence
+FORMAT.  One of such ways would be to devise a free (and/or floating) sequence
 method that easily handles optional arguments, in contrast to the conventional
 fixed sequence method, in order to obtain a handy optional and functional
-interface.  With the concept of free and floating sequencing, the CAT
-procedure is then defined, not to process optional arguments with default
-values, but to process default values with optional arguments.
+interface.  With the concept of free sequencing, the CAT procedure is then
+defined, not to process optional arguments with default values, but to process
+default values with optional arguments.
 
 Issues
 
@@ -67,7 +67,7 @@ Specification
      * <exactness> is a symbol: exact or inexact.
      * <radix> is a symbol: binary, decimal, octal, or hexadecimal.
        The default value is decimal.
-     * <precision> is an exact integer whose absolute value specifies the
+     * <precision> is an inexact integer whose absolute value specifies the
        number of decimal digits after a decimal point.  If <precision> is
        a non-negative integer, an exact sign (#e) is prefixed to the resulting
        string as needed.
@@ -103,12 +103,11 @@ Specification
        character and strings are <char> and <string>s, respectively.
      * <string> is a string that is appended to the resulting string.
 
-In general, the order of optional arguments does not matter except <width>
-must be defined prior to defining of <precision>.  The CAT procedure processes
-optional arguments in the following order; <converter>, <exactness>, <radix>,
-<precision>, <sign>, <separator>, <char>, <width>, <string> for the number
-type of <object>, or in the following order; <converter>, <writer>, <pipe>,
-<take>, <char>, <width>, <string>, <override> for all other types.
+The order of all optional arguments does not matter.  The CAT procedure
+processes optional arguments in the following order; <converter>, <exactness>,
+<radix>, <precision>, <sign>, <separator>, <char>, <width>, <string> for the
+number type of <object>, or in the following order; <converter>, <writer>,
+<pipe>, <take>, <char>, <width>, <string>, <override> for all other types.
 
 (CONCAT [<object>] ...)
 (PRINT  [<object>] ...)
@@ -121,27 +120,27 @@ constant, they use DISPLAY procedure, otherwise, use WRITE procedure.
 
 Examples
 
-(cat 129.995 -10 2)				"130.00    "
-(cat 129.995 10 2)				"    130.00"
-(cat 129.995 10 2 'exact)			"  #e130.00"
-(cat 129 10 -2)					"    129.00"
-(cat 129 10 2)					"  #e129.00"
-(cat 129 10 2 #\0)				"#e00129.00"
-(cat 129 10 2 #\0 'sign)			"#e+0129.00"
-(cat 129 10 2 #\* 'sign)			"*#e+129.00"
+(cat 129.995 -10 2.)				"130.00    "
+(cat 129.995 2. 10)				"    130.00"
+(cat 129.995 2. 'exact)				"#e130.00"
+(cat 129 -2.)					"129.00"
+(cat 129 2.)					"#e129.00"
+(cat 129 10 2. #\0)				"#e00129.00"
+(cat 129 10 2. #\9 'sign)			"#e+9129.00"
+(cat 129 10 2. #\* 'sign)			"*#e+129.00"
 (cat 1/3)					"1/3"
-(cat 1/3 10 2)					"    #e0.33"
-(cat 1/3 10 -2)					"      0.33"
+(cat 1/3 10 2.)					"    #e0.33"
+(cat 1/3 10 -2.)				"      0.33"
 (cat 129.995 10 '(#\, 2))			" 1,29.99,5"
 (cat 129995 10 '(#\,) 'sign)			"  +129,995"
-(cat (cat 129.995 0 0) '(0 -1))			"130"
+(cat (cat 129.995 0.) '(0 -1))			"130"
 (cat (cat 129.995) '(3 0))			"129"
 (cat 99.5 10 'sign 'octal 'exact)		"    +307/2"
-(cat (sqrt -5) 10 2)				"0.00+2.24i"
-(cat 3.14159e12 10 2 'sign)			"  +3.14e12"
+(cat (sqrt -5) 10 2.)				"0.00+2.24i"
+(cat 3.14159e12 10 2. 'sign)			"  +3.14e12"
 (cat #x123 'octal 'sign)			"+443"
 (cat "#o" (cat #x123 'octal 'sign))		"#o+443"
-(cat #x123 -10 2 'sign #\*)			"#e+291.00*"
+(cat #x123 -10 2. 'sign #\*)			"#e+291.00*"
 (cat "string" -10)				"string    "
 (cat "string" 10 (list string-upcase))		"    STRING"
 (cat "string" 10 (list string-upcase) '(-2 0))	"      RING"
@@ -190,7 +189,7 @@ ex						'#{:example}
      '(0 -1) #\-)				"--------------GNIRTS"
 (cat "string" 20 record-writer
      (list string-upcase) '(2 3) #\-)		"---------------STING"
-(cat 12 20 record-writer 3)			"            #e12.000"
+(cat 12 20 record-writer 3.)			"            #e12.000"
 (cat ex 20 (cons example? record->string))	"          123-string"
 (cat ex 20 (cons example? record->string)
      `(,(cut string-delete char-set:digit <>)
@@ -198,7 +197,7 @@ ex						'#{:example}
      '(0 -1) #\-)				"----------123-string"
 (cat "string" 20 (cons example? record->string)
      (list string-upcase) '(2 3) #\-)		"---------------STING"
-(cat 12 20 (cons example? record->string) -3)	"              12.000"
+(cat 12 20 (cons example? record->string) -3.)	"              12.000"
 
 (define item '("plus" "minus" "net"))
 (define item-values '(234 -123 111))
@@ -290,7 +289,7 @@ list).
 				   (procedure? (cdr x)))))
 		   (cons #f (lambda (x) (memq x '(exact inexact))))
 		   (list 'decimal 'binary 'octal 'hexadecimal)
-		   (cons #f (lambda (x) (and (integer? x) (exact? x))))
+		   (cons #f (lambda (x) (and (integer? x) (inexact? x))))
 		   (cons #f (lambda (x) (eq? x 'sign)))
 		   (cons #f (lambda (x)
 			      (and (list? x)
@@ -371,7 +370,7 @@ list).
 			      '((decimal . 10) (binary . 2) (octal . 8)
 				(hexadecimal . 16))))))
 	     (str (if precision
-		      (let ((precision (abs precision))
+		      (let ((precision (inexact->exact (abs precision)))
 			    (e-index (or (string-index str #\e)
 					 (string-index str #\E)))
 			    (+-index (or (string-index str #\+ 1)
@@ -476,7 +475,7 @@ list).
 		((<= pad 0) str)
 		((< 0 width)
 		 (cond
-		  ((and (eqv? char #\0) exact-sign)
+		  ((and (char-numeric? char) exact-sign)
 		   (if (or (eqv? #\+ (string-ref str 2))
 			   (eqv? #\- (string-ref str 2)))
 		       (string-append (substring str 0 3)
@@ -485,7 +484,7 @@ list).
 		       (string-append (substring str 0 2)
 				      (make-string pad char)
 				      (substring str 2 len))))
-		  ((and (eqv? char #\0)
+		  ((and (char-numeric? char)
 			(or (eqv? #\+ (string-ref str 0))
 			    (eqv? #\- (string-ref str 0))))
 		   (string-append (substring str 0 1)
