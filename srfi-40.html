@@ -917,6 +917,18 @@ href="">SRFI-9</a>, and the functions <code>any</code> and
                  (set-cdr! prom (cdr val))
                  (stream-low-level-force prom)))))
 
+(define (stream-low-level-force promise)
+  (let ((content (car promise)))
+    (case (car content)
+      ((eager) (cdr content))
+      ((lazy)  (let* ((promise* (stream-promise ((cdr content))))
+                      (content  (car promise)))
+                 (if (not (eqv? (car content) 'eager))
+                     (begin (set-car! content (car (car promise*)))
+                            (set-cdr! content (cdr (car promise*)))
+                            (set-car! promise* content)))
+                 (stream-low-level-force promise))))))
+
 
 ;;; STREAM SYNTAX AND FUNCTIONS
 
