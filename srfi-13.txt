@@ -193,11 +193,11 @@ Comparison
     substring<= substring>= substring-ci<= substring-ci>=
 
 Matching
-    string-prefix-count    string-suffix-count
-    string-prefix-count-ci string-suffix-count-ci
+    string-prefix-length    string-suffix-length
+    string-prefix-length-ci string-suffix-length-ci
 
-    substring-prefix-count    substring-suffix-count
-    substring-prefix-count-ci substring-suffix-count-ci
+    substring-prefix-length    substring-suffix-length
+    substring-prefix-length-ci substring-suffix-length-ci
 
     string-prefix?    string-suffix?    
     string-prefix-ci? string-suffix-ci? 
@@ -339,6 +339,8 @@ string-fold-right kons knil s [start end] -> value
 		       0 s)
 	  ans)
 
+    The fold-right combinator is sometimes called a "catamorphism."
+
 string-unfold p f g seed -> string
     This is an iterative constructor for strings. 
     - G is used to generate a series of "seed" values from the initial seed:
@@ -455,12 +457,12 @@ substring-compare-ci s1 start1 end1 s2 start2 end2 lt-proc eq-proc gt-proc -> va
 		       values values values) => 5	; Index of S1's "a"
 
 
-string=  s1 s2 -> #f or integer
-string<> s1 s2 -> #f or integer
-string<  s1 s2 -> #f or integer
-string>  s1 s2 -> #f or integer
-string<= s1 s2 -> #f or integer
-string>= s1 s2 -> #f or integer
+string=  s1 s2 -> boolean
+string<> s1 s2 -> boolean
+string<  s1 s2 -> boolean
+string>  s1 s2 -> boolean
+string<= s1 s2 -> boolean
+string>= s1 s2 -> boolean
     These procedures are the lexicographic extensions to strings of the
     corresponding orderings on characters.  For example, STRING< is the
     lexicographic ordering on strings induced by the ordering CHAR<? on
@@ -468,30 +470,27 @@ string>= s1 s2 -> #f or integer
     the length of the shorter string, the shorter string is considered to 
     be lexicographically less than the longer string.
 
-    If the comparison operation is true, the function returns the
-    mismatch index (as defined for the previous comparator functions).
-
-string-ci=  s1 s2 -> #f or integer
-string-ci<> s1 s2 -> #f or integer
-string-ci<  s1 s2 -> #f or integer
-string-ci>  s1 s2 -> #f or integer
-string-ci<= s1 s2 -> #f or integer
-string-ci>= s1 s2 -> #f or integer
+string-ci=  s1 s2 -> boolean
+string-ci<> s1 s2 -> boolean
+string-ci<  s1 s2 -> boolean
+string-ci>  s1 s2 -> boolean
+string-ci<= s1 s2 -> boolean
+string-ci>= s1 s2 -> boolean
     Case-insensitive variants.
 
-substring=     s1 start1 end1 s2 start2 end2 -> #f or integer
-substring<>    s1 start1 end1 s2 start2 end2 -> #f or integer
-substring<     s1 start1 end1 s2 start2 end2 -> #f or integer
-substring>     s1 start1 end1 s2 start2 end2 -> #f or integer
-substring<=    s1 start1 end1 s2 start2 end2 -> #f or integer
-substring>=    s1 start1 end1 s2 start2 end2 -> #f or integer
+substring=     s1 start1 end1 s2 start2 end2 -> boolean
+substring<>    s1 start1 end1 s2 start2 end2 -> boolean
+substring<     s1 start1 end1 s2 start2 end2 -> boolean
+substring>     s1 start1 end1 s2 start2 end2 -> boolean
+substring<=    s1 start1 end1 s2 start2 end2 -> boolean
+substring>=    s1 start1 end1 s2 start2 end2 -> boolean
 
-substring-ci=  s1 start1 end1 s2 start2 end2 -> #f or integer
-substring-ci<> s1 start1 end1 s2 start2 end2 -> #f or integer
-substring-ci<  s1 start1 end1 s2 start2 end2 -> #f or integer
-substring-ci>  s1 start1 end1 s2 start2 end2 -> #f or integer
-substring-ci<= s1 start1 end1 s2 start2 end2 -> #f or integer
-substring-ci>= s1 start1 end1 s2 start2 end2 -> #f or integer
+substring-ci=  s1 start1 end1 s2 start2 end2 -> boolean
+substring-ci<> s1 start1 end1 s2 start2 end2 -> boolean
+substring-ci<  s1 start1 end1 s2 start2 end2 -> boolean
+substring-ci>  s1 start1 end1 s2 start2 end2 -> boolean
+substring-ci<= s1 start1 end1 s2 start2 end2 -> boolean
+substring-ci>= s1 start1 end1 s2 start2 end2 -> boolean
     These variants restrict the comparison to the indicated 
     substrings of S1 and S2.
 
@@ -626,17 +625,17 @@ string-skip-right  s char/char-set/pred [end start] -> integer or #f
                  ;; (string-ref s i) is not whitespace.
 		 ...)))
 
-string-prefix-count    s1 s2 -> integer
-string-suffix-count    s1 s2 -> integer
-string-prefix-count-ci s1 s2 -> integer
-string-suffix-count-ci s1 s2 -> integer
+string-prefix-length    s1 s2 -> integer
+string-suffix-length    s1 s2 -> integer
+string-prefix-length-ci s1 s2 -> integer
+string-suffix-length-ci s1 s2 -> integer
     Return the length of the longest common prefix/suffix of the two strings.
     This is equivalent to the "mismatch index" for the strings.
 
-substring-prefix-count    s1 start1 end1 s2 start2 end2 -> integer
-substring-suffix-count    s1 start1 end1 s2 start2 end2 -> integer
-substring-prefix-count-ci s1 start1 end1 s2 start2 end2 -> integer
-substring-suffix-count-ci s1 start1 end1 s2 start2 end2 -> integer
+substring-prefix-length    s1 start1 end1 s2 start2 end2 -> integer
+substring-suffix-length    s1 start1 end1 s2 start2 end2 -> integer
+substring-prefix-length-ci s1 start1 end1 s2 start2 end2 -> integer
+substring-suffix-length-ci s1 start1 end1 s2 start2 end2 -> integer
     Substring variants.
 
 string-prefix?    s1 s2 -> boolean
@@ -713,8 +712,8 @@ string-append string1 ... -> string					R5RS
   concatenation of the given strings.
 
 string-concatenate string-list -> string
-    Append the elements of STRING-LIST together into a single list.
-    Guaranteed to return a freshly allocated list.
+    Append the elements of STRING-LIST together into a single string.
+    Guaranteed to return a freshly allocated string.
 
     Note that the (apply string-append string-list) idiom is
     not robust for long lists of strings, as many Scheme implementations
@@ -749,7 +748,7 @@ reverse-string-concatenate/shared string-list [final-string end] -> string
 
     These procedures are useful in the construction of procedures that 
     accumulate character data into lists of string buffers, and wish to
-    convert the accumulated data into a single strin when done.
+    convert the accumulated data into a single string when done.
 
 string->list s [start end] -> char-list					R5RS+
 list->string list -> string
@@ -889,6 +888,7 @@ string-set! string i char -> unspecified				R5RS
 
 ** Lower-level procedures
 =========================
+
 The following procedures are useful for writing other string-processing
 functions. In a Scheme system that has a module or package system, these
 procedures should be contained in a module named "string-lib-internals".
@@ -947,7 +947,7 @@ make-kmp-restart-vector c= s [start end] -> vector
     Build the Knuth-Morris-Pratt "restart vector," which is useful
     for quickly searching character sequences for the occurrence of
     string S (or the substring of S demarcated by the optional START/END 
-    paramters, if provided). C= is a character-equality function used to 
+    parameters, if provided). C= is a character-equality function used to 
     construct the restart vector; it is usefully CHAR=? or CHAR-CI=?.
     
     The definition of the restart vector RV for string S is:
