@@ -13,7 +13,7 @@ RECEIVE (SRFI 8) and LET-VALUES (SRFI 11).
 
 Abstract
 
-This SRFI introduces the REST-VALUES procedure which has two modes of
+This SRFI introduces the REST-VALUES procedure which has three modes of
 operation:
 
 1. it processes a rest list after checking its elements with default values or
@@ -22,6 +22,10 @@ operation:
 2. it processes a rest list with default values without checking its elements;
    the ARG-AND, ARG-ANDS, ERR-AND, and ERR-ANDS macros check the rest
    arguments that are returned by REST-VAULES that functions as the latter.
+
+3. it processes a default list whose elements are lists or pairs, after
+   checking their elements that are default values or predicate procedures
+   with the elements of a rest list.
 
 Rationale
 
@@ -34,16 +38,18 @@ Specification
 (REST-VALUES [<caller>] <rest-list> [<args-number-limit> <default> ...])
 
     * <caller> is any scheme expression.
-    * <args-number-limit> should be an integer or #f or #t.
-    * 1. When the <args-number-limit> is #t or a positive integer,
-	 each <default> should be a list that contains default value(s), or a
-         pair whose car is a default value and whose cdr is a predicate
-         procedure.
-      2. When the <args-number-limit> is #f or a negative integer,
+    * <args-number-limit> should be an integer, +, -, or a boolean.
+
+    * 1. When the <args-number-limit> is + or a positive integer,
+    	 each <default> should be a list that contains default value(s), or a
+	 pair whose car is a default value and whose cdr is a predicate
+	 procedure.
+      2. When the <args-number-limit> is - or a negative integer,
 	 each <default> is any scheme expression. 
+      3. When the <args-number-limit> is a boolean,
+	 each <default> is the same as 1.
 
 1. (first mode of operation)
-
    REST-VALUES checks whether each element of the <rest-list> is a member of
    the corresponding <default> list, or satisfies the predicate procedure of
    the corresponding <default> pair, and then returns the checked element(s).
@@ -52,14 +58,24 @@ Specification
    the car values of the remaining <default>s.  On the other hand, when the
    number of elements of the <rest-list> are more than the number of the
    <default>s, the supernumerary elements are additionally returned if the
-   <args-number-limit> is #t, or its value is not less than the number of
+   <args-number-limit> is +, or its value is not less than the number of
    elements of the <rest-list>.
 
 2. (second mode of operation)
-
    This is the same as the first except that REST-VALUES does not check each
-   element of the <rest-list>, and it uses #f instead of #t, and an absolute
+   element of the <rest-list>, and it uses - instead of +, and an absolute
    value instead of a simple value as the value of <args-number-limit>.
+
+3. (third mode of operation)
+
+   REST-VALUES checks whether any element of the <default> list is a member of
+   the <rest-list>, or any element of the <rest-list> satisfies the predicate
+   procedure of the <default> pair, and then returns the checked element.  If
+   the <default> doesn't pass, REST-VALUES returns the car value of the
+   <default>.  When any elements of the <rest-list> are remained after the
+   above processing, REST-VALUES either signals an error if the
+   <args-number-limit> is #t, or return the remaining elements of the
+   <rest-list> if the <args-number-limit> is #f.
 
 (ARG-AND [<caller>] <variable> <expr> ...)
 (ARG-ANDS [COMMON <caller>] ([<caller>] <variable> <expr> ...) ...)
@@ -90,7 +106,7 @@ rest-list => (x 1)
 (rest-values caller rest-list)           => x 1
 (rest-values caller rest-list -3)        => x 1
 (rest-values rest-list -2 'y 3 "str")
-    => error too many defaults (y 3 "str") (rest-values (x 1) -2 y 3 "str")
+    => error too many defaults (y 3 "str") (<= (length (y 3 "str")) 2)
 (rest-values caller rest-list 1 '(x y z))
     => error too many arguments (x 1) (<= (length (x 1)) 1) <procedure caller>
 (rest-values 'caller rest-list 2 (list 'x 'y 'z) (cons "str" string?))
@@ -101,10 +117,18 @@ rest-list => (x 1)
     => error unmatched argument x (member x (y z)) (caller x 1)
 (rest-values "caller: bad argument" rest-list 2 '(y z) `(100 . ,number?))
     => error caller: bad argument x (member x (y z))
-(rest-values rest-list #f 'y 100 "str")
+(rest-values rest-list - 'y 100 "str")
+    => x 1 "str"
+(rest-values rest-list + `(x y z) `(100 . ,number?) `("str" . ,string?))
     => x 1 "str"
 (rest-values rest-list #t `(x y z) `(100 . ,number?) `("str" . ,string?))
     => x 1 "str"
+(rest-values rest-list #t `(100 . ,number?) `("str" . ,string?) `(x y z))
+    => 1 "str" x
+(rest-values rest-list #t `(100 . ,number?) `("str" . ,string?) `(y z))
+    => error bad argument (x) (null? (x))
+(rest-values rest-list #f `(100 . ,number?) `("str" . ,string?) `(y z))
+    => 1 "str" y x
 
 caller => <procedure caller>
 str    => "string"
@@ -140,11 +164,12 @@ num    => 2
 (err-and 'caller
 	 (string? str) (< (string-length str) 7) (number? num) (< num 2))
        => error false expression (< num 2) caller
-(err-ands ("str failed test in caller" (string? str) (< (string-length str) 7))
-	  ((format "caller: bad arg ~s ~s" num 'num) (number? num) (< num 2)))
-       => error caller: bad arg 2 num (< num 2)	; FORMAT (SRFI 28)
+(err-ands (caller (string? str) (< (string-length str) 7))
+	  ("num failed test in caller" (number? num) (< num 2)))
+       => error num failed test in caller (< num 2)
 
 (define (read-line . p-d)
+  ;; p-d should be (<input-port> <symbol>).
   (receive (p d) (rest-values p-d 2
 			      (cons (current-input-port) input-port?)
 			      (list 'trim 'concat 'split...))
@@ -153,6 +178,12 @@ num    => 2
   (receive (p d) (rest-values p-d -2 (current-input-port) 'trim)
     (arg-ands (p (input-port? p))
 	      (d (memq d '(trim concat split...))))
+    ...))
+(define (read-line . p-d)
+  ;; p-d can be (<input-port> <symbol>) or (<symbol> <input-port>).
+  (receive (p d) (rest-values p-d #t
+			      (cons (current-input-port) input-port?)
+			      (list 'trim 'concat 'split...))
     ...))
 
 (define (delete x ls . predicate)
@@ -178,14 +209,17 @@ ERROR (SRFI 23) and TAKE (SRFI 1) are used in implementation of this SRFI.
 (define (rest-values rest-list . default-list)
   (let* ((caller (if (or (null? default-list)
 			 (boolean? (car default-list))
+			 (memq (car default-list) (list + -))
 			 (number? (car default-list)))
 		     '()
 		     (if (string? rest-list) rest-list (list rest-list))))
 	 (rest (if (null? caller) rest-list (car default-list)))
 	 (rest-length (if (list? rest)
 			  (length rest)
-			  (error "bad rest list" rest
-				 `(rest-values ,rest-list ,@default-list))))
+			  (if (string? caller)
+			      (error caller rest `(list? ,rest))
+			      (apply error "bad rest list" rest `(list? ,rest)
+				     caller))))
 	 (default (if (null? caller) default-list (cdr default-list)))
 	 (number
 	  (and (not (null? default))
@@ -199,56 +233,118 @@ ERROR (SRFI 23) and TAKE (SRFI 1) are used in implementation of this SRFI.
 					      `(<= (length ,rest) ,(abs d))
 					      caller)))
 			      (and (> (length (cdr default)) (abs d))
-				   (error "too many defaults" (cdr default)
-					  `(rest-values ,rest-list
-							,@default-list)))
+				   (if (string? caller)
+				       (error caller (cdr default)
+					      `(<= (length ,(cdr default))
+						   ,(abs d)))
+				       (apply error "too many defaults"
+					      (cdr default)
+					      `(<= (length ,(cdr default))
+						   ,(abs d))
+					      caller)))
 			      d))
+		     (and (eq? d +) +)
+		     (and (eq? d -) -)
 		     (and (eq? d #f) 'false)
 		     (eq? d #t)
-		     (error "neither number nor boolean" d
-			    `(rest-values ,rest-list ,@default-list))))))
+		     (if (string? caller)
+			 (error caller d `(or (boolean? ,d)
+					      (number? ,d)
+					      (memq ,d (list + -))))
+			 (apply error "bad optional argument" d
+				`(or (boolean? ,d)
+				     (number? ,d)
+				     (memq ,d (list + -)))
+				caller))))))
 	 (default (if number (cdr default) default))
 	 (default-length (length default)))
-    (if (or (and (number? number) (> number 0))
-	    (eq? number #t))
-	(let ((number (min rest-length default-length)))
-	  (for-each (lambda (r d)
-		      (cond
-		       ((list? d)
-			(if (not (member r d))
-			    (if (string? caller)
-				(error caller r `(member ,r ,d))
-				(apply error "unmatched argument"
-				       r `(member ,r ,d) caller))))
-		       ((pair? d)
-			(let ((p (cdr d)))
-			  (if (procedure? p)
-			      (if (not (p r))
-				  (if (string? caller)
-				      (error caller r `(,p ,r))
-				      (apply error "incorrect argument"
-					     r `(,p ,r) caller)))
-			      (error "bad predicate" p
-				     `(rest-values ,rest-list
-						   ,@default-list)))))
-		       (else
-			(error "bad default" d
-			       `(rest-values ,rest-list ,@default-list)))))
-		    (take rest number) (take default number))
-	  (apply values
-		 (if (> default-length rest-length)
-		     (append rest
-			     (map (lambda (x)
-				    (if (pair? x)
-					(car x)
-					(error "bad default" x
-					       `(rest-values ,rest-list
-							     ,@default-list))))
-				  (list-tail default rest-length)))
-		     rest)))
-	(apply values (if (> default-length rest-length)
-			  (append rest (list-tail default rest-length))
-			  rest)))))
+    (cond
+     ((or (eq? 'false number) (eq? #t number))
+      (let loop ((rest-list rest)
+		 (default-list default)
+		 (result '()))
+	(if (null? default-list)
+	    (if (eq? #t number)
+		(if (null? rest-list)
+		    (apply values (reverse result))
+		    (if (string? caller)
+			(error caller rest-list `(null? ,rest-list))
+			(apply error "bad argument" rest-list
+			       `(null? ,rest-list) caller)))
+		(apply values (append (reverse result) rest-list)))
+	    (let ((default (car default-list)))
+	      (if (or (list? default)
+		      (and (pair? default) (procedure? (cdr default))))
+		  (let lp ((rest rest-list)
+			   (head '()))
+		    (if (null? rest)
+			(loop (reverse head)
+			      (cdr default-list)
+			      (cons (car default) result))
+			(if (list? default)
+			    (if (member (car rest) default)
+				(loop (append (reverse head) (cdr rest))
+				      (cdr default-list)
+				      (cons (car rest) result))
+				(lp (cdr rest) (cons (car rest) head)))
+			    (if ((cdr default) (car rest))
+				(loop (append (reverse head) (cdr rest))
+				      (cdr default-list)
+				      (cons (car rest) result))
+				(lp (cdr rest) (cons (car rest) head))))))
+		  (if (string? caller)
+		      (error caller default
+			     `(or (list? ,default)
+				  (and (pair? ,default)
+				       (procedure? (cdr ,default)))))
+		      (apply error "bad default" default
+			     `(or (list? ,default)
+				  (and (pair? ,default)
+				       (procedure? (cdr ,default))))
+			     caller)))))))
+     ((or (and (number? number) (> number 0))
+	  (eq? number +))
+      (let ((number (min rest-length default-length)))
+	(for-each (lambda (r d)
+		    (cond
+		     ((list? d)
+		      (if (not (member r d))
+			  (if (string? caller)
+			      (error caller r `(member ,r ,d))
+			      (apply error "unmatched argument"
+				     r `(member ,r ,d) caller))))
+		     ((and (pair? d) (procedure? (cdr d)))
+		      (if (not ((cdr d) r))
+			  (if (string? caller)
+			      (error caller r `(,(cdr d) ,r))
+			      (apply error "incorrect argument"
+				     r `(,(cdr d) ,r) caller))))
+		     (else
+		      (if (string? caller)
+			  (error caller d
+				 `(or (list? ,d)
+				      (and (pair? ,d) (procedure? (cdr ,d)))))
+			  (apply error "bad default" d
+				 `(or (list? ,d)
+				      (and (pair? ,d) (procedure? (cdr ,d))))
+				 caller)))))
+		  (take rest number) (take default number))
+	(apply values
+	       (if (> default-length rest-length)
+		   (append rest
+			   (map (lambda (x)
+				  (if (pair? x)
+				      (car x)
+				      (if (string? caller)
+					  (error caller x `(pair? ,x))
+					  (apply error "bad default" x
+						 `(pair? ,x) caller))))
+				(list-tail default rest-length)))
+		   rest))))
+     (else
+      (apply values (if (> default-length rest-length)
+			(append rest (list-tail default rest-length))
+			rest))))))
 
 (define-syntax arg-and
   (syntax-rules()
