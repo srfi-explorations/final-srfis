@@ -12,7 +12,6 @@
 
     Collections 
 
-
     <H1>Author</H1>
 
     Scott G. Miller 
@@ -40,11 +39,11 @@
       <li>Revised: 2003/08/10
       <li>Revised: 2003/08/19
       <li>Revised: 2003/08/27
+      <li>Revised: 2003/09/11
     </ul></p>
 
 
-    <h1>Abstract</h1>
-    
+    <H1>Abstract</H1>
 
     <p>
       A Collections API which defines a common naming scheme and
@@ -57,7 +56,7 @@
       vectors) and for the homogeneous Scheme string is provided.
     </p>
 
-    <h1>Table of Contents</h1>
+    <H1>Table of Contents</H1>
 
     <blockquote>
        <a href="#issues">Issues</a><br>
@@ -88,7 +87,8 @@
           </blockquote>
           <a href="#procedures">Procedures</a><br>
           <blockquote>
-            <a href="#flup">Functional, Linear Update, and Purely Mutable Collections</a><br>
+            <a href="#flup">Functional, Linear Update, and Purely
+Mutable Collections</a><br>
             <a href="#enumprocs">Enumeration</a><br>
             <a href="#collprocs">Collections</a><br>
             <a href="#orderedcollprocs">Ordered Collections</a><br>
@@ -109,7 +109,9 @@
          <a href="#implementation">Implementation</a><br>
       </blockquote>
 
-    <h1><a name="issues">Issues</a></h1>
+      <H1><a name="issues">Issues</a></H1>
+
+      
 
     <p>
       Several functions in this SRFI are required to take arbitrary
@@ -144,7 +146,9 @@
       collection function in place.
     </p>
 
-    <h1><a name="rationale">Rationale</a></h1>
+    <H1><a name="rationale">Rationale</a></H1>
+
+      
 
     <p>
       The Scheme language provides two basic datastructures for
@@ -204,7 +208,9 @@
       elements.
     </p>
 
-    <h1><a name="specification">Specification</a></h1>
+    <H1><a name="specification">Specification</a></H1>
+
+      
 
     <blockquote>
       <h2>
@@ -599,13 +605,22 @@ terms of unnecessarily allocated storage. <br>
       <blockquote>
         <p>
           A sequence is a collection of values named by a
-          contiguous, zero-based sequence of exact integers. Scheme
-          vectors are a natural example of a sequence. Sequences
+          contiguous sequence of exact integers
+	  in the range [0,<tt>(collection-size sequence)</tt>).
+          Scheme vectors are a natural example of a sequence. Sequences
           may or may not be of fixed size. If they are not,
           sequences allow new values to be added at an undefined
           point in the sequence, after which some value will exist
-          at the index<br>
-          <tt>(- (collection-size <i>seq</i>) 1)</tt>.
+          at the index <tt>(- (collection-size <i>seq</i>) 1)</tt>.
+        </p>
+        <p>
+          Sequences may allow other indicies outside the range specified
+          above to retrieve values that can also be retrieved with indices
+          inside the normal range.  For example, a circular list sequence
+          may allow you to retrieve the last value at position 
+          <tt>(- (collection-size seq) 1)</tt> and at position <tt>-1</tt>.
+          Such additions should be well documented in the specification
+          of that sequence.
         </p>
         <h3>
           <a name="flexsequences">Flexible Sequences</a>
@@ -840,7 +855,7 @@ terms of unnecessarily allocated storage. <br>
           </blockquote>
           <p>
             <i>procedure:</i> <b>*-get-left</b> *
-            [absense-thunk]<b>=&gt;</b> value
+            [absence-thunk]<b>=&gt;</b> value
           </p>
           <blockquote>
             Returns a value the given collection.  For an arbitrary
@@ -1363,7 +1378,7 @@ terms of unnecessarily allocated storage. <br>
         </h3>
         <blockquote>
           <p>
-            <i>procedure:</i> <b>dict?</b> value <b>=&gt;</b>
+            <i>procedure:</i> <b>dictionary?</b> value <b>=&gt;</b>
             boolean
           </p>
           <blockquote>
@@ -1541,6 +1556,8 @@ terms of unnecessarily allocated storage. <br>
             =&gt; boolean
           </p>
           <p>
+            <i>procedure:</i> <b>list-ref</b> list integer [absence-thunk]
+            =&gt; value<br>
             <i>procedure:</i> <b>list-get-left</b> list [absence-thunk]
             =&gt; value<br>
              <i>procedure:</i> <b>list-get-right</b> list [absence-thunk]
@@ -1623,9 +1640,9 @@ terms of unnecessarily allocated storage. <br>
             =&gt; list
           </p>
           <p>
-            <i>procedure:</i> <b>list-insert</b> list bag =&gt;
+            <i>procedure:</i> <b>list-insert</b> list index value =&gt;
             list<br>
-             <i>procedure:</i> <b>list-insert!</b> list bag
+             <i>procedure:</i> <b>list-insert!</b> list index value
             =&gt; list
           </p>
           <p>
@@ -1857,7 +1874,8 @@ terms of unnecessarily allocated storage. <br>
       </blockquote>
     </blockquote>
 
-    <h1><a name="implementation">Implementation</a></h1>
+    <H1><a name="implementation">Implementation</a></H1>
+
 
     <p>
       This SRFI behaves more as a meta-SRFI for future SRFIs to
@@ -1869,7 +1887,8 @@ terms of unnecessarily allocated storage. <br>
       Tiny-CLOS portable object system to provide type dispatch.
     </p>
 
-    <h1>Copyright</h1>
+    <H1>Copyright</H1>
+
 
     <p>
       Copyright (C) Scott G. Miller (2003). All Rights Reserved.
