@@ -1,3 +1,4 @@
+
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <html>
   <head>
@@ -33,6 +34,7 @@
     <ul>
       <li>Received: 2003/09/20
       <li>Draft: 2003/09/23-2003/12/23
+      <li>Revised: 2003/12/20
     </ul>
     
     <H1>Abstract</H1>
@@ -66,7 +68,10 @@ recipe for using these primitives is provided.
 Although this SRFI redefines <code>delay</code> and <code>force</code>,
 the extension is conservative in the sense that the semantics of the subset {<code>delay</code>, <code>force</code>} in 
 isolation (i.e., as long as the program does not use <code>lazy</code>)
-agrees with that in R5RS.  
+agrees with that in R5RS.  In other words, no program that uses the
+R5RS definitions of delay and force will break if those definition are 
+replaced by the SRFI-45 definitions of delay and force.
+
 
 
 
@@ -215,7 +220,7 @@ copy operations.
 
 <h2>The solution</h2>
  
-The accumulation of unnecessary promises in the above examples are a consequence
+The accumulation of unnecessary promises in the above examples is a consequence
 of suspensions being forced in increasingly nested contexts.  In order 
 to correctly simulate naive graph reduction  
 we should instead find a way of forcing tail suspensions <em>iteratively</em>,
@@ -242,11 +247,9 @@ redefine <code>delay</code> and <code>force</code> as below:
   (syntax-rules ()
     ((lazy exp) (cons 'suspension (lambda () exp)))))
 
-(define (strict x) (cons 'value x))
-
 (define-syntax delay
   (syntax-rules ()
-    ((delay exp) (lazy (strict exp)))))
+    ((delay exp) (lazy (cons 'value exp)))))
 
 (define (force promise)
   (case (car promise)
@@ -335,7 +338,7 @@ The typing can be succinctly expressed as follows:
 </pre>
 
 <p> 
-Although this SRFI specifies and extension to the semantics of <code>force</code>,
+Although this SRFI specifies an extension to the semantics of <code>force</code>,
 the extension is conservative in the sense that the semantics of the subset {<code>delay</code>, <code>force</code>} in 
 isolation (i.e., as long as the program does not use <code>lazy</code>)
 agrees with that in R5RS.  
@@ -395,7 +398,7 @@ in replacing the combination <code>(delay (force ...))</code> with
 <code>(lazy ...)</code> in the third rule.  
 
 <p>
-More examples are included in the reference inplementation below.
+More examples are included in the reference implementation below.
  
 
 
@@ -432,16 +435,11 @@ Reference implementation
   (syntax-rules ()
     ((lazy exp) (cons 'suspension (lambda () exp)))))
 
-; strict : a -> Promise a
-; Makes a promise out of a value.
-
-(define (strict x) (cons 'value x))
-
-; delay : a -> Promise a   =   lazy o strict
+; delay : a -> Promise a   
 
 (define-syntax delay
   (syntax-rules ()
-    ((delay exp) (lazy (strict exp)))))
+    ((delay exp) (lazy (cons 'value exp)))))
 
 ; force : Promise a -> a 
 
@@ -451,7 +449,9 @@ Reference implementation
     ((suspension) (let ((val ((cdr promise))))
                     (set-car! promise (car val))
                     (set-cdr! promise (cdr val))
-                    (force promise)))))
+                    (force promise)))
+    (else         
+      'force-error)))
 
 </pre>
 
@@ -565,34 +565,38 @@ Benchmarks
 ;(force (stream-filter (lambda (n) (= n 10000000000))
 ;                      (from 0)))
 
-(define (stream-ref index s)
+; The stream-ref procedure below does not strictly need to be lazy.  
+; It is defined lazy for the purpose of testing safe compostion of lazy procedures in 
+; the times3 benchmark below (previous candidate solutions had failed this).  
+
+(define (stream-ref s index)
   (lazy
    (match (force s)
      (()      'error)
      ((h . t) (if (zero? index)
                   (delay h)
-                  (stream-ref (- index 1) t))))))
+                  (stream-ref t (- index 1)))))))
 
 ; Check that evenness is correctly implemented - should terminate:
 
-(force (stream-ref 0 (stream-filter
-                      zero?
-                      (from 0))))
+(force (stream-ref (stream-filter zero? (from 0))
+                   0))
 
 ; Leak test 6: Another long traversal should run in bounded space.
 
-(define s (stream-ref 100000000 (from 0)))
+(define s (stream-ref (from 0) 100000000))
 ;(force s)                      
 
 (define (times3 n)
-  (stream-ref 3 (stream-filter
-                 (lambda (x) (zero? (modulo x n)))
-                 (from 0))))
+  (stream-ref (stream-filter
+               (lambda (x) (zero? (modulo x n)))
+               (from 0))
+              3))
 
 ; Leak test 7: Infamous example from SRFI 40. 
 
 (force (times3 7))
-;(time (force (times3 1000000)))   
+;(force (times3 100000000))   
 
 </pre>
 
@@ -646,7 +650,7 @@ PARTICULAR PURPOSE.
     <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Francisco Solsona</a></address>
 <!-- Created: Fri Sep 19 17:55:00 EST 2002 -->
 <!-- hhmts start -->
-Last modified: Tue Sep 23 13:33:02 CDT 2003
+Last modified: Tue Dec 30 11:21:21 CST 2003
 <!-- hhmts end -->
   </body>
 </html>
