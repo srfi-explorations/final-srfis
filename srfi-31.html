@@ -3,18 +3,22 @@
 <html>
   <head>
     <META http-equiv=Content-Type content="text/html; charset=windows-1252">
-    <title>SRFI 31: A special form for recursive evaluation</title> 
+    <title>SRFI 31: A special form `rec' for recursive evaluation</title>
   </head>
-  
-  <body>
+
+<body>
 
 <H1>Title</H1>
 
-A special form for recursive evaluation
+A special form <CODE>rec</CODE> for recursive evaluation
 
 <H1>Version</H1> 
 
 <UL>
+
+<LI>Mon Aug 12 22:53:08 2002. Included `rec' in title. Shortened
+`Rationale' section. Provided two more examples. Adapted syntax
+specification to R5RS style. Defined semantics by implementation.</LI>
 
 <LI>
 Sun Jul 7 17:32:18 2002. Corrected a typo in the semantic
@@ -38,9 +42,7 @@ srfi-editors@srfi.schemers.org.</LI>
 
 </UL>
 
-<H1>Author</H1> 
-
-Mirko Luedde &lt;<A
+<H1>Author</H1> Mirko Luedde &lt;<A
 href="mailto:Mirko.Luedde@Computer.Org">Mirko.Luedde@Computer.Org</A>&gt;
 
 <H1>Status</H1>
@@ -61,11 +63,10 @@ of the mailing list.
   <LI>Draft: 2002/05/24-2002/08/24</LI>
 </UL>
 
-<H1>Abstract</H1> 
-
-We propose the implementation of a special form
-called <CODE>rec</CODE>.  This form is a generalization of the forms
-<CODE>rec</CODE> and <CODE>named-lambda</CODE> of <A
+<H1>Abstract</H1> We propose the implementation of a special form
+called <CODE>rec</CODE>.  This form is a generalization and
+combination of the forms <CODE>rec</CODE> and
+<CODE>named-lambda</CODE> of <A
 href="#[Clinger1985]">[Clinger1985]</A>. It allows the simple and
 non-imperative construction of self-referential expressions.  As an
 important special case, it extends the A. Church form
@@ -93,10 +94,7 @@ are the following.
 
 </OL>
 
-Therefore Scheme is particularly suited for research and teaching in
-recursion theory. 
-
-<P>Nevertheless Scheme does not provide a syntax for recursive
+Nevertheless Scheme does not provide a syntax for recursive
 evaluations with the properties of
 
 <OL>
@@ -112,9 +110,6 @@ notation as possible,</LI>
 
 <H2>Example</H2> 
 
-We provide two examples illustrating special cases of what we think is
-missing from the specification <A href="#[KCR1998]">[KCR1998]</A>.
-
 <H3>Problem 1</H3> 
 
 Let us look at the factorial function. In mathematical notation this
@@ -125,24 +120,15 @@ function is expressed as
               N * F(N - 1), otherwise).
 </PRE>
 
-This expression is just a name for the factorial. Hence the following
-is a syntactically correct mathematical assertion.
-
-<PRE>
-  The function (F : N |--> 1, if N = 0; N * F(N – 1), otherwise) is
-  not polynomially bounded.</PRE>
-
-Note that this assertion does not define a name for the factorial
-function, but rather uses a name of the factorial.  As a result, the
-assertion does not perform a change of state.
+This expression is a term and not a definition or proposition.
 
 <P>We investigate some approaches to express the factorial function in
 Scheme.
 
-<OL>
+<UL>
 
 <LI>
-The simplest way perhaps is as follows.
+The simplest way perhaps is as
 
 <PRE>
 (define (F N) 
@@ -150,88 +136,70 @@ The simplest way perhaps is as follows.
     (* N (F (- N 1)))))
 </PRE>
 
-This Scheme expression is a more or less straightforward translation
-from the mathematical mixed infix/prefix notation to a pure prefix
-notation.  Despite this syntactical similarity, there is a difference
-in semantics.
+But this expression is not a term. It binds the factorial function to
+the variable <code>F</code>. The expression itself may not occur in a
+syntactical context where a name of the factorial is required.</LI>
 
-<UL> 
+<LI>
+We list several ways to express the factorial as a function term.
 
-<LI>The Scheme expression is not a name for the factorial. It may not
-occur in a context where a name of the factorial is required.</LI>
+<OL>
 
-<LI>The Scheme expression is an imperative that introduces the name
-<CODE>F</CODE> for the factorial. A change of state is involved by
-binding the factorial function to the variable <CODE>F</CODE>. Hence
-we need a storage model in order to understand the semantics.</LI>
-
-</UL>
-
+<LI>
+<PRE>
+(let () 
+  (define (F N)
+    (if (zero? N) 1 
+        (* N (F (- N 1)))))
+    F)
+</PRE>
 </LI>
 
 <LI>
-Here are some possibilities for implementing the factorial in a
-different way.
-
-<PRE>
-(letrec ( (G (lambda (N) 
-	       (if (zero? N) 1 
-		 (* N (G (- N 1)))))) )	G)
-</PRE>
-
 <PRE>
 (lambda (N) 
-  (let G ( (m N) ) 
-       (if (zero? m) 1 
-	 (* m (G (- m 1))))))
+  (let F ( (N N) ) 
+       (if (zero? N) 1 
+	 (* N (F (- N 1))))))
 </PRE>
-
-These expressions define the factorial anonymously, not binding it to
-a variable. However, the following objections may be made.
-
-<UL>
-
-<LI>The expressions are more remote from the mathematical notation
-than the <CODE>define</CODE> form. Therefore they are less intuitive.
-
-<LI>They introduce further special forms <CODE>letrec</CODE> and
-<CODE>let</CODE>, respectively.</LI>
-
-<LI>When defining the semantics of these expressions, the use of
-<CODE>letrec</CODE> or <CODE>let</CODE> again requires the notion of
-storage, as in both cases variable bindings occur.</LI>
-
-</UL>
-
 </LI>
 
 <LI>
-We can avoid using <CODE>letrec</CODE> and <CODE>let</CODE> relying
-solely on <CODE>lambda</CODE>, when we are willing to make use of
-H. B. Curry combinatorial expressions. But also this approach is not
-satisfying for the following reasons.
+<PRE>
+(letrec ( (F (lambda (N) 
+	       (if (zero? N) 1 
+		 (* N (F (- N 1)))))) )	F)
+</PRE>
+</LI>
 
-<UL>
-
-<LI>The syntax gets even more involved.</LI>
-
-<LI>The semantics gets more complicated as higher order procedures are
-required.</LI>
-
-<LI>Procedures of multiple arguments need currying.</LI>
-
-</UL>
+<LI>
+<PRE>
+((lambda (F) 
+   (F F))
+ (lambda (G) 
+   (lambda (N) 
+     (if (zero? N) 1 
+       (* N ((G G) (- N 1)))))))
+</PRE>
+</LI>
 
 </OL>
 
+All these expressions define the factorial anonymously, not binding it
+to a variable. However, all these expressions are more verbose than it
+seems necessary and they are less intuitive than it seems
+desirable. </LI>
+
+</UL>
+
 <H3>Solution 1</H3> 
 
-A solution to our example problem was already provided in <A
+A solution to our problem was already provided in <A
 href="#[Clinger1985]">[Clinger1985]</A> by the form
-<CODE>named-lambda</CODE>. (An even earlier solution with a slightly
-different syntax was implemented in Kent Dybvig's Chez Scheme system.)
+<CODE>named-lambda</CODE>. An even earlier solution with a slightly
+different syntax was implemented in Kent Dybvig's Chez Scheme system.
 
-Using this special form, we would denote the factorial simply by
+Using this special form, we can denote the factorial simply by
 
 <PRE>
 (named-lambda (F N) 
@@ -239,30 +207,20 @@ Using this special form, we would denote the factorial simply by
                 (* N (F (- N 1)))))
 </PRE>
 
-with similar syntax and semantics as the <CODE>define</CODE>
-expression above. But <CODE>named-lambda</CODE> is non-imperative, it
-does not introduce an external binding of the variable
-<CODE>F</CODE>. The variable <CODE>F</CODE> is confined (we do not say
-`bound', since in Scheme context this terminology is reserved for
-bindings of variables in environments) inside the expression in the
-same way as is the argument variable <CODE>N</CODE>.
+This expression is a function term that denotes the factorial in the
+appropriate brevity.
 
-<P>However, this form has been dropped from later versions of the
-Scheme Report. Also it is missing in state-of-the-art implementations
-such as Chez Scheme (6.0a) and MIT Scheme (7.7.0). (The latter
-actually knows a form <CODE>named-lambda</CODE> with different
-semantics).
+<P>However, the form <code>named-lambda</code> has been dropped from
+later versions of the Scheme Report. Also it is missing in
+state-of-the-art implementations such as Chez Scheme (6.0a) and MIT
+Scheme (7.7.0). (The latter actually knows a form
+<CODE>named-lambda</CODE> with different semantics).
 
 <H3>Problem 2</H3> 
 
-We have seen that sometimes we'd like to define an expression with
-reference to itself.  The <CODE>named-lambda</CODE> form allowed to do
-this in the case of procedure definitions.  A similar problem with
-self-referential expressions can occur also in different contexts.
+The constant stream of ones can be defined via
 
-<P>E.g., the constant stream of ones can be defined via
-
-<PRE>(define S (cons 1 (delay S))).</PRE>
+<PRE>(define S (cons 1 (delay S)))</PRE>
 
 As in the case of the factorial, we are able to define the recursive
 object at the price of spending an externally bound name. Remedying
@@ -274,10 +232,9 @@ objections as above.
 This particular case of the self-referential problem was solved by the
 <CODE>rec</CODE> form in <A href="#[Clinger1985]">[Clinger1985]</A>.
 
-With the help of this form, a name for the constant stream of ones 
-is given by the expression 
+This form allows writing
 
-<PRE>(rec S (cons 1 (delay S))).</PRE>
+<PRE>(rec S (cons 1 (delay S)))</PRE>
 
 This expression is non-imperative and does not introduce an external
 variable binding.
@@ -288,116 +245,48 @@ capable of solving Problem 1. The respective definition would look
 like
 
 <PRE>
-(rec F (lambda (N) 
-               (if (zero? N) 1 
-                 (* N (F (- N 1)))))),
+(rec F 
+     (lambda (N) 
+       (if (zero? N) 1 
+	 (* N (F (- N 1))))))
 </PRE>
 
-which again does not seem quite as simple and intuitive as the
+This again does not seem quite as simple and intuitive as the
 mathematical notation.
 
 <H2>Proposal</H2> 
 
 We therefore propose to implement the <CODE>rec</CODE> special form in
-a generalized form in order to allow recursive procedure definitions
-as in
+a generalized way that combines the advantages of the
+<CODE>named-lambda</CODE> and <CODE>rec</CODE> forms.
 
+The factorial function could be written
 <PRE>
 (rec (F N) 
      (if (zero? N) 1 
-       (* N (F (- N 1))))).
+       (* N (F (- N 1)))))
 </PRE>
 
 <H1>Specification</H1>
 
 <H2>Syntax</H2> 
 
+The following production rules are to be added to those of <a
+href="#[KCR1998]">[KCR1998]</a> (we reuse names of non-terminals).
+
 <OL>
 
-<LI><CODE>&lt;REC-EXPRESSION&gt;</CODE>:
-<CODE>&lt;REC-CONSTANT&gt;</CODE> or
-<CODE>&lt;REC-PROCEDURE&gt;</CODE>.</LI>
+<LI><CODE>&lt;derived expression&gt; --&gt; &lt;rec expression&gt;</CODE></LI>
 
-<LI><CODE>&lt;REC-CONSTANT&gt;</CODE>: <CODE>(rec &lt;TAG&gt;
-&lt;EXPRESSION&gt;)</CODE>.</LI>
+<LI><CODE>&lt;rec expression&gt; --&gt; (rec &lt;variable&gt;
+&lt;expression&gt;)</CODE></LI>
 
-<LI><CODE>&lt;REC-PROCEDURE&gt;</CODE>: <CODE>(rec (&lt;TAG&gt;
-   . &lt;VARIABLES&gt;) &lt;BODY&gt;)</CODE>.</LI>
-
-<LI><CODE>&lt;TAG&gt;</CODE>: any Scheme symbol.</LI>
-
-<LI><CODE>&lt;EXPRESSION&gt;</CODE>: any Scheme expression.</LI>
-
-<LI><CODE>&lt;VARIABLES&gt;</CODE>: any sequence of Scheme
-   symbols.</LI>
-
-<LI><CODE>&lt;BODY&gt;</CODE>: any sequence of expressions that is
-allowed as the body of a lambda expression.</LI>
+<LI><CODE>&lt;rec expression&gt; --&gt; (rec (&lt;variable&gt;+)
+&lt;body&gt;)</CODE></LI>
 
 </OL>
 
 <H2>Semantics</H2> 
-
-<H3><CODE>rec</CODE>-Constants</H3> 
-
-Let <EM>T</EM> be a symbol. Let <EM>X</EM> be an expression.  Let
-<EM>E</EM> be an environment in which <EM>T</EM> is bound according to
-the command
-
-<PRE>(define <EM>T</EM> <EM>X</EM>).</PRE>
-
-Then in <EM>E</EM> the expression <EM>T</EM> is equivalent to any
-expression
-
-<PRE>(rec <EM>T2</EM> <EM>X2</EM>),</PRE>
-
-where <EM>T2</EM> is a symbol and <EM>X2</EM> is the substitution of
-<EM>T</EM> by <EM>T2</EM> in <EM>X</EM>, assuming <EM>T</EM> is free
-for <EM>T2</EM> in <EM>X</EM>.
-
-<H3><CODE>rec</CODE>-Procedures</H3> 
-
-Let <EM>T</EM> be a symbol. Let <EM>V</EM> be a sequence of symbols.
-Let <EM>B</EM> be a body expression.  Let <EM>E</EM> be an environment
-in which <EM>T</EM> is bound according to the command
-
-<PRE>(define (<EM>T</EM> . <EM>V</EM>) <EM>B</EM>).</PRE>
-
-Then in <EM>E</EM> the expression <EM>T</EM> is equivalent to any
-expression
-
-<PRE>(rec (<EM>T2</EM> . <EM>V</EM>) <EM>B2</EM>),</PRE>
-
-where <EM>T2</EM> is a symbol and <EM>B2</EM> is the substitution of
-<EM>T</EM> by <EM>T2</EM> in <EM>B</EM>, assuming <EM>T</EM> is free
-for <EM>T2</EM> in <EM>B</EM>.
-
-<H2>Properties</H2>
-
-The special form <CODE>rec</CODE> has the following properties.
-
-<OL>
-
-<LI>It is a proper extension of the <CODE>rec</CODE> and the
-<CODE>named-lambda</CODE> forms of <A
-href="#[Clinger1985]">[Clinger1985]</A>.</LI>
-
-<LI>When used for recursive procedure definitions, its syntax is quite
-similar to the mathematical standard notation.</LI>
-
-<LI>It is a proper extension of the <CODE>lambda</CODE> form, not
-requiring <CODE>let</CODE>, <CODE>letrec</CODE> or the H. B. Curry
-combinator in order to express general recursions.</LI>
-
-<LI>As long as we use the form for defining functions rather than
-procedures, the concept of storage is not needed for defining the
-semantics.</LI>
-
-</OL>
-
-<H1>Implementation</H1>
-
-<H2>Macro</H2>
 
 Scheme versions such as <A href="#[KCR1998]">[KCR1998]</A> providing
 <CODE>define-syntax</CODE>, <CODE>syntax-rules</CODE>,
@@ -407,15 +296,15 @@ Scheme versions such as <A href="#[KCR1998]">[KCR1998]</A> providing
 <PRE>
 (define-syntax rec
   (syntax-rules ()
-    ((rec (TAG . VARIABLES) . BODY)
-     (letrec ( (TAG (lambda VARIABLES . BODY)) ) TAG))
-    ((rec TAG EXPRESSION)
-     (letrec ( (TAG EXPRESSION) ) TAG))))
+    ((rec (NAME . VARIABLES) . BODY)
+     (letrec ( (NAME (lambda VARIABLES . BODY)) ) NAME))
+    ((rec NAME EXPRESSION)
+     (letrec ( (NAME EXPRESSION) ) NAME))))
 </PRE>
 
-<H2>Simple test</H2>
+<H2>Test</H2>
 
-The following session shows in which way the macro allows a
+The following session shows in which way <CODE>rec</CODE> allows a
 tail-recursive implementation of the factorial function.
 
 <PRE>
