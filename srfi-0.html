@@ -81,11 +81,11 @@ The following special-form is added to the Scheme syntax:
 
 	<p></p>
 
-<LISTING>
-  <definition> --> (if-implements <feature-id> <definition> [ <definition> ] )
-  <expression> --> (if-implements <feature-id> <expression> [ <expression> ] )
-  <feature-id> --> a symbol which is the name or alias of a SRFI
-</LISTING>
+<PRE>
+  &lt;definition&gt; --&gt; (if-implements &lt;feature-id&gt; &lt;definition&gt; [ &lt;definition&gt; ] )
+  &lt;expression&gt; --&gt; (if-implements &lt;feature-id&gt; &lt;expression&gt; [ &lt;expression&gt; ] )
+  &lt;feature-id&gt; --&gt; a symbol which is the name or alias of a SRFI
+</PRE>
 
 At macro-expansion time the <code>if-implements</code> form expands
 into the second argument if the Scheme system implements the feature
@@ -103,13 +103,13 @@ Examples:
 
 	<p></p>
 
-<LISTING>
+<PRE>
   (write (if-implements SRFI-0 (* 1 2) (+ 3 4)))  => writes 2
 
   (if-implements Gambit-C-3.0
     (define (command-line-arguments) (argv))
     (define (command-line-arguments) '()))
-</LISTING>
+</PRE>
 
 The second example assumes that <code>Gambit-C-3.0</code> is an alias
 for the SRFI associated with the specification of Gambit-C version 3.0
@@ -136,7 +136,7 @@ the only implemented features):
 
 	<p></p>
 
-<LISTING>
+<PRE>
 (define-syntax if-implements
   (syntax-rules (SRFI-0 SRFI-5)
     ((if-implements SRFI-0 yes)    yes)
@@ -145,7 +145,7 @@ the only implemented features):
     ((if-implements SRFI-5 yes no) yes)
     ((if-implements other yes)     (begin)) ; note: (begin) not an expression
     ((if-implements other yes no)  no)))
-</LISTING>
+</PRE>
 
 If Scheme defined that <code>(begin)</code> was a valid expression
 that returned an unspecified value then this definition would be
@@ -155,12 +155,12 @@ expression.  For example this is an error in R5RS, if
 
 	<p></p>
 
-<LISTING>
+<PRE>
 (lambda (x)
   (write x)
   (if-implements SRFI-9 (write-char (integer->char 999))) ; expands to (begin)
   (newline))
-</LISTING>
+</PRE>
 
 So to properly implement the <code>if-implements</code> construct, the
 Scheme system must also know at macro-expansion time if the form is
@@ -198,7 +198,7 @@ PARTICULAR PURPOSE.
     <address>Editor: <a href="mailto:srfi-editors@schemers.org">Mike Sperber</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Tue Jan  5 17:50:36 MET 1999
+Last modified: Tue Jan  5 18:45:46 MET 1999
 <!-- hhmts end -->
   </body>
 </html>
