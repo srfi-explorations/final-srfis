@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <html>
   <head>
-    <title>SRFI-26: Notation for Specializing Parameters without Currying</title>
+    <title>SRFI 26: Notation for Specializing Parameters without Currying</title>
   </head>
 
   <body>
@@ -33,9 +33,8 @@ the archive of the mailing list</a>.
 <LI>Draft: 2002/02/06-2002/04/06 </LI>
 <LI>Revised: 2002/02/15</LI>
 <LI>Revised: 2002/02/28</LI>
+<LI>Revised: 2002/06/04</LI>
 </UL>
-
-
 
 <H1>Abstract</H1>
 
@@ -46,7 +45,7 @@ For example, from the binary operation <code>cons</code>
 one might want to obtain the unary operation 
 <code>(lambda (x) (cons 1 x))</code>.
 This specialization of parameters is also known as
-partial application, operator section and projection.<p>
+"partial application", "operator section" or "projection".<p>
 
 The mechanism proposed here allows to write this sort
 of specialization in a simple and compact way.
@@ -73,6 +72,11 @@ The mechanism is best explained by a few examples:<p>
 <TD>is the same as
 <TD><code>(lambda (x2 . xs) (apply list 1 x2 3 xs))</code>
 </TR>
+<TR>
+<TD><code>(cut <> a b)</code> 
+<TD>is the same as
+<TD><code>(lambda (f) (f a b))</code>
+</TR>
 </TABLE><p>
 
 As you see, the macro <code>cut</code> specializes some of the 
@@ -81,9 +85,30 @@ The parameters that are to show up as formal
 variables of the result are indicated by the symbol <code>&lt;&gt;</code>, 
 pronouced as "slot". In addition, the symbol <code>&lt;...&gt;</code>,
 pronounced as "rest-slot", matches all residual arguments of a variable 
-argument procedure.<p>
+argument procedure.
+As you can see from the last example above, the first argument can also
+be a slot, as one should expect in Scheme.<p>
 
-The mechanism proposed here allows specializing any subset 
+In addition to <code>cut</code>, there is a variant called <code>cute</code>
+(a mnemonic for "<code>cut</code> with evaluated non-slots") which evaluates
+the non-slot expressions at the time the procedure is specialized, not at 
+the time the specialized procedure is called.
+For example,<p>
+
+<TABLE>
+<TR>
+<TD><code>(cute cons (+ a 1) <>)</code> 
+<TD>is the same as
+<TD><code>(let ((a1 (+ a 1))) (lambda (x2) (cons a1 x2)))</code>
+</TR>
+</TABLE><p>
+
+As you see from comparing this example with the first example above,
+the <code>cute</code>-variant will evaluate <code>(+ a 1)</code>
+once, while the <code>cut</code>-variant will evaluate it during
+every invokation of the resulting procedure.<p>
+
+The mechanism proposed in this SRFI allows specializing any subset 
 of the variables of a procedure.
 The result can be of fixed arity or of variable arity.
 The mechanism does not allow permutation, omission, duplication
@@ -123,7 +148,7 @@ of currying available within the programming language Scheme.
 There are two primary benefits of currying in practice:
 Higher-order types are substantially simplified and
 there is a simple notation for specializing parameters.
-The type aspect is irrelevant as has Scheme latent typing.
+The type aspect is irrelevant as Scheme has latent typing.
 The specialization aspect is largly covered with this SRFI.<p>
 
 Here are a few more examples for illustration:
@@ -141,6 +166,12 @@ Here are a few more examples for illustration:
 <TR>
 <TD><code>(apply + (map (cut if <> 0 1) '(#f #t #t #f)))</code>
 </TR>
+<TR>
+<TD><code>(map (cut <> x y z) (list min max))</code> 
+</TR>
+<TR>
+<TD><code>(for-each (cut <>) thunks)</code> 
+</TR>
 </TABLE>
 
 <H1>Specification</H1>
@@ -152,15 +183,12 @@ The formal syntax of a specialized expression, in the style of the
 <TR>
 <TD><code>&lt;cut-expression&gt;</code>
 <TD><code>--></code>
-<TD><TD><code>(cut &lt;proc&gt; &lt;const-or-slot&gt;*)</code>
+<TD><TD><code>(cut &lt;const-or-slot&gt;+ [ <...> ])</code>
+<TD>
 </TR>
 <TR>
-<TD><TD><TD>|<TD><code>(cut &lt;proc&gt; &lt;const-or-slot&gt;* <...>)</code>
-</TR>
-<TR>
-<TD><code>&lt;proc&gt;</code>
-<TD><code>--></code>
-<TD><TD><code>&lt;expression&gt;</code><TD>; a procedure
+<TD><TD><TD>|<TD><code>(cute &lt;const-or-slot&gt;+ [ <...> ])</code>
+<TD>; evaluate non-slots at specialization time
 </TR>
 <TR>
 <TD><code>&lt;const-or-slot&gt;</code>
@@ -176,70 +204,44 @@ a constant, not directly dependent on the slots
 The macro <code>cut</code> transforms a 
 <code>&lt;cut-expression&gt;</code> into a 
 <code>&lt;lambda expression&gt;</code> with as many formal variables
-as there are slots in the list <code>&lt;const-or-slot&gt;*</code>.
+as there are slots in the list <code>&lt;const-or-slot&gt;+</code>.
 The body of the resulting <code>&lt;lambda expression&gt;</code> calls
-<code>&lt;proc&gt;</code> with the arguments from 
-<code>&lt;const-or-slot&gt;*</code> in the order they appear.
+the first <code>&lt;const-or-slot&gt;</code> with arguments from
+the other <code>&lt;const-or-slot&gt;</code>s in the order they appear.
 In case there is a rest-slot symbol for the residual arguments 
 of a variable arity procedure, the resulting procedure is also of 
-variable arity and the body calls <code>&lt;proc&gt;</code> with
-all arguments provided to the actual call of the specialized procedure.<p>
+variable arity, and the body calls the first <code>&lt;const-or-slot&gt;</code>
+with all arguments provided to the actual call of the specialized procedure.<p>
 
-The expressions at the non-slot positions (called "constant" above) and 
-the expression for <code>&lt;proc&gt;</code> are evaluated at the 
-time the specialized procedure is called, <em>not</em> at the time 
-it is constructed.
-This implies, that the meaning of a <code>&lt;cut-expression&gt;</code>
-is in any respect identical to the meaning of the lambda-expression
-it represents.<p>
+The macro <code>cute</code> is similar to the macro <code>cut</code>,
+except that it first binds new variables to the result of evaluating
+the non-slot expressions and then substituting the variables for the
+non-slot expressions.
+In effect, <code>cut</code> evaluates non-slot expressions at the time
+the resulting procedure is called, whereas <code>cute</code> evaluates
+the non-slot expressions at the time the procedure is constructed.
 
 <H1>Implementation</H1>
 
-The following reference implementation defines the macro 
-<code>cut</code> using the macro mechanism of R5RS.
+The reference implementation defines the two macros
+<code>cut</code> and <code>cute</code> using macro mechanism of R5RS.
 It does not use any other SRFI or any library.
-The implementation makes use of a local macro of
-the form <code>(cut "loop" params proc args . consts-or-slots)</code>
-which collects the parameters (formals of the result) and
-arguments (values eventually passed to the proc) from the 
-list of constants or slots.
+The implementation makes use of the internal macro \
+<code>srfi-26-internal</code> to process the qualifiers.
 As macros in R5RS are hygienic and referentially transparent,
 the macro mechanism makes sure the names of the newly
 introduced formal variables are unique and do not clash.
-The template <code>(params ... slot)</code>, see <a href="http://www.schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-10.html#%_sec_7.1.5">Sect. 7.1.5. of R5RS</a>,
+The template <code>(param ... slot)</code>, see <a href="http://www.schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-10.html#%_sec_7.1.5">Sect. 7.1.5. of R5RS</a>,
 allows to preserve the order of arguments---which would get
 reversed otherwise.
-Here is the reference implementation:
-
-<code><pre>
-(define-syntax cut
-  (syntax-rules (<> <...>)
-
-    ; construct variable or fixed arity procedure
-    ((cut "loop" (params ...) proc (args ...) <...>)
-     (lambda (params ... . rest-slot) (apply proc args ... rest-slot)))
-    ((cut "loop" (params ...) proc (args ...))
-     (lambda (params ...) (proc args ...)))
-				
-    ; loop over &lt;const-or-slot&gt;*
-    ((cut "loop" (param ...) proc (arg ...) <> . consts-or-slots)
-     (cut "loop" (param ... slot) proc (arg ... slot) . consts-or-slots))
-    ((cut "loop" (param ...) proc (arg ...) const . consts-or-slots)
-     (cut "loop" (param ...) proc (arg ... const) . consts-or-slots))
-
-    ; specified syntax
-    ((cut proc . consts-or-slots)
-     (cut "loop" () proc () . consts-or-slots))))
-</pre></code>
-
-(For those who have technical problems with copy and paste from
-this page: <a href="cut.scm">Here</a> is it in a file, too.)<p>
+The reference implementation is <a href="cut.scm">here</a>.<p>
 
 Finally, there is a small collection of 
 <a href="check.scm">confidence tests</a>.
 It checks some special cases of the mechanism defined
 in this SRFI and signals an error in case something is wrong.
-Passing the tests does not mean a correct implementation, though.
+Passing the tests does not mean a correct implementation.
+
 
 <H1>Design Rationale</H1>
 
@@ -272,7 +274,7 @@ Please refer to the discussion threads
 <a href="http://srfi.schemers.org/srfi-26/mail-archive/msg00038.html">"is that useful?"</a> (Walter C. Pelissero), and
 <a href="http://srfi.schemers.org/srfi-26/mail-archive/msg00040.html">"l, the ultimate curry that is not curry"</a> (Al Petrofsky).<p>
 
-<H3>Why is the macro called <code>cut</code> and not 
+<H3>Why are the macro called <code>cut/cute</code> and not 
 [<em>enter your favourite here</em>]?</H3>
 
 Well, the original name proposed for this SRFI was <code>curry</code>
@@ -298,21 +300,23 @@ could potentially benefit from a different name---however impractical
 it may be to go for unanimous popularity.
 The name <code>cut</code> refers to "operator section", as the
 concept is often called in other programming languages, 
-but I tend to remember it as the acronym for "Curry Upon This" ;-).<p>
+but I tend to remember it as the acronym for "Curry Upon This" ;-).
+The names for the evaluating version of <code>cut</code> that
+have been proposed were <code>cut!</code>, <code>cutlet</code>,
+<code>cut*</code>, and <code>cute</code>.<p>
 
 <H3>Is it possible to implement the SRFI without macros?</H3>
 
 Not really.
 As Stephan Houben has pointed out during the discussion (refer to
-<a href="http://srfi.schemers.org/srfi-26/mail-archive/msg00008.html">"Implementing it as a procedure"</a>) it is possible to implement a mechanism
-closely related to the one proposed in this SRFI without macros.
-However, the procedural mechanism evaluates the expressions for the 
-"constants" at the time the specialized procedure is being constructed. 
-Refer to Al Petrovsky's posting 
+<a href="http://srfi.schemers.org/srfi-26/mail-archive/msg00008.html">"Implementing it as a procedure"</a>) it is possible to implement the 
+<code>cute</code>-mechanism as a procedure.
+Refer also to Al Petrofsky's posting 
 <a href="http://srfi.schemers.org/srfi-26/mail-archive/msg00048.html">"Problems with "curry"'s formal specification"</a> for details.
-This is in contrast to the specification of the mechanism as
-defined here. Hence, the procedural implementation is not compliant
-to this SRFI. One of the confidence tests checks for this.
+However, the procedural implementation comes with a slight performance
+penalty and it is not possible the implement the <code>cut</code>-mechanism 
+as a procedure, too.
+As both are needed, we rely on macros to implement the SRFI.
 
 <H3>Why is there another symbol for the rest-slot when lambda-expressions
 use the dotted notation for variable length argument lists?</H3>
@@ -324,6 +328,28 @@ The second reason is the way the hygienic macro mechanism in R5RS
 is defined to deal with dotted notation, as Felix Winkelmann has pointed out.
 Refer to the discussion threads
 <a href="http://srfi.schemers.org/srfi-26/mail-archive/msg00001.html">"Improper lists in macros [WAS: none]"</a>.<p>
+
+<H3>Why is it impossible to specify when a non-slot is evaluated individually 
+per non-slot?</H3>
+<code>Cut</code> evaluates all non-slots at the time the specialized
+procedure is called and <code>cute</code> evaluates all non-slots at
+the time the procedure is being specialized.
+These are only the two extremes and it is possible to define a 
+syntax that allows to choose per non-slot.
+However, I am convinced that the benefit of the greater flexibility
+is not worth the risk of confusion.
+If a piece of code really depends on the distinction, it might be
+better to make this explicit through <code>let</code> and 
+<code>lambda</code>.<p>
+
+
+<H1>Acknowledgements</H1>
+
+An important part of this SRFI is based on the contribution
+of other people, mostly through the discussion archive.
+In particular, the semantics and the design rationale have
+been greatly improved in the course of the discussion.
+I would like to thank all who have contributed.
 
 <H1>Copyright</H1>
 Copyright (C) Sebastian Egner (2002). All Rights Reserved. 
@@ -356,7 +382,7 @@ PARTICULAR PURPOSE.
     <address>Author: <a href="mailto:sebastian.egner@philips.com">Sebastian Egner</a></address>
 <!-- Created: Mon Feb 4 15:20:00 EST 2002 -->
 <!-- hhmts start -->
-Last modified: Fri Mar  1 09:02:11 MET 2002
+Last modified: Tue Jun  4 18:15:51 MST 2002
 <!-- hhmts end -->
   </body>
 </html>=
