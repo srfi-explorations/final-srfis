@@ -621,7 +621,7 @@ HREF="mailto:srfi-43@srfi.schemers.org">mail to
         <br>
         <br>
         <code class="example-call">
-          (vector-unfold-right values <i>n</i>)
+          (vector-unfold-right (&lambda; (i x) (values x (+ x 1))) <i>n</i> 0)
         </code>
         <br>
         <code class="example-value">
@@ -633,10 +633,15 @@ HREF="mailto:srfi-43@srfi.schemers.org">mail to
         <br>
         <br>
         <code class="example-call">
-          (vector-unfold-right (&lambda; (i) (vector-ref <i>vector</i> i))
+          (vector-unfold-right (&lambda; (i x)
+                                 (values (vector-ref <i>vector</i> x)
+                                         (+ x 1)))
           <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                               (vector-length <i>vector</i>))
+                               (vector-length <i>vector</i>)
+          <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                               0)
         </code>
         <br>
         <br>
