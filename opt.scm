@@ -14,11 +14,12 @@
       (pretty-print (apply opt:make spec)))))
 
 (define (mk)
-  (opt:file "op-ctor.scm" 'ctor '(1) '(3 0))
-  (opt:file "op-mbda.scm" 'mbda '(1) '(3 0))
-  (opt:file "op-mize.scm" 'tter '(3 -1 0 1) '(5 0) '(8))
-  (opt:file "op-tter.scm" 'tter '(1) '(3 0))
-  (opt:file "op-zero.scm" 'mbda '(0)))
+  (opt:file "op-ctor.scm" 'ctor '(4))
+  (opt:file "op-mbda.scm" 'mbda '(3 -1 0 1) '(4 0 1))
+  (opt:file "op-tter.scm" 'tter '(3 -1 0 1) '(4 0)))
+
+; (opt:file "op-mize.scm" 'tter '(3 -1 0 1) '(4 0) '(8))
+; (opt:file "op-zero.scm" 'mbda '(0))
 
 ;;; Execute (opt:make '(4 -1 0 1) '(20))
 ;;; to display the source code
@@ -72,7 +73,7 @@
        (define (,(opt:lib "optimize-empty") r)
          ,(case type
             ((mbda) '(lambda ks
-                       (if (= (length? ks) r)
+                       (if (= (length ks) r)
                            -1
                            (values -1 (car (reverse ks))))))
             ((ctor) '(let ((x (make-vector (+ r 1) 0)))

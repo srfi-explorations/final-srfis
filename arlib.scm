@@ -98,7 +98,7 @@
     (let ((vec (make-vector r)))
       (let do-dim ((d 0))
         (if (= d r)
-            (array:apply-to-vector proc vec)
+            (array:apply-to-vector r proc vec)
             (let ((e (array-ref shp d 1)))
               (do ((k (array-ref shp d 0) (+ k 1)))
                 ((= k e))
@@ -340,10 +340,14 @@
       (out-set! out k (fix-ref fix k)))
     (share-array/index!
      arr
+     (let ((bounds (array->list (array-shape arr))))
+       (apply shape (list-tail bounds (if (vector? fix)
+                                          (* 2 (vector-length fix))
+                                          (* 2 (array-end fix 0))))))
      (lambda (in)
        (do ((k m (+ k 1)))
          ((= k n))
-         (out-set! out k (in-ref (- k m))))
+         (out-set! out k (in-ref in (- k m))))
        out)
      in)))
 

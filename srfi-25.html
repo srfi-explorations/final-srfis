@@ -16,67 +16,33 @@ Jussi Piitulainen
 
 <H1>Status</H1>
 
-This SRFI is currently in ``draft'' status. To see an explanation of
+This SRFI is currently in ``final'' status. To see an explanation of
 each status that a SRFI can hold, see <a
-href="http://srfi.schemers.org/srfi-process.html">here</a>.  It will
-remain in draft until 2002-01-11, or as amended.  to provide input on
-this SRFI, please
-<a href="mailto:srfi-25@srfi.schemers.org">
-mail to <code>srfi-25@srfi.schemers.org</code></a>.
-See <a href="http://srfi.schemers.org/srfi-list-subscribe.html">
-instructions here</a> to subscribe to the list.  You can access
-previous messages via
+href="http://srfi.schemers.org/srfi-process.html">here</a>.  You can access
+the discussion via
 <a href="http://srfi.schemers.org/srfi-25/mail-archive/maillist.html">
 the archive of the mailing list</a>.
 <P>
 <UL>
 <LI>Draft: 2001/11/12-2002/01/11 </LI>
+<LI>Revised: 2002/02/03</LI>
+<LI>Final: 2002/05/21</LI>
 </UL>
 </P>
 
 <H1>Abstract</H1>
 
 <p>
-A powerful core set of procedures for creating and manipulating
-heterogeneous multidimensional arrays is proposed. The design provides
-easy sharing of parts of an array as other arrays without copying,
-encouraging a declarative style of programming. The provided
-primitives should be sufficient to implement higher level operations.
+A core set of procedures for creating and manipulating heterogeneous
+multidimensional arrays is proposed. The design is consistent with the
+rest of Scheme and independent of other container data types. It
+provides easy sharing of parts of an array as other arrays without
+copying, encouraging a declarative style of programming.
 </p>
 
 <p>
 The specification is based on an original contribution by Alan Bawden
 in 1993.
-</p>
-
-<H1>Issues</H1>
-
-<p>
-Here's what changed.
-</p>
-
-<p>
-Shapes are now quite as mutable as any other array. The shape of an
-array is not itself accessible any more; bounds for each dimension are
-accessed instead. (It is trivial to reconstruct the shape as an
-array.)
-</p>
-
-<p>
-Element access has a variant interface where the indices are packaged
-in an index object: either a vector or a 0-based 1-dimensional array.
-The old interface has not changed.
-</p>
-
-<p>
-It is not required that vectors not be arrays. It is not required that
-they be, either.
-</p>
-
-<p>
-The word for sharing index mappings is <em>affine</em> instead of
-<em>linear</em>. The number of dimensions is called <em>rank</em>
-again.
 </p>
 
 <H1>Rationale</H1>
@@ -86,12 +52,6 @@ The proposed arrays encourage a natural declarative programming
 style. They allow sharing of most any rectangular part of an array
 through an affine index mapping, without copying. But imperative style
 is equally natural.
-</p>
-
-<p>
-The scope of this specification is limited. These are meant to be just
-the core primitives. Another library of higher level operations and
-otherwise convenient procedures should be specified separately.
 </p>
 
 <p>
@@ -120,15 +80,32 @@ lack of an external representation. Index bounds are specified as for
 </p>
 
 <p>
-There is only one new type. Array shapes are represented as
-arrays. Index objects are arrays or vectors. Index mappings return
-multiple values as multiple values.
+Array shapes are specified as arrays. These can be made with a special
+procedure <code>shape</code> that does not have a shape argument. An
+array does not retain a dependence to the shape array. For example,
+mutation of a shape array is allowed.
 </p>
 
 <p>
-Finally, array dimensions can begin at any index. In particular, the
-choice between <code>0</code> and <code>1</code> is left to the user.
+Index mappings return multiple values as multiple values.
+</p>
+
+<p>
+Array dimensions can begin at any index. In particular, the choice
+between <code>0</code> and <code>1</code> is left to the user.
 (Shapes and index objects are zero based, though.)
+</p>
+
+<p>
+The ability to pack an index sequence in a vector is useful for
+implementing higher level operations. (The ability to pack it in a
+one-dimensional array lets one use, say, a row of a matrix as an
+index.)
+</p>
+
+<p>
+It is not required that vectors not be arrays. It is not required that
+they be, either.
 </p>
 
 <H1>Specification</H1>
@@ -185,7 +162,8 @@ implementations provide something similar.
 Returns a newly allocated array whose shape is given by
 <var>shape</var>.  If <var>obj</var> is provided, then each element is
 initialized to it. Otherwise the initial contents of each element is
-unspecified.
+unspecified. The array does not retain a dependence to
+<var>shape</var>.
 </p>
 
 <p>
@@ -209,7 +187,7 @@ The shape of a <var>d</var>-dimensional array is a
 <var>k</var> and the element at <var>k 1</var> contains the
 corresponding upper bound, where <var>k</var> satisfies
 <code>(&lt;=&nbsp;0&nbsp;<var>k</var>)</code> and
-<code>(&lt;&nbsp;<var>k</var>&nbsp;<var>d</var>)</var>.
+<code>(&lt;&nbsp;<var>k</var>&nbsp;<var>d</var>)</code>.
 </p>
 
 <p>
@@ -217,7 +195,7 @@ corresponding upper bound, where <var>k</var> satisfies
 
 Returns a new array whose shape is given by <var>shape</var> and the
 initial contents of the elements are <var>obj ...</var> in row major
-order.
+order. The array does not retain a dependence to <var>shape</var>.
 </p>
 
 <p>
@@ -331,7 +309,9 @@ Returns a new array of shape <var>shape</var> that shares elements of
 <var>array</var> through <var>proc</var>. The procedure
 <var>proc</var> must implement an affine function that returns indices
 of <var>array</var> when given indices of the array returned by
-<code>share-array</code>.
+<code>share-array</code>. The array does not retain a dependence to
+<var>shape</var>.
+</p>
 
 <pre>
     (define i_4
@@ -389,8 +369,7 @@ in <em>testing</em> an implementation; that is their origin).
 
 <li> A test suite <a href="test.scm">test.scm</a> for <em>array</em>,
      and another test suite <a href="list.scm">list.scm</a> for
-     <em>arlib</em>. A third suite tests error <a
-     href="fail.scm">fail.scm</a> messages.
+     <em>arlib</em>.
 
 <li> A rudimentary display procedure <code>(play array)</code> in <a
      href="play.scm">play.scm</a>, for playing around with the system.
@@ -414,14 +393,15 @@ Types). All names not defined in this proposal are in the prefix
 You can get <a href="srfi-25-reference.scm">source for the reference
 implementation</a> as a single file and stop reading. But there are
 variations. This single file represents arrays as procedures (so the
-type predicate is rather approximate); it represents index mapping as
+type predicate is very approximate); it represents index mapping as
 vectors of coefficients; map recognition is not optimised for any
-number of dimensions (that would be redundant in this representation).
+number of dimensions as that would be redundant in this
+representation.
 </p>
 
 <p>
-The real source comes in separate files. A working installation
-consists of the following four parts, each in its own file.
+The real source comes in too many files. A working installation
+consists of the following parts, each in its own file.
 </p>
 
 <ol>
@@ -430,8 +410,8 @@ consists of the following four parts, each in its own file.
      type disjointness, or portable as procedures, in a file
      <em>as-*.scm</em>, and
 
-<li> <dfn>indexing operations</dfn> to match the type of the affine
-     recogniser, in a file <em>ix-*.scm</em>, and
+<li> <dfn>indexing operations</dfn> to match the type, in a file
+     <em>ix-*.scm</em>, and
 
 <li> an <dfn>affine recogniser</dfn> of one of three types, optimised
      up to some number of dimensions, in a file <em>op-*.scm</em>, and
@@ -463,8 +443,8 @@ procedures; load <tt>as-</tt>, <tt>ix-</tt> and <tt>op-</tt> and
      procedure to the argumets of <code>array-ref</code> and the
      second procedure to the arguments of <code>array-set!</code>.
 
-<li> In <a href="op-ctor.scm">op-ctor.scm<a> representation, index
-     mappings are coefficient vectors. The <a href="ix-ctor.scm">index
+<li> In <a href="op-ctor.scm">ctor</a> representation, index mappings
+     are coefficient vectors. The <a href="ix-ctor.scm">access
      procedures</a> compute the sum of products of coefficients and
      indexes in a loop on the list.
 
@@ -479,15 +459,15 @@ Scheme</a> (arrays belong to a struct type).
 </p>
 
 <p>
-With the three other files from above, the <a href="array.scm">main
-source file</a> should work in any Scheme implementation without need
-of modification.
+With the three files from above, the <a href="array.scm">main source
+file</a> should work in any Scheme implementation without need of
+modification.
 </p>
 
 <p>
-Error checking in the implementation may be expensive. The places
-where it occurs are cleanly separated from the surrounding code.
-(Sharing uses a check that is exponential in the number of
+Error checking in the implementation may be a tad expensive. The
+places where it occurs are cleanly separated from the surrounding
+code. (Sharing uses a check that is exponential in the number of
 dimensions. It is disabled above a threshold rank.)
 </p>
 
@@ -503,14 +483,13 @@ consistency with the core types of Scheme.
 
 <p>
 Alan Bawden and Mark K. Gardner gave useful comments at an earlier
-attempt to make this specification public. (There were others.)
-Finally, the specification has benefited from the discussion on the
-SRFI mailing list.
+attempt to make this specification public. (There was at least one
+other. Notes have gone missing.) SRFI feedback led to improved
+wording, hidden shapes, and two kinds of index objects.
 </p>
 
 <p>
-The exact title of the proposal comes from a message titled "a process
-that might work" by William D. Clinger to the <tt>rrrs-authors</tt>
+The exact title of the proposal comes from a <a href="http://zurich.ai.mit.edu/pipermail/rrrs-authors/1998-May/002349.html">message titled "a process that might work"</a> by William D. Clinger to the <tt>rrrs-authors</tt>
 mailing list in 1998. That appears to be a part of the past of the <a
 href="http://srfi.schemers.org">SRFI process</a>.
 </p>
@@ -547,7 +526,7 @@ PARTICULAR PURPOSE.
     href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Wed Nov 14 10:20:03 MET 2001
+Last modified: Tue May 28 18:46:09 MST 2002
 <!-- hhmts end -->
   </body>
 </html>

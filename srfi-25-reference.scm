@@ -1,3 +1,9 @@
+;;; cat as-procedure.scm \
+;;;     ix-ctor.scm      \
+;;;     op-ctor.scm      \
+;;;     array.scm        \
+;;; > srfi-25-reference.scm
+
 ;;; array as-procedure
 ;;; 1997 - 2001 Jussi Piitulainen
 
@@ -105,7 +111,7 @@
                             "array-set!: bad index object: "
                             (array:thing->string x)))))))))
 (begin
-  (define array:opt-args '(ctor (1) (3 0)))
+  (define array:opt-args '(ctor (4)))
   (define (array:optimize f r)
     (case r
       ((0) (let ((n0 (f))) (array:0 n0)))
@@ -113,6 +119,13 @@
       ((2)
        (let ((n0 (f 0 0)))
          (array:2 n0 (- (f 1 0) n0) (- (f 0 1) n0))))
+      ((3)
+       (let ((n0 (f 0 0 0)))
+         (array:3
+           n0
+           (- (f 1 0 0) n0)
+           (- (f 0 1 0) n0)
+           (- (f 0 0 1) n0))))
       (else
        (let ((v
               (do ((k 0 (+ k 1)) (v '() (cons 0 v)))
@@ -151,13 +164,15 @@
   (define (array:0 n0) (vector n0))
   (define (array:1 n0 n1) (vector n1 n0))
   (define (array:2 n0 n1 n2) (vector n1 n2 n0))
-  (define (array:n n0 n1 n2 n3 . ns)
-    (apply vector n1 n2 n3 (append ns (list n0))))
+  (define (array:3 n0 n1 n2 n3) (vector n1 n2 n3 n0))
+  (define (array:n n0 n1 n2 n3 n4 . ns)
+    (apply vector n1 n2 n3 n4 (append ns (list n0))))
   (define (array:maker r)
     (case r
       ((0) array:0)
       ((1) array:1)
       ((2) array:2)
+      ((3) array:3)
       (else array:n)))
   (define array:indexer/vector
     (let ((em
@@ -1363,10 +1378,10 @@
       (array:index-set! in k 0))
     (let* ((n0 (proc in))
            (n (array:index-length n0)))
-      (let ((arr (make-array (shape 0 (+ m 1) 0 n))))  ;BAD - be lower level
+      (let ((arr (make-array (shape 0 (+ m 1) 0 n))))  ; (*)
         (do ((k 0 (+ k 1)))
           ((= k n))
-          (array-set! arr 0 k (array:index-ref n0 k))) ;BAAD
+          (array-set! arr 0 k (array:index-ref n0 k))) ; (**)
         (do ((j 0 (+ j 1)))
           ((= j m))
           (array:index-set! in j 1)
@@ -1374,6 +1389,10 @@
             (array:index-set! in j 0)
             (do ((k 0 (+ k 1)))
               ((= k n))
-              (array-set! arr (+ j 1) k (- (array:index-ref nj k) ;BAAAD
+              (array-set! arr (+ j 1) k (- (array:index-ref nj k) ; (**)
                                            (array:index-ref n0 k))))))
         arr))))
+;; (*)  Should not use `make-array' and `shape' here
+;; (**) Should not use `array-set!' here
+;; Should use something internal to the library instead: either lower
+;; level code (preferable but complex) or alternative names to these same.

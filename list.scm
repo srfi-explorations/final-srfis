@@ -431,6 +431,20 @@
 
 (past "four-by-four vs array-retabulate! on parts")
 
+;;; An argument was missing in a call in arlib when
+;;; shape-for-each was called without an index object.
+
+(or (let ((em '()))
+      (shape-for-each
+       (shape 0 2 -2 0 0 1)
+       (lambda (u v w)
+         (set! em (cons (list u v w) em))))
+      (equal? (reverse em) '((0 -2 0) (0 -1 0) (1 -2 0) (1 -1 0))))
+    (error "shape-for-each without index object"))
+
+(past "shape-for-each without index object")
+                                 
+
 ;;; Exercise share-array/index!
 
 (or (let ((arr (tabulate-array (shape 2 4 3 5 4 7) *)))
@@ -688,6 +702,17 @@
 (past "share-array/{prefix,index!} 1")
 
 (let ((m (array (shape 1 3 1 3) 'a 'b 'c 'd)))
+  (or (array-equal? (share-array/prefix m (vector 1))
+                    (share-array/index!
+                     m (shape 1 3)
+                     (lambda (x)
+                       (vector 1 (vector-ref x 0)))
+                     (vector *)))
+      (error "share-array/prefix with vector failed")))
+
+(past "share-array/prefix with vector")
+
+(let ((m (array (shape 1 3 1 3) 'a 'b 'c 'd)))
   (or (array-equal? (share-array/prefix m 2)
                     (share-array/index!
                      m (shape 1 3)
@@ -697,6 +722,17 @@
       (error "share-array/index! with prefix 2 failed")))
 
 (past "share-array/{prefix,index!} 2")
+
+(let ((m (array (shape 1 3 1 3) 'a 'b 'c 'd)))
+  (or (array-equal? (share-array/prefix m (array (shape 0 1) 2))
+                    (share-array/index!
+                     m (shape 1 3)
+                     (lambda (x)
+                       (vector 2 (vector-ref x 0)))
+                     (vector *)))
+      (error "share-array/prefix with array failed")))
+
+(past "share-array/prefix with array")
 
 (let ((m (array (shape 1 3 1 3) 'a 'b 'c 'd)))
   (or (array-equal? (share-array/prefix m)
@@ -718,7 +754,7 @@
       (error "share-array/index! with prefix 1 2 failed")))
 
 (past "share-array/{prefix,index!} 1 2")
-                     
+
 ;;; Uh oh.
 
 (let* ((hape (tabulate-array

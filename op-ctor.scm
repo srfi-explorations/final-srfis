@@ -1,5 +1,5 @@
 (begin
-  (define array:opt-args '(ctor (1) (3 0)))
+  (define array:opt-args '(ctor (4)))
   (define (array:optimize f r)
     (case r
       ((0) (let ((n0 (f))) (array:0 n0)))
@@ -7,6 +7,13 @@
       ((2)
        (let ((n0 (f 0 0)))
          (array:2 n0 (- (f 1 0) n0) (- (f 0 1) n0))))
+      ((3)
+       (let ((n0 (f 0 0 0)))
+         (array:3
+           n0
+           (- (f 1 0 0) n0)
+           (- (f 0 1 0) n0)
+           (- (f 0 0 1) n0))))
       (else
        (let ((v
               (do ((k 0 (+ k 1)) (v '() (cons 0 v)))
@@ -45,13 +52,15 @@
   (define (array:0 n0) (vector n0))
   (define (array:1 n0 n1) (vector n1 n0))
   (define (array:2 n0 n1 n2) (vector n1 n2 n0))
-  (define (array:n n0 n1 n2 n3 . ns)
-    (apply vector n1 n2 n3 (append ns (list n0))))
+  (define (array:3 n0 n1 n2 n3) (vector n1 n2 n3 n0))
+  (define (array:n n0 n1 n2 n3 n4 . ns)
+    (apply vector n1 n2 n3 n4 (append ns (list n0))))
   (define (array:maker r)
     (case r
       ((0) array:0)
       ((1) array:1)
       ((2) array:2)
+      ((3) array:3)
       (else array:n)))
   (define array:indexer/vector
     (let ((em

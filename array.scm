@@ -621,10 +621,10 @@
       (array:index-set! in k 0))
     (let* ((n0 (proc in))
            (n (array:index-length n0)))
-      (let ((arr (make-array (shape 0 (+ m 1) 0 n))))  ;BAD - be lower level
+      (let ((arr (make-array (shape 0 (+ m 1) 0 n))))  ; (*)
         (do ((k 0 (+ k 1)))
           ((= k n))
-          (array-set! arr 0 k (array:index-ref n0 k))) ;BAAD
+          (array-set! arr 0 k (array:index-ref n0 k))) ; (**)
         (do ((j 0 (+ j 1)))
           ((= j m))
           (array:index-set! in j 1)
@@ -632,6 +632,10 @@
             (array:index-set! in j 0)
             (do ((k 0 (+ k 1)))
               ((= k n))
-              (array-set! arr (+ j 1) k (- (array:index-ref nj k) ;BAAAD
+              (array-set! arr (+ j 1) k (- (array:index-ref nj k) ; (**)
                                            (array:index-ref n0 k))))))
         arr))))
+;; (*)  Should not use `make-array' and `shape' here
+;; (**) Should not use `array-set!' here
+;; Should use something internal to the library instead: either lower
+;; level code (preferable but complex) or alternative names to these same.
