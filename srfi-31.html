@@ -1,19 +1,21 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
 <!-- SAVED from url=(0043)http://srfi.schemers.org/srfi-template.html -->
-<HTML>
-<HEAD>
-<META http-equiv=Content-Type content="text/html; charset=windows-1252">
-<title>SRFI 31: A generalised A. Church procedure form</title> </HEAD>
-
-<BODY>
-
-<H1>Title</H1>
-
-A generalised A. Church procedure form
+<html>
+  <head>
+    <META http-equiv=Content-Type content="text/html; charset=windows-1252">
+    <title>SRFI 31: A generalised A. Church procedure form</title> 
+  </head>
+  
+  <body>
+    
+<H1>Title</H1>A generalised A. Church procedure form
 
 <H1>Version</H1> 
 
 <UL>
+
+<LI>
+Fri May 31 08:09:19 2002. Corrected some typos.</LI>
 
 <LI>
 Sun May 26 09:10:44 2002. Improved exposition without changing
@@ -25,9 +27,7 @@ srfi-editors@srfi.schemers.org.</LI>
 
 </UL>
 
-<H1>Author</H1>
-
- Mirko Luedde &lt;<A
+<H1>Author</H1> Mirko Luedde &lt;<A
 href="mailto:Mirko.Luedde@Computer.Org">Mirko.Luedde@Computer.Org</A>&gt;
 
 <H1>Status</H1>
@@ -35,22 +35,20 @@ href="mailto:Mirko.Luedde@Computer.Org">Mirko.Luedde@Computer.Org</A>&gt;
 This SRFI is currently in ``draft'' status. To see an explanation of
 each status that a SRFI can hold, see <A
 href="http://srfi.schemers.org/srfi-process.html">here</A>.  It will
-remain in draft until 2002-08-24, or as amended.  to provide input on
-this SRFI, please <A href="mailto:srfi-31@srfi.schemers.org"> mail to
+remain in draft until 2002-08-24, or as amended.  To provide input on
+this SRFI, please <A href="mailto:srfi-31@srfi.schemers.org">mail to
 <CODE>srfi-31@srfi.schemers.org</CODE></A>.  See <A
-href="http://srfi.schemers.org/srfi-list-subscribe.html"> instructions
+href="http://srfi.schemers.org/srfi-list-subscribe.html">instructions
 here</A> to subscribe to the list.  You can access previous messages
 via <A
-href="http://srfi.schemers.org/srfi-31/mail-archive/maillist.html">
-the archive of the mailing list</A>.
+href="http://srfi.schemers.org/srfi-31/mail-archive/maillist.html">the
+archive of the mailing list</A>.
     
 <UL>
   <LI>Draft: 2002/05/24-2002/08/24</LI>
 </UL>
 
-<H1>Abstract</H1>
-
- We propose the implementation of a new special form
+<H1>Abstract</H1> We propose the implementation of a new special form
 called <CODE>procedure</CODE>. This form allows the simple and
 stateless construction of recursive procedures. It extends the
 A. Church form <CODE>lambda</CODE> in that it allows recursive
@@ -60,9 +58,7 @@ the H. B. Curry combinator. Unlike <CODE>define</CODE>, the form
 <CODE>procedure</CODE> is non-imperative, hence does not operate on
 storage and does not introduce a variable binding in its scope.
 
-<H1>Issues</H1>
-
- No issues are anticipated.
+<H1>Issues</H1> No issues are anticipated.
 
 <H1>Rationale</H1> 
 
@@ -310,7 +306,7 @@ The following session shows an application of the macro.
 > (define F (procedure (F N)
 		((procedure (G K L)
 		   (if (zero? K) L
-		     (G (- K 1) (* K L)))) N 1))
+		     (G (- K 1) (* K L)))) N 1)))
 > F
 #&lt;procedure&gt;
 > (F 0)
