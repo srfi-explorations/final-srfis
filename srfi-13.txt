@@ -1,7 +1,7 @@
-String Libraries					-*- outline -*-
+The SRFI-13 string libraries					-*- outline -*-
 Olin Shivers
 99/10/2
-Last Update: 99/10/17
+Last Update: 99/10/31
 
 Emacs should display this document in outline mode. Say c-h m for
 instructions on how to move through it by sections (e.g., c-c c-n, c-c c-p).
@@ -12,72 +12,32 @@ Abstract
 Issues
 Rationale
 Specification
+  Procedure index
+  Higher-level procedures
+  Lower-level procedures
 Implementation
 Copyright
+
 
 -------------------------------------------------------------------------------
 * Abstract
 ----------
 
-R5RS Scheme has an impoverished set of string-processing utilities,
-which is a problem for authors of portable code.  This SRFI proposes a
-coherent and comprehensive set of string-processing procedures; it
-will be accompanied by a reference implementation of the spec.
+R5RS Scheme has an impoverished set of string-processing utilities, which is 
+a problem for authors of portable code.  This SRFI proposes a coherent and
+comprehensive set of string-processing procedures; it will be accompanied by a
+reference implementation of the spec.
 
 -------------------------------------------------------------------------------
 * Issues
--------------
+--------
 
-The following issues should be discussed and resolved.
+Look for messages by shivers at
+    http://srfi.schemers.org/srfi-13/mail-archive/maillist.html
+with subject lines of the form
+    Open issues summary #n
+The latest such message will give the most recent list of outstanding issues.
 
-** STRING-REDUCE & STRING-REDUCE-RIGHT
-   Should I add these?
-
-** STRING-APPEND accepts chars as well as strings?
-   Would give a kind of "string cons" for free...
-   If we altered STRING-APPEND to accept characters as well as strings,
-   we would get the ability to "cons" characters onto the head or tail of
-   strings, e.g. (string-append c1 c2 s).
-
-** N-ary comparison functions?
-   Should the string comparison functions such as STRING= and STRING<
-   be generalised to be n-ary? E.g., should we be able to write
-     (string< s1 s2 s3)
-   I have specified these functions as dyadic only. You can certainly make
-   a case for greater generality. However,
-    
-     - Unlike numeric inequalities, I do not think this generality will be
-       useful in practice.
-    
-     - It doesn't extend well to the *sub*string comparison functions
-       or the three-way comparison functions. To get it to work for the
-       three-way comparison functions, you'd have to put the continuations
-       first, then the strings after. This is pretty ugly; the usual convention
-       is continuations last. This is not a completely compelling argument,
-       but it does weigh some.
-
-       Extending to the substring comparison functions -- both the predicates
-       and the 3-way continuation-based functions is even uglier.
-
-       Finally, if we were to do this, we ought to really follow through
-       and make the 8 prefix-count functions n-ary.
-
-       I think it's too much complexity.
-
-   Note that Rice's MzScheme provides n-ary string comparison.
-
-** Add STRING-TOKENIZE ?
-   People are always wanting to do a trivial parse of strings into
-   whitespace-delimited tokens. I could add a procedure
-     (string-tokenize s [token-set start end]) -> list
-   that would return the list of contiguous substrings of chars from
-   S that were in char-set TOKEN-SET. TOKEN-SET would default to
-   CHAR-SET:GRAPHIC.
-
-   There's a slippery slope here, one best pushed off to real parser
-   toolkits or regexp systems. See, for example, the field-parser
-   constructors in scsh's AWK library. However, this simple-minded
-   utility might still be worth including. Or not. I am open to discussion.
 
 -------------------------------------------------------------------------------
 * Rationale
@@ -273,6 +233,10 @@ Replicate & rotate
     xsubstring 
     string-xcopy!
 
+Miscellaneous: insertion, parsing
+    string-replace
+    string-tokenize
+
 Filtering & deleting
     string-filter string-delete 
 
@@ -281,13 +245,11 @@ Low-level procedures
     string-parse-final-start+end
     let-string-start+end
     check-substring-spec
-    make-kmp-restart-vector
 
-** Higher-level procedures
-==========================
-   
-In a Scheme system that has a module or package system, these procedures
-should be contained in a module named "string-lib".
+    make-kmp-restart-vector kmp-step string-search-kmp
+
+** Procedure specifications
+===========================
 
 In the following procedure specifications:
     - Any S parameter is a string;
@@ -307,6 +269,12 @@ In the following procedure specifications:
 
     - I and K parameters are non-negative integers specifying indexes
       into a string or the length of a string.
+
+** Higher-level procedures
+==========================
+
+In a Scheme system that has a module or package system, these procedures
+should be contained in a module named "string-lib".
 
 string? obj -> boolean						    	R5RS
   Returns #t if OBJ is a string, otherwise returns #f.
@@ -346,16 +314,30 @@ string-fold-right kons knil s [start end] -> value
 	    (string-fold-right kons (kons s[end-1] knil) start end-1)
 	
     Examples: 
-	To convert a string to a list of chars:
-	    (string-fold-right cons '() s)
+	;;; Convert a string to a list of chars.
+	(string-fold-right cons '() s)
 
-	To count the number of lower-case characters in a string:
-	    (string-fold (lambda (c count)
-                           (if (char-set-contains? char-set:lower c)
-                               (+ count 1)
-                               count))
-                         0
-                         s)
+	;;; Count the number of lower-case characters in a string.
+	(string-fold (lambda (c count)
+                       (if (char-set-contains? char-set:lower c)
+                           (+ count 1)
+                           count))
+                     0
+                     s)
+
+	;;; Double every backslash character in S.
+	(let ((ans-len (string-fold (lambda (c sum)
+					 (+ sum (if (char=? c #\\) 2 1)))
+				    0 s))
+	      (ans (make-string ans-len)))
+	  (string-fold (lambda (c i)
+		         (let ((i (if (char=? c #\\)
+                                      (begin (string-set! ans i #\\) (+ i 1))
+				      i)))
+			   (string-set! ans i c)
+			   (+ i 1)))
+		       0 s)
+	  ans)
 
 string-unfold p f g seed -> string
     This is an iterative constructor for strings. 
@@ -371,7 +353,7 @@ string-unfold p f g seed -> string
     (define (string-unfold p f g seed)
       (let lp ((seed seed) (ans ""))
         (if (p seed) ans
-	    (lp (g seed) (string-append ans (string (f seed)))
+	    (lp (g seed) (string-append ans (string (f seed)))))))
 			                
 
     STRING-UNFOLD is a fairly powerful constructor -- you can use it to
@@ -465,7 +447,13 @@ string-compare-ci s1 s2 lt-proc eq-proc gt-proc -> values
 substring-compare    s1 start1 end1 s2 start2 end2 lt-proc eq-proc gt-proc -> values
 substring-compare-ci s1 start1 end1 s2 start2 end2 lt-proc eq-proc gt-proc -> values
     The continuation procedures are applied to S1's mismatch index (as defined
-    above). In the case of EQ-PROC, this is always END1.
+    above). The mismatch index is an index into the entire string. In the case
+    of EQ-PROC, it is always END1.
+
+    (substring-compare "The cat in the hat" 4 6		; "ca"
+                       "abcdefgh" 2 4			; "cd"
+		       values values values) => 5	; Index of S1's "a"
+
 
 string=  s1 s2 -> #f or integer
 string<> s1 s2 -> #f or integer
@@ -740,23 +728,28 @@ string-append/shared s ... -> string
     one argument, it may return exactly that argument, whereas STRING-APPEND
     is required to allocate a fresh string.
 
-reverse-string-concatenate string-list [end] -> string
-reverse-string-concatenate/shared string-list [end] -> string
-    With no optional argument, these two functions are equivalent to
+reverse-string-concatenate string-list [final-string end] -> string
+reverse-string-concatenate/shared string-list [final-string end] -> string
+    With no optional arguments, these two functions are equivalent to
         (string-concatenate (reverse string-list))
     and
         (string-concatenate/shared (reverse string-list))
     
-    The optional integer index END is applied to the first string in
-    the STRING-LIST; it is ignored if the list is empty. If supplied,
-    then only the first END characters of the initial string are used.
+    If the optional argument FINAL-STRING is specified, it is consed
+    onto the beginning of STRING-LIST before performing the list-reverse 
+    and string-concatenate operations.
+
+    If the optional argument END is given, only the first END characters
+    of FINAL-STRING are added to the string list, thus producing
+        (string-concatenate (reverse (cons (substring final-string 0 end)
+                                           string-list)))
     E.g.
-	(reverse-string-concatenate '("going.XXXX" "must be " "Hello, I " 6))
+	(reverse-string-concatenate '("must be " "Hello, I") "going.XXXX" 6))
           => "Hello, I must be going."
 
     These procedures are useful in the construction of procedures that 
     accumulate character data into lists of string buffers, and wish to
-    convert the accumulated data into a single list when done.
+    convert the accumulated data into a single strin when done.
 
 string->list s [start end] -> char-list					R5RS+
 list->string list -> string
@@ -804,6 +797,44 @@ join-strings string-list [delimiter grammar] -> string
 
 string-null? s -> bool
     Is S the empty string?
+
+string-replace s1 start1 end1 s2 [start2 end2] -> string
+    Returns
+	(string-append (substring s1 0 start1)
+                       (substring s2 start2 end2)
+                       (substring s1 end1 (string-length s1)))
+
+    That is, the segment of characters in S1 from START1 to END1
+    is replaced by the segment of characters in S2 from START2 to END2.
+    If START1=END1, this simply splices the S2 characters into S1 at the
+    specified index.
+
+    Examples:
+	(string-replace "The TCL programmer endured daily ridicule." 4 7
+                        "another miserable perl drone" 8 22 ) =>
+            "The miserable perl programmer endured daily ridicule."
+
+	(string-replace "It's easy to code it up in Scheme." 5 5 "really ") =>
+            "It's really easy to code it up in Scheme."
+
+string-tokenize s [token-set start end] -> list
+   Split the string S into a list of substrings, where each substring is
+   a maximal contiguous sequence of characters from the character set
+   TOKEN-SET.
+
+       - TOKEN-SET defaults to CHAR-SET:GRAPHIC 
+         (see SRFI-14 for more on character sets and CHAR-SET:GRAPHIC).
+       - If START or START/END indices are provided, they restrict 
+         STRING-TOKENIZE to operating on the indicated substring of S.
+
+    This function provides a minimal parsing facility for simple applications.
+    More sophisticated parsers that handle quoting and backslash effects can
+    easily be constructed using regular-expression systems; be careful not
+    to use STRING-TOKENIZE in contexts where more serious parsing is needed.
+
+        (string-tokenize "Help make programs run, run, RUN!") =>
+	  ("Help" "make" "programs" "run," "run," "RUN!")
+
 
 xsubstring s from [to start end] -> string
     This is the "extended substring" procedure that implements replicated
@@ -862,6 +893,9 @@ The following procedures are useful for writing other string-processing
 functions. In a Scheme system that has a module or package system, these
 procedures should be contained in a module named "string-lib-internals".
 
+*** START/END optional argument parsing & checking utilities
+============================================================
+
 string-parse-start+end proc s args -> [start end rest]
 string-parse-final-start+end proc s args -> [start end]
     STRING-PARSE-START+END may be used to parse a pair of optional START/END 
@@ -887,7 +921,6 @@ let-string-start+end (start end) proc s-exp args-exp body ...		 Syntax
       (STRING-PARSE-FINAL-START+END proc s-exp args-exp
         (LAMBDA (start end) body ...))
         
-
 check-substring-spec proc s start end -> unspecific
     Check values START and END to ensure they specify a valid substring 
     in S. This means that START and END are exact integers, and 
@@ -896,11 +929,26 @@ check-substring-spec proc s start end -> unspecific
     as part of error condition, and should be the procedure whose START/END
     parameters we are checking.
 
-make-kmp-restart-vector s c= -> vector
+
+*** Knuth-Morris-Pratt searching
+================================
+
+The Knuth-Morris-Pratt string-search algorithm is a method of rapidly scanning
+a sequence of text for the occurrence of some fixed string.  It has the
+advantage of never requiring backtracking -- hence, it is useful for searching
+not just strings, but also other sequences of text that do not support
+backtracking or random-access, such as input ports.  These routines package up
+the initialisation and searching phases of the algorithm for general use. They
+also support searching through sequences of text that arrive in buffered
+chunks, in that intermediate search state can be carried across applications
+of the search loop from the end of one buffer application to the next.
+
+make-kmp-restart-vector c= s [start end] -> vector
     Build the Knuth-Morris-Pratt "restart vector," which is useful
     for quickly searching character sequences for the occurrence of
-    string S. C= is a character-equality function used to construct
-    the restart vector; it is usefully CHAR=? or CHAR-CI=?.
+    string S (or the substring of S demarcated by the optional START/END 
+    paramters, if provided). C= is a character-equality function used to 
+    construct the restart vector; it is usefully CHAR=? or CHAR-CI=?.
     
     The definition of the restart vector RV for string S is:
     If we have matched chars 0..i-1 of S against some search string SS, and
@@ -911,7 +959,6 @@ make-kmp-restart-vector s c= -> vector
     [Describe running time of m-k-r-v & the search process here & in source.
      "This algorithm is O(m + n) where m and n are the 
       lengths of the pattern and string respectively"]
-
 
     In other words, if you have matched the first i chars of S, but
     the i+1'th char doesn't match, RV[i] tells you what the next-longest
@@ -947,13 +994,105 @@ make-kmp-restart-vector s c= -> vector
 			     (lp (+ si 1)  0   (- sj 1)  plen)	; Punt.
 			     (lp si        pi  sj        (- plen pi))))))))))
 
+kmp-step pat rv c= c i -> bool or integer
+    This function encapsulates the work performed by one step of the
+    KMP string search; it can be used to scan strings, input ports,
+    or other on-line character sources for fixed strings. 
+
+    PAT is the string specifying the text for which we are searching.
+    RV is a Knuth-Morris-Pratt restart vector for PAT, as constructed
+    by MAKE-KMP-RESTART-VECTOR. C= is a character-equality function;
+    typically CHAR=? or CHAR-CI=?.
+
+    Suppose PAT is N characters in length. I is a legal index into PAT; it
+    specifies how much of the pattern we have already matched. C is the next
+    character in the input stream. KMP-STEP returns the new I value -- that
+    is, how much of the pattern we have matched, including character C.
+    When I reaches N, the entire pattern has been matched.
+
+    Thus a typical search loop looks like this:
+        (let lp ((i 0))
+	  (or (= i n)				; Win -- #t
+	      (and (not (end-of-stream))	; Lose -- #f
+	           (lp (kmp-step pat rv char=? (get-next-character) i)))))
+
+    Example:
+       ;; Read chars from IPORT until we find string PAT or hit EOF.
+       (define (port-skip pat iport)
+         (let* ((rv (make-kmp-restart-vector pat))
+                (patlen (string-length pat)))
+           (let lp ((i 0) (nchars 0))
+             (if (= i patlen) nchars			; Win -- nchars skipped
+                 (let ((c (read-char iport)))
+                   (if (eof-object? c) c		; Fail -- EOF
+                       (lp (kmp-step pat rv char=? c i) ; Continue
+                           (+ nchars 1))))))))
+
+    This procedure could be defined as follows:
+
+    (define (kmp-step pat rv c= c i)
+      (let ((len (vector-length rv)))
+	(let lp ((i i))
+	  (if (c= c (string-ref pat i))		; Match =>
+	      (+ i 1)				;   Done.
+	      (let ((i (vector-ref rv i)))	; Back up in PAT.
+	        (if (= i -1) 0			; Can't back up further.
+		    (lp i)))))))		; Keep trying for match.
+
+string-search-kmp pat rv c= i s [start end] -> integer
+    Applies KMP-STEP across S; optional START/END bounds parameters
+    restrict search to substring of S.
+
+    I is an integer index into PAT (that is, 0 <= i < (string-length PAT))
+    indicating how much of PAT has already been matched.
+
+    - On success, returns -J, where J is the index in S bounding
+      the *end* of the pattern -- e.g., a value that could be used as 
+      the END parameter in a call to SUBSTRING.
+
+    - On continue, returns the current search state (an index into PAT)
+      when the search reached the end of the string. This is a non-negative
+      integer.
+
+    Hence:
+    - A negative return value indicates success, and says
+      where in the string the match occured.
+
+    - A non-negative return value provides the I to use for
+      continued search in a following string.
+
+    This utility is designed to allow searching for occurrences of a fixed
+    string that might extend across multiple buffers of text. This is
+    why, for example, we do not provide the index of the *start* of the
+    match on success -- it may have occurred in a previous buffer.
+
+    To search a character sequence that arrives in "chunks," write a
+    loop of this form:
+        (let lp ((i 0))
+	  (and (not (end-of-data?))		; Lose -- return #f.
+               (let* ((buf (get-next-chunk))	; Get or fill up the buffer.
+                      (i (string-search-kmp pat rv char= i buf)))
+                 (if (< i 0) (- i) 		; Win -- return end index.
+                     (lp i)))))
+
+    Modulo start/end optional-argument parsing, this procedure could
+    be defined as follows:
+        (define (string-search-kmp pat rv c= i s start end)
+	  (let ((patlen (vector-length rv)))
+            (let lp ((si start)	; An index into S.
+	             (pi i))	; An index into PAT.
+	      (cond ((= pi patlen) (- si))	; Win.
+                    ((= si end) pi)		; Ran off the end.
+                    (else (lp (+ si 1)		; Match s[si] & loop.
+                              (kmp-step pat rv c= (string-ref s si) pi)))))))
+
 
 -------------------------------------------------------------------------------
 * Implementation
 ----------------
 
-A reference implementation has been written, but is not yet in complete
-compliance with some late changes to the SRFI draft. It will be
+A reference implementation has been written, but is not in complete
+compliance with some late changes to the SRFI draft.  It will be
 available soon.
 
 -------------------------------------------------------------------------------
