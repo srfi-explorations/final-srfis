@@ -84,11 +84,13 @@ arrays should be explicit; so the boolean array procedures put their
 results into a passed array.  In contrast, these procedures are purely
 functional.
 <P>
+<H3>Bitwise Operations and Integer Properties</H3>
+
 The <TT>logior</TT>, <TT>logxor</TT>, <TT>logand</TT>,
 <TT>lognot</TT>, <TT>logtest</TT>, <TT>logbit?</TT> (logbitp),
 <TT>ash</TT>, <TT>logcount</TT>, and <TT>integer-length</TT>
 procedures are from Common-Lisp.  <TT>Logior</TT>, <TT>logxor</TT>,
-and <TT>logand</TT> have been extended to accept one or more arguments.
+and <TT>logand</TT> have been extended to accept any arity.
 Opportunities to use an <I>n</I>-ary version of <TT>logtest</TT> have
 not been frequent enough to justify its extension.
 <P>
@@ -104,17 +106,75 @@ means that any nontrivial two-input logical function can be
 synthesized using just one of these two-input primaries with zero or
 one calls to <TT>lognot</TT>.
 <P>
-The <DFN>Bit Within Word</DFN> and <DFN>Field of Bits</DFN>
-procedures are used for modeling digital logic and accessing C data
-structures.
+<TT>bitwise-if</TT> is what SRFI-33 calls <TT>bitwise-merge</TT>.
 <P>
-Development of the <DFN>Bit order and Lamination</DFN> procedures were
-driven by digital logic modeling and the implementation of the
-Hilbert-Peano space-filling function.
+The SRFI-33 aliases: <TT>bitwise-ior</TT>, <TT>bitwise-xor</TT>,
+<TT>bitwise-and</TT>, <TT>bitwise-not</TT>, and <TT>bit-count</TT> are
+also provided.
 <P>
+<TT>log2-binary-factors</TT> is a useful function which is simple but
+non-obvious:
+
+<PRE>
+(define (log2-binary-factors n)
+  (+ -1 (integer-length (logand n (- n)))))
+</PRE>
+
+<H3>Bit Within Word and Field of Bits</H3>
+
+The <DFN>Bit Within Word</DFN> and <DFN>Field of Bits</DFN> procedures
+are used for modeling digital logic and accessing binary data
+structures in software.
+<P>
+I have changed to <TT>copy-bit-field</TT> argument order to be
+consistent with the other <DFN>Field of Bits</DFN> procedures: the
+<VAR>start</VAR> and <VAR>end</VAR> index arguments are last.
+This makes them analogous to the argument order to <TT>substring</TT>
+and SRFI-47 arrays, which took their cue from <TT>substring</TT>.
+<P>
+These <VAR>start</VAR> and <VAR>end</VAR> index arguments are not
+compatible with SRFI-33's <VAR>size</VAR> and <VAR>position</VAR>
+arguments (occurring first) in its <TT>bit-field</TT> procedures.
+Both define <TT>copy-bit-field</TT>; the arguments and purposes being
+incompatible.
+<P>
+A procedure in slib/logical.scm, <TT>logical:rotate</TT>, rotated a
+given number of low-order bits by a given number of bits.  This
+function was quite servicable, but I could not name it adequately.  I
+have replaced it with <TT>rotate-bit-field</TT> with the addition of a
+<VAR>start</VAR> argument.  This new function rotates a given field
+(from positions <VAR>start</VAR> to <VAR>end</VAR>) within an integer;
+leaving the rest unchanged.
+<P>
+Another problematic name was <TT>logical:ones</TT>, which generated an
+integer with the least significant <VAR>k</VAR> bits set.  Calls to
+<TT>bit-field</TT> could have replaced its uses .  But the definition
+was so short that I just replaced its uses with:
+
+<PRE>
+(lognot (ash -1 <VAR>k</VAR>))
+</PRE>
+<P>
+The <TT>bit-reverse</TT> procedure was then the only one which took a
+<VAR>width</VAR> argument.  So I replaced it with
+<TT>reverse-bit-field</TT>.
+<P>
+The <DFN>Lamination</DFN> functions were moved to slib/phil-spc.scm.
+<P>
+
+<H3>Bits as Booleans</H3>
+
+<DFN>Bits as Booleans</DFN> provides the procedures to convert between
+integers and lists of booleans.  There is no comparable facility in
+SRFI-33.
+<P>
+
+<H3>Gray code</H3>
+
 <DFN>Gray code</DFN>s are useful for communication between
 asynchronous processes in both hardware and software; and are integral
 to the implementation of the Hilbert-Peano space-filling function.
+There is no comparable facility in SRFI-33.
 <P>
 
 <H1>Specification</H1>
@@ -122,12 +182,17 @@ to the implementation of the Hilbert-Peano space-filling function.
 These functions behave as though operating on integers in
 two's-complement representation.
 
-<H3>Bitwise Operations</H3>
+
+
+
+<H3><A NAME="SEC97">Bitwise Operations</A></H3>
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>logand</B> <I>n1 n2 ...</I>
-<DD>
+<DT><U>Function:</U> <B>logand</B> <I>n1 ...</I>
+<DD><A NAME="IDX487"></A>
+<DT><U>Function:</U> <B>bitwise-and</B> <I>n1 ...</I>
+<DD><A NAME="IDX488"></A>
 Returns the integer which is the bit-wise AND of the integer
 arguments.
 
@@ -144,8 +209,10 @@ Example:
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>logior</B> <I>n1 n2 ...</I>
-<DD>
+<DT><U>Function:</U> <B>logior</B> <I>n1 ...</I>
+<DD><A NAME="IDX489"></A>
+<DT><U>Function:</U> <B>bitwise-ior</B> <I>n1 ...</I>
+<DD><A NAME="IDX490"></A>
 Returns the integer which is the bit-wise OR of the integer arguments.
 
 
@@ -161,8 +228,10 @@ Example:
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>logxor</B> <I>n1 n2 ...</I>
-<DD>
+<DT><U>Function:</U> <B>logxor</B> <I>n1 ...</I>
+<DD><A NAME="IDX491"></A>
+<DT><U>Function:</U> <B>bitwise-xor</B> <I>n1 ...</I>
+<DD><A NAME="IDX492"></A>
 Returns the integer which is the bit-wise XOR of the integer
 arguments.
 
@@ -180,7 +249,9 @@ Example:
 <P>
 <DL>
 <DT><U>Function:</U> <B>lognot</B> <I>n</I>
-<DD>
+<DD><A NAME="IDX493"></A>
+<DT><U>Function:</U> <B>bitwise-not</B> <I>n</I>
+<DD><A NAME="IDX494"></A>
 Returns the integer which is the 2s-complement of the integer argument.
 
 
@@ -199,7 +270,7 @@ Example:
 <P>
 <DL>
 <DT><U>Function:</U> <B>bitwise-if</B> <I>mask n0 n1</I>
-<DD>
+<DD><A NAME="IDX495"></A>
 Returns an integer composed of some bits from integer <VAR>n0</VAR> and some
 from integer <VAR>n1</VAR>.  A bit of the result is taken from <VAR>n0</VAR> if the
 corresponding bit of integer <VAR>mask</VAR> is 1 and from <VAR>n1</VAR> if that bit
@@ -210,7 +281,7 @@ of <VAR>mask</VAR> is 0.
 <P>
 <DL>
 <DT><U>Function:</U> <B>logtest</B> <I>j k</I>
-<DD>
+<DD><A NAME="IDX496"></A>
 
 <PRE>
 (logtest j k) == (not (zero? (logand j k)))
@@ -223,12 +294,14 @@ of <VAR>mask</VAR> is 0.
 
 
 
-<H3>Integer Properties</H3>
+<H3><A NAME="SEC98">Integer Properties</A></H3>
 
 <P>
 <DL>
 <DT><U>Function:</U> <B>logcount</B> <I>n</I>
-<DD>
+<DD><A NAME="IDX497"></A>
+<DT><U>Function:</U> <B>bit-count</B> <I>n</I>
+<DD><A NAME="IDX498"></A>
 Returns the number of bits in integer <VAR>n</VAR>.  If integer is positive,
 the 1-bits in its binary representation are counted.  If negative, the
 0-bits in its two's-complement binary representation are counted.  If 0,
@@ -252,7 +325,7 @@ Example:
 <P>
 <DL>
 <DT><U>Function:</U> <B>integer-length</B> <I>n</I>
-<DD>
+<DD><A NAME="IDX499"></A>
 Returns the number of bits neccessary to represent <VAR>n</VAR>.
 
 
@@ -270,17 +343,60 @@ Example:
 
 </DL>
 
+<P>
+<DL>
+<DT><U>Function:</U> <B>log2-binary-factors</B> <I>n</I>
+<DD><A NAME="IDX500"></A>
+Returns the number of factors of two of integer <VAR>n</VAR>.  This value
+is also the bit-index of the least-significant <SAMP>`1'</SAMP> bit in
+<VAR>n</VAR>.
 
 
-<H3>Bit Within Word</H3>
+
+<PRE>
+(require 'printf)
+(do ((idx 0 (+ 1 idx)))
+      ((&#62; idx 16))
+    (printf "%s(%3d) ==&#62; %-5d %s(%2d) ==&#62; %-5d\n"
+            'log2-binary-factors
+            (- idx) (log2-binary-factors (- idx))
+            'log2-binary-factors
+            idx (log2-binary-factors idx)))
+-|
+log2-binary-factors(  0) ==&#62; -1    log2-binary-factors( 0) ==&#62; -1   
+log2-binary-factors( -1) ==&#62; 0     log2-binary-factors( 1) ==&#62; 0    
+log2-binary-factors( -2) ==&#62; 1     log2-binary-factors( 2) ==&#62; 1    
+log2-binary-factors( -3) ==&#62; 0     log2-binary-factors( 3) ==&#62; 0    
+log2-binary-factors( -4) ==&#62; 2     log2-binary-factors( 4) ==&#62; 2    
+log2-binary-factors( -5) ==&#62; 0     log2-binary-factors( 5) ==&#62; 0    
+log2-binary-factors( -6) ==&#62; 1     log2-binary-factors( 6) ==&#62; 1    
+log2-binary-factors( -7) ==&#62; 0     log2-binary-factors( 7) ==&#62; 0    
+log2-binary-factors( -8) ==&#62; 3     log2-binary-factors( 8) ==&#62; 3    
+log2-binary-factors( -9) ==&#62; 0     log2-binary-factors( 9) ==&#62; 0    
+log2-binary-factors(-10) ==&#62; 1     log2-binary-factors(10) ==&#62; 1    
+log2-binary-factors(-11) ==&#62; 0     log2-binary-factors(11) ==&#62; 0    
+log2-binary-factors(-12) ==&#62; 2     log2-binary-factors(12) ==&#62; 2    
+log2-binary-factors(-13) ==&#62; 0     log2-binary-factors(13) ==&#62; 0    
+log2-binary-factors(-14) ==&#62; 1     log2-binary-factors(14) ==&#62; 1    
+log2-binary-factors(-15) ==&#62; 0     log2-binary-factors(15) ==&#62; 0    
+log2-binary-factors(-16) ==&#62; 4     log2-binary-factors(16) ==&#62; 4    
+</PRE>
+
+</DL>
+
+
+
+<H3><A NAME="SEC99">Bit Within Word</A></H3>
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>logbit?</B> <I>index j</I>
-<DD>
+<DT><U>Function:</U> <B>logbit?</B> <I>index n</I>
+<DD><A NAME="IDX501"></A>
+<DT><U>Function:</U> <B>bit-set?</B> <I>index n</I>
+<DD><A NAME="IDX502"></A>
 
 <PRE>
-(logbit? index j) == (logtest (expt 2 index) j)
+(logbit? index n) == (logtest (expt 2 index) n)
 
 (logbit? 0 #b1101) => #t
 (logbit? 1 #b1101) => #f
@@ -294,7 +410,7 @@ Example:
 <P>
 <DL>
 <DT><U>Function:</U> <B>copy-bit</B> <I>index from bit</I>
-<DD>
+<DD><A NAME="IDX503"></A>
 Returns an integer the same as <VAR>from</VAR> except in the <VAR>index</VAR>th bit,
 which is 1 if <VAR>bit</VAR> is <CODE>#t</CODE> and 0 if <VAR>bit</VAR> is <CODE>#f</CODE>.
 
@@ -312,20 +428,12 @@ Example:
 
 
 
-<H3>Field of Bits</H3>
-
-<P>
-<DL>
-<DT><U>Function:</U> <B>logical:ones</B> <I>n</I>
-<DD>
-Returns the smallest non-negative integer having <VAR>n</VAR> binary ones.
-</DL>
-
+<H3><A NAME="SEC100">Field of Bits</A></H3>
 
 <P>
 <DL>
 <DT><U>Function:</U> <B>bit-field</B> <I>n start end</I>
-<DD>
+<DD><A NAME="IDX504"></A>
 Returns the integer composed of the <VAR>start</VAR> (inclusive) through
 <VAR>end</VAR> (exclusive) bits of <VAR>n</VAR>.  The <VAR>start</VAR>th bit becomes
 the 0-th bit in the result.
@@ -345,8 +453,8 @@ Example:
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>copy-bit-field</B> <I>to start end from</I>
-<DD>
+<DT><U>Function:</U> <B>copy-bit-field</B> <I>to from start end</I>
+<DD><A NAME="IDX505"></A>
 Returns an integer the same as <VAR>to</VAR> except possibly in the
 <VAR>start</VAR> (inclusive) through <VAR>end</VAR> (exclusive) bits, which are
 the same as those of <VAR>from</VAR>.  The 0-th bit of <VAR>from</VAR> becomes the
@@ -357,10 +465,12 @@ the same as those of <VAR>from</VAR>.  The 0-th bit of <VAR>from</VAR> becomes t
 Example:
 
 <PRE>
-(number-&#62;string (copy-bit-field #b1101101010 0 4 0) 2)
+(number-&#62;string (copy-bit-field #b1101101010 0 0 4) 2)
         => "1101100000"
-(number-&#62;string (copy-bit-field #b1101101010 0 4 -1) 2)
+(number-&#62;string (copy-bit-field #b1101101010 -1 0 4) 2)
         => "1101101111"
+(number-&#62;string (copy-bit-field #b110100100010000 -1 5 9) 2)
+        => "110100111110000"
 </PRE>
 
 </DL>
@@ -368,7 +478,9 @@ Example:
 <P>
 <DL>
 <DT><U>Function:</U> <B>ash</B> <I>n count</I>
-<DD>
+<DD><A NAME="IDX506"></A>
+<DT><U>Function:</U> <B>arithmetic-shift</B> <I>n count</I>
+<DD><A NAME="IDX507"></A>
 Returns an integer equivalent to
 <CODE>(inexact-&#62;exact (floor (* <VAR>n</VAR> (expt 2 <VAR>count</VAR>))))</CODE>.
 
@@ -385,83 +497,56 @@ Example:
 
 </DL>
 
-
-
-<H3>Bit order and Lamination</H3>
-
 <P>
 <DL>
-<DT><U>Function:</U> <B>logical:rotate</B> <I>k count len</I>
-<DD>
-Returns the low-order <VAR>len</VAR> bits of <VAR>k</VAR> cyclically permuted
-<VAR>count</VAR> bits towards high-order.
+<DT><U>Function:</U> <B>rotate-bit-field</B> <I>n count start end</I>
+<DD><A NAME="IDX508"></A>
+Returns <VAR>n</VAR> with the bit-field from <VAR>start</VAR> to <VAR>end</VAR>
+cyclically permuted by <VAR>count</VAR> bits towards high-order.
 
 
 <P>
 Example:
 
 <PRE>
-(number-&#62;string (logical:rotate #b0100 3 4) 2)
-=> "10"
-(number-&#62;string (logical:rotate #b0100 -1 4) 2)
-=> "10"
+(number-&#62;string (rotate-bit-field #b0100 3 0 4) 2)
+    => "10"
+(number-&#62;string (rotate-bit-field #b0100 -1 0 4) 2)
+    => "10"
+(number-&#62;string (rotate-bit-field #b110100100010000 -1 5 9) 2)
+    => "110100010010000"
+(number-&#62;string (rotate-bit-field #b110100100010000 1 5 9) 2)
+    => "110100000110000"
 </PRE>
 
 </DL>
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>bit-reverse</B> <I>k n</I>
-<DD>
-Returns the low-order <VAR>k</VAR> bits of <VAR>n</VAR> with the bit order
-reversed.  The low-order bit of <VAR>n</VAR> is the high order bit of the
-returned value.
+<DT><U>Function:</U> <B>reverse-bit-field</B> <I>n start end</I>
+<DD><A NAME="IDX509"></A>
+Returns <VAR>n</VAR> with the order of bits <VAR>start</VAR> to <VAR>end</VAR>
+reversed.
 
 
 
 <PRE>
-(number-&#62;string (bit-reverse 8 #xa7) 16)
+(number-&#62;string (reverse-bit-field #xa7 0 8) 16)
   => "e5"
 </PRE>
 
 </DL>
 
-<P>
-<DL>
-<DT><U>Function:</U> <B>bitwise:laminate</B> <I>k1 ...</I>
-<DD>
-Returns an integer composed of the bits of <VAR>k1</VAR> ... interlaced
-in argument order.  Given <VAR>k1</VAR>, ... <VAR>kn</VAR>, the n low-order
-bits of the returned value will be the lowest-order bit of each
-argument.
 
 
-<P>
-<DT><U>Function:</U> <B>bitwise:delaminate</B> <I>count k</I>
-<DD>
-Returns a list of <VAR>count</VAR> integers comprised of every <VAR>count</VAR>h
-bit of the integer <VAR>k</VAR>.
-
-
-<P>
-For any non-negative integers <VAR>k</VAR> and <VAR>count</VAR>:
-
-<PRE>
-(eqv? k (bitwise:laminate (bitwise:delaminate count k)))
-</PRE>
-
-</DL>
-
-
-
-<H3>Bits as Booleans</H3>
+<H3><A NAME="SEC101">Bits as Booleans</A></H3>
 
 <P>
 <DL>
 <DT><U>Function:</U> <B>integer-&#62;list</B> <I>k len</I>
-<DD>
+<DD><A NAME="IDX510"></A>
 <DT><U>Function:</U> <B>integer-&#62;list</B> <I>k</I>
-<DD>
+<DD><A NAME="IDX511"></A>
 <CODE>integer-&#62;list</CODE> returns a list of <VAR>len</VAR> booleans corresponding
 to each bit of the given integer.  #t is coded for each 1; #f for 0.
 The <VAR>len</VAR> argument defaults to <CODE>(integer-length <VAR>k</VAR>)</CODE>.
@@ -469,7 +554,7 @@ The <VAR>len</VAR> argument defaults to <CODE>(integer-length <VAR>k</VAR>)</COD
 
 <P>
 <DT><U>Function:</U> <B>list-&#62;integer</B> <I>list</I>
-<DD>
+<DD><A NAME="IDX512"></A>
 <CODE>list-&#62;integer</CODE> returns an integer formed from the booleans in the
 list <VAR>list</VAR>, which must be a list of booleans.  A 1 bit is coded for
 each #t; a 0 bit for #f.
@@ -484,17 +569,17 @@ each #t; a 0 bit for #f.
 <P>
 <DL>
 <DT><U>Function:</U> <B>booleans-&#62;integer</B> <I>bool1 ...</I>
-<DD>
+<DD><A NAME="IDX513"></A>
 Returns the integer coded by the <VAR>bool1</VAR> ... arguments.
 </DL>
 
 
 
 
-<H3>Gray code</H3>
+<H3><A NAME="SEC102">Gray code</A></H3>
 
 <P>
-
+<A NAME="IDX514"></A>
 A <EM>Gray code</EM> is an ordering of non-negative integers in which
 exactly one bit differs between each pair of successive elements.  There
 are multiple Gray codings.  An n-bit Gray code corresponds to a
@@ -510,14 +595,14 @@ of Peano-Hilbert space-filling curves.
 <P>
 <DL>
 <DT><U>Function:</U> <B>integer-&#62;gray-code</B> <I>k</I>
-<DD>
+<DD><A NAME="IDX515"></A>
 Converts <VAR>k</VAR> to a Gray code of the same <CODE>integer-length</CODE> as
 <VAR>k</VAR>.
 
 
 <P>
 <DT><U>Function:</U> <B>gray-code-&#62;integer</B> <I>k</I>
-<DD>
+<DD><A NAME="IDX516"></A>
 Converts the Gray code <VAR>k</VAR> to an integer of the same
 <CODE>integer-length</CODE> as <VAR>k</VAR>.
 
@@ -534,15 +619,15 @@ For any non-negative integer <VAR>k</VAR>,
 <P>
 <DL>
 <DT><U>Function:</U> <B>=</B> <I>k1 k2</I>
-<DD>
+<DD><A NAME="IDX517"></A>
 <DT><U>Function:</U> <B>gray-code&#60;?</B> <I>k1 k2</I>
-<DD>
+<DD><A NAME="IDX518"></A>
 <DT><U>Function:</U> <B>gray-code&#62;?</B> <I>k1 k2</I>
-<DD>
+<DD><A NAME="IDX519"></A>
 <DT><U>Function:</U> <B>gray-code&#60;=?</B> <I>k1 k2</I>
-<DD>
+<DD><A NAME="IDX520"></A>
 <DT><U>Function:</U> <B>gray-code&#62;=?</B> <I>k1 k2</I>
-<DD>
+<DD><A NAME="IDX521"></A>
 These procedures return #t if their Gray code arguments are
 (respectively): equal, monotonically increasing, monotonically
 decreasing, monotonically nondecreasing, or monotonically nonincreasing.
@@ -556,7 +641,6 @@ corresponding predicate of <VAR>k1</VAR> and <VAR>k2</VAR>.
 </DL>
 
 
-
 <H1>Implementation</H1>
 
 <A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/*checkout*/slib/slib/logical.scm?rev=HEAD&amp;content-type=text/vnd.viewcvs-markup">slib/logical.scm</A>
@@ -565,7 +649,7 @@ Scheme implementations.
 <P>
 
 <H1>Copyright</H1>
-Copyright (C) Aubrey Jaffer (2004). All Rights Reserved.
+Copyright (C) Aubrey Jaffer (2004, 2005). All Rights Reserved.
 <P>
 This document and translations of it may be copied and furnished to
 others, and derivative works that comment on or otherwise explain it
@@ -595,7 +679,7 @@ PARTICULAR PURPOSE.
     <ADDRESS>Editor: <A HREF="mailto:srfi-editors@srfi.schemers.org">David Van Horn</A></ADDRESS>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Mon Jan  3 16:24:00 EST 2005
+Last modified: Mon Jan 10 13:35:35 EST 2005
 <!-- hhmts end -->
   </BODY>
 </HTML>
