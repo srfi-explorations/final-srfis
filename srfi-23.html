@@ -1,0 +1,170 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 23: Error reporting mechanism</title>
+  </head>
+
+  <body>
+
+<H1>Title</H1>
+
+SRFI 23: Error reporting mechanism
+
+<H1>Author</H1>
+
+Stephan Houben
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status. To see an explanation of
+each status that a SRFI can hold, see <a
+href="http://srfi.schemers.org/srfi-process.html">here</a>.  It will
+remain in draft until 2001-06-09, or as amended.  to provide input on
+this SRFI, please
+<a href="mailto:srfi-23@srfi.schemers.org">
+mail to <code>srfi-23@srfi.schemers.org</code></a>.
+See <a href="http://srfi.schemers.org/srfi-list-subscribe.html">
+instructions here</a> to subscribe to the list.  You can access
+previous messages via
+<a href="http://srfi.schemers.org/srfi-23/mail-archive/maillist.html">
+the archive of the mailing list</a>.
+<P>
+<UL>
+<LI>Draft: 2001/03/09-2001/06/09</LI>
+</UL>
+</P>
+
+<H1>Abstract</H1>
+
+A mechanism is proposed to allow Scheme code to report errors and abort
+execution.
+The proposed mechanism is already implemented in several Scheme systems
+and can be implemented, albeit imperfectly, in any R5RS conforming Scheme.
+
+<H1>Rationale</H1>
+
+<p>
+R5RS Scheme requires certain operations to signal an error when they fail.
+"Signalling an error" means that implementations must detect and report
+the error.
+Moreover, R5RS encourages, but not requires, 
+implementations to signal an error in many more circumstances.
+
+<p>
+However, there is no direct way for the Scheme application programmer to report
+an error that occured in his or her own application. 
+This means that Scheme procedures created by applications or libraries are
+in this respect not on equal footing with procedures provided by the
+Scheme system.
+
+<p>
+Many Scheme systems already provide a mechanism that allows application code
+to report an error. At least the following implementations support
+such a mechanism: Bigloo, Guile, MIT Scheme, MzScheme, RScheme, Scsh, SCM,
+all implementations supported by SLIB.
+Of these implementations, the following have an error mechanism compatible
+with this SRFI: Guile, MIT Scheme, MzScheme, RScheme, Scsh. The error
+mechanism in Bigloo conflicts with this SRFI, but this can be easily
+remedied. The implementation in SLIB just has a different name than the
+one proposed in this SRFI.
+
+<p>
+To summarise, many implementations already have the error reporting
+mechanism described in this SRFI, and others are easily made compatible
+with this SRFI. This shows that the proposed mechanism is considered useful
+and that it is easy to implement in most major implementations.
+
+<H1>Specification</H1>
+
+<p>
+The following procedure should be provided:
+<p>
+<code>(error</code> &lt;message&gt;<code>)</code>
+<p>
+The argument &lt;message&gt should be a string.
+The procedure <code>error</code> will <em>signal an error</em>,
+as described in R5RS, and it will report the message &lt;message&gt;.
+An implementation might report more information than just 
+&lt;message&gt;; for instance, it might report the procedure name in which
+the error occured or even print a stack trace. Whatever happens exactly
+when an error is signalled is left to the implementation, but a reasonable
+behaviour might be to terminate the application (for a batch compiler)
+or to go back to the read-evaluate-print loop (for an interactive
+implementation).
+
+<H1>Implementation</H1>
+
+An implementation that works in almost any R5RS Scheme is the following:
+<pre>
+  (define (error message)
+      (display "Error: ")
+      (display message)
+      (newline)
+      (car #t))  ;; we hope that (car #t) will signal an error
+</pre>
+This implementation has 2 flaws. The first one is that <code>(car #t)</code>
+is not required to signal an error, although I am not aware of an
+implementation in which it does not.
+The second one is that in many implementations, this
+will actually print 2 messages: the message <code>message</code> and
+a message about <code>car</code> getting an invalid argument. This might be
+confusing to the user.
+
+<p>
+The SLIB procedure <code>slib:error</code> works like the <code>error</code>
+procedure described in this document (actually, it is more general).
+Thus, when SLIB is loaded, <code>error</code> can be defined as:
+<pre>
+  (define error slib:error)
+</pre>  
+
+<p>
+In Bigloo Scheme, there already is an <code>error</code> procedure.
+However, this expects 3 arguments instead of 1. This is easy to fix:
+the following definition will extend Bigloo's <code>error</code> to also
+allow a single argument.
+<pre>
+(define error
+   (let ((old-error error)) 
+       (lambda args 
+           (if (= 1 (length args)) 
+	      (error "<unknown>" (car args) '()) 
+	      (apply old-error args)))))
+</pre>
+
+<H1>Copyright</H1>
+Copyright (C) <a href="mailto:stephanh@win.tue.nl">Stephan Houben</a> (2001). All Rights Reserved. 
+<p>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<p>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<p>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+
+    <hr>
+    <address>Editor: <a
+    href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
+<!-- Created: Thu Mar  8 15:33:07 CET 2001 -->
+<!-- hhmts start -->
+Last modified: Fri Mar  9 14:36:39 MET 2001
+<!-- hhmts end -->
+  </body>
+</html>
