@@ -1,0 +1,246 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 26: Simple Notation for Specializing Parameters (Currying)</title>
+  </head>
+
+  <body>
+
+<H1>Title</H1>
+
+Simple Notation for Specializing Parameters (Currying)
+
+<H1>Author</H1>
+
+Sebastian Egner
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status. To see an explanation of
+each status that a SRFI can hold, see <a
+href="http://srfi.schemers.org/srfi-process.html">here</a>.  It will
+remain in draft until 2002-04-06, or as amended.  to provide input on
+this SRFI, please
+<a href="mailto:srfi-26@srfi.schemers.org">
+mail to <code>srfi-26@srfi.schemers.org</code></a>.
+See <a href="http://srfi.schemers.org/srfi-list-subscribe.html">
+instructions here</a> to subscribe to the list.  You can access
+previous messages via
+<a href="http://srfi.schemers.org/srfi-26/mail-archive/maillist.html">
+the archive of the mailing list</a>.
+
+<UL>
+<LI>Draft: 2002/02/06-2002/04/06 </LI>
+</UL>
+
+
+
+<H1>Abstract</H1>
+
+Currying means that an <I>n</I>-ary function, <I>n</I> >= 2, 
+is interpreted as a unary function mapping its first argument into 
+an (<I>n</I>-1)-ary function.
+Procedures in Scheme are not curried, which means that the number of
+actual arguments in a call to a procedure must match the number of
+formal variables of the lambda-expression defining the procedure.
+This implies that specializing parameters of a procedure involves 
+writing down another lambda-expression and inventing some irrelevant
+symbols for its formal variables.<p>
+
+The mechanism proposed here provides a cheap way write down this 
+type of specialization in a simple and compact form. 
+The mechanism is best explained by a few examples:<p>
+
+<TABLE>
+<TR>
+<TD><code>(curry cons a <>)</code> 
+<TD>is the same as
+<TD><code>(lambda (x2) (cons a x2))</code>
+</TR>
+<TR>
+<TD><code>(curry list 1 <> 3 <> 5)</code> 
+<TD>is the same as
+<TD><code>(lambda (x2 x4) (list 1 x2 3 x4 5))</code>
+</TR>
+<TR>
+<TD><code>(curry list)</code> 
+<TD>is the same as
+<TD><code>(lambda () (list))</code>
+</TR>
+<TR>
+<TD><code>(curry list 1 <> 3 . <>)</code> 
+<TD>is the same as
+<TD><code>(lambda (x2 . xs) (apply list (append (list 1 x2 3) xs)))</code>
+</TR>
+</TABLE><p>
+
+As you see, the macro curry takes its first argument and specializes
+some of its arguments. The arguments that are to show up as formal 
+variables of the result are indicated by the symbol <code><></code>, 
+pronouced as "slot".<p>
+
+This form of currying allows specializing any subset 
+of the variables of a procedure.
+The result can be of fixed arity or of variable arity.
+The mechanism does not allow changing the order in which the 
+arguments are passed to the procedure; 
+for this it is necessary to write down a lambda-expression.
+
+<H1>Rationale</H1>
+
+Currying is a standard feature in many programming languages 
+dealing with higher order functions.
+It has proven useful many times as it provides a powerful 
+notation to express partial specialization of functions.
+However, as Scheme is not a curried programming language, 
+simply unwinding the parameter list does not unleash the
+potential of currying.
+Yet, the mechanism proposed in this document is a way to 
+render partial specialization convenient.<p>
+
+Why is there no <code>uncurry</code>? 
+The mechanism proposed here is in fact only a specialization of parameters. 
+It does not really do currying in the sense of constructing a procedure
+in one argument that returns a procedure in one argument and so on.
+Hence, the specialized procedure (the result of <code>curry</code>) is
+still a multi-argument procedure by nature---which renders uncurrying 
+pointless.<p>
+
+Why not real currying/uncurrying?
+Even if there is a macro to turn a multi-argument procedure into a
+nesting of single-argument procedures, Scheme remains an uncurried language. 
+This implies that procedure calls to curried procedures can only provide
+one argument at a time, which eliminates the greatest part of the benefit
+of having currying in the first place.
+Hence, a "by the book" implementation of currying would only be useful
+if you a apply it in the sequence curry, specialize some the arguments,
+and uncurry again.
+This is exactly the purpose of the macro <code>curry</code> specified
+in this document.<p>
+
+Why must the variable arity argument (after the dot) be a slot?
+This reflects a limitation of the R5RS macro mechanism.
+The expression <code>(curry list . '(1 2))</code> is passed to
+the macro substitution machine as <code>(curry list quote 1 2)</code>.
+As both expressions are legal, and there is no way to tell which
+has actually been written down, there is also no way to remove the 
+additional quote.
+Fortunately, this limitation of <code>curry</code> is insignificant
+as one can always resort to an explicit lambda-expression when a
+variable number of arguments are to be specialized.
+
+<H1>Specification</H1>
+
+The formal syntax of a curried expression, 
+in the style of the 
+<a href="http://www.schemers.org/Documents/Standards/R5RS/"><I>Revised^5 Report on the Algorithmic Language Scheme</I></a>:
+
+<TABLE>
+<TR>
+<TD><code>&lt;curried-expression&gt;</code>
+<TD><code>--></code>
+<TD><TD><code>(curry &lt;procedure&gt; &lt;constant-or-slot&gt;*)</code>
+</TR>
+<TR>
+<TD><TD><TD>|<TD><code>(curry &lt;procedure&gt; &lt;constant-or-slot&gt;* . <>)</code>
+</TR>
+<TR>
+<TD><code>&lt;procedure&gt;</code>
+<TD><code>--></code>
+<TD><TD><code>&lt;expression&gt;</code>
+</TR>
+<TR>
+<TD><code>&lt;constant-or-slot&gt;</code>
+<TD><code>--></code>
+<TD><TD><code><></code><TD>; a "slot"
+</TR>
+<TR>
+<TD><TD><TD>|<TD> <code>&lt;expression&gt;</code><TD>; a constant
+</TR>
+</TABLE>
+
+The macro <code>curry</code> transforms a 
+<code>&lt;curried-expression&gt;</code> into a 
+<code>&lt;lambda expression&gt;</code> with as many formal variables
+as there are slots in the list <code>&lt;constant-or-slot&gt;*</code>.
+The body of the resulting <code>&lt;lambda expression&gt;</code> calls the
+<code>&lt;procedure&gt;</code> with the arguments from 
+<code>&lt;constant-or-slot&gt;*</code> in the order they appear.
+In case there is a slot for the residual arguments of a variable arity procedure, 
+the resulting procedure is also of variable arity and
+the body calls the <code>&lt;procedure&gt;</code> with
+all arguments provided to the actual call of the specialized procedure.
+
+<H1>Implementation</H1>
+
+The reference implementation only involves the hygienic and 
+referentially transparent macros of R5RS. 
+It does not use any other SRFI or any library.
+The macro <code>curry</code> calls a local transformer,
+implemented as <code>(curry "args" proc formals args)</code>,
+which loops over the <code>&lt;constant-or-slot*&gt;</code> and
+collects the formal variables and the actual arguments to
+call the procedure.
+As macros are hygienic and referentially transparent,
+the macro mechanism makes sure the names of the newly
+introduced formal variables are unique and do not clash.
+The template <code>(x ... y)</code>, see <a href="http://www.schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-10.html#%_sec_7.1.5">Sect. 7.1.5. of R5RS</a>,
+allows to preserve the order of arguments---which would get
+reversed otherwise.
+Here is the implementation:<p>
+
+<code><pre>
+(define-syntax curry
+  (syntax-rules (<>)
+    ; loop over &lt;constant-or-slot&gt;*
+    ((curry "args" proc (x ...) (a ...) <> . more-args)
+     (curry "args" proc (x ... y) (a ... y) . more-args))
+    ((curry "args" proc (x ...) (a ...) const . more-args)
+     (curry "args" proc (x ...) (a ... const) . more-args))
+    ; make the procedure (fixed or variable arity)
+    ((curry "args" proc formals args)
+     (lambda formals 
+       (proc . args)))
+    ((curry "args" proc (formals ...) (args ...) . <>)
+     (lambda (formals ... . rest-arg)
+       (apply proc args ... rest-arg)))
+    ; specified syntax
+    ((curry proc . args)
+     (curry "args" proc () () . args))))
+</pre></code>
+
+<H1>Copyright</H1>
+Copyright (C) Sebastian Egner (2002). All Rights Reserved. 
+<p>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<p>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<p>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+    <hr>
+    <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
+    <address>Author: <a href="mailto:sebastian.egner@philips.com">Sebastian Egner</a></address>
+<!-- Created: Mon Feb 4 15:20:00 EST 2002 -->
+<!-- hhmts start -->
+Last modified: Wed Feb  6 16:16:46 MET 2002
+<!-- hhmts end -->
+  </body>
+</html>=
