@@ -1,0 +1,204 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI-0 Feature-based conditional expansion construct</title>
+  </head>
+
+  <body>
+
+<H1>Title</H1><UL>
+
+Feature-based conditional expansion construct
+
+</UL><H1>Author</H1><UL>
+
+Marc Feeley
+
+</UL><H1>Status</H1><UL>
+This SRFI is currently in ``draft'' status.  To see an explanation of each status that a SRFI can hold, see <A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+It will remain in draft status until 1999/03/05, or as amended.
+To provide input on this SRFI, please <code><A
+HREF="mailto:srfi-0@srfi.schemers.org">mail to
+&lt;srfi-0@srfi.schemers.org&gt;</A></code>.  See <A HREF=../srfi-list-subscribe.html>instructions here</A> to subscribe to the list.  You can access previous messages via <A HREF=mail-archive/maillist.html>the archive of the mailing list</A>.
+<P><UL>
+<LI>Received: 1998/11/17
+<LI>Draft: 1999/01/05-1999/03/05
+</UL>
+
+</UL><H1>Abstract</H1><UL>
+
+This SRFI describes a mechanism to check at macro-expansion time for
+the existence of a particular feature of the Scheme system and to
+enable and/or disable a piece of Scheme code based on this.  This
+allows a Scheme program to be written in such a way that it adapts its
+code to the features provided by the Scheme system.
+
+</UL><H1>Rationale</H1><UL>
+
+Most Scheme systems extend the language with some additional features
+(such as the ability to manipulate Unicode characters and strings, to
+do binary I/O, or to handle asynchronous interrupts).  Such features
+may be provided in a variety of ways including new procedures, new
+program syntax, and extended behavior of standard procedures and
+special-forms.  A particular functionality may exist in several or
+even most Scheme systems but its API may be different (use of a
+procedure or special-form, name, number of parameters, etc).  To write
+code that will run on several Scheme systems, it is useful to have a
+common construct to enable or disable sections of code based on the
+existence or absence of a feature in the Scheme system being used.
+For example, the construct could be use to check if a particular
+binary I/O API is available, and if not, load a portable library which
+implements that API.
+
+	<p></p>
+
+The construct is parameterized by a feature-identifier which denotes
+the feature that is being checked.  In order for the semantics of this
+construct to be well defined, the feature-identifier must of course
+refer to a feature which has a well defined meaning.  There is thus a
+need for a registry, independent of this SRFI, to keep track of the
+formal specification associated with each valid feature-identifier.
+The SRFI registry is used for this purpose.
+
+	<p></p>
+
+Another issue is the binding time of this construct (i.e. the moment
+when it operates).  It is important that the binding time be early so
+that a compiler can discard the sections of code that are not needed,
+and perform better static analyses.  Expressing this construct through
+a procedure returning a boolean, such as
+<code>(feature-implemented? 'SRFI-5)</code>,
+would not achieve this goal, as its binding time is too late
+(i.e. program run-time).  A read-time construct, such as CommonLisp's
+<code>#+</code> read-macro, is very early but would require non-trivial changes
+to the reader of existing Scheme systems and the syntax is not
+particularly human friendly.  Instead, a macro-expansion-time
+construct is used.
+
+</UL><H1>Specification</H1><UL>
+
+The following special-form is added to the Scheme syntax:
+
+	<p></p>
+
+<LISTING>
+  <definition> --> (if-implements <feature-id> <definition> [ <definition> ] )
+  <expression> --> (if-implements <feature-id> <expression> [ <expression> ] )
+  <feature-id> --> a symbol which is the name or alias of a SRFI
+</LISTING>
+
+At macro-expansion time the <code>if-implements</code> form expands
+into the second argument if the Scheme system implements the feature
+as specified in the SRFI registry, otherwise the
+<code>if-implements</code> form expands into the third argument.  Note
+that the third argument is optional.  If it is not given it is as
+though an empty <code>begin</code> form was specified when
+<code>if-implements</code> is used as a definition, otherwise it is as
+though a side-effect free expression yielding an unspecified value was
+specified.
+
+	<p></p>
+
+Examples:
+
+	<p></p>
+
+<LISTING>
+  (write (if-implements SRFI-0 (* 1 2) (+ 3 4)))  => writes 2
+
+  (if-implements Gambit-C-3.0
+    (define (command-line-arguments) (argv))
+    (define (command-line-arguments) '()))
+</LISTING>
+
+The second example assumes that <code>Gambit-C-3.0</code> is an alias
+for the SRFI associated with the specification of Gambit-C version 3.0
+(i.e.  the documentation for that Scheme system).
+
+	<p></p>
+
+When writing portable code, the case used for the feature identifier
+should match the one in the SRFI registry.  This is to ensure that the
+feature identifier will be correctly recognized whether or not the
+Scheme system is case-sensitive.  To support case-insensitive Scheme
+systems, the feature identifiers in the SRFI registry are guaranteed
+to be unique even when ignoring the case.
+
+</UL><H1>Implementation</H1><UL>
+
+The Scheme system must maintain a table of the feature-identifiers
+that it implements.  At macro-expansion time this table is checked to
+decide what the "if-implements" form expands into.  Except for the
+table which is obviously system dependent, the
+<code>if-implements</code> construct could be defined as a macro along
+these lines (assuming <code>SRFI-0</code> and <code>SRFI-5</code> are
+the only implemented features):
+
+	<p></p>
+
+<LISTING>
+(define-syntax if-implements
+  (syntax-rules (SRFI-0 SRFI-5)
+    ((if-implements SRFI-0 yes)    yes)
+    ((if-implements SRFI-0 yes no) yes)
+    ((if-implements SRFI-5 yes)    yes)
+    ((if-implements SRFI-5 yes no) yes)
+    ((if-implements other yes)     (begin)) ; note: (begin) not an expression
+    ((if-implements other yes no)  no)))
+</LISTING>
+
+If Scheme defined that <code>(begin)</code> was a valid expression
+that returned an unspecified value then this definition would be
+correct.  However, in Scheme, <code>(begin)</code> is not a valid
+expression.  For example this is an error in R5RS, if
+<code>SRFI-9</code> is not implemented:
+
+	<p></p>
+
+<LISTING>
+(lambda (x)
+  (write x)
+  (if-implements SRFI-9 (write-char (integer->char 999))) ; expands to (begin)
+  (newline))
+</LISTING>
+
+So to properly implement the <code>if-implements</code> construct, the
+Scheme system must also know at macro-expansion time if the form is
+used as a definition or expression, just like the implementation of
+the <code>begin</code> construct must know this.
+
+</UL><H1>Copyright</H1><UL>
+Copyright (C) Marc Feeley (1999). All Rights Reserved. 
+<p>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<p>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<p>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+</UL>
+
+    <hr>
+    <address>Editor: <a href="mailto:srfi-editors@schemers.org">Mike Sperber</a></address>
+<!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
+<!-- hhmts start -->
+Last modified: Tue Jan  5 17:50:36 MET 1999
+<!-- hhmts end -->
+  </body>
+</html>
