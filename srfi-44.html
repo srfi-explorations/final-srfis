@@ -9,9 +9,11 @@
   <body>
 
     <H1>Title</H1>
+
     Collections 
 
     <H1>Author</H1>
+
     Scott G. Miller 
 
     <H1>Status</H1> 
@@ -35,6 +37,7 @@
       <li>Revised: 2003/07/02
       <li>Revised: 2003/07/24
       <li>Revised: 2003/08/10
+      <li>Revised: 2003/08/19
     </ul></p>
 
     <h1>Abstract</h1>
@@ -356,7 +359,8 @@ terms of unnecessarily allocated storage. <br>
           Finally, all Dictionary and Sequence datastructures must
           be supported by <tt>collection-fold-keys-left</tt> which
           enumerates the Dictionary's keys or the Sequence's
-          indices. If ordered, the collection may be supported by
+          indices and their corresponding values. If ordered, 
+          the collection may be supported by
           <tt>collection-fold-keys-right</tt>, which again behaves
           similarly but enumerating over the keys or indices in
           reverse.
@@ -718,17 +722,24 @@ terms of unnecessarily allocated storage. <br>
           seed-value ... <b>=&gt;</b> seed-value ...<br>
            
           <blockquote>
+            <p>
             Behaves like <tt>collection-fold-left</tt>, but
             enumerates over the keys or indices of a dictionary or
             sequence respectively. This procedure is only defined
             for sequences and dictionaries.
+            <p>
+            Also, the fold function of a key enumerator must accept
+            <i>two</i> more operands than the number of seed values.
+            The first two operands to the function are the key 
+            and corresponding value at the current point in the 
+	    enumeration.
           </blockquote><i>procedure:</i>
           <b>collection-fold-keys-right</b> collection
           fold-function seed-value ... <b>=&gt;</b> seed-value
           ...<br>
            
           <blockquote>
-            Behaves like <tt>collection-fold-right</tt>, but
+            Behaves like <tt>collection-fold-keys-left</tt>, but
             enumerates in the reverse order over the keys or
             indices of an ordered dictionary or sequence
             respectively. This procedure is only defined for
@@ -789,7 +800,10 @@ terms of unnecessarily allocated storage. <br>
             [default]<b>=&gt;</b> value
           </p>
           <blockquote>
-            Returns an unspecified value from the given collection.
+            Returns a value the given collection.  For an arbitrary
+            collection, it is unspecified which of its values is 
+            returned.  More specific collection types may 
+            have more rigorous requirements.
             If the collection is empty, <tt>default</tt> is
             returned if present, otherwise <tt>#f</tt> is returned.
           </blockquote>
@@ -1299,7 +1313,7 @@ terms of unnecessarily allocated storage. <br>
           </p>
           <blockquote>
             Returns a non-false value if the provided value is a
-            flexible sequence
+            dictionary.
           </blockquote>
           <p>
             <i>procedure:</i> <b>%</b> [equivalence-function] (key
@@ -1808,6 +1822,6 @@ terms of unnecessarily allocated storage. <br>
     <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Francisco Solsona</a></address>
     <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
     <!-- hhmts start --><!-- hhmts end -->
-    Last modified: Tue Jul 29 12:10 CST 2003
+    Last modified: Tue Aug 19 23:42 CST 2003
   </body>
 </html>
