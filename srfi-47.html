@@ -32,8 +32,7 @@ Aubrey Jaffer
     </UL>
 
 <H1>Abstract</H1>
-
-"<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/array.scm?rev=1.23&#38;content-type=text/vnd.viewcvs-markup">slib/array.scm</A>"
+"<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/*checkout*/slib/slib/array.scm?rev=HEAD&amp;content-type=text/vnd.viewcvs-markup">slib/array.scm</A>"
 synthesizes array ideas from Common-Lisp and Alan
 Bawden with homogeneous vector ideas from
 <A HREF="http://srfi.schemers.org/srfi-4">SRFI-4</A> and
@@ -44,49 +43,56 @@ into Scheme.
 
 <H1>Issues</H1>
 
+<UL>
+<LI>
 The Scheme reports mention hardly any specific precisions for numbers.
 Uniform arrays necessarily must have finite precision.  I followed
 Feeley's <A HREF="http://srfi.schemers.org/srfi-4">SRFI-4</A> lead for
 homogeneous-type precisions and names, although without the
-<CODE>"vector"</CODE> suffixes.
-<P>
-I have renamed the array creation procedure to
-<CODE>create-array</CODE> to avoid conflict with the
-<CODE>make-array</CODE> procedure in
-<A HREF="http://srfi.schemers.org/srfi-25">SRFI-25</A>.
-<P>
+<CODE>"vector"</CODE> suffixes.<P>
+<LI>
 The <CODE>array-set!</CODE> argument order is different from the
 same-named procedure in
 <A HREF="http://srfi.schemers.org/srfi-25">SRFI-25</A>.
 Type dispatch on the first argument to <CODE>array-set!</CODE> could
-support both SRFIs simultaneously.
-<P>
-An attraction of this order can be seen in the uniformity of argument
-order for SRFI-47's procedures:
-<P>
+support both SRFIs simultaneously.<P>
+<LI>
+The <CODE>make-array</CODE> arguments are different from the
+same-named procedure in
+<A HREF="http://srfi.schemers.org/srfi-25">SRFI-25</A>.
+Type dispatch on the first argument to <CODE>make-array</CODE> could
+support both SRFIs simultaneously.<P>
+<LI>
+An attraction of SRFI-47 procedures' argument orders is their
+uniformity:
+
 <PRE>
-        (create-array  proto        bound1 bound2 ...)
+          (make-array  proto        bound1 bound2 ...)
    (make-shared-array  array mapper bound1 bound2 ...)
           (array-set!  array obj    index1 index2 ...)
     (array-in-bounds?  array        index1 index2 ...)
            (array-ref  array        index1 index2 ...)
-</PRE>
-<P>
-All the procedures except <CODE>create-array</CODE> and
-<CODE>array=?</CODE> originate from Alan Bawden's "array.scm".
+</PRE><P>
+<LI>
+All the procedures except <CODE>make-array</CODE> and
+<CODE>equal?</CODE> originate from Alan Bawden's "array.scm".
 SRFI-47's <CODE>array-set!</CODE> argument order is that of Bawden's
 package.  <A HREF="http://swissnet.ai.mit.edu/~jaffer/SLIB">SLIB</A>
 adopted "array.scm" in 1993.  This form of <CODE>array-set!</CODE> has
 also been part of the
 <A HREF="http://swissnet.ai.mit.edu/~jaffer/SCM">SCM</A> Scheme
-implementation since 1993.
-<P>
+implementation since 1993.<P>
+<LI>
 In response to comments, I have removed the array read-syntax from
 SRFI-47.  The remaining package of procedures is completely portable
 to R4RS and R5RS Schemes as implemented by
 
-<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/array.scm?rev=1.23&#38;content-type=text/vnd.viewcvs-markup">slib/array.scm</A>.
+<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/*checkout*/slib/slib/array.scm?rev=HEAD&amp;content-type=text/vnd.viewcvs-markup">slib/array.scm</A>.
 <P>
+<LI>
+I have replaced <CODE>array=?</CODE> with an array-augmented version
+of R5RS <CODE>equal?</CODE>.
+</UL>
 
 <H1>Rationale</H1>
 
@@ -100,7 +106,7 @@ one-dimensional case, obviating the need for
 <A HREF="http://srfi.schemers.org/srfi-4">SRFI-4</A>.
 <P>
 <UL>
-  <LI>The prototype argument to <CODE>create-array</CODE> seamlessly
+  <LI>The prototype argument to <CODE>make-array</CODE> seamlessly
       supports as many uniform array types as an implementation
       provides, defaulting to arrays built on vectors (and
       strings).<P>
@@ -139,20 +145,36 @@ working compatibly.
 <H2>Conversions</H2>
 
 <UL>
+<LI> All the elements of arrays of type au8, au16, au32, au64, as8,
+     as16, as32, or as64 are exact.<P>
+
+<LI> All the elements of arrays of type ar32, ar64, ac32, or ac64 are
+     inexact.<P>
+
+<LI> The value retrieved from an exact array element will equal (=)
+     the value stored in that element.<P>
+
 <LI> Assigning a non-integer to array-type au8, au16, au32, au64, as8,
- as16, as32, or as64 is an error.<p>
+     as16, as32, or as64 is an error.<P>
+
+<LI> Assigning a number larger than can be represented in array-type
+     au8, au16, au32, au64, as8, as16, as32, or as64 is an error.<P>
 
 <LI> Assigning a negative number to array-type au8, au16, au32, or
- au64 is an error.<p>
+     au64 is an error.<P>
 
-<LI> Assigning a non-real number to an ar64 or ar32 array is an
- error.<P>
+<LI> Assigning an inexact number to array-type au8, au16, au32,
+     au64, as8, as16, as32, or as64 is an error.<P>
 
-<LI> An implementation may reduce the precision of a number when
- assigning a number to an ar32 or ac32 array.<P>
+<LI> When assigning an exact number to array-type ar32, ar64, ac32, or
+     ac64, the procedure may report a violation of an implementation
+     restriction.<P>
 
-<LI> An implementation may reduce the precision of a number when
- assigning a complex number to an ac32 array.<P>
+<LI> Assigning a non-real number (eg. <CODE>real?</CODE> returns
+     <CODE>#f</CODE>) to an ar64 or ar32 array is an error.<P>
+
+<LI> An implementation may reduce the precision of a number assigned
+     to an inexact array.<P>
 
 </UL>
 
@@ -180,26 +202,42 @@ be written:
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>array=?</B> <I>array1 array2</I>
-<DD><A NAME="IDX1050"></A>
+<DT><U>Function:</U> <B>equal?</B> <I>obj1 obj2</I>
+<DD><A NAME="IDX200"></A>
 
 
 <P>
-Returns <CODE>#t</CODE> if <VAR>array1</VAR> and <VAR>array2</VAR>
-have the same rank and dimensions and the corresponding elements of
-<VAR>array1</VAR> and <VAR>array2</VAR> are <CODE>equal?</CODE>.
+<SAMP>`Equal?'</SAMP> recursively compares the contents of pairs,
+vectors, strings, and <B>arrays</B>, applying <SAMP>`eqv?'</SAMP> on other
+objects such as numbers and symbols.  A rule of thumb is that objects
+are generally <SAMP>`equal?'</SAMP> if they print the same.
+<SAMP>`Equal?'</SAMP> may fail to terminate if its arguments are
+circular data structures.
+
+
 
 <PRE>
-(array=? (create-array '#(foo) 3 3)
-         (create-array '#(foo) '(0 2) '(0 2)))
-  =&gt; #t
+<TT>(equal? 'a 'a)                         ==&#62;  #t
+(equal? '(a) '(a))                     ==&#62;  #t
+(equal? '(a (b) c)
+        '(a (b) c))                    ==&#62;  #t
+(equal? "abc" "abc")                   ==&#62;  #t
+(equal? 2 2)                           ==&#62;  #t
+(equal? (make-vector 5 'a)
+        (make-vector 5 'a))            ==&#62;  #t
+<B>(equal? (make-array (Au32 4) 5 3)
+        (make-array (Au32 4) 5 3))     ==&#62;  #t</B>
+(equal? (lambda (x) x)
+        (lambda (y) y))                ==&#62;  <EM>unspecified</EM>
+</TT>
 </PRE>
 
 </DL>
 
+
 <P>
 <DL>
-<DT><U>Function:</U> <B>create-array</B> <I>prototype k1 k2 ...</I>
+<DT><U>Function:</U> <B>make-array</B> <I>prototype k1 k2 ...</I>
 <DD><A NAME="IDX1051"></A>
 
 
@@ -217,7 +255,7 @@ of the returned array are unspecified.  Otherwise, the returned array
 will be filled with the element at the origin of <VAR>prototype</VAR>.
 <P>
 <PRE>
-(create-array '#(foo) 2 3) =&gt; #2A((foo foo foo) (foo foo foo))
+(make-array '#(foo) 2 3) =&gt; #2A((foo foo foo) (foo foo foo))
 </PRE>
 
 </DL>
@@ -421,7 +459,7 @@ it can be otherwise arbitrary.  A simple example:
 
 
 <PRE>
-(define fred (create-array '#(#f) 8 8))
+(define fred (make-array '#(#f) 8 8))
 (define freds-diagonal
   (make-shared-array fred (lambda (i) (list i i)) 8))
 (array-set! freds-diagonal 'foo 3)
@@ -460,7 +498,7 @@ Returns a list of dimensions.
 
 
 <PRE>
-(array-dimensions (create-array '#() 3 5))
+(array-dimensions (make-array '#() 3 5))
    =&gt; (3 5)
 </PRE>
 
@@ -544,17 +582,17 @@ by <CODE>array-set!</CODE> is unspecified.
 
 <H1>Implementation</H1>
 
-<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/array.scm?rev=1.23&#38;content-type=text/vnd.viewcvs-markup">slib/array.scm</A>
+<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/*checkout*/slib/slib/array.scm?rev=HEAD&amp;content-type=text/vnd.viewcvs-markup">slib/array.scm</A>
 implements array procedures for R4RS or R5RS compliant Scheme
 implementations with <DFN>records</DFN> as implemented by
-<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/record.scm?rev=1.6&#38;content-type=text/vnd.viewcvs-markup">slib/record.scm</A>
+<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/record.scm?rev=HEAD&amp;content-type=text/vnd.viewcvs-markup">slib/record.scm</A>
 or <A HREF="http://srfi.schemers.org/srfi-9">SRFI-9</A>.
 <P>
 <!-- Arrays in the <A HREF="http://swissnet.ai.mit.edu/~jaffer/SCM">SCM</A> Scheme implementation have the syntax described. -->
 <!-- <p> -->
 
 <H1>Copyright</H1>
-Copyright (C) Aubrey Jaffer (2003). All Rights Reserved.
+Copyright (C) Aubrey Jaffer (2003, 2004). All Rights Reserved.
 <p>
 This document and translations of it may be copied and furnished to
 others, and derivative works that comment on or otherwise explain it
@@ -588,6 +626,5 @@ Last modified: Thu Nov 20 20:49:09 GMT 2003<A    HREF="http://validator.w3.org/c
 <!-- hhmts end -->
   </body>
 </html>
-
 
 
