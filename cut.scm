@@ -3,6 +3,7 @@
 ;
 ; Sebastian.Egner@philips.com, 5-Jun-2002.
 ; adapted from the posting by Al Petrofsky <al@petrofsky.org>
+; placed in the public domain
 ;
 ; The code to handle the variable argument case was originally
 ; proposed by Michael Sperber and has been adapted to the new
