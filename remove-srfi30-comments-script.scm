@@ -156,6 +156,14 @@
   (lambda (c)
     (skip-comment! 'read-sharp)))
 
+; SRFI 22's script prelude
+(define-sharp-macro #\!
+  (lambda (c)
+    (write-char #\#)
+    (write-char (read-char))
+    (dup-line)
+    (sub-dup)))
+
 (let ((number-sharp-macro
        (lambda (c)
 	 (write-char c)
