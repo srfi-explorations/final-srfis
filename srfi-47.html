@@ -21,8 +21,8 @@ Aubrey Jaffer and Radey Shouman
     <A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
     It will remain in draft status until 2004/01/15, or as amended.
     To provide input on this SRFI, please
-    <code><A HREF="mailto:srfi-47@srfi.schemers.org">mail to
-	&lt;srfi-47@srfi.schemers.org&gt;</A></code>.  See
+    <CODE><A HREF="mailto:srfi-47@srfi.schemers.org">mail to
+    &lt;srfi-47@srfi.schemers.org&gt;</A></CODE>.  See
     <A HREF=../srfi-list-subscribe.html>instructions here</A>
     to subscribe to the list.  You can access previous messages via
     <A HREF=mail-archive/maillist.html>the archive of the mailing list</A>. 
@@ -33,63 +33,117 @@ Aubrey Jaffer and Radey Shouman
 
 <H1>Abstract</H1>
 
-"slib/array.scm" synthesizes array ideas from Common-Lisp and Alan
-Bawden with uniform vector ideas from SRFI-4 and SCM.  The result
-highly integrates uniform and heterogeneous arrays into Scheme.
-<p>
+"<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/array.scm?rev=1.20&#38;content-type=text/vnd.viewcvs-markup">slib/array.scm</A>"
+synthesizes array ideas from Common-Lisp and Alan
+Bawden with homogeneous vector ideas from
+<A HREF="http://srfi.schemers.org/srfi-4">SRFI-4</A> and
+<A HREF="http://swissnet.ai.mit.edu/~jaffer/SCM">SCM</A>.
+The result portably integrates homogeneous and heterogeneous arrays
+into Scheme.
+<P>
 
 <H1>Issues</H1>
 
 The Scheme reports mention hardly any specific precisions for numbers.
 Uniform arrays necessarily must have finite precision.  We have
-followed Feeley's SRFI-4 lead for uniform-type names, though without
-the <code>"vector"</code> suffix.  In the syntax for array constants,
-putting (optional rank and) <samp>`A'</samp> between the
-<samp>#</samp> and the type name echoes Common-Lisp array syntax; and
-is compatible to Common-Lisp for heterogeneous arrays.
+followed Feeley's <A HREF="http://srfi.schemers.org/srfi-4">SRFI-4</A>
+lead for homogeneous-type precisions and names, although without the
+<CODE>"vector"</CODE> suffixes.
+<P>
+I have renamed the array creation procedure to
+<CODE>create-array</CODE> to avoid conflict with the
+<CODE>make-array</CODE> procedure in
+<A HREF="http://srfi.schemers.org/srfi-25">SRFI-25</A>.
+<P>
+The <CODE>array-set!</CODE> argument order is different from the
+same-named procedure in
+<A HREF="http://srfi.schemers.org/srfi-25">SRFI-25</A>.
+Type dispatch on the first argument to <CODE>array-set!</CODE> could
+support both SRFIs simultaneously.
+<P>
+All the procedures except <CODE>create-array</CODE> and
+<CODE>array=?</CODE> originate from Alan Bawden's "array.scm".
+SRFI-47's <CODE>array-set!</CODE> argument order is that of Bawden's
+package.  <A HREF="http://swissnet.ai.mit.edu/~jaffer/SLIB">SLIB</A>
+adopted "array.scm" in 1993.  This form of <CODE>array-set!</CODE> has
+also been part of the
+<A HREF="http://swissnet.ai.mit.edu/~jaffer/SCM">SCM</A> Scheme
+implementation since 1993.
+<P>
+In response to comments, I have removed the array read-syntax from
+SRFI-47.  The remaining package of procedures is completely portable
+to R4RS and R5RS Schemes as implemented by
+
+<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/array.scm?rev=1.20&#38;content-type=text/vnd.viewcvs-markup">slib/array.scm</A>.
+<P>
 
 <H1>Rationale</H1>
 
+"Array" incorporates all the homogeneous vector types from
+<A HREF="http://srfi.schemers.org/srfi-4">SRFI-4</A>
+"Homogeneous numeric vector datatypes", and adds complex types
+composed of two 32-bit or two 64-bit floating-point numbers, a uniform
+character array type, and a uniform boolean array type.
+Multi-dimensional uniform-arrays subsume homogeneous vectors as the
+one-dimensional case, obviating the need for
+<A HREF="http://srfi.schemers.org/srfi-4">SRFI-4</A>.
+<P>
 <UL>
-  <LI>Strings and Vectors are Arrays.<p>
-
-  <LI>Array procedures are compatible with Common-Lisp arrays except
-      for keyword arguments to <CODE>make-array</CODE>.<p>
-
-  <LI><code>make-shared-array</code> creates arrays which overlay a
-      subsection of a given array.<p>
-
-  <LI>The prototype argument to <CODE>make-array</CODE> seamlessly
+  <LI>The prototype argument to <CODE>create-array</CODE> seamlessly
       supports as many uniform array types as an implementation
       provides, defaulting to arrays built on vectors (and
-      strings).<p>
+      strings).<P>
 
-  <LI>Byte arrays can be implemented independently of strings.<p>
+  <LI>Byte arrays can be implemented independently and distinctly from
+      strings.<P>
+
+  <LI><CODE>make-shared-array</CODE> creates arrays which overlay a
+      subsection of a given array; allowing reversed indexes;
+      <P>
+
+  <LI>Strings and vectors are arrays;
+      generalizing the array concept beyond that in
+      <A HREF="http://srfi.schemers.org/srfi-25">SRFI-25</A>.
+      <P>
+
+  <LI>Strings and vectors as arrays, arrays in general, and the
+      procedures <CODE>array-rank</CODE> and
+      <CODE>array-dimensions</CODE> are compatible with
+      Common-Lisp.<p>
 
 </UL>
-
-"Array" implements a richer set of features than SRFI-25, with more
-compatibility with Common-Lisp.  The <code>make-array</code> procedure
-is incompatible between the two SRFIs.
-<p>
-"Array" incorporates all the uniform vector types from SFRI-4
-"Homogeneous numeric vector datatypes", and adds complex types
-composed of two 32-bit or two 64-bit floating-point numbers, and a
-uniform boolean array type.
-Multi-dimensional arrays subsume homogeneous vectors as the
-one-dimensional case, obviating the need for SRFI-4.
-<p>
+<P>
 Implementations are required to define all of the prototype
 procedures.  Those which the platform supports will have
 platform-dependent definitions; the others will be defined identically
 to the next larger prototype implemented; defaulting to
-<code>vector</code> if there are none.  All implementations must
+<CODE>vector</CODE> if there are none.  All implementations must
 support the string array type using a string.
-<p>
-This arrangement has platforms supporting uniform array types using
-them, with less capable platforms using vectors; both from the same
-source code.
-<p>
+<P>
+This arrangement has platforms which support uniform array types
+employing them, with less capable platforms using vectors; but all
+working compatibly.
+<P>
+
+<H2>Conversions</H2>
+
+<UL>
+<LI> Assigning a non-integer to array-type au8, au16, au32, au64, as8,
+ as16, as32, or as64 is an error.<p>
+
+<LI> Assigning a negative number to array-type au8, au16, au32, or
+ au64 is an error.<p>
+
+<LI> Assigning a non-real number to an ar64 or ar32 array is an
+ error.<P>
+
+<LI> An implementation may reduce the precision of a number when
+ assigning a number to an ar32 or ac32 array.<P>
+
+<LI> An implementation may reduce the precision of a number when
+ assigning a complex number to an ac32 array.<P>
+
+</UL>
 
 <H1>Specification</H1>
 
@@ -126,8 +180,8 @@ corresponding elements of <VAR>array1</VAR> and <VAR>array2</VAR> are <CODE>equa
 
 
 <PRE>
-(array=? (make-array '#(foo) 3 3)
-         (make-array '#(foo) '(0 2) '(0 2)))
+(array=? (create-array '#(foo) 3 3)
+         (create-array '#(foo) '(0 2) '(0 2)))
   =&gt; #t
 </PRE>
 
@@ -135,7 +189,7 @@ corresponding elements of <VAR>array1</VAR> and <VAR>array2</VAR> are <CODE>equa
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>make-array</B> <I>prototype bound1 bound2 ...</I>
+<DT><U>Function:</U> <B>create-array</B> <I>prototype bound1 bound2 ...</I>
 <DD><A NAME="IDX1051"></A>
 
 
@@ -154,10 +208,10 @@ array are unspecified.  Otherwise, the returned array will be filled
 with the element at the origin of <VAR>prototype</VAR>.
 </DL>
 <P>
-These functions return a uniform array prototype enclosing the
+These functions return a prototypical uniform-array enclosing the
 optional argument (which must be of the correct type).  If the
 uniform-array type is supported by the implementation, then it is
-returned; promoting to the next larger precision type; resorting
+returned; defaulting to the next larger precision type; resorting
 finally to vector.
 
 
@@ -343,7 +397,7 @@ a single integer.  So
 
 
 <PRE>
-(make-array '#(foo) 3 3) == (make-array '#(foo) '(0 2) '(0 2))
+(create-array '#(foo) 3 3) == (create-array '#(foo) '(0 2) '(0 2))
 </PRE>
 
 <P>
@@ -362,7 +416,7 @@ it can be otherwise arbitrary.  A simple example:
 
 
 <PRE>
-(define fred (make-array '#(#f) 8 8))
+(define fred (create-array '#(#f) 8 8))
 (define freds-diagonal
   (make-shared-array fred (lambda (i) (list i i)) 8))
 (array-set! freds-diagonal 'foo 3)
@@ -401,7 +455,7 @@ Returns a list of inclusive bounds.
 
 
 <PRE>
-(array-shape (make-array '#() 3 5))
+(array-shape (create-array '#() 3 5))
    =&gt; ((0 2) (0 4))
 </PRE>
 
@@ -420,7 +474,7 @@ elements with a 0 minimum with one greater than the maximum.
 
 
 <PRE>
-(array-dimensions (make-array '#() 3 5))
+(array-dimensions (create-array '#() 3 5))
    =&gt; (3 5)
 </PRE>
 
@@ -460,36 +514,47 @@ Stores <VAR>obj</VAR> in the (<VAR>index1</VAR>, <VAR>index2</VAR>, ...) element
 by <CODE>array-set!</CODE> is unspecified.
 </DL>
 
-<H2>Syntax</H2>
+<!-- <H2>Syntax</H2> -->
 
-The procedures specified above are independent of syntactic support
-for array constants.
-<P>
-A syntax for arrays is the list decomposition of an array with a
-prefix according to the type of the array.  The rank digit `<I>n</I>'
-is optional for rank 1 arrays.
-<P>
-<PRE>
-prototype       element type                    prefix         prefix
-procedure                                       rank = 1       rank = <I>n</I>
-=========       ============                    ========       ========
-vector          conventional vector             #A             #<i>n</i>A
-ac64            complex (double precision)      #Ac64          #<i>n</i>Ac64
-ac32            complex (single precision)      #Ac32          #<i>n</i>Ac32
-ar64            double (double precision)       #Ar64          #<i>n</i>Ar64
-ar32            float (single precision)        #Ar32          #<i>n</i>Ar32
-as64            signed integer (64-bit)         #As64          #<i>n</i>As64
-as32            signed integer (32-bit)         #As32          #<i>n</i>As32
-as16            signed integer (16-bit)         #As16          #<i>n</i>As16
-as8             signed integer (8-bit)          #As8           #<i>n</i>As8
-au64            unsigned integer (64-bit)       #Au64          #<i>n</i>Au64
-au32            unsigned integer (32-bit)       #Au32          #<i>n</i>Au32
-au16            unsigned integer (16-bit)       #Au16          #<i>n</i>Au16
-au8             unsigned integer (8-bit)        #Au8           #<i>n</i>Au8
-string          char (string)                   #A\            #<i>n</i>A\
-at1             boolean (bit-vector)            #At            #<i>n</i>At
-</PRE>
-
+<!-- The procedures specified above are independent of syntactic support -->
+<!-- for array constants. -->
+<!-- <P> -->
+<!-- A syntax for arrays is the list decomposition of an array with a -->
+<!-- prefix according to the type of the array.  The rank digit `<I>n</I>' -->
+<!-- is optional for rank 1 arrays. -->
+<!-- <P> -->
+<!-- <PRE> -->
+<!-- prototype       element type                    prefix         prefix -->
+<!-- procedure                                       rank = 1       rank = <I>n</I> -->
+<!-- =========       ============                    ========       ======== -->
+<!-- vector          conventional vector             #A             #<i>n</i>A -->
+<!-- ac64            complex (double precision)      #Ac64          #<i>n</i>Ac64 -->
+<!-- ac32            complex (single precision)      #Ac32          #<i>n</i>Ac32 -->
+<!-- ar64            double (double precision)       #Ar64          #<i>n</i>Ar64 -->
+<!-- ar32            float (single precision)        #Ar32          #<i>n</i>Ar32 -->
+<!-- as64            signed integer (64-bit)         #As64          #<i>n</i>As64 -->
+<!-- as32            signed integer (32-bit)         #As32          #<i>n</i>As32 -->
+<!-- as16            signed integer (16-bit)         #As16          #<i>n</i>As16 -->
+<!-- as8             signed integer (8-bit)          #As8           #<i>n</i>As8 -->
+<!-- au64            unsigned integer (64-bit)       #Au64          #<i>n</i>Au64 -->
+<!-- au32            unsigned integer (32-bit)       #Au32          #<i>n</i>Au32 -->
+<!-- au16            unsigned integer (16-bit)       #Au16          #<i>n</i>Au16 -->
+<!-- au8             unsigned integer (8-bit)        #Au8           #<i>n</i>Au8 -->
+<!-- string          char (string)                   #A\            #<i>n</i>A\ -->
+<!-- at1             boolean (bit-vector)            #At or #At1    #<i>n</i>At or #<i>n</i>At1 -->
+<!-- </PRE> -->
+<!-- <P> -->
+<!-- <H3>Examples</H3> -->
+<!-- <CODE>#2A((a1 a2 a3) (b1 b2 b3) (c1 c2 c3) (d1 d2 d3))</CODE> is the -->
+<!-- syntax for a 4 by 3 plain (non-uniform) array. -->
+<!-- <P> -->
+<!-- <CODE>#0A()</CODE>, <CODE>#0a()</CODE> and <CODE>#0A(foo)</CODE> are -->
+<!-- rank-zero arrays. -->
+<!-- <P> -->
+<!-- <CODE>#2At((#t #f) (#f #t))</CODE> is a 2 by 2 boolean array. -->
+<!-- <P> -->
+<!-- <CODE>#Au8(0 0 255)</CODE> is a byte-array. -->
+<!-- <P> -->
 
 <H1>Implementation</H1>
 
@@ -497,10 +562,10 @@ at1             boolean (bit-vector)            #At            #<i>n</i>At
 implements array procedures for R4RS or R5RS compliant Scheme
 implementations with <DFN>records</DFN> as implemented by
 <A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/record.scm?rev=1.6&#38;content-type=text/vnd.viewcvs-markup">slib/record.scm</A>
-or SRFI-9.
+or <A HREF="http://srfi.schemers.org/srfi-9">SRFI-9</A>.
 <P>
-Arrays in the SCM Scheme implementation have the syntax described.
-<p>
+<!-- Arrays in the <A HREF="http://swissnet.ai.mit.edu/~jaffer/SCM">SCM</A> Scheme implementation have the syntax described. -->
+<!-- <p> -->
 
 <H1>Copyright</H1>
 Copyright (C) Aubrey Jaffer (2003). All Rights Reserved.
@@ -533,7 +598,7 @@ PARTICULAR PURPOSE.
     <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">David Rush</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Tue Nov 11 20:49:09 GMT 2003
+Last modified: Thu Nov 20 20:49:09 GMT 2003<A    HREF="http://validator.w3.org/check?uri=http://swissnet.ai.mit.edu/~jaffer/srfi-47">.</A>
 <!-- hhmts end -->
   </body>
 </html>
