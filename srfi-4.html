@@ -23,6 +23,7 @@ HREF=mail-archive/maillist.html>the archive of the mailing list</A>.
 <P><UL>
 <LI>Received: 1998/1/11
 <LI>Draft: 1999/1/19-1999/03/19
+<LI>Revised: 1999/04/26
 <LI>Final: 1999/5/22
 </UL>
 
@@ -217,9 +218,10 @@ list of numbers of the type acceptable for elements of the
 
 It is an error if <code>TAGvalue</code> is not the same type as the
 elements of the <code>TAGvector</code> datatype (for example if an
-exact integer is passed to <code>f64vector</code>).  For the procedure
-<code>make-TAGvector</code> the fill value defaults to exact 0 for
-integer vector datatypes and inexact 0 for the float vector datatypes.
+exact integer is passed to <code>f64vector</code>).  If the fill
+value is not specified, the content of the vector is unspecified
+but individual elements of the vector are guaranteed to be in the
+range of values permitted for that type of vector.
 
 </OL>
 
@@ -283,7 +285,7 @@ which is exempt of error checking:
     (lambda (n . opt-fill)
       (let ((v (orig-make-vector
                  (orig-+ n 1)
-                 (if (orig-null? opt-fill) 0 (orig-car opt-fill)))))
+                 (if (orig-null? opt-fill) 123 (orig-car opt-fill)))))
         (orig-vector-set! v 0 tag)
         v)))
 
@@ -364,4 +366,3 @@ PARTICULAR PURPOSE.
 
   </body>
 </html>
-
