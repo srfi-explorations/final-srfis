@@ -1,0 +1,1029 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+  <HEAD>
+    <title>SRFI 63: Homogeneous and Heterogeneous Arrays</title>
+  </HEAD>
+
+  <BODY>
+
+<H1>Title</H1>
+
+Homogeneous and Heterogeneous Arrays
+
+<H1>Author</H1>
+
+Aubrey Jaffer
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status. To see an explanation of each
+status that a SRFI can hold, see
+<A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+It will remain in draft status until 2005/01/26, or as amended. To
+provide input on this SRFI, please <CODE>
+<A HREF="mailto:srfi-63@srfi.schemers.org">mailto:srfi-63@srfi.schemers.org</A></CODE>.
+See <A HREF="http://srfi.schemers.org/srfi-list-subscribe.html">instructions
+here</A> to subscribe to the list. You can access previous messages via
+<A HREF="http://srfi.schemers.org/srfi-63/mail-archive/maillist.html">the
+archive of the mailing list</A>.
+<P>
+<UL>
+  <LI>Received: 2005/01/17</LI>
+  <LI>Draft: 2005/01/17 - 2005/03/18</LI>
+</UL>
+
+<H1>Abstract</H1>
+
+The SRFI, which is to supersede
+<A HREF="http://srfi.schemers.org/srfi-47/srfi-47.html">SRFI-47</A>,
+"Array",
+
+<UL>
+
+<LI>synthesizes array concepts from Common-Lisp and Alan Bawden's
+    "array.scm";
+
+<LI>incorporates all the uniform vector types from
+    <A HREF="http://srfi.schemers.org/srfi-4/srfi-4.html">SFRI-4</A>
+    "Homogeneous numeric vector datatypes";
+
+<LI>adds a boolean uniform array type;
+
+<LI>adds 16.bit and 128.bit floating-point uniform-array types;
+
+<LI>adds decimal floating-point uniform-array types; and
+
+<LI>adds array types of (dual) floating-point complex numbers.
+
+</UL>
+
+Multi-dimensional arrays subsume homogeneous vectors as the
+one-dimensional case, obviating the need for SRFI-4.
+<P>
+SRFI-58 gives a read/write invariant syntax for the homogeneous and
+heterogeneous arrays described here.
+<P>
+
+<H1>Issues</H1>
+
+<UL>
+<LI>
+I removed character arrays (from SRFI-47) because, as I read R5RS, the
+number of distinct characters an implementation supports need not be
+finite; thus character elements might require an unbounded size of
+representation.
+<P>
+Character arrays are can be supported based on strings; but they do
+not necessarily have access times comparable to other types of arrays.
+<P>
+<LI>
+The <A HREF="#Conversions">conversion rules</A> for exact decimal
+flonums have yet to be determined.
+<P>
+<LI>
+<CODE>array-&#62;vector</CODE> and <CODE>vector-&#62;array</CODE> are
+not inverses for rank-0 arrays.
+<P>
+</UL>
+
+<H1>Rationale</H1>
+
+<H2>Arrays</H2>
+
+Computations have been organized into multidimensional arrays for over
+200 years.  Applications for multi-dimensional arrays continue to
+arise.  Computer graphics and imaging, whether vector or bitmap based,
+use arrays.  A general-purpose computer language without
+multidimensional arrays is an oxymoron.
+
+<H2>Precision</H2>
+
+R5RS provides an input syntax for inexact numbers which is capable of
+distinguishing between <VAR>short</VAR>, <VAR>single</VAR>,
+<VAR>double</VAR>, and <VAR>long</VAR> precisions.  But R5RS provides
+no method for limiting the precision of calculations:
+
+<BLOCKQUOTE>
+In particular, implementations that use flonum representations must
+follow these rules: A flonum result must be represented with at least
+as much precision as is used to express any of the inexact arguments
+to that operation.
+
+</BLOCKQUOTE>
+
+And calculation with any exact number inputs blows the precision out
+to "the most precise flonum format available":
+
+<BLOCKQUOTE>
+If, however, an exact number is operated upon so as to produce an
+inexact result (as by <SAMP>`sqrt'</SAMP>), and if the result is
+represented as a flonum, then the most precise flonum format available
+must be used; but if the result is represented in some other way then
+the representation must have at least as much precision as the most
+precise flonum format available.
+
+</BLOCKQUOTE>
+
+Scheme is not much hampered by lack of low-precision inexact numbers
+for scalar calculations.  The extra computation incurred by gratuitous
+precision is usually small compared with the overhead of type-dispatch
+and boxed data manipulation.
+<P>
+<H2>Homogeneous Arrays</H2>
+
+But if calculations are vectorized, that overhead can become
+significant.  Sophisticated program analysis may be able to deduce
+that aggregated number storage can be made uniformly of the most
+precise flonum format available.  But even the most aggressive
+analysis of uncontrived programs will not be able to reduce the
+precision while yielding results equivalent to the most precise
+calculation, as R5RS requires.
+<P>
+<!-- Globally reduced precision is a poor solution.  The intermediate -->
+<!-- results should be calculated with precision as high or higher than the -->
+<!-- inputs, even if the results will be stored with lower precision. -->
+<!-- <P> -->
+Also significant is that the numerical data in most Scheme
+implementations has manifest type information encoded with it.
+Varying sizes of number objects means that the vectors hold pointers
+to some numbers, requiring data fetches from memory locations unlikely
+to be in the same CPU cache-line.
+<P>
+Arrays composed of elements all having the same size representations
+can eliminate these indirect accesses and the storage allocation
+associated with them.  Homogeneous arrays of lower precision flonums
+can reduce by factors of 2 or 4 the storage they occupy; which can
+also speed execution because of the lower bandwidth to the memory
+necessary to supply the CPU data cache.
+<P>
+<H2>Common Lisp</H2>
+
+Common-Lisp arrays are serviceable, and are the basis for arrays here.
+Common-Lisp's <CODE>make-array</CODE> does not translate well to
+Scheme because the array element type and the initial contents are
+passed using named arguments.
+<P>
+Prototype arrays specify both the homogeneous array type (or lack of)
+and the initial value or lack of it; allowing these purposes to be
+satisfied by one argument to <CODE>make-array</CODE> or other
+procedures which create arrays.
+<P>
+Some have objected that restricting type specification to arrays is a
+half-measure.  In vectorized programs, specifying the precision of
+scalar calculations will produce negligible performance improvements.
+But the performance improvements of homogeneous arrays can accrue to
+both interpreted and compiled Scheme implementations.  By avoiding the
+morass of general type specification, SRFI-63 can be more easily
+accommodated by more Scheme implementations.
+<P>
+<H2>Argument Order</H2>
+
+<UL>
+<LI>
+Most of the procedures except originate from Alan Bawden's "array.scm".
+SRFI-47's <CODE>array-set!</CODE> argument order is that of Bawden's
+package.  <A HREF="http://swissnet.ai.mit.edu/~jaffer/SLIB">SLIB</A>
+adopted "array.scm" in 1993.  This form of <CODE>array-set!</CODE> has
+also been part of the
+<A HREF="http://swissnet.ai.mit.edu/~jaffer/SCM">SCM</A> Scheme
+implementation since 1993.<P>
+
+<LI>
+The <CODE>array-set!</CODE> argument order is different from the
+same-named procedure in
+<A HREF="http://srfi.schemers.org/srfi-25/srfi-25.html">SRFI-25</A>.
+Type dispatch on the first argument to <CODE>array-set!</CODE> could
+support both SRFIs simultaneously.<P>
+
+<LI>
+The <CODE>make-array</CODE> arguments are different from the
+same-named procedure in
+<A HREF="http://srfi.schemers.org/srfi-25/srfi-25.html">SRFI-25</A>.
+Type dispatch on the first argument to <CODE>make-array</CODE> could
+support both SRFIs simultaneously.<P>
+
+<LI>
+The SRFI-47 argument orders are motivated to make easy dealing with
+the variable arity resulting from variable rank.
+
+<PRE>
+       (vector-&gt;array  vect  proto  bound1 ...)
+          (make-array        proto  bound1 ...)
+   (make-shared-array  array mapper bound1 ...)
+          (array-set!  array obj    index1 ...)
+    (array-in-bounds?  array        index1 ...)
+           (array-ref  array        index1 ...)
+</PRE>
+<P>
+The list-&gt;array is somewhat dissonant:
+<PRE>
+         (list-&gt;array  rank  proto  list)
+</PRE>
+<P>
+</UL>
+<P>
+
+<H2>Homogeneous Array Types</H2>
+
+Although an implementation is required to define all the prototype
+functions, it is not required to support all or even any of the
+homogeneous numeric arrays.  It is assumed that no uniform numeric
+types have larger precision than the Scheme implementation supports as
+numbers.
+<P>
+<A NAME=Table-1></A>
+<TABLE BORDER=1>
+<TR><TH>prototype<BR>procedure
+    <TH>exactness
+    <TH>element type
+<TR><TD><CODE>vector    </CODE><TD>        <TD>any
+<TR><TD><CODE>A:floC128b</CODE><TD>inexact<TD>128.bit binary flonum complex
+<TR><TD><CODE>A:floC64b </CODE><TD>inexact<TD>64.bit binary flonum complex
+<TR><TD><CODE>A:floC32b </CODE><TD>inexact<TD>32.bit binary flonum complex
+<TR><TD><CODE>A:floC16b </CODE><TD>inexact<TD>16.bit binary flonum complex
+<TR><TD><CODE>A:floR128b</CODE><TD>inexact<TD>128.bit binary flonum real
+<TR><TD><CODE>A:floR64b </CODE><TD>inexact<TD>64.bit binary flonum real
+<TR><TD><CODE>A:floR32b </CODE><TD>inexact<TD>32.bit binary flonum real
+<TR><TD><CODE>A:floR16b </CODE><TD>inexact<TD>16.bit binary flonum real
+<TR><TD COLSPAN=3>
+<TR><TD><CODE>A:floQ128d</CODE><TD>exact<TD>128.bit decimal flonum rational
+<TR><TD><CODE>A:floQ64d </CODE><TD>exact<TD>64.bit decimal flonum rational
+<TR><TD><CODE>A:floQ32d </CODE><TD>exact<TD>32.bit decimal flonum rational
+<TR><TD COLSPAN=3>
+<TR><TD><CODE>A:fixZ64b </CODE><TD>exact<TD>64.bit binary fixnum
+<TR><TD><CODE>A:fixZ32b </CODE><TD>exact<TD>32.bit binary fixnum
+<TR><TD><CODE>A:fixZ16b </CODE><TD>exact<TD>16.bit binary fixnum
+<TR><TD><CODE>A:fixZ8b  </CODE><TD>exact<TD>8.bit  binary fixnum
+<TR><TD><CODE>A:fixN64b </CODE><TD>exact<TD>64.bit nonnegative binary fixnum
+<TR><TD><CODE>A:fixN32b </CODE><TD>exact<TD>32.bit nonnegative binary fixnum
+<TR><TD><CODE>A:fixN16b </CODE><TD>exact<TD>16.bit nonnegative binary fixnum
+<TR><TD><CODE>A:fixN8b  </CODE><TD>exact<TD>8.bit  nonnegative binary fixnum
+<TR><TD><CODE>A:bool    </CODE><TD>     <TD>boolean
+<!-- <TR><TD><CODE>string    </CODE><TD>     <TD>char -->
+</TABLE>
+<P>
+Decimal flonums are used for financial calculations so that fractional
+errors do not accumulate.  They should be exact numbers.
+<P>
+<A NAME="Conversions"></A>
+<H2>Conversions</H2>
+
+<UL>
+<LI> All the elements of arrays of type A:fixN8b, A:fixN16b,
+     A:fixN32b, A:fixN64b, A:fixZ8b, A:fixZ16b, A:fixZ32b, or
+     A:fixZ64b are exact.<P>
+
+<LI> All the elements of arrays of type A:floR16b, A:floR32b,
+     A:floR64b, A:floR128b, A:floC16b, A:floC32b, A:floC64b, and
+     A:floC128b are inexact.<P>
+
+<LI> The value retrieved from an exact array element will equal (=)
+     the value stored in that element.<P>
+
+<LI> Assigning a non-integer to array-type A:fixN8b, A:fixN16b,
+     A:fixN32b, A:fixN64b, A:fixZ8b, A:fixZ16b, A:fixZ32b, or
+     A:fixZ64b is an error.<P>
+
+<LI> Assigning a number larger than can be represented in array-type
+     A:fixN8b, A:fixN16b, A:fixN32b, A:fixN64b, A:fixZ8b, A:fixZ16b,
+     A:fixZ32b, or A:fixZ64b is an error.<P>
+
+<LI> Assigning a negative number to array-type A:fixN8b, A:fixN16b,
+     A:fixN32b, or A:fixN64b is an error.<P>
+
+<LI> Assigning an inexact number to array-type A:fixN8b, A:fixN16b,
+     A:fixN32b, A:fixN64b, A:fixZ8b, A:fixZ16b, A:fixZ32b, or
+     A:fixZ64b is an error.<P>
+
+<LI> When assigning an exact number to an inexact array-type, the
+     procedure may report a violation of an implementation
+     restriction.<P>
+
+<LI> Assigning a non-real number (eg. <CODE>real?</CODE> returns
+     <CODE>#f</CODE>) to an A:floR128b, A:floR64b, A:floR32b, or
+     A:floR16b array is an error.<P>
+
+<LI> When an inexact number is assigned to an array whose type is
+     lower precision, the number will be rounded to that lower
+     precision if possible; otherwise it is an error.<P>
+
+</UL>
+
+<H2>Prototype Procedures</H2>
+
+Implementations are required to define all of the prototype
+procedures.  Uniform types of matching format and sizes which the
+platform supports will be used; the others will be represented as
+follows:
+<P>
+For inexact flonum complex arrays:
+<UL>
+  <LI>the next larger complex format is used;
+  <LI>if there is no larger format,
+  <UL>
+    <LI>then if the implementation supports complex floating-point numbers of
+        unbounded precision,
+    <UL>
+      <LI>then a heterogeneous array;
+      <LI>else the largest inexact flonum complex array.
+    </UL>
+  </UL>
+</UL>
+
+For inexact flonum real arrays:
+<UL>
+  <LI>the next larger real format is used;
+  <LI>if there is no larger real format, then the next larger complex format
+      is used.
+  <LI>If there is no larger complex format,
+    <UL>
+    <LI>then if the implementation supports floating-point real numbers of
+        unbounded precision,
+    <UL>
+      <LI>then a heterogeneous array;
+      <LI>else the largest inexact flonum real or complex array.
+    </UL>
+  </UL>
+</UL>
+
+For exact decimal flonum arrays:
+<UL>
+  <LI>the next larger decimal flonum format array is used;
+  <LI>If there is no larger decimal flonum format, then a
+      heterogeneous array is used.
+</UL>
+
+For exact bipolar fixnum arrays:
+<UL>
+  <LI>the next larger bipolar fixnum format array is used;
+  <LI>If there is no larger bipolar fixnum format,
+  <UL>
+    <LI>then if the implementation supports exact integers of unbounded
+        precision,
+      <UL>
+        <LI>then a heterogeneous array;
+        <LI>else the largest bipolar fixnum array.
+     </UL>
+  </UL>
+</UL>
+
+For exact nonnegative fixnum arrays:
+<UL>
+  <LI>the next larger nonnegative fixnum format array is used;
+  <LI>If there is no larger nonnegative fixnum format,
+  <UL>
+    <LI>then the next larger bipolar fixnum format is used.
+    <LI>If there is no larger bipolar fixnum format,
+    <UL>
+      <LI>then if the implementation supports exact integers of
+          unbounded precision,
+      <UL>
+        <LI>then a heterogeneous array;
+        <LI>else the largest nonnegative or bipolar fixnum array.
+      </UL>
+    </UL>
+  </UL>
+</UL>
+
+<P>
+This arrangement has platforms which support uniform array types
+employing them, with less capable platforms using vectors; but all
+working compatibly from the same source code.
+<P>
+
+<H2>Shared Arrays</H2>
+
+To my knowledge, shared arrays were original to Alan Bawden in his
+"array.scm".  <CODE>Make-shared-array</CODE> creates any view into an
+array whose coordinates can be mapped by exact integer affine
+functions.  Shared arrays are quite useful.  They can reverse indexes,
+make subarrays, and facilitate straightforward implementations of
+divide-and-conquer algorithms.
+<P>
+In Common-Lisp a <DFN>displaced array</DFN> can be created by calls to
+<A HREF="http://www-2.cs.cmu.edu/Groups/AI/html/hyperspec/HyperSpec/Body/fun_adjust-array.html">adjust-array</A>.
+
+But displaced arrays are far less flexible than <DFN>shared
+arrays</DFN>, constrained to have the same rank as the original and
+allowing only index displacements (not reversals, skips, or
+shuffling).
+<P>
+
+<H2>Limit Cases</H2>
+
+The bounds for each index in both Alan Bawden's "array.scm" and
+<A HREF="http://srfi.schemers.org/srfi-25/srfi-25.html">SRFI-25</A>
+
+can be any consecutive run of integers.  All indexes in SRFI-63 are
+zero-based for compatibility with R5RS.
+<P>
+Empty arrays having no elements can be of any positive rank.  Empty
+arrays can be returned from <CODE>make-shared-array</CODE>.
+<P>
+Following <A HREF="http://www-2.cs.cmu.edu/Groups/AI/html/hyperspec/HyperSpec/Body/sec_15-1-1-3.html">Common-Lisp</A>'s
+lead, zero-rank arrays have a single element.
+<P>
+Array access time is O(<I>R</I>)+<I>V</I>, where <I>R</I> is the rank
+of the array and <I>V</I> is the vector access time.
+<P>
+
+<H1>Specification</H1>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>array?</B> <I>obj</I>
+<DD><A NAME="IDX1108"></A>
+
+
+<P>
+Returns <CODE>#t</CODE> if the <VAR>obj</VAR> is an array, and <CODE>#f</CODE> if not.
+</DL>
+
+
+<P>
+<EM>Note:</EM> Arrays are not disjoint from other Scheme types.
+Vectors and possibly strings also satisfy <CODE>array?</CODE>.
+A disjoint array predicate can be written:
+
+
+
+<PRE>
+(define (strict-array? obj)
+  (and (array? obj) (not (string? obj)) (not (vector? obj))))
+</PRE>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>equal?</B> <I>obj1 obj2</I>
+<DD><A NAME="IDX1109"></A>
+
+
+<P>
+Returns <CODE>#t</CODE> if <VAR>obj1</VAR> and <VAR>obj2</VAR> have the same rank and dimensions and the
+corresponding elements of <VAR>obj1</VAR> and <VAR>obj2</VAR> are <CODE>equal?</CODE>.
+
+
+<P>
+<CODE>equal?</CODE> recursively compares the contents of pairs, vectors, strings, and
+<EM>arrays</EM>, applying <CODE>eqv?</CODE> on other objects such as numbers
+and symbols.  A rule of thumb is that objects are generally <CODE>equal?</CODE> if
+they print the same.  <CODE>equal?</CODE> may fail to terminate if its arguments are
+circular data structures.
+
+
+
+<PRE>
+(equal? 'a 'a)                             =>  #t
+(equal? '(a) '(a))                         =>  #t
+(equal? '(a (b) c)
+        '(a (b) c))                        =>  #t
+(equal? "abc" "abc")                       =>  #t
+(equal? 2 2)                               =>  #t
+(equal? (make-vector 5 'a)
+        (make-vector 5 'a))                =>  #t
+(equal? (make-array (A:fixN32b 4) 5 3)
+        (make-array (A:fixN32b 4) 5 3))    =>  #t
+(equal? (make-array '#(foo) 3 3)
+        (make-array '#(foo) 3 3))          =>  #t
+(equal? (lambda (x) x)
+        (lambda (y) y))                    =>  <EM>unspecified</EM>
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>array-rank</B> <I>obj</I>
+<DD><A NAME="IDX1110"></A>
+
+
+<P>
+Returns the number of dimensions of <VAR>obj</VAR>.  If <VAR>obj</VAR> is not an array, 0 is
+returned.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>array-dimensions</B> <I>array</I>
+<DD><A NAME="IDX1111"></A>
+
+
+<P>
+Returns a list of dimensions.
+
+
+
+<PRE>
+(array-dimensions (make-array '#() 3 5))
+   => (3 5)
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>make-array</B> <I>prototype k1 ...</I>
+<DD><A NAME="IDX1112"></A>
+
+
+<P>
+Creates and returns an array of type <VAR>prototype</VAR> with dimensions <VAR>k1</VAR>, ...
+and filled with elements from <VAR>prototype</VAR>.  <VAR>prototype</VAR> must be an array, vector, or
+string.  The implementation-dependent type of the returned array
+will be the same as the type of <VAR>prototype</VAR>; except if that would be a vector
+or string with rank not equal to one, in which case some variety of
+array will be returned.
+
+
+<P>
+If the <VAR>prototype</VAR> has no elements, then the initial contents of the returned
+array are unspecified.  Otherwise, the returned array will be filled
+with the element at the origin of <VAR>prototype</VAR>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>make-shared-array</B> <I>array mapper k1 ...</I>
+<DD><A NAME="IDX1114"></A>
+
+
+<P>
+<CODE>make-shared-array</CODE> can be used to create shared subarrays of other
+arrays.  The <VAR>mapper</VAR> is a function that translates coordinates in
+the new array into coordinates in the old array.  A <VAR>mapper</VAR> must be
+linear, and its range must stay within the bounds of the old array, but
+it can be otherwise arbitrary.  A simple example:
+
+
+
+<PRE>
+(define fred (make-array '#(#f) 8 8))
+(define freds-diagonal
+  (make-shared-array fred (lambda (i) (list i i)) 8))
+(array-set! freds-diagonal 'foo 3)
+(array-ref fred 3 3)
+   => FOO
+(define freds-center
+  (make-shared-array fred (lambda (i j) (list (+ 3 i) (+ 3 j)))
+                     2 2))
+(array-ref freds-center 0 0)
+   => FOO
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>list-&#62;array</B> <I>rank proto list</I>
+<DD><A NAME="IDX1115"></A>
+
+
+<P>
+<VAR>list</VAR> must be a rank-nested list consisting of all the elements, in
+row-major order, of the array to be created.
+
+
+<P>
+<CODE>list-&#62;array</CODE> returns an array of rank <VAR>rank</VAR> and type <VAR>proto</VAR> consisting of all the
+elements, in row-major order, of <VAR>list</VAR>.  When <VAR>rank</VAR> is 0, <VAR>list</VAR> is the lone
+array element; not necessarily a list.
+
+
+
+<PRE>
+(list-&#62;array 2 '#() '((1 2) (3 4)))
+                => #2A((1 2) (3 4))
+(list-&#62;array 0 '#() 3)
+                => #0A 3
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>array-&#62;list</B> <I>array</I>
+<DD><A NAME="IDX1116"></A>
+
+
+<P>
+Returns a rank-nested list consisting of all the elements, in
+row-major order, of <VAR>array</VAR>.  In the case of a rank-0 array, <CODE>array-&#62;list</CODE> returns
+the single element.
+
+
+
+<PRE>
+(array-&#62;list #2A((ho ho ho) (ho oh oh)))
+                => ((ho ho ho) (ho oh oh))
+(array-&#62;list #0A ho)
+                => ho
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>vector-&#62;array</B> <I>vect proto dim1 ...</I>
+<DD><A NAME="IDX1117"></A>
+
+
+<P>
+<VAR>vect</VAR> must be a vector of length equal to the product of exact
+nonnegative integers <VAR>dim1</VAR>, ....
+
+
+<P>
+<CODE>vector-&#62;array</CODE> returns an array of type <VAR>proto</VAR> consisting of all the elements, in
+row-major order, of <VAR>vect</VAR>.  In the case of a rank-0 array, <VAR>vect</VAR> has a
+single element.
+
+
+
+<PRE>
+(vector-&#62;array #(1 2 3 4) #() 2 2)
+                => #2A((1 2) (3 4))
+(vector-&#62;array '#(3) '#())
+                => #0A 3
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>array-&#62;vector</B> <I>array</I>
+<DD><A NAME="IDX1118"></A>
+
+
+<P>
+Returns a new vector consisting of all the elements of <VAR>array</VAR> in
+row-major order.  In the case of a rank-0 array, <CODE>array-&#62;vector</CODE> returns the
+single element.
+
+
+
+<PRE>
+(array-&#62;vector #2A ((1 2)( 3 4)))
+                => #(1 2 3 4)
+(array-&#62;vector #0A ho)
+                => ho
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>array-in-bounds?</B> <I>array index1 ...</I>
+<DD><A NAME="IDX1119"></A>
+
+
+<P>
+Returns <CODE>#t</CODE> if its arguments would be acceptable to
+<CODE>array-ref</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>array-ref</B> <I>array k1 ...</I>
+<DD><A NAME="IDX1120"></A>
+
+
+<P>
+Returns the (<VAR>k1</VAR>, ...) element of <VAR>array</VAR>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Procedure:</U> <B>array-set!</B> <I>array obj k1 ...</I>
+<DD><A NAME="IDX1121"></A>
+
+
+<P>
+Stores <VAR>obj</VAR> in the (<VAR>k1</VAR>, ...) element of <VAR>array</VAR>.  The value returned
+by <CODE>array-set!</CODE> is unspecified.
+</DL>
+
+
+<P>
+These functions return a prototypical uniform-array enclosing the
+optional argument (which must be of the correct type).  If the
+uniform-array type is supported by the implementation, then it is
+returned; defaulting to the next larger precision type; resorting
+finally to vector.
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:floc128b</B> <I>z</I>
+<DD><A NAME="IDX1122"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:floc128b</B>
+<DD><A NAME="IDX1123"></A>
+Returns an inexact 128.bit flonum complex uniform-array prototype.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:floc64b</B> <I>z</I>
+<DD><A NAME="IDX1124"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:floc64b</B>
+<DD><A NAME="IDX1125"></A>
+Returns an inexact 64.bit flonum complex uniform-array prototype.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:floc32b</B> <I>z</I>
+<DD><A NAME="IDX1126"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:floc32b</B>
+<DD><A NAME="IDX1127"></A>
+Returns an inexact 32.bit flonum complex uniform-array prototype.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:floc16b</B> <I>z</I>
+<DD><A NAME="IDX1128"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:floc16b</B>
+<DD><A NAME="IDX1129"></A>
+Returns an inexact 16.bit flonum complex uniform-array prototype.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:flor128b</B> <I>z</I>
+<DD><A NAME="IDX1130"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:flor128b</B>
+<DD><A NAME="IDX1131"></A>
+Returns an inexact 128.bit flonum real uniform-array prototype.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:flor64b</B> <I>z</I>
+<DD><A NAME="IDX1132"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:flor64b</B>
+<DD><A NAME="IDX1133"></A>
+Returns an inexact 64.bit flonum real uniform-array prototype.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:flor32b</B> <I>z</I>
+<DD><A NAME="IDX1134"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:flor32b</B>
+<DD><A NAME="IDX1135"></A>
+Returns an inexact 32.bit flonum real uniform-array prototype.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:flor16b</B> <I>z</I>
+<DD><A NAME="IDX1136"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:flor16b</B>
+<DD><A NAME="IDX1137"></A>
+Returns an inexact 16.bit flonum real uniform-array prototype.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:flor128b</B> <I>z</I>
+<DD><A NAME="IDX1138"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:flor128b</B>
+<DD><A NAME="IDX1139"></A>
+Returns an exact 128.bit decimal flonum rational uniform-array prototype.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:flor64b</B> <I>z</I>
+<DD><A NAME="IDX1140"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:flor64b</B>
+<DD><A NAME="IDX1141"></A>
+Returns an exact 64.bit decimal flonum rational uniform-array prototype.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:flor32b</B> <I>z</I>
+<DD><A NAME="IDX1142"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:flor32b</B>
+<DD><A NAME="IDX1143"></A>
+Returns an exact 32.bit decimal flonum rational uniform-array prototype.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:fixz64b</B> <I>n</I>
+<DD><A NAME="IDX1144"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:fixz64b</B>
+<DD><A NAME="IDX1145"></A>
+Returns an exact binary fixnum uniform-array prototype with at least
+64 bits of precision.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:fixz32b</B> <I>n</I>
+<DD><A NAME="IDX1146"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:fixz32b</B>
+<DD><A NAME="IDX1147"></A>
+Returns an exact binary fixnum uniform-array prototype with at least
+32 bits of precision.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:fixz16b</B> <I>n</I>
+<DD><A NAME="IDX1148"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:fixz16b</B>
+<DD><A NAME="IDX1149"></A>
+Returns an exact binary fixnum uniform-array prototype with at least
+16 bits of precision.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:fixz8b</B> <I>n</I>
+<DD><A NAME="IDX1150"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:fixz8b</B>
+<DD><A NAME="IDX1151"></A>
+Returns an exact binary fixnum uniform-array prototype with at least
+8 bits of precision.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:fixn64b</B> <I>k</I>
+<DD><A NAME="IDX1152"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:fixn64b</B>
+<DD><A NAME="IDX1153"></A>
+Returns an exact non-negative binary fixnum uniform-array prototype with at
+least 64 bits of precision.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:fixn32b</B> <I>k</I>
+<DD><A NAME="IDX1154"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:fixn32b</B>
+<DD><A NAME="IDX1155"></A>
+Returns an exact non-negative binary fixnum uniform-array prototype with at
+least 32 bits of precision.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:fixn16b</B> <I>k</I>
+<DD><A NAME="IDX1156"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:fixn16b</B>
+<DD><A NAME="IDX1157"></A>
+Returns an exact non-negative binary fixnum uniform-array prototype with at
+least 16 bits of precision.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:fixn8b</B> <I>k</I>
+<DD><A NAME="IDX1158"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:fixn8b</B>
+<DD><A NAME="IDX1159"></A>
+Returns an exact non-negative binary fixnum uniform-array prototype with at
+least 8 bits of precision.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>a:bool</B> <I>bool</I>
+<DD><A NAME="IDX1160"></A>
+
+
+<P>
+<DT><U>Function:</U> <B>a:bool</B>
+<DD><A NAME="IDX1161"></A>
+Returns a boolean uniform-array prototype.
+</DL>
+
+
+
+<H1>Implementation</H1>
+
+<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/*checkout*/slib/slib/array.scm?rev=HEAD&amp;content-type=text/vnd.viewcvs-markup">slib/array.scm</A>
+implements array procedures for R4RS or R5RS compliant Scheme
+implementations with <DFN>records</DFN> as implemented by
+<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/record.scm?rev=HEAD&amp;content-type=text/vnd.viewcvs-markup">slib/record.scm</A>
+or <A HREF="http://srfi.schemers.org/srfi-9/srfi-9.html">SRFI-9</A>.
+<P>
+"<CODE>array.scm</CODE>" redefines <CODE>equal?</CODE> to handle
+arrays.
+<P>
+
+<H1>Copyright</H1>
+Copyright (C) 2005 Aubrey Jaffer
+<P>
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+<P>
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+<P>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+<P>
+    <HR>
+    <ADDRESS>Editor: <A HREF="mailto:srfi-editors@srfi.schemers.org">David Van Horn</A></ADDRESS>
+<!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
+<!-- hhmts start -->
+Last modified: Mon Jan 17 12:56:55 EST 2005
+<!-- hhmts end -->
+  </BODY>
+</HTML>
