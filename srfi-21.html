@@ -16,17 +16,14 @@ Marc Feeley
 
 <H1>Status</H1>
 
-This SRFI is currently in ``draft'' status.  To see an explanation of each status that a SRFI can hold, see <A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
-It will remain in draft status until 2000/07/10, or as amended.
-To provide input on this SRFI, please <CODE><A
-HREF="mailto:srfi-21@srfi.schemers.org">mail to
-&lt;srfi-21@srfi.schemers.org&gt;</A></CODE>.  See <A HREF=../srfi-list-subscribe.html>instructions here</A> to subscribe to the list.  You can access previous messages via <A HREF=mail-archive/maillist.html>the archive of the mailing list</A>.
+This SRFI is currently in ``final'' status.  To see an explanation of each status that a SRFI can hold, see <A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+You can access the discussion via <A HREF=mail-archive/maillist.html>the archive of the mailing list</A>.
 <P><UL>
 <LI>Received: 2000/05/11</LI>
 <LI>Draft: 2000/05/12-2000/07/11</LI>
 <LI>Revised: 2000/12/31</LI>
+<LI>Final: 2001/03/02</LI>
 </UL>
-
 
 <H1>Abstract</H1>
 
@@ -1153,16 +1150,36 @@ primordial thread terminates (normally or not).
     <CODE><I>condition-variable</I></CODE> is supplied, the current
     thread is blocked and added to the
     <CODE><I>condition-variable</I></CODE> before unlocking
-    <CODE><I>mutex</I></CODE>; the thread remains blocked until a call
-    to <CODE>condition-variable-signal!</CODE> or
-    <CODE>condition-variable-broadcast!</CODE> unblocks the thread
-    (see below), or until the timeout is reached if
-    <CODE><I>timeout</I></CODE> is supplied.  If there are threads
+    <CODE><I>mutex</I></CODE>; the thread can unblock at any time but
+    no later than when an appropriate call to
+    <CODE>condition-variable-signal!</CODE> or
+    <CODE>condition-variable-broadcast!</CODE> is performed (see
+    below), and no later than the timeout (if
+    <CODE><I>timeout</I></CODE> is supplied).  If there are threads
     waiting to lock this <CODE><I>mutex</I></CODE>, the scheduler
     selects a thread, the mutex becomes locked/owned or
     locked/not-owned, and the thread is unblocked.
     <CODE>mutex-unlock!</CODE> returns <CODE>#f</CODE> when the
     timeout is reached, otherwise it returns <CODE>#t</CODE>.
+</P>
+
+<P>
+    NOTE: The reason the thread can unblock at any time (when
+    <CODE><I>condition-variable</I></CODE> is supplied) is to allow
+    extending this SRFI with primitives that force a specific blocked
+    thread to become runnable.  For example a primitive to interrupt a
+    thread so that it performs a certain operation, whether the thread
+    is blocked or not, may be useful to handle the case where the
+    scheduler has detected a serious problem (such as a deadlock) and
+    it must unblock one of the threads (such as the primordial thread)
+    so that it can perform some appropriate action.  After a thread
+    blocked on a condition-variable has handled such an interrupt it
+    would be wrong for the scheduler to return the thread to the
+    blocked state, because any calls to
+    <CODE>condition-variable-broadcast!</CODE> during the interrupt
+    will have gone unnoticed.  It is necessary for the thread to
+    remain runnable and return from the call to
+    <CODE>mutex-unlock!</CODE> with a result of <CODE>#t</CODE>.
 </P>
 
 <P>
@@ -1173,9 +1190,10 @@ primordial thread terminates (normally or not).
     This operation is not performed by <CODE>mutex-unlock!</CODE> and
     so must be done by an explicit call to <CODE>mutex-lock!</CODE>.
     This has the advantages that a different timeout and exception
-    handler can be specified on the <CODE>mutex-lock!</CODE> and the
-    location of all the mutex operations is clearly apparent.  A
-    typical use with a condition variable is:
+    handler can be specified on the <CODE>mutex-lock!</CODE> and
+    <CODE>mutex-unlock!</CODE> and the location of all the mutex
+    operations is clearly apparent.  A typical use with a condition
+    variable is:
 </P>
 
 <PRE>
