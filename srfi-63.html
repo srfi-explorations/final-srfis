@@ -32,6 +32,7 @@ archive of the mailing list</A>.
   <LI>Draft: 2005/01/17 - 2005/03/18</LI>
   <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-63/srfi-63.html?rev=1.4">2005/01/27</A></LI>
   <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-63/srfi-63.html?rev=1.5">2005/01/29</A></LI>
+  <LI>Revised: <A HREF="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-63/srfi-63.html?rev=1.6">2005/04/08</A></LI>
 </UL>
 
 <H1>Abstract</H1>
@@ -69,23 +70,20 @@ heterogeneous arrays described here.
 <H1>Issues</H1>
 
 <UL>
-<LI>
-<!-- I removed character arrays (from SRFI-47) because, as I read R5RS, the -->
-<!-- number of distinct characters an implementation supports need not be -->
-<!-- finite; thus character elements might require an unbounded size of -->
-<!-- representation. -->
+<!-- <LI> -->
+<!-- Character arrays can be supported based on strings; but they do not -->
+<!-- necessarily have access times comparable to other types of arrays. -->
 <!-- <P> -->
-Character arrays are can be supported based on strings; but they do
-not necessarily have access times comparable to other types of arrays.
-<P>
 <LI>
 The <A HREF="#Conversions">conversion rules</A> for exact decimal
-flonums have yet to be determined.
+flonums have yet to be determined.  Wisdom in this area would come
+from experience.  Lacking that, it is better to underspecify the
+behavior of decimal flonums than to make it wrong.
 <P>
-<LI>
-<CODE>array-&#62;vector</CODE> and <CODE>vector-&#62;array</CODE> are
-not inverses for rank-0 arrays.
-<P>
+<!-- <LI> -->
+<!-- <CODE>array-&gt;vector</CODE> and <CODE>vector-&gt;array</CODE> are -->
+<!-- not inverses for rank-0 arrays. -->
+<!-- <P> -->
 </UL>
 
 <H1>Rationale</H1>
@@ -182,7 +180,7 @@ accommodated by more Scheme implementations.
 
 <UL>
 <LI>
-Most of the procedures except originate from Alan Bawden's "array.scm".
+Most of the procedures originate from Alan Bawden's "array.scm".
 SRFI-47's <CODE>array-set!</CODE> argument order is that of Bawden's
 package.  <A HREF="http://swissnet.ai.mit.edu/~jaffer/SLIB">SLIB</A>
 adopted "array.scm" in 1993.  This form of <CODE>array-set!</CODE> has
@@ -395,6 +393,10 @@ For exact nonnegative fixnum arrays:
 </UL>
 
 <P>
+Note that these rules are used to configure an implementation's
+definitions of the prototype procedures, which should not themselves
+be type-dispatching.
+<P>
 This arrangement has platforms which support uniform array types
 employing them, with less capable platforms using vectors; but all
 working compatibly from the same source code.
@@ -591,7 +593,7 @@ it can be otherwise arbitrary.  A simple example:
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>list-&#62;array</B> <I>rank proto list</I>
+<DT><U>Function:</U> <B>list-&gt;array</B> <I>rank proto list</I>
 <DD><A NAME="IDX1115"></A>
 
 
@@ -601,16 +603,16 @@ row-major order, of the array to be created.
 
 
 <P>
-<CODE>list-&#62;array</CODE> returns an array of rank <VAR>rank</VAR> and type <VAR>proto</VAR> consisting of all the
+<CODE>list-&gt;array</CODE> returns an array of rank <VAR>rank</VAR> and type <VAR>proto</VAR> consisting of all the
 elements, in row-major order, of <VAR>list</VAR>.  When <VAR>rank</VAR> is 0, <VAR>list</VAR> is the lone
 array element; not necessarily a list.
 
 
 
 <PRE>
-(list-&#62;array 2 '#() '((1 2) (3 4)))
+(list-&gt;array 2 '#() '((1 2) (3 4)))
                 => #2A((1 2) (3 4))
-(list-&#62;array 0 '#() 3)
+(list-&gt;array 0 '#() 3)
                 => #0A 3
 </PRE>
 
@@ -618,21 +620,21 @@ array element; not necessarily a list.
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>array-&#62;list</B> <I>array</I>
+<DT><U>Function:</U> <B>array-&gt;list</B> <I>array</I>
 <DD><A NAME="IDX1116"></A>
 
 
 <P>
 Returns a rank-nested list consisting of all the elements, in
-row-major order, of <VAR>array</VAR>.  In the case of a rank-0 array, <CODE>array-&#62;list</CODE> returns
+row-major order, of <VAR>array</VAR>.  In the case of a rank-0 array, <CODE>array-&gt;list</CODE> returns
 the single element.
 
 
 
 <PRE>
-(array-&#62;list #2A((ho ho ho) (ho oh oh)))
+(array-&gt;list #2A((ho ho ho) (ho oh oh)))
                 => ((ho ho ho) (ho oh oh))
-(array-&#62;list #0A ho)
+(array-&gt;list #0A ho)
                 => ho
 </PRE>
 
@@ -640,7 +642,7 @@ the single element.
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>vector-&#62;array</B> <I>vect proto dim1 ...</I>
+<DT><U>Function:</U> <B>vector-&gt;array</B> <I>vect proto dim1 ...</I>
 <DD><A NAME="IDX1117"></A>
 
 
@@ -650,16 +652,16 @@ nonnegative integers <VAR>dim1</VAR>, ....
 
 
 <P>
-<CODE>vector-&#62;array</CODE> returns an array of type <VAR>proto</VAR> consisting of all the elements, in
+<CODE>vector-&gt;array</CODE> returns an array of type <VAR>proto</VAR> consisting of all the elements, in
 row-major order, of <VAR>vect</VAR>.  In the case of a rank-0 array, <VAR>vect</VAR> has a
 single element.
 
 
 
 <PRE>
-(vector-&#62;array #(1 2 3 4) #() 2 2)
+(vector-&gt;array #(1 2 3 4) #() 2 2)
                 => #2A((1 2) (3 4))
-(vector-&#62;array '#(3) '#())
+(vector-&gt;array '#(3) '#())
                 => #0A 3
 </PRE>
 
@@ -667,22 +669,21 @@ single element.
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>array-&#62;vector</B> <I>array</I>
+<DT><U>Function:</U> <B>array-&gt;vector</B> <I>array</I>
 <DD><A NAME="IDX1118"></A>
 
 
 <P>
 Returns a new vector consisting of all the elements of <VAR>array</VAR> in
-row-major order.  In the case of a rank-0 array, <CODE>array-&#62;vector</CODE> returns the
-single element.
+row-major order.
 
 
 
 <PRE>
-(array-&#62;vector #2A ((1 2)( 3 4)))
+(array-&gt;vector #2A ((1 2)( 3 4)))
                 => #(1 2 3 4)
-(array-&#62;vector #0A ho)
-                => ho
+(array-&gt;vector #0A ho)
+                => #(ho)
 </PRE>
 
 </DL>
@@ -1315,14 +1316,13 @@ arrays.
 
 ;;@args array
 ;;Returns a new vector consisting of all the elements of @1 in
-;;row-major order.  In the case of a rank-0 array, @0 returns the
-;;single element.
+;;row-major order.
 ;;
 ;;@example
 ;;(array-&gt;vector #2A ((1 2)( 3 4)))
 ;;                @result{} #(1 2 3 4)
 ;;(array-&gt;vector #0A ho)
-;;                @result{} ho
+;;                @result{} #(ho)
 ;;@end example
 (define (array-&gt;vector ra)
   (define dims (array-dimensions ra))
@@ -1333,7 +1333,7 @@ arrays.
           (let ((val (apply array-ref ra (reverse idxs))))
             (set! vdx (+ -1 vdx))
             (vector-set! vect vdx val)
-            val)
+            vect)
           (do ((idx (+ -1 (car dims)) (+ -1 idx)))
               ((negative? idx) vect)
             (ra2v (cdr dims) (cons idx idxs)))))
@@ -1521,7 +1521,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     <ADDRESS>Editor: <A HREF="mailto:srfi-editors@srfi.schemers.org">David Van Horn</A></ADDRESS>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Sat Jan 29 13:26:32 EST 2005
+Last modified: Thu Jan 27 09:30:33 EST 2005
 <!-- hhmts end -->
   </BODY>
 </HTML>
