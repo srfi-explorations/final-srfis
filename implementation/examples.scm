@@ -29,6 +29,9 @@
 ;   ..
 ;   SE, 28-Feb-2005: adapted to make it one-source PLT,S48,Chicken
 ;   JS, 01-Mar-2005: first version
+;   SE, 18-Apr-2005: added (<? [c] [x y]) and (</<? [c] [x y z])
+;   SE, 13-May-2005: included examples for <? etc.
+;   SE, 16-May-2005: naming convention changed; compare-by< optional x y
 ;
 ; This program runs some examples on 'compare.scm'.
 ; It has been tested under 
@@ -79,14 +82,16 @@
 ; ======================================
 ;
 ; 1. Uncomment the following lines:
-;      (require 
-;        (lib "16.ss" "srfi") ; case-lambda
-;        (lib "23.ss" "srfi") ; error
-;        (lib "27.ss" "srfi") ; random-integer
-;        (lib "42.ss" "srfi") ; eager comprehensions list-ec etc.
-;        (lib "pretty.ss"))   ; pretty-print
-;      (define pretty-write pretty-print)
-;      (load "compare.scm")
+;
+;plt (require 
+;plt    (lib "16.ss" "srfi") ; case-lambda
+;plt    (lib "23.ss" "srfi") ; error
+;plt    (lib "27.ss" "srfi") ; random-integer
+;plt    (lib "42.ss" "srfi") ; eager comprehensions list-ec etc.
+;plt    (lib "pretty.ss"))   ; pretty-print
+;plt (define pretty-write pretty-print)
+;plt (load "compare.scm")
+;
 ; 2. Run this file.
 
 ; Running the examples in Scheme-48
@@ -238,7 +243,7 @@
 ; Abstractions etc.
 ; =================
 
-(define ci compare-integer) ; very frequently used
+(define ci integer-compare) ; very frequently used
 
 ; (result-ok? actual desired)
 ;   tests if actual and desired specify the same ordering.
@@ -412,6 +417,16 @@
        (my-check (rel? 0 0) => (rel 0 0))
        (my-check (rel? 0 1) => (rel 0 1))
        (my-check (rel? 1 0) => (rel 1 0))
+
+       ; as a combinator
+       (my-check ((rel? ci) 0 0) => (rel 0 0))
+       (my-check ((rel? ci) 0 1) => (rel 0 1))
+       (my-check ((rel? ci) 1 0) => (rel 1 0))
+
+       ; using default-compare as a combinator
+       (my-check ((rel?) 0 0) => (rel 0 0))
+       (my-check ((rel?) 0 1) => (rel 0 1))
+       (my-check ((rel?) 1 0) => (rel 1 0))
        ))))
 
 (define (list->set xs) ; xs a list of integers
@@ -471,6 +486,36 @@
        (my-check (rel1/rel2? 1 0 2) => (and (rel1 1 0) (rel2 0 2)))
        (my-check (rel1/rel2? 2 0 1) => (and (rel1 2 0) (rel2 0 1)))
        (my-check (rel1/rel2? 2 1 0) => (and (rel1 2 1) (rel2 1 0)))
+       
+       ; as a combinator
+       (my-check ((rel1/rel2? ci) 0 0 0) => (and (rel1 0 0) (rel2 0 0)))
+       (my-check ((rel1/rel2? ci) 0 0 1) => (and (rel1 0 0) (rel2 0 1)))
+       (my-check ((rel1/rel2? ci) 0 1 0) => (and (rel1 0 1) (rel2 1 0)))
+       (my-check ((rel1/rel2? ci) 1 0 0) => (and (rel1 1 0) (rel2 0 0)))
+       (my-check ((rel1/rel2? ci) 1 1 0) => (and (rel1 1 1) (rel2 1 0)))
+       (my-check ((rel1/rel2? ci) 1 0 1) => (and (rel1 1 0) (rel2 0 1)))
+       (my-check ((rel1/rel2? ci) 0 1 1) => (and (rel1 0 1) (rel2 1 1)))
+       (my-check ((rel1/rel2? ci) 0 1 2) => (and (rel1 0 1) (rel2 1 2)))
+       (my-check ((rel1/rel2? ci) 0 2 1) => (and (rel1 0 2) (rel2 2 1)))
+       (my-check ((rel1/rel2? ci) 1 2 0) => (and (rel1 1 2) (rel2 2 0)))
+       (my-check ((rel1/rel2? ci) 1 0 2) => (and (rel1 1 0) (rel2 0 2)))
+       (my-check ((rel1/rel2? ci) 2 0 1) => (and (rel1 2 0) (rel2 0 1)))
+       (my-check ((rel1/rel2? ci) 2 1 0) => (and (rel1 2 1) (rel2 1 0)))
+
+       ; as a combinator using default-compare
+       (my-check ((rel1/rel2?) 0 0 0) => (and (rel1 0 0) (rel2 0 0)))
+       (my-check ((rel1/rel2?) 0 0 1) => (and (rel1 0 0) (rel2 0 1)))
+       (my-check ((rel1/rel2?) 0 1 0) => (and (rel1 0 1) (rel2 1 0)))
+       (my-check ((rel1/rel2?) 1 0 0) => (and (rel1 1 0) (rel2 0 0)))
+       (my-check ((rel1/rel2?) 1 1 0) => (and (rel1 1 1) (rel2 1 0)))
+       (my-check ((rel1/rel2?) 1 0 1) => (and (rel1 1 0) (rel2 0 1)))
+       (my-check ((rel1/rel2?) 0 1 1) => (and (rel1 0 1) (rel2 1 1)))
+       (my-check ((rel1/rel2?) 0 1 2) => (and (rel1 0 1) (rel2 1 2)))
+       (my-check ((rel1/rel2?) 0 2 1) => (and (rel1 0 2) (rel2 2 1)))
+       (my-check ((rel1/rel2?) 1 2 0) => (and (rel1 1 2) (rel2 2 0)))
+       (my-check ((rel1/rel2?) 1 0 2) => (and (rel1 1 0) (rel2 0 2)))
+       (my-check ((rel1/rel2?) 2 0 1) => (and (rel1 2 0) (rel2 0 1)))
+       (my-check ((rel1/rel2?) 2 1 0) => (and (rel1 2 1) (rel2 1 0)))
        
        ; test if all arguments are type checked
        (my-check (arguments-used (rel1/rel2? ci 0 1 2)) => '(0 1 2))
@@ -789,10 +834,10 @@
   (my-check (max-compare ci 2 1 0) => 2)
   
   ; check that the first minimal value is returned
-  (my-check (min-compare (compare-car ci)
+  (my-check (min-compare (pair-compare-car ci)
                          '(0 1) '(0 2) '(0 3))
             => '(0 1))
-  (my-check (max-compare (compare-car ci)
+  (my-check (max-compare (pair-compare-car ci)
                          '(0 1) '(0 2) '(0 3))
             => '(0 1))
   
@@ -843,40 +888,58 @@
   
   ) ;check:kth-largest
 
-; compare< etc. procedures
+; compare-by< etc. procedures
 
 (define (check:compare-from-predicates)
   
   (my-check-compare
-   (lambda (x y) (compare< < x y))
+   (compare-by< <)
    my-integers)
   
   (my-check-compare
-   (lambda (x y) (compare> > x y))
+   (compare-by> >)
    my-integers)
   
   (my-check-compare
-   (lambda (x y) (compare<= <= x y))
+   (compare-by<= <=)
    my-integers)
   
   (my-check-compare
-   (lambda (x y) (compare>= >= x y))
+   (compare-by>= >=)
    my-integers)
   
   (my-check-compare
-   (lambda (x y) (compare=/< = < x y))
+   (compare-by=/< = <)
    my-integers)
   
   (my-check-compare
-   (lambda (x y) (compare=/> = > x y))
+   (compare-by=/> = >)
+   my-integers)
+  
+  ; with explicit arguments
+
+  (my-check-compare
+   (lambda (x y) (compare-by< < x y))
    my-integers)
   
   (my-check-compare
-   (lambda (x y) (compare=/<= = <= x y))
+   (lambda (x y) (compare-by> > x y))
    my-integers)
   
   (my-check-compare
-   (lambda (x y) (compare=/>= = >= x y))
+   (lambda (x y) (compare-by<= <= x y))
+   my-integers)
+  
+  (my-check-compare
+   (lambda (x y) (compare-by>= >= x y))
+   my-integers)
+  
+  (my-check-compare
+   (lambda (x y) (compare-by=/< = < x y))
+   my-integers)
+  
+  (my-check-compare
+   (lambda (x y) (compare-by=/> = > x y))
    my-integers)
   
   ) ; check:compare-from-predicates
@@ -884,27 +947,27 @@
 
 (define (check:atomic)
   
-  (my-check-compare compare-boolean   my-booleans)
+  (my-check-compare boolean-compare   my-booleans)
   
-  (my-check-compare compare-char      my-chars)
+  (my-check-compare char-compare      my-chars)
   
-  (my-check-compare compare-char-ci   my-chars-ci)
+  (my-check-compare char-compare-ci   my-chars-ci)
   
-  (my-check-compare compare-string    my-strings)
+  (my-check-compare string-compare    my-strings)
   
-  (my-check-compare compare-string-ci my-strings-ci)
+  (my-check-compare string-compare-ci my-strings-ci)
   
-  (my-check-compare compare-symbol    my-symbols)
+  (my-check-compare symbol-compare    my-symbols)
   
-  (my-check-compare compare-integer   my-integers)
+  (my-check-compare integer-compare   my-integers)
   
-  (my-check-compare compare-rational  my-rationals)
+  (my-check-compare rational-compare  my-rationals)
   
-  (my-check-compare compare-real      my-reals)
+  (my-check-compare real-compare      my-reals)
   
-  (my-check-compare compare-complex   my-complexes)
+  (my-check-compare complex-compare   my-complexes)
   
-  (my-check-compare compare-number    my-complexes)
+  (my-check-compare number-compare    my-complexes)
   
   ) ; check:atomic
 
@@ -917,20 +980,20 @@
    '(#f))
   
   (my-check-compare
-   (lambda (x y) (refine-compare (compare-integer x y)))
+   (lambda (x y) (refine-compare (integer-compare x y)))
    my-integers)
   
   (my-check-compare
    (lambda (x y)
-     (refine-compare (compare-integer (car x) (car y))
-                     (compare-symbol  (cdr x) (cdr y))))
+     (refine-compare (integer-compare (car x) (car y))
+                     (symbol-compare  (cdr x) (cdr y))))
    '((1 . a) (1 . b) (2 . b) (2 . c) (3 . a) (3 . c)))
   
   (my-check-compare
    (lambda (x y)
-     (refine-compare (compare-integer (car   x) (car   y))
-                     (compare-symbol  (cadr  x) (cadr  y))
-                     (compare-string  (caddr x) (caddr y))))
+     (refine-compare (integer-compare (car   x) (car   y))
+                     (symbol-compare  (cadr  x) (cadr  y))
+                     (string-compare  (caddr x) (caddr y))))
    '((1 a "a") (1 b "a") (1 b "b") (2 b "c") (2 c "a") (3 a "b") (3 c "b")))
   
   ; select-compare
@@ -948,35 +1011,35 @@
   (my-check-compare
    (lambda (x y)
      (select-compare x y 
-                     (pair? (compare-integer (car x) (car y))
-                            (compare-symbol  (cdr x) (cdr y)))))
+                     (pair? (integer-compare (car x) (car y))
+                            (symbol-compare  (cdr x) (cdr y)))))
    '((1 . a) (1 . b) (2 . b) (2 . c) (3 . a) (3 . c)))
   
   (my-check-compare
    (lambda (x y)
      (select-compare x y 
-                     (else (compare-integer x y))))
+                     (else (integer-compare x y))))
    my-integers)
   
   (my-check-compare
    (lambda (x y)
      (select-compare x y 
-                     (else (compare-integer (car x) (car y))
-                           (compare-symbol  (cdr x) (cdr y)))))
+                     (else (integer-compare (car x) (car y))
+                           (symbol-compare  (cdr x) (cdr y)))))
    '((1 . a) (1 . b) (2 . b) (2 . c) (3 . a) (3 . c)))
   
   (my-check-compare
    (lambda (x y)
      (select-compare x y
-                     (symbol? (compare-symbol x y))
-                     (string? (compare-string x y))))
+                     (symbol? (symbol-compare x y))
+                     (string? (string-compare x y))))
    '(a b c "a" "b" "c" 1)) ; implicit (else 0)
   
   (my-check-compare
    (lambda (x y)
      (select-compare x y
-                     (symbol? (compare-symbol x y))
-                     (else    (compare-string x y))))
+                     (symbol? (symbol-compare x y))
+                     (else    (string-compare x y))))
    '(a b c "a" "b" "c"))
   
   ; test if arguments are only evaluated once
@@ -1001,41 +1064,41 @@
   (my-check-compare
    (lambda (x y) 
      (cond-compare 
-      (((integer? x) (integer? y)) (compare-integer x y))))
+      (((integer? x) (integer? y)) (integer-compare x y))))
    my-integers)
   
   (my-check-compare
    (lambda (x y) 
      (cond-compare 
-      (((pair? x) (pair? y)) (compare-integer (car x) (car y))
-                             (compare-symbol  (cdr x) (cdr y)))))
+      (((pair? x) (pair? y)) (integer-compare (car x) (car y))
+                             (symbol-compare  (cdr x) (cdr y)))))
    '((1 . a) (1 . b) (2 . b) (2 . c) (3 . a) (3 . c)))
   
   (my-check-compare
    (lambda (x y)
      (cond-compare
-      (else (compare-integer x y))))
+      (else (integer-compare x y))))
    my-integers)
   
   (my-check-compare
    (lambda (x y) 
      (cond-compare 
-      (else (compare-integer (car x) (car y))
-            (compare-symbol  (cdr x) (cdr y)))))
+      (else (integer-compare (car x) (car y))
+            (symbol-compare  (cdr x) (cdr y)))))
    '((1 . a) (1 . b) (2 . b) (2 . c) (3 . a) (3 . c)))
   
   (my-check-compare
    (lambda (x y)
      (cond-compare 
-      (((symbol? x) (symbol? y)) (compare-symbol x y))
-      (((string? x) (string? y)) (compare-string x y))))
+      (((symbol? x) (symbol? y)) (symbol-compare x y))
+      (((string? x) (string? y)) (string-compare x y))))
    '(a b c "a" "b" "c" 1)) ; implicit (else 0)
   
   (my-check-compare
    (lambda (x y)
      (cond-compare 
-      (((symbol? x) (symbol? y)) (compare-symbol x y))
-      (else                      (compare-string x y))))
+      (((symbol? x) (symbol? y)) (symbol-compare x y))
+      (else                      (string-compare x y))))
    '(a b c "a" "b" "c"))
   
   ) ; check:refine-select-cond
@@ -1060,87 +1123,87 @@
 (define (check:data-structures)
   
   (my-check-compare
-   (compare-car ci)
+   (pair-compare-car ci)
    '((1 . b) (2 . a) (3 . c)))
   
   (my-check-compare
-   (compare-cdr ci)
+   (pair-compare-cdr ci)
    '((b . 1) (a . 2) (c . 3)))
   
-  ; compare-pair
+  ; pair-compare
   
-  (my-check-compare compare-pair my-null-or-pairs)
+  (my-check-compare pair-compare my-null-or-pairs)
   
   (my-check-compare
-   (lambda (x y) (compare-pair ci x y))
+   (lambda (x y) (pair-compare ci x y))
    my-null-or-pairs)
   
   (my-check-compare
-   (lambda (x y) (compare-pair ci compare-symbol x y))
+   (lambda (x y) (pair-compare ci symbol-compare x y))
    '((1 . a) (1 . b) (2 . b) (2 . c) (3 . a)))
   
-  ; compare-list
+  ; list-compare
   
-  (my-check-compare compare-list my-lists)
+  (my-check-compare list-compare my-lists)
   
   (my-check-compare
-   (lambda (x y) (compare-list ci x y))
+   (lambda (x y) (list-compare ci x y))
    my-lists)
   
   (my-check-compare
-   (lambda (x y) (compare-list x y my-empty? my-head my-tail))
+   (lambda (x y) (list-compare x y my-empty? my-head my-tail))
    (map list->my-list my-lists))
   
   (my-check-compare
-   (lambda (x y) (compare-list ci x y my-empty? my-head my-tail))
+   (lambda (x y) (list-compare ci x y my-empty? my-head my-tail))
    (map list->my-list my-lists))
   
-  ; compare-list-as-vector
+  ; list-compare-as-vector
   
-  (my-check-compare compare-list-as-vector my-list-as-vectors)
+  (my-check-compare list-compare-as-vector my-list-as-vectors)
   
   (my-check-compare
-   (lambda (x y) (compare-list-as-vector ci x y))
+   (lambda (x y) (list-compare-as-vector ci x y))
    my-list-as-vectors)
   
   (my-check-compare
-   (lambda (x y) (compare-list-as-vector x y my-empty? my-head my-tail))
+   (lambda (x y) (list-compare-as-vector x y my-empty? my-head my-tail))
    (map list->my-list my-list-as-vectors))
   
   (my-check-compare
-   (lambda (x y) (compare-list-as-vector ci x y my-empty? my-head my-tail))
+   (lambda (x y) (list-compare-as-vector ci x y my-empty? my-head my-tail))
    (map list->my-list my-list-as-vectors))
   
-  ; compare-vector
+  ; vector-compare
   
-  (my-check-compare compare-vector my-vectors)
+  (my-check-compare vector-compare my-vectors)
   
   (my-check-compare
-   (lambda (x y) (compare-vector ci x y))
+   (lambda (x y) (vector-compare ci x y))
    my-vectors)
   
   (my-check-compare
-   (lambda (x y) (compare-vector x y my-size my-ref))
+   (lambda (x y) (vector-compare x y my-size my-ref))
    (map list->my-list my-list-as-vectors))
   
   (my-check-compare
-   (lambda (x y) (compare-vector ci x y my-size my-ref))
+   (lambda (x y) (vector-compare ci x y my-size my-ref))
    (map list->my-list my-list-as-vectors))
   
-  ; compare-vector-as-list
+  ; vector-compare-as-list
   
-  (my-check-compare compare-vector-as-list my-vector-as-lists)
+  (my-check-compare vector-compare-as-list my-vector-as-lists)
   
   (my-check-compare
-   (lambda (x y) (compare-vector-as-list ci x y))
+   (lambda (x y) (vector-compare-as-list ci x y))
    my-vector-as-lists)
   
   (my-check-compare
-   (lambda (x y) (compare-vector-as-list x y my-size my-ref))
+   (lambda (x y) (vector-compare-as-list x y my-size my-ref))
    (map list->my-list my-lists))
   
   (my-check-compare
-   (lambda (x y) (compare-vector-as-list ci x y my-size my-ref))
+   (lambda (x y) (vector-compare-as-list ci x y my-size my-ref))
    (map list->my-list my-lists))
   
   ) ; check:data-structures
@@ -1150,12 +1213,12 @@
   
   (my-check-compare default-compare my-objects)
   
-  ; check if default-compare refines compare-pair
+  ; check if default-compare refines pair-compare
   
   (my-check-ec
    (:list x (index ix) my-objects)
    (:list y (index iy) my-objects)
-   (:let c-coarse (compare-pair x y))
+   (:let c-coarse (pair-compare x y))
    (:let c-fine (default-compare x y))
    (or (eqv? c-coarse 0) (eqv? c-fine c-coarse))
    (list x y))
@@ -1167,6 +1230,20 @@
   ) ; check:default-compare
 
 
+(define (sort-by-less xs pred) ; trivial quicksort
+  (if (or (null? xs) (null? (cdr xs)))
+      xs
+      (append 
+       (sort-by-less (list-ec (:list x (cdr xs))
+			      (if (pred x (car xs))) 
+			      x) 
+		     pred)
+       (list (car xs))
+       (sort-by-less (list-ec (:list x (cdr xs))
+			      (if (not (pred x (car xs))))
+			      x) 
+		     pred))))
+
 (define (check:more-examples)
   
   ; define recursive order on tree type (nodes are dotted pairs)
@@ -1174,7 +1251,7 @@
   (my-check-compare
    (letrec ((c (lambda (x y)
                  (cond-compare (((null? x) (null? y)) 0)
-                               (else (compare-pair c c x y))))))
+                               (else (pair-compare c c x y))))))
      c)
    (list '() (list '()) (list '() '()) (list (list '())))
    ;'(() (() . ()) (() . (() . ())) ((() . ()) . ()))   ; Chicken can't parse this ?
@@ -1186,13 +1263,13 @@
    (letrec ((c (lambda (x y)
                  (select-compare x y
                                  (null? 0)
-                                 (pair?    (compare-pair    c c x y))
-                                 (boolean? (compare-boolean x y))
-                                 (char?    (compare-char    x y))
-                                 (string?  (compare-string  x y))
-                                 (symbol?  (compare-symbol  x y))
-                                 (number?  (compare-number  x y))
-                                 (vector?  (compare-vector  c x y))
+                                 (pair?    (pair-compare    c c x y))
+                                 (boolean? (boolean-compare x y))
+                                 (char?    (char-compare    x y))
+                                 (string?  (string-compare  x y))
+                                 (symbol?  (symbol-compare  x y))
+                                 (number?  (number-compare  x y))
+                                 (vector?  (vector-compare  c x y))
                                  (else (error "unrecognized type in c" x y))))))
      c)
    my-objects)
@@ -1203,13 +1280,13 @@
    (letrec ((c (lambda (x y)
                  (cond-compare
                   (((null?    x) (null?    y)) 0)
-                  (((pair?    x) (pair?    y)) (compare-pair    c c x y))
-                  (((boolean? x) (boolean? y)) (compare-boolean x y))
-                  (((char?    x) (char?    y)) (compare-char    x y))
-                  (((string?  x) (string?  y)) (compare-string  x y))
-                  (((symbol?  x) (symbol?  y)) (compare-symbol  x y))
-                  (((number?  x) (number?  y)) (compare-number  x y))
-                  (((vector?  x) (vector?  y)) (compare-vector  c x y))
+                  (((pair?    x) (pair?    y)) (pair-compare    c c x y))
+                  (((boolean? x) (boolean? y)) (boolean-compare x y))
+                  (((char?    x) (char?    y)) (char-compare    x y))
+                  (((string?  x) (string?  y)) (string-compare  x y))
+                  (((symbol?  x) (symbol?  y)) (symbol-compare  x y))
+                  (((number?  x) (number?  y)) (number-compare  x y))
+                  (((vector?  x) (vector?  y)) (vector-compare  c x y))
                   (else (error "unrecognized type in c" x y))))))
      c)
    my-objects)
@@ -1218,10 +1295,17 @@
   
   (my-check-compare
    (lambda (x y)
-     (compare-vector-as-list
-      (lambda (x y) (compare-char y x))
+     (vector-compare-as-list
+      (lambda (x y) (char-compare y x))
       x y string-length string-ref))
    '("" "b" "bb" "ba" "a" "ab" "aa"))
+
+  ; examples from SRFI text for <? etc.
+
+  (my-check (>? "laugh" "LOUD") => #t)
+  (my-check (<? string-compare-ci "laugh" "LOUD") => #t)
+  (my-check (sort-by-less '(1 a "b") (<?)) => '("b" a 1))
+  (my-check (sort-by-less '(1 a "b") (>?)) => '(1 a "b"))
   
   ) ; check:more-examples
 
@@ -1284,4 +1368,4 @@
 (check:default-compare)
 (check:more-examples)
 
-(my-check-summary) ; all examples correct?
+(my-check-summary) ; all examples (99486) correct?

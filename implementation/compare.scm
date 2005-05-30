@@ -28,15 +28,18 @@
 ;   SE, 18-Oct-2004: 1st redesign: axioms for 'compare function'
 ;   SE, 29-Oct-2004: 2nd redesign: higher order reverse/map/refine/unite
 ;   SE,  2-Nov-2004: 3rd redesign: macros cond/refine-compare replace h.o.f's
-;   SE, 10-Nov-2004: (im,re) replaced by (re,im) in compare-complex
+;   SE, 10-Nov-2004: (im,re) replaced by (re,im) in complex-compare
 ;   SE, 11-Nov-2004: case-compare by case (not by cond); select-compare added
-;   SE, 12-Jan-2005: compare-cdr
+;   SE, 12-Jan-2005: pair-compare-cdr
 ;   SE, 15-Feb-2005: stricter typing for compare-<type>; pairwise-not=?
 ;   SE, 16-Feb-2005: case-compare -> if-compare -> if3; <? </<? chain<? etc.
 ;   JS, 24-Feb-2005: selection-compare added
 ;   SE, 25-Feb-2005: selection-compare -> kth-largest modified; if<? etc.
 ;   JS, 28-Feb-2005: kth-largest modified - is "stable" now
 ;   SE, 28-Feb-2005: simplified pairwise-not=?/kth-largest; min/max debugged
+;   SE, 07-Apr-2005: compare-based type checks made explicit
+;   SE, 18-Apr-2005: added (rel? compare) and eq?-test
+;   SE, 16-May-2005: naming convention changed; compare-by< etc. optional x y
 
 ; =============================================================================
 
@@ -53,21 +56,35 @@
 ;     and portability, not on efficiency.
 ;   * Variable arity procedures are expressed in terms of case-lambda
 ;     in the hope that this will produce efficient code for the case
-;     where the arity is simply a syntactic constant.
+;     where the arity is statically known at the call site.
 ;   * In procedures that are required to type-check their arguments,
-;     we use (compare x x) for executing extra checks.
+;     we use (compare x x) for executing extra checks. This relies on
+;     the assumption that eq? is used to catch this case quickly.
 ;   * Care has been taken to reference comparison procedures of R5RS
 ;     only at the time the operations here are being defined. This
 ;     makes it possible to redefine these operations, if need be.
 ;   * For the sake of efficiency, some inlining has been done by hand.
+;     This is mainly expressed by macros producing defines.
+;   * Identifiers of the form compare:<something> are private.
 ;
 ; Hints for low-level implementation:
 ;   * The basis of this SRFI are the atomic compare procedures, 
-;     i.e. compare-boolean, compare-char, etc. and the conditionals
-;     if3, if=?, if<? etc. These should be lightning fast.
+;     i.e. boolean-compare, char-compare, etc. and the conditionals
+;     if3, if=?, if<? etc., and default-compare. These should make
+;     optimal use of the available type information.
 ;   * For the sake of speed, the reference implementation does not
 ;     use a LET to save the comparison value c for the ERROR call.
 ;     This can be fixed in a low-level implementation at no cost.
+;   * Type-checks based on (compare x x) are made explicit by the
+;     expression (compare:check result compare x ...).
+;   * Eq? should  can used to speed up built-in compare procedures,
+;     but it can only be used after type-checking at least one of
+;     the arguments.
+
+(define (compare:checked result compare . args)
+  (for-each (lambda (x) (compare x x)) args)
+  result)
+
 
 ; 3-sided conditional
 
@@ -83,322 +100,139 @@
 
 ; 2-sided conditionals for comparisons
 
+(define-syntax compare:if-rel?
+  (syntax-rules ()
+    ((compare:if-rel? c-cases a-cases c consequence)
+     (compare:if-rel? c-cases a-cases c consequence (if #f #f)))
+    ((compare:if-rel? c-cases a-cases c consequence alternate)
+     (case c
+       (c-cases consequence)
+       (a-cases alternate)
+       (else    (error "comparison value not in {-1,0,1}"))))))
+
 (define-syntax if=?
   (syntax-rules ()
-    ((if=? c consequence)
-     (if=? c consequence (if #f #f)))
-    ((if=? c consequence alternate)
-     (case c
-       ((0)    consequence)
-       ((-1 1) alternate)
-       (else   (error "comparison value not in {-1,0,1}"))))))
+    ((if=? arg ...)
+     (compare:if-rel? (0) (-1 1) arg ...))))
 
 (define-syntax if<?
   (syntax-rules ()
-    ((if<? c consequence)
-     (if<? c consequence (if #f #f)))
-    ((if<? c consequence alternate)
-     (case c
-       ((-1)  consequence)
-       ((0 1) alternate)
-       (else   (error "comparison value not in {-1,0,1}"))))))
+    ((if<? arg ...)
+     (compare:if-rel? (-1) (0 1) arg ...))))
 
 (define-syntax if>?
   (syntax-rules ()
-    ((if>? c consequence)
-     (if>? c consequence (if #f #f)))
-    ((if>? c consequence alternate)
-     (case c
-       ((1)    consequence)
-       ((-1 0) alternate)
-       (else   (error "comparison value not in {-1,0,1}"))))))
+    ((if>? arg ...)
+     (compare:if-rel? (1) (-1 0) arg ...))))
 
 (define-syntax if<=?
   (syntax-rules ()
-    ((if<=? c consequence)
-     (if<=? c consequence (if #f #f)))
-    ((if<=? c consequence alternate)
-     (case c
-       ((-1 0) consequence)
-       ((1)    alternate)
-       (else   (error "comparison value not in {-1,0,1}"))))))
+    ((if<=? arg ...)
+     (compare:if-rel? (-1 0) (1) arg ...))))
 
 (define-syntax if>=?
   (syntax-rules ()
-    ((if>=? c consequence)
-     (if>=? c consequence (if #f #f)))
-    ((if>=? c consequence alternate)
-     (case c
-       ((0 1) consequence)
-       ((-1)  alternate)
-       (else   (error "comparison value not in {-1,0,1}"))))))
+    ((if>=? arg ...)
+     (compare:if-rel? (0 1) (-1) arg ...))))
 
 (define-syntax if-not=?
   (syntax-rules ()
-    ((if-not=? c consequence)
-     (if-not=? c consequence (if #f #f)))
-    ((if-not=? c consequence alternate)
-     (case c
-       ((-1 1) consequence)
-       ((0)    alternate)
-       (else   (error "comparison value not in {-1,0,1}"))))))
+    ((if-not=? arg ...)
+     (compare:if-rel? (-1 1) (0) arg ...))))
 
 
 ; predicates from compare procedures
 
-(define =?
-  (case-lambda
-    ((x y)         (if=? (default-compare x y) #t #f))
-    ((compare x y) (if=? (compare         x y) #t #f))))
+(define-syntax compare:define-rel?
+  (syntax-rules ()
+    ((compare:define-rel? rel? if-rel?)
+     (define rel?
+       (case-lambda
+	(()        (lambda (x y) (if-rel? (default-compare x y) #t #f)))
+	((compare) (lambda (x y) (if-rel? (compare         x y) #t #f)))
+	((x y)                   (if-rel? (default-compare x y) #t #f))
+	((compare x y)
+	 (if (procedure? compare)
+	     (if-rel? (compare x y) #t #f)
+	     (error "not a procedure (Did you mean rel/rel??): " compare))))))))
 
-(define <?
-  (case-lambda
-    ((x y)         (if<? (default-compare x y) #t #f))
-    ((compare x y) (if<? (compare         x y) #t #f))))
-
-(define >?
-  (case-lambda
-    ((x y)         (if>? (default-compare x y) #t #f))
-    ((compare x y) (if>? (compare         x y) #t #f))))
-
-(define <=?
-  (case-lambda
-    ((x y)         (if<=? (default-compare x y) #t #f))
-    ((compare x y) (if<=? (compare         x y) #t #f))))
-
-(define >=?
-  (case-lambda
-    ((x y)         (if>=? (default-compare x y) #t #f))
-    ((compare x y) (if>=? (compare         x y) #t #f))))
-
-(define not=?
-  (case-lambda
-    ((x y)         (if-not=? (default-compare x y) #t #f))
-    ((compare x y) (if-not=? (compare         x y) #t #f))))
+(compare:define-rel? =?    if=?)
+(compare:define-rel? <?    if<?)
+(compare:define-rel? >?    if>?)
+(compare:define-rel? <=?   if<=?)
+(compare:define-rel? >=?   if>=?)
+(compare:define-rel? not=? if-not=?)
 
 
 ; chains of length 3
 
-(define </<?
-  (case-lambda
-    ((x y z)
-     (if<? (default-compare x y)
-           (if<? (default-compare y z) #t #f)
-           (begin (default-compare z z) #f)))
-    ((compare x y z)
-     (if<? (compare x y)
-           (if<? (compare y z) #t #f)
-           (begin (compare z z) #f)))))
+(define-syntax compare:define-rel1/rel2?
+  (syntax-rules ()
+    ((compare:define-rel1/rel2? rel1/rel2? if-rel1? if-rel2?)
+     (define rel1/rel2?
+       (case-lambda
+	(()
+	 (lambda (x y z)
+	   (if-rel1? (default-compare x y)
+		     (if-rel2? (default-compare y z) #t #f)
+		     (compare:checked #f default-compare z))))
+	((compare)
+	 (lambda (x y z)
+	   (if-rel1? (compare x y)
+		(if-rel2? (compare y z) #t #f)
+		(compare:checked #f compare z))))
+	((x y z)
+	 (if-rel1? (default-compare x y)
+	       (if-rel2? (default-compare y z) #t #f)
+	       (compare:checked #f default-compare z)))
+	((compare x y z)
+	 (if-rel1? (compare x y)
+	       (if-rel2? (compare y z) #t #f)
+	       (compare:checked #f compare z))))))))
 
-(define </<=?
-  (case-lambda
-    ((x y z)
-     (if<? (default-compare x y)
-           (if<=? (default-compare y z) #t #f)
-           (begin (default-compare z z) #f)))
-    ((compare x y z)
-     (if<? (compare x y)
-           (if<=? (compare y z) #t #f)
-           (begin (compare z z) #f)))))
-
-(define <=/<?
-  (case-lambda
-    ((x y z)
-     (if<=? (default-compare x y)
-            (if<? (default-compare y z) #t #f)
-            (begin (default-compare z z) #f)))
-    ((compare x y z)
-     (if<=? (compare x y)
-            (if<? (compare y z) #t #f)
-            (begin (compare z z) #f)))))
-
-(define <=/<=?
-  (case-lambda
-    ((x y z)
-     (if<=? (default-compare x y)
-            (if<=? (default-compare y z) #t #f)
-            (begin (default-compare z z) #f)))
-    ((compare x y z)
-     (if<=? (compare x y)
-            (if<=? (compare y z) #t #f)
-            (begin (compare z z) #f)))))
-
-(define >/>?
-  (case-lambda
-    ((x y z)
-     (if>? (default-compare x y)
-           (if>? (default-compare y z) #t #f)
-           (begin (default-compare z z) #f)))
-    ((compare x y z)
-     (if>? (compare x y)
-           (if>? (compare y z) #t #f)
-           (begin (compare z z) #f)))))
-
-(define >/>=?
-  (case-lambda
-    ((x y z)
-     (if>? (default-compare x y)
-           (if>=? (default-compare y z) #t #f)
-           (begin (default-compare z z) #f)))
-    ((compare x y z)
-     (if>? (compare x y)
-           (if>=? (compare y z) #t #f)
-           (begin (compare z z) #f)))))
-
-(define >=/>?
-  (case-lambda
-    ((x y z)
-     (if>=? (default-compare x y)
-            (if>? (default-compare y z) #t #f)
-            (begin (default-compare z z) #f)))
-    ((compare x y z)
-     (if>=? (compare x y)
-            (if>? (compare y z) #t #f)
-            (begin (compare z z) #f)))))
-
-(define >=/>=?
-  (case-lambda
-    ((x y z)
-     (if>=? (default-compare x y)
-            (if>=? (default-compare y z) #t #f)
-            (begin (default-compare z z) #f)))
-    ((compare x y z)
-     (if>=? (compare x y)
-            (if>=? (compare y z) #t #f)
-            (begin (compare z z) #f)))))
+(compare:define-rel1/rel2? </<?   if<?  if<?)
+(compare:define-rel1/rel2? </<=?  if<?  if<=?)
+(compare:define-rel1/rel2? <=/<?  if<=? if<?)
+(compare:define-rel1/rel2? <=/<=? if<=? if<=?)
+(compare:define-rel1/rel2? >/>?   if>?  if>?)
+(compare:define-rel1/rel2? >/>=?  if>?  if>=?)
+(compare:define-rel1/rel2? >=/>?  if>=? if>?)
+(compare:define-rel1/rel2? >=/>=? if>=? if>=?)
 
 
 ; chains of arbitrary length
 
-(define chain=?
-  (case-lambda
-    ((compare)
-     #t)
-    ((compare x1)
-     (begin (compare x1 x1) #t))
-    ((compare x1 x2)
-     (if=? (compare x1 x2) #t #f))
-    ((compare x1 x2 x3)
-     (if=? (compare x1 x2)
-           (if=? (compare x2 x3) #t #f)
-           (begin (compare x3 x3) #f)))
-    ((compare x1 x2 . x3+)
-     (if=? (compare x1 x2)
-           (let chain? ((head x2) (tail x3+))
-             (if (null? tail)
-                 #t
-                 (if=? (compare head (car tail))
-                       (chain? (car tail) (cdr tail))
-                       (begin (for-each (lambda (x) (compare x x))
-                                        (cdr tail))
-                              #f))))
-           (begin (for-each (lambda (x) (compare x x))
-                            x3+) 
-                  #f)))))
+(define-syntax compare:define-chain-rel?
+  (syntax-rules ()
+    ((compare:define-chain-rel? chain-rel? if-rel?)
+     (define chain-rel?
+       (case-lambda
+	((compare)
+	 #t)
+	((compare x1)
+	 (compare:checked #t compare x1))
+	((compare x1 x2)
+	 (if-rel? (compare x1 x2) #t #f))
+	((compare x1 x2 x3)
+	 (if-rel? (compare x1 x2)
+		  (if-rel? (compare x2 x3) #t #f)
+		  (compare:checked #f compare x3)))
+	((compare x1 x2 . x3+)
+	 (if-rel? (compare x1 x2)
+		  (let chain? ((head x2) (tail x3+))
+		    (if (null? tail)
+			#t
+			(if-rel? (compare head (car tail))
+				 (chain? (car tail) (cdr tail))
+				 (apply compare:checked #f 
+					compare (cdr tail)))))
+		  (apply compare:checked #f compare x3+))))))))
 
-(define chain<?
-  (case-lambda
-    ((compare)
-     #t)
-    ((compare x1)
-     (begin (compare x1 x1) #t))
-    ((compare x1 x2)
-     (if<? (compare x1 x2) #t #f))
-    ((compare x1 x2 x3)
-     (if<? (compare x1 x2)
-           (if<? (compare x2 x3) #t #f)
-           (begin (compare x3 x3) #f)))
-    ((compare x1 x2 . x3+)
-     (if<? (compare x1 x2)
-           (let chain? ((head x2) (tail x3+))
-             (if (null? tail)
-                 #t
-                 (if<? (compare head (car tail))
-                       (chain? (car tail) (cdr tail))
-                       (begin (for-each (lambda (x) (compare x x))
-                                        (cdr tail))
-                              #f))))
-           (begin (for-each (lambda (x) (compare x x))
-                            x3+) 
-                  #f)))))
-
-(define chain>?
-  (case-lambda
-    ((compare)
-     #t)
-    ((compare x1)
-     (begin (compare x1 x1) #t))
-    ((compare x1 x2)
-     (if>? (compare x1 x2) #t #f))
-    ((compare x1 x2 x3)
-     (if>? (compare x1 x2)
-           (if>? (compare x2 x3) #t #f)
-           (begin (compare x3 x3) #f)))
-    ((compare x1 x2 . x3+)
-     (if>? (compare x1 x2)
-           (let chain? ((head x2) (tail x3+))
-             (if (null? tail)
-                 #t
-                 (if>? (compare head (car tail))
-                       (chain? (car tail) (cdr tail))
-                       (begin (for-each (lambda (x) (compare x x))
-                                        (cdr tail))
-                              #f))))
-           (begin (for-each (lambda (x) (compare x x))
-                            x3+) 
-                  #f)))))
-
-(define chain<=?
-  (case-lambda
-    ((compare)
-     #t)
-    ((compare x1)
-     (begin (compare x1 x1) #t))
-    ((compare x1 x2)
-     (if<=? (compare x1 x2) #t #f))
-    ((compare x1 x2 x3)
-     (if<=? (compare x1 x2)
-            (if<=? (compare x2 x3) #t #f)
-            (begin (compare x3 x3) #f)))
-    ((compare x1 x2 . x3+)
-     (if<=? (compare x1 x2)
-            (let chain? ((head x2) (tail x3+))
-              (if (null? tail)
-                  #t
-                  (if<=? (compare head (car tail))
-                         (chain? (car tail) (cdr tail))
-                         (begin (for-each (lambda (x) (compare x x))
-                                          (cdr tail))
-                                #f))))
-            (begin (for-each (lambda (x) (compare x x))
-                             x3+) 
-                   #f)))))
-
-(define chain>=?
-  (case-lambda
-    ((compare)
-     #t)
-    ((compare x1)
-     (begin (compare x1 x1) #t))
-    ((compare x1 x2)
-     (if>=? (compare x1 x2) #t #f))
-    ((compare x1 x2 x3)
-     (if>=? (compare x1 x2)
-            (if>=? (compare x2 x3) #t #f)
-            (begin (compare x3 x3) #f)))
-    ((compare x1 x2 . x3+)
-     (if>=? (compare x1 x2)
-            (let chain? ((head x2) (tail x3+))
-              (if (null? tail)
-                  #t
-                  (if>=? (compare head (car tail))
-                         (chain? (car tail) (cdr tail))
-                         (begin (for-each (lambda (x) (compare x x))
-                                          (cdr tail))
-                                #f))))
-            (begin (for-each (lambda (x) (compare x x))
-                             x3+) 
-                   #f)))))
+(compare:define-chain-rel? chain=?  if=?)
+(compare:define-chain-rel? chain<?  if<?)
+(compare:define-chain-rel? chain>?  if>?)
+(compare:define-chain-rel? chain<=? if<=?)
+(compare:define-chain-rel? chain>=? if>=?)
 
 
 ; pairwise inequality
@@ -409,7 +243,7 @@
       ((compare)
        #t)
       ((compare x1)
-       (begin (compare x1 x1) #t))
+       (compare:checked #t compare x1))
       ((compare x1 x2)
        (if-not=? (compare x1 x2) #t #f))
       ((compare x1 x2 x3)
@@ -417,14 +251,13 @@
                  (if-not=? (compare x2 x3)
                            (if-not=? (compare x1 x3) #t #f)
                            #f)
-                 (begin (compare x3 x3) #f)))
+		 (compare:checked #f compare x3)))
       ((compare . x1+)
        (let unequal? ((x x1+) (n (length x1+)) (unchecked? #t))
          (if (< n 2)
-             (begin
-               (if (and unchecked? (= n 1))
-                   (compare (car x) (car x)))
-               #t)
+	     (if (and unchecked? (= n 1))
+		 (compare:checked #t compare (car x))
+		 #t)
              (let* ((i-pivot (random-integer n))
                     (x-pivot (list-ref x i-pivot)))
                (let split ((i 0) (x x) (x< '()) (x> '()))
@@ -435,10 +268,9 @@
                          (split (+ i 1) (cdr x) x< x>)
                          (if3 (compare (car x) x-pivot)
                               (split (+ i 1) (cdr x) (cons (car x) x<) x>)
-                              (begin (if unchecked?
-                                         (for-each (lambda (u) (compare u u))
-                                                   (cdr x)))
-                                     #f)
+			      (if unchecked?
+				  (apply compare:checked #f compare (cdr x))
+				  #f)
                               (split (+ i 1) (cdr x) x< (cons (car x) x>)))))))))))))
 
 
@@ -447,7 +279,7 @@
 (define min-compare
   (case-lambda
     ((compare x1)
-     (begin (compare x1 x1) x1))
+     (compare:checked x1 compare x1))
     ((compare x1 x2)
      (if<=? (compare x1 x2) x1 x2))
     ((compare x1 x2 x3)
@@ -472,7 +304,7 @@
 (define max-compare
   (case-lambda
     ((compare x1)
-     (begin (compare x1 x1) x1))
+     (compare:checked x1 compare x1))
     ((compare x1 x2)
      (if>=? (compare x1 x2) x1 x2))
     ((compare x1 x2 x3)
@@ -502,7 +334,7 @@
     (case-lambda
       ((compare k x0)
        (case (modulo k 1)
-         ((0) (compare x0 x0) x0)
+         ((0)  (compare:checked x0 compare x0))
          (else (error "bad index" k))))
       ((compare k x0 x1)
        (case (modulo k 2)
@@ -554,24 +386,37 @@
 
 ; compare functions from predicates
 
-(define (compare< < x y) (if (< x y) -1 (if (< y x)  1 0)))
-(define (compare> > x y) (if (> x y)  1 (if (> y x) -1 0)))
+(define compare-by<
+  (case-lambda
+   ((lt)     (lambda (x y) (if (lt x y) -1 (if (lt y x)  1 0))))
+   ((lt x y)               (if (lt x y) -1 (if (lt y x)  1 0)))))
 
-(define (compare<= <= x y) (if (<= x y) (if (<= y x) 0 -1)  1))
-(define (compare>= >= x y) (if (>= x y) (if (>= y x) 0  1) -1))
+(define compare-by>
+  (case-lambda
+   ((gt)     (lambda (x y) (if (gt x y) 1 (if (gt y x)  -1 0))))
+   ((gt x y)               (if (gt x y) 1 (if (gt y x)  -1 0)))))
 
-(define (compare=/< = < x y) (if (= x y) 0 (if (< x y) -1  1)))
-(define (compare=/> = > x y) (if (= x y) 0 (if (> x y)  1 -1)))
+(define compare-by<=
+  (case-lambda
+   ((le)     (lambda (x y) (if (le x y) (if (le y x) 0 -1) 1)))
+   ((le x y)               (if (le x y) (if (le y x) 0 -1) 1))))
 
-(define (compare=/<= = <= x y) (if (= x y) 0 (if (<= x y) -1  1)))
-(define (compare=/>= = >= x y) (if (= x y) 0 (if (>= x y)  1 -1)))
+(define compare-by>=
+  (case-lambda
+   ((ge)     (lambda (x y) (if (ge x y) (if (ge y x) 0 1) -1)))
+   ((ge x y)               (if (ge x y) (if (ge y x) 0 1) -1))))
 
-;   Compare=/<= is identical to Compare=/<, and similar =/>= and =/>.
-;   To avoid confusion when the procedure names are printed, we
-;   define them redundantly.
+(define compare-by=/<
+  (case-lambda
+   ((eq lt)     (lambda (x y) (if (eq x y) 0 (if (lt x y) -1 1))))
+   ((eq lt x y)               (if (eq x y) 0 (if (lt x y) -1 1)))))
 
+(define compare-by=/>
+  (case-lambda
+   ((eq gt)     (lambda (x y) (if (eq x y) 0 (if (gt x y) 1 -1))))
+   ((eq gt x y)               (if (eq x y) 0 (if (gt x y) 1 -1)))))
 
-; refine and extend construction (reverse and transform are trivial)
+; refine and extend construction
 
 (define-syntax refine-compare
   (syntax-rules ()
@@ -614,10 +459,6 @@
 
 ; R5RS atomic types
 
-; Implementation remark:
-;   Since these procedures may be called frequently, it is important
-;   to have fast implementations for them.
-
 (define-syntax compare:type-check
   (syntax-rules ()
     ((compare:type-check type? type-name x)
@@ -627,115 +468,101 @@
      (begin (compare:type-check type? type-name x)
             (compare:type-check type? type-name y)))))
 
-(define (compare-boolean x y)
+(define-syntax compare:define-by=/<
+  (syntax-rules ()
+    ((compare:define-by=/< compare = < type? type-name)
+     (define compare
+       (let ((= =) (< <))
+	 (lambda (x y)
+	   (if (type? x)
+	       (if (eq? x y)
+		   0
+		   (if (type? y)
+		       (if (= x y) 0 (if (< x y) -1 1))
+		       (error (string-append "not " type-name ":") y)))
+	       (error (string-append "not " type-name ":") x))))))))
+
+(define (boolean-compare x y)
   (compare:type-check boolean? "boolean" x y)
   (if x (if y 0 1) (if y -1 0)))
 
-(define compare-char
-  (let ((= char=?) (< char<?))
-    (lambda (x y)
-      (compare:type-check char? "char" x y)
-      (if (= x y) 0 (if (< x y) -1 1)))))
+(compare:define-by=/< char-compare char=? char<? char? "char")
 
-(define compare-char-ci
-  (let ((= char-ci=?) (< char-ci<?))
-    (lambda (x y)
-      (compare:type-check char? "char" x y)
-      (if (= x y) 0 (if (< x y) -1 1)))))
+(compare:define-by=/< char-compare-ci char-ci=? char-ci<? char? "char")
 
-(define compare-string
-  (let ((= string=?) (< string<?))
-    (lambda (x y)
-      (compare:type-check string? "string" x y)
-      (if (= x y) 0 (if (< x y) -1 1)))))
+(compare:define-by=/< string-compare string=? string<? string? "string")
 
-(define compare-string-ci
-  (let ((= string-ci=?) (< string-ci<?))
-    (lambda (x y)
-      (compare:type-check string? "string" x y)
-      (if (= x y) 0 (if (< x y) -1 1)))))
+(compare:define-by=/< string-compare-ci string-ci=? string-ci<? string? "string")
 
-(define (compare-symbol x y)
+(define (symbol-compare x y)
   (compare:type-check symbol? "symbol" x y)
-  (compare-string (symbol->string x) (symbol->string y)))
+  (string-compare (symbol->string x) (symbol->string y)))
 
-(define compare-integer
-  (let ((= =) (< <))
-    (lambda (x y)
-      (compare:type-check integer? "integer" x y)
-      (if (= x y) 0 (if (< x y) -1 1)))))
+(compare:define-by=/< integer-compare = < integer? "integer")
 
-(define compare-rational
-  (let ((= =) (< <))
-    (lambda (x y)
-      (compare:type-check rational? "rational" x y)
-      (if (= x y) 0 (if (< x y) -1 1)))))
+(compare:define-by=/< rational-compare = < rational? "rational")
 
-(define compare-real
-  (let ((= =) (< <))
-    (lambda (x y)
-      (compare:type-check real? "real" x y)
-      (if (= x y) 0 (if (< x y) -1 1)))))
+(compare:define-by=/< real-compare = < real? "real")
 
-(define (compare-complex x y)
+(define (complex-compare x y)
   (compare:type-check complex? "complex" x y)
   (if (and (real? x) (real? y))
-      (compare-real x y)
-      (refine-compare (compare-real (real-part x) (real-part y))
-                      (compare-real (imag-part x) (imag-part y)))))
+      (real-compare x y)
+      (refine-compare (real-compare (real-part x) (real-part y))
+                      (real-compare (imag-part x) (imag-part y)))))
 
-(define (compare-number x y)
+(define (number-compare x y)
   (compare:type-check number? "number" x y)
-  (compare-complex x y))
+  (complex-compare x y))
 
 
 ; R5RS compound data structures: dotted pair, list, vector
 
-(define (compare-car compare)
+(define (pair-compare-car compare)
   (lambda (x y)
     (compare (car x) (car y))))
 
-(define (compare-cdr compare)
+(define (pair-compare-cdr compare)
   (lambda (x y)
     (compare (cdr x) (cdr y))))
 
-(define compare-pair
+(define pair-compare
   (case-lambda
     
     ; dotted pair
-    ((compare-car compare-cdr x y)
-     (refine-compare (compare-car (car x) (car y))
-                     (compare-cdr (cdr x) (cdr y))))
+    ((pair-compare-car pair-compare-cdr x y)
+     (refine-compare (pair-compare-car (car x) (car y))
+                     (pair-compare-cdr (cdr x) (cdr y))))
     
     ; possibly improper lists
     ((compare x y)
      (cond-compare 
       (((null? x) (null? y)) 0)
       (((pair? x) (pair? y)) (compare              (car x) (car y))
-                             (compare-pair compare (cdr x) (cdr y)))
+                             (pair-compare compare (cdr x) (cdr y)))
       (else                  (compare x y))))
     
     ; for convenience
     ((x y)
-     (compare-pair default-compare x y))))
+     (pair-compare default-compare x y))))
 
-(define compare-list
+(define list-compare
   (case-lambda
     ((compare x y empty? head tail)
      (cond-compare
       (((empty? x) (empty? y)) 0)
       (else (compare              (head x) (head y))
-            (compare-list compare (tail x) (tail y) empty? head tail))))
+            (list-compare compare (tail x) (tail y) empty? head tail))))
     
     ; for convenience
     ((        x y empty? head tail)
-     (compare-list default-compare x y empty? head tail))
+     (list-compare default-compare x y empty? head tail))
     ((compare x y              )
-     (compare-list compare         x y null? car   cdr))
+     (list-compare compare         x y null? car   cdr))
     ((        x y              )
-     (compare-list default-compare x y null? car   cdr))))
+     (list-compare default-compare x y null? car   cdr))))
 
-(define compare-list-as-vector
+(define list-compare-as-vector
   (case-lambda
     ((compare x y empty? head tail)
      (refine-compare
@@ -743,23 +570,23 @@
         (cond-compare
          (((empty? x) (empty? y)) 0)
          (else (compare-length (tail x) (tail y)))))
-      (compare-list compare x y empty? head tail)))
+      (list-compare compare x y empty? head tail)))
     
     ; for convenience
     ((        x y empty? head tail)
-     (compare-list-as-vector default-compare x y empty? head tail))
+     (list-compare-as-vector default-compare x y empty? head tail))
     ((compare x y              )
-     (compare-list-as-vector compare         x y null?  car  cdr))
+     (list-compare-as-vector compare         x y null?  car  cdr))
     ((        x y              )
-     (compare-list-as-vector default-compare x y null?  car  cdr))))
+     (list-compare-as-vector default-compare x y null?  car  cdr))))
 
-(define compare-vector
+(define vector-compare
   (let ((= =))
     (case-lambda
       ((compare x y size ref)
        (let ((n (size x)) (m (size y)))
          (refine-compare 
-          (compare-integer n m)
+          (integer-compare n m)
           (let compare-rest ((i 0)) ; compare x[i..n-1] y[i..n-1]
             (if (= i n)
                 0
@@ -768,13 +595,13 @@
       
       ; for convenience
       ((        x y size ref)
-       (compare-vector default-compare x y size          ref))
+       (vector-compare default-compare x y size          ref))
       ((compare x y           )
-       (compare-vector compare         x y vector-length vector-ref))
+       (vector-compare compare         x y vector-length vector-ref))
       ((        x y           )
-       (compare-vector default-compare x y vector-length vector-ref)))))
+       (vector-compare default-compare x y vector-length vector-ref)))))
 
-(define compare-vector-as-list
+(define vector-compare-as-list
   (let ((= =))
     (case-lambda
       ((compare x y size ref)
@@ -782,33 +609,34 @@
          (let ((n (min nx ny)))
            (let compare-rest ((i 0)) ; compare x[i..n-1] y[i..n-1]
              (if (= i n)
-                 (compare-integer nx ny)
+                 (integer-compare nx ny)
                  (refine-compare (compare (ref x i) (ref y i))
                                  (compare-rest (+ i 1))))))))
       
       ; for convenience
       ((        x y size ref)
-       (compare-vector-as-list default-compare x y size          ref))
+       (vector-compare-as-list default-compare x y size          ref))
       ((compare x y           )
-       (compare-vector-as-list compare         x y vector-length vector-ref))
+       (vector-compare-as-list compare         x y vector-length vector-ref))
       ((        x y           )
-       (compare-vector-as-list default-compare x y vector-length vector-ref)))))
+       (vector-compare-as-list default-compare x y vector-length vector-ref)))))
 
 
 ; default compare
 
 (define (default-compare x y)
-  (select-compare x y
-                  (null?    0)
-                  (pair?    (default-compare (car x) (car y))
-                            (default-compare (cdr x) (cdr y)))
-                  (boolean? (compare-boolean x y))
-                  (char?    (compare-char    x y))
-                  (string?  (compare-string  x y))
-                  (symbol?  (compare-symbol  x y))
-                  (number?  (compare-number  x y))
-                  (vector?  (compare-vector default-compare x y))
-                  (else (error "unrecognized type in default-compare" x y))))
+  (select-compare 
+   x y
+   (null?    0)
+   (pair?    (default-compare (car x) (car y))
+	     (default-compare (cdr x) (cdr y)))
+   (boolean? (boolean-compare x y))
+   (char?    (char-compare    x y))
+   (string?  (string-compare  x y))
+   (symbol?  (symbol-compare  x y))
+   (number?  (number-compare  x y))
+   (vector?  (vector-compare default-compare x y))
+   (else (error "unrecognized type in default-compare" x y))))
 
 ; Note that we pass default-compare to compare-{pair,vector} explictly.
 ; This makes sure recursion proceeds with this default-compare, which 

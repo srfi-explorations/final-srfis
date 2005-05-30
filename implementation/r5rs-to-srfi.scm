@@ -23,38 +23,36 @@
 ;
 ; Defining the R5RS comparison predicates in terms of the compare SRFI
 ; Sebastian.Egner@philips.com
-; history of this file:
-;   SE, 17-Feb-2005: initial version
 
 ; (load "compare.scm")
 
-(define (=  z1 z2 . zs) (apply chain=?  compare-number z1 z2 zs))
-(define (<  x1 x2 . xs) (apply chain<?  compare-real   x1 x2 xs))
-(define (>  x1 x2 . xs) (apply chain>?  compare-real   x1 x2 xs))
-(define (<= x1 x2 . xs) (apply chain<=? compare-real   x1 x2 xs))
-(define (>= x1 x2 . xs) (apply chain>=? compare-real   x1 x2 xs))
+(define (=  z1 z2 . zs) (apply chain=?  number-compare z1 z2 zs))
+(define (<  x1 x2 . xs) (apply chain<?  real-compare   x1 x2 xs))
+(define (>  x1 x2 . xs) (apply chain>?  real-compare   x1 x2 xs))
+(define (<= x1 x2 . xs) (apply chain<=? real-compare   x1 x2 xs))
+(define (>= x1 x2 . xs) (apply chain>=? real-compare   x1 x2 xs))
 
-(define (char=?  char1 char2) (=?  compare-char char1 char2))
-(define (char<?  char1 char2) (<?  compare-char char1 char2))
-(define (char>?  char1 char2) (>?  compare-char char1 char2))
-(define (char<=? char1 char2) (<=? compare-char char1 char2))
-(define (char>=? char1 char2) (>=? compare-char char1 char2))
+(define char=?       (=?  char-compare))
+(define char<?       (<?  char-compare))
+(define char>?       (>?  char-compare))
+(define char<=?      (<=? char-compare))
+(define char>=?      (>=? char-compare))
 
-(define (char-ci=?  char1 char2) (=?  compare-char-ci char1 char2))
-(define (char-ci<?  char1 char2) (<?  compare-char-ci char1 char2))
-(define (char-ci>?  char1 char2) (>?  compare-char-ci char1 char2))
-(define (char-ci<=? char1 char2) (<=? compare-char-ci char1 char2))
-(define (char-ci>=? char1 char2) (>=? compare-char-ci char1 char2))
+(define char-ci=?    (=?  char-compare-ci))
+(define char-ci<?    (<?  char-compare-ci))
+(define char-ci>?    (>?  char-compare-ci))
+(define char-ci<=?   (<=? char-compare-ci))
+(define char-ci>=?   (>=? char-compare-ci))
 
-(define (string=?  string1 string2) (=?  compare-string string1 string2))
-(define (string<?  string1 string2) (<?  compare-string string1 string2))
-(define (string>?  string1 string2) (>?  compare-string string1 string2))
-(define (string<=? string1 string2) (<=? compare-string string1 string2))
-(define (string>=? string1 string2) (>=? compare-string string1 string2))
+(define string=?     (=?  string-compare))
+(define string<?     (<?  string-compare))
+(define string>?     (>?  string-compare))
+(define string<=?    (<=? string-compare))
+(define string>=?    (>=? string-compare))
 
-(define (string-ci=?  string1 string2) (=?  compare-string-ci string1 string2))
-(define (string-ci<?  string1 string2) (<?  compare-string-ci string1 string2))
-(define (string-ci>?  string1 string2) (>?  compare-string-ci string1 string2))
-(define (string-ci<=? string1 string2) (<=? compare-string-ci string1 string2))
-(define (string-ci>=? string1 string2) (>=? compare-string-ci string1 string2))
+(define string-ci=?  (=?  string-compare-ci))
+(define string-ci<?  (<?  string-compare-ci))
+(define string-ci>?  (>?  string-compare-ci))
+(define string-ci<=? (<=? string-compare-ci))
+(define string-ci>=? (>=? string-compare-ci))
 
