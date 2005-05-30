@@ -27,6 +27,7 @@ archive of the mailing list</a>.
   <li>Draft: 2005/05/15 - 2005/07/13</li>
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.3">2005/05/17</a></li>
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.4">2005/05/22</a></li>
+  <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.5">2005/05/24</a></li>
 </ul>
 
 <h1>Abstract</h1>
@@ -238,44 +239,41 @@ implement 0/0 or not.
 for infinities, <samp>`#t'</samp> for other numbers;<br>
 <code>`real?'</code> will return <samp>`#f'</samp> for <samp>`0/0'</samp>; and<br>
 the two real infinities have opposite signs.
-<P>
-</dd><dt><a name="exact infinities">What about exact infinities?</a>
+<p>
+</p></dd><dt><a name="exact infinities">What about exact infinities?</a>
 
-</dt><dd>1/0 + 1 = 1/0; the only numbers which can be their own increments
+</dt><dd>The short answer is:
+1/0 + 1 = 1/0; the only numbers which can be their own increments
 are inexact numbers.
 <P>
-</dd><dt>How do infinities behave in comparisons?
+<a href="#6.2.2x">6.2.2x Inexactness</a> gives semantics for inexact
+numbers, which correspond to mathematical neighborhoods on the real
+line.  Its real analysis with (mathematical) limits.
+<P>
+In contrast, each exact number corresponds to exactly one mathematical
+number, because it must be written and read uniquely.  An exact
+infinity "number" would have no additive inverse and a non-unique
+multiplicative inverse (0).  If one gives the negative infinity an
+infinitesimal reciprocal, then the field is not closed under addition
+or multiplication.
+<p>
+</p></dd><dt>How do infinities behave in comparisons?
 
 </dt><dd>
-In an implementation which represents inexact real numbers with
-IEEE-754 format flonums:
 
-<PRE>
-(= 3.141592653589793 3.1415926535897932)        ==&#62;  #t
-</PRE>
+</p><pre>(= 1/0 1/0)                 ==&gt;  #t
+(= -1/0 1/0)                ==&gt;  #f
+(= -1/0 -1/0)               ==&gt;  #t
+</pre>
 
-Thus an inexact real number represents an interval of (mathematical)
-real numbers.
-<P>
-The natural treatment for real infinities is that they represent all
-real numbers outside the range of inexact reals supported an
-implementation, extending the total-ordering of real numbers.  Thus:
+For any finite real number <var>x</var>:
 
-<PRE>
-(= 1/0 1/0)                 ==>  #t
-(= -1/0 1/0)                ==>  #f
-(= -1/0 -1/0)               ==>  #t
-</PRE>
-
-For any finite real number <VAR>x</VAR>:
-
-<PRE>
-(= -1/0 <VAR>x</VAR>))                 ==>  #f
-(= 1/0 <VAR>x</VAR>))                  ==>  #f
-(&lt -1/0 <VAR>x</VAR> 1/0))             ==>  #t
-(&gt 1/0 <VAR>x</VAR> -1/0))             ==>  #t
-</PRE>
-<P>
+<pre>(= -1/0 <var>x</var>))                 ==&gt;  #f
+(= 1/0 <var>x</var>))                  ==&gt;  #f
+(&lt; -1/0 <var>x</var> 1/0))             ==&gt;  #t
+(&gt; 1/0 <var>x</var> -1/0))             ==&gt;  #t
+</pre>
+<p>
 
 <!-- </dd><dt>Can infinities be the only inexacts an implementation supports? -->
 
@@ -290,26 +288,26 @@ For any finite real number <VAR>x</VAR>:
 <!--     consistent with both the purposes of the implementation and the -->
 <!--     spirit of the Scheme language. -->
 <!-- </blockquote> -->
-<P>
-</dd><dt>Are real infinities rational?
+</p><p>
+</p></dd><dt>Are real infinities rational?
 
 </dt><dd>No; (mathematical) rational numbers have non-zero denominators.
 
-<P>
-</dd><dt>Are real infinities integers?
+<p>
+</p></dd><dt>Are real infinities integers?
 
 </dt><dd>Because they are not rational they cannot be integers.
 
-<P>
-</dd><dt>What about complex (non-real) infinities?
+<p>
+</p></dd><dt>What about complex (non-real) infinities?
 
 </dt><dd>Infinities in rectangular notation leads to strange beasts like
 1/0+5i.  I know of no mathematical system having such numbers.  Polar
 notation allows an infinitude of numbers having infinite magnitude and
 finite angle.  Multiplication and division of complex infinities would
 work, but at the price of forcing their representations to be polar.
-<P>
-</dd><dt>What about +0.0 and -0.0?
+<p>
+</p></dd><dt>What about +0.0 and -0.0?
 
 </dt><dd>Dealing with zero is certainly thorny; but having more varieties
 of zero does not make dealing with unsigned zero any easier.
@@ -813,30 +811,63 @@ may produce an exact zero result, even if the other argument is
 inexact.
 </STRIKE>
 
+<A NAME="6.2.2x"></A>
 <H3><FONT COLOR=red>6.2.2x Inexactness</FONT></H3>
 
+<FONT COLOR=red>In an implementation which represents inexact real numbers with</FONT>
+<FONT COLOR=red>IEEE-754 64-bit flonums:</FONT>
+
+<pre>
+<FONT COLOR=red>(= 3.141592653589793</FONT>
+   <FONT COLOR=red>3.14159265358979323846</FONT>
+   <FONT COLOR=red>3.1415926535897932384626433</FONT>
+   <FONT COLOR=red>3.141592653589793238462643383279</FONT>
+   <FONT COLOR=red>3.14159265358979323846264338327950288)       ==&gt;  #t</FONT>
+</pre>
+
+<FONT COLOR=red>Thus an inexact real number represents not a single value, but a</FONT>
+<FONT COLOR=red>neighborhood of (mathematical) real numbers.  The inaccuracies of</FONT>
+<FONT COLOR=red>inexact calculations are due to misalignment of functional projection</FONT>
+<FONT COLOR=red>of a given neighborhood onto the real line neighborhoods.</FONT>
+<p>
+<FONT COLOR=red>The interpretation of real infinities is that 1/0 represents real</FONT>
+<FONT COLOR=red>numbers greater than can be encoded by finite inexacts in the</FONT>
+<FONT COLOR=red>implementation (&gt;&nbsp;179.76931348623158e306 for IEEE-754 64-bit</FONT>
+<FONT COLOR=red>flonums) and that -1/0 represents numbers less than can be encoded by</FONT>
+<FONT COLOR=red>finite inexacts in the implementation</FONT>
+<FONT COLOR=red>(&lt;&nbsp;-179.76931348623158e306 for IEEE-754 64-bit flonums).  This</FONT>
+<FONT COLOR=red>preserves the total ordering of the (mathematical) real numbers and</FONT>
+<FONT COLOR=red>extends Scheme's representation to cover the entire real line.  Note</FONT>
+<FONT COLOR=red>that no numerical infinity, with its attendant theoretical problems,</FONT>
+<FONT COLOR=red>is constructed; 1/0 and -1/0 represent the half-lines beyond either</FONT>
+<FONT COLOR=red>end of the implementation's inexact rational range.</FONT>
+
+<FONT COLOR=red>For any finite real number </FONT><var><FONT COLOR=red>x</FONT></var><FONT COLOR=red>:</FONT>
+
+<pre><FONT COLOR=red>(= -1/0 </FONT><var><FONT COLOR=red>x</FONT></var><FONT COLOR=red>))                 ==&gt;  #f</FONT>
+<FONT COLOR=red>(= 1/0 </FONT><var><FONT COLOR=red>x</FONT></var><FONT COLOR=red>))                  ==&gt;  #f</FONT>
+<FONT COLOR=red>(&lt; -1/0 </FONT><var><FONT COLOR=red>x</FONT></var> <FONT COLOR=red>1/0))             ==&gt;  #t</FONT>
+<FONT COLOR=red>(&gt; 1/0 </FONT><var><FONT COLOR=red>x</FONT></var> <FONT COLOR=red>-1/0))             ==&gt;  #t</FONT>
+</pre>
+
 <P>
-<FONT COLOR=red>Implementations of Scheme which implement inexact numbers must</FONT>
-<FONT COLOR=red>implement positive infinity and negative infinity as unique real</FONT>
-<FONT COLOR=red>inexact numbers.</FONT>
+<FONT COLOR=red>Implementations of Scheme which provide inexact real numbers shall</FONT>
+<FONT COLOR=red>implement positive infinity and negative infinity as unique inexact</FONT>
+<FONT COLOR=red>real numbers.</FONT>
 <P>
-<FONT COLOR=red>An optional third infinity, which is </FONT><EM><FONT COLOR=red>not</FONT></EM> <FONT COLOR=red>real, results when</FONT>
-<FONT COLOR=red>an infinity is an argument to a numerical function such that no number</FONT>
-<FONT COLOR=red>(including infinities) is the correct answer.  An implementation may</FONT>
-<FONT COLOR=red>report a violation of an implementation restriction in any calculation</FONT>
-<FONT COLOR=red>for which the result would be an unreal infinity.</FONT>
+<FONT COLOR=red>An optional third infinity, which is </FONT><EM><FONT COLOR=red>not</FONT></EM> <FONT COLOR=red>real, may be</FONT>
+<FONT COLOR=red>returned by a numerical function when no inexact neighborhood</FONT>
+<FONT COLOR=red>(including infinities) contains the correct answer.  An implementation</FONT>
+<FONT COLOR=red>may report a violation of an implementation restriction in any</FONT>
+<FONT COLOR=red>calculation for which the result would be an unreal infinity.</FONT>
 <P>
-<FONT COLOR=red>Implementations of Scheme which implement inexact numbers shall also</FONT>
-<FONT COLOR=red>provide the </FONT><CODE><FONT COLOR=red>limit</FONT></CODE> <FONT COLOR=red>and </FONT><CODE><FONT COLOR=red>finite?</FONT></CODE> <FONT COLOR=red>procedures.</FONT>
+<FONT COLOR=red>Implementations of Scheme which provide inexact numbers shall also</FONT>
+<FONT COLOR=red>define the </FONT><CODE><FONT COLOR=red>limit</FONT></CODE> <FONT COLOR=red>and </FONT><CODE><FONT COLOR=red>finite?</FONT></CODE> <FONT COLOR=red>procedures.</FONT>
 
 <P>
 <DL>
 <DT><U><FONT COLOR=red>Function:</FONT></U> <B><FONT COLOR=red>limit</FONT></B> <I><FONT COLOR=red>proc z1 z2</FONT></I>
 <DD><A NAME="IDX1"></A>
-<DT><U><FONT COLOR=red>Function:</FONT></U> <B><FONT COLOR=red>limit</FONT></B> <I><FONT COLOR=red>proc -1/0</FONT></I>
-<DD><A NAME="IDX2"></A>
-<DT><U><FONT COLOR=red>Function:</FONT></U> <B><FONT COLOR=red>limit</FONT></B> <I><FONT COLOR=red>proc 1/0</FONT></I>
-<DD><A NAME="IDX3"></A>
 
 
 <P>
@@ -844,10 +875,58 @@ inexact.
 
 
 <P>
-<CODE><FONT COLOR=red>Limit</FONT></CODE> <FONT COLOR=red>computes the mathematical limit of </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>as its</FONT>
-<FONT COLOR=red>argument approaches </FONT><VAR><FONT COLOR=red>z1</FONT></VAR> <FONT COLOR=red>from </FONT><VAR><FONT COLOR=red>z1</FONT></VAR> <FONT COLOR=red>+ </FONT><VAR><FONT COLOR=red>z2</FONT></VAR><FONT COLOR=red>.  </FONT><CODE><FONT COLOR=red>Limit</FONT></CODE>
-<FONT COLOR=red>returns a complex number or real infinity if the limit exists; and</FONT>
-<SAMP><FONT COLOR=red>`#f'</FONT></SAMP> <FONT COLOR=red>otherwise.</FONT>
+<VAR><FONT COLOR=red>z2</FONT></VAR> <FONT COLOR=red>should be chosen so that </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>is expected to be</FONT>
+<FONT COLOR=red>monotonic or constant on arguments between </FONT><VAR><FONT COLOR=red>z1</FONT></VAR> <FONT COLOR=red>and </FONT><VAR><FONT COLOR=red>z1</FONT></VAR> <FONT COLOR=red>+</FONT>
+<VAR><FONT COLOR=red>z2</FONT></VAR><FONT COLOR=red>.</FONT>
+
+
+<P>
+<CODE><FONT COLOR=red>Limit</FONT></CODE> <FONT COLOR=red>computes the limit of </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>as its argument</FONT>
+<FONT COLOR=red>approaches </FONT><VAR><FONT COLOR=red>z1</FONT></VAR> <FONT COLOR=red>from </FONT><VAR><FONT COLOR=red>z1</FONT></VAR> <FONT COLOR=red>+ </FONT><VAR><FONT COLOR=red>z2</FONT></VAR><FONT COLOR=red>.</FONT>
+<CODE><FONT COLOR=red>Limit</FONT></CODE> <FONT COLOR=red>returns a complex number or real infinity or </FONT><SAMP><FONT COLOR=red>`#f'</FONT></SAMP><FONT COLOR=red>.</FONT>
+
+
+<P>
+<DT><U><FONT COLOR=red>Function:</FONT></U> <B><FONT COLOR=red>limit</FONT></B> <I><FONT COLOR=red>proc -1/0</FONT></I>
+<DD><A NAME="IDX2"></A>
+
+
+<P>
+<FONT COLOR=red>Computes the limit of </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>as its its argument approaches -1/0</FONT>
+<FONT COLOR=red>(from -179.76931348606807e306 if using IEEE-754 flonums).</FONT>
+
+
+<P>
+<DT><U><FONT COLOR=red>Function:</FONT></U> <B><FONT COLOR=red>limit</FONT></B> <I><FONT COLOR=red>proc 1/0</FONT></I>
+<DD><A NAME="IDX3"></A>
+
+
+<P>
+<FONT COLOR=red>Computes the limit of </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>as its its argument approaches 1/0</FONT>
+<FONT COLOR=red>(from 179.76931348606807e306 if using IEEE-754 flonums).</FONT>
+
+
+<P>
+<CODE><FONT COLOR=red>Limit</FONT></CODE> <FONT COLOR=red>examines the magnitudes of the differences between</FONT>
+<FONT COLOR=red>successive values returned by </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>called with a succession of</FONT>
+<FONT COLOR=red>numbers ending with the second argument to </FONT><CODE><FONT COLOR=red>limit</FONT></CODE><FONT COLOR=red>.</FONT>
+
+
+<P>
+<FONT COLOR=red>If the magnitudes of differences are monotonically decreasing, then</FONT>
+<FONT COLOR=red>the value of </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>at the second argument is returned.  If the</FONT>
+<FONT COLOR=red>magnitudes of differences are monotonically increasing, then 1/0 or</FONT>
+<FONT COLOR=red>-1/0 is returned if the values returned by </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>are real;</FONT>
+<FONT COLOR=red>otherwise #f.</FONT>
+
+
+<P>
+<FONT COLOR=red>If the magnitudes of differences are constant (within the positive</FONT>
+<FONT COLOR=red>inexact number closest to 0), then the value of </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>on the</FONT>
+<FONT COLOR=red>second argument is returned, unless the magnitudes of differences are</FONT>
+<FONT COLOR=red>zero; in which case the value of </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>on the second to last</FONT>
+<FONT COLOR=red>value is returned.  If the magnitudes of differences are not</FONT>
+<FONT COLOR=red>monotonic, then #f is returned.</FONT>
 
 
 
@@ -1215,6 +1294,7 @@ monotonically nondecreasing, or monotonically nonincreasing.
 
 <PRE>
 <FONT COLOR=red>(= 1/0 1/0)                 ==>  #t</FONT>
+<FONT COLOR=red>(= -1/0 1/0)                ==&gt;  #f</FONT>
 <FONT COLOR=red>(= -1/0 -1/0)               ==>  #t</FONT>
 <FONT COLOR=red>(= 0/0 0/0)                 ==>  #t</FONT>
 </PRE>
@@ -2107,7 +2187,7 @@ Here is code for the procedures extended from R5RS:
 
 (define sequence-&gt;limit
   (let ((almost-zero
-	 (do ((inc 1 (/ inc 2)) (linc 2 inc))
+	 (do ((inc 0.5 (/ inc 2)) (linc 1.0 inc))
 	     ((zero? inc) linc))))
     (lambda (proc sequence)
       (define val (proc (cadr sequence)))
@@ -2207,6 +2287,6 @@ DEALINGS IN THE SOFTWARE.
     <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Mon May 23 19:42:55 CEST 2005
+Last modified: Mon May 30 02:13:26 CEST 2005
 <!-- hhmts end -->
   </body></html>
