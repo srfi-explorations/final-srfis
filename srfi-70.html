@@ -28,6 +28,7 @@ archive of the mailing list</a>.
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.3">2005/05/17</a></li>
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.4">2005/05/22</a></li>
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.5">2005/05/24</a></li>
+  <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.6">2005/06/15</a></li>
 </ul>
 
 <h1>Abstract</h1>
@@ -595,8 +596,7 @@ SRFI leaves to the implementation whether to signal an error or return
 Because it has no sensible place in the total-order of real numbers,
 0/0 is not a real number.  Thus it is an illegal argument to the
 comparison procedures <samp>`&lt;'</samp>, <samp>`&lt;='</samp>,
-<samp>`&gt;'</samp>, and <samp>`&gt;='</samp>; which should signal an
-error upon encountering it.
+<samp>`&gt;'</samp>, and <samp>`&gt;='</samp>.
 
 <blockquote>
   While +inf, -inf, and NaN are quite useful for inexact computations,
@@ -636,7 +636,11 @@ dynamic language?  This SRFI introduces the
 
 <samp>`<a href="#6.2.2x">limit</a>'</samp> procedure to produce the
 mathematically expected behavior of finite and infinite limits of
-functions.
+continuous functions.  Its mathematical basis and algorithm are
+detailed in the article
+
+<a href="http://swiss.csail.mit.edu/~jaffer/III/Limit.html">Computing
+the Limit</a>.
 
 
 </p><h1>Specification</h1>
@@ -861,99 +865,6 @@ inexact.
 <FONT COLOR=red>may report a violation of an implementation restriction in any</FONT>
 <FONT COLOR=red>calculation for which the result would be an unreal infinity.</FONT>
 <P>
-<FONT COLOR=red>Implementations of Scheme which provide inexact numbers shall also</FONT>
-<FONT COLOR=red>define the </FONT><CODE><FONT COLOR=red>limit</FONT></CODE> <FONT COLOR=red>and </FONT><CODE><FONT COLOR=red>finite?</FONT></CODE> <FONT COLOR=red>procedures.</FONT>
-
-<P>
-<DL>
-<DT><U><FONT COLOR=red>Function:</FONT></U> <B><FONT COLOR=red>limit</FONT></B> <I><FONT COLOR=red>proc z1 z2</FONT></I>
-<DD><A NAME="IDX1"></A>
-
-
-<P>
-<VAR><FONT COLOR=red>Proc</FONT></VAR> <FONT COLOR=red>must be a procedure taking a single inexact argument.</FONT>
-
-
-<P>
-<VAR><FONT COLOR=red>z2</FONT></VAR> <FONT COLOR=red>should be chosen so that </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>is expected to be</FONT>
-<FONT COLOR=red>monotonic or constant on arguments between </FONT><VAR><FONT COLOR=red>z1</FONT></VAR> <FONT COLOR=red>and </FONT><VAR><FONT COLOR=red>z1</FONT></VAR> <FONT COLOR=red>+</FONT>
-<VAR><FONT COLOR=red>z2</FONT></VAR><FONT COLOR=red>.</FONT>
-
-
-<P>
-<CODE><FONT COLOR=red>Limit</FONT></CODE> <FONT COLOR=red>computes the limit of </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>as its argument</FONT>
-<FONT COLOR=red>approaches </FONT><VAR><FONT COLOR=red>z1</FONT></VAR> <FONT COLOR=red>from </FONT><VAR><FONT COLOR=red>z1</FONT></VAR> <FONT COLOR=red>+ </FONT><VAR><FONT COLOR=red>z2</FONT></VAR><FONT COLOR=red>.</FONT>
-<CODE><FONT COLOR=red>Limit</FONT></CODE> <FONT COLOR=red>returns a complex number or real infinity or </FONT><SAMP><FONT COLOR=red>`#f'</FONT></SAMP><FONT COLOR=red>.</FONT>
-
-
-<P>
-<DT><U><FONT COLOR=red>Function:</FONT></U> <B><FONT COLOR=red>limit</FONT></B> <I><FONT COLOR=red>proc -1/0</FONT></I>
-<DD><A NAME="IDX2"></A>
-
-
-<P>
-<FONT COLOR=red>Computes the limit of </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>as its its argument approaches -1/0</FONT>
-<FONT COLOR=red>(from -179.76931348606807e306 if using IEEE-754 flonums).</FONT>
-
-
-<P>
-<DT><U><FONT COLOR=red>Function:</FONT></U> <B><FONT COLOR=red>limit</FONT></B> <I><FONT COLOR=red>proc 1/0</FONT></I>
-<DD><A NAME="IDX3"></A>
-
-
-<P>
-<FONT COLOR=red>Computes the limit of </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>as its its argument approaches 1/0</FONT>
-<FONT COLOR=red>(from 179.76931348606807e306 if using IEEE-754 flonums).</FONT>
-
-
-<P>
-<CODE><FONT COLOR=red>Limit</FONT></CODE> <FONT COLOR=red>examines the magnitudes of the differences between</FONT>
-<FONT COLOR=red>successive values returned by </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>called with a succession of</FONT>
-<FONT COLOR=red>numbers ending with the second argument to </FONT><CODE><FONT COLOR=red>limit</FONT></CODE><FONT COLOR=red>.</FONT>
-
-
-<P>
-<FONT COLOR=red>If the magnitudes of differences are monotonically decreasing, then</FONT>
-<FONT COLOR=red>the value of </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>at the second argument is returned.  If the</FONT>
-<FONT COLOR=red>magnitudes of differences are monotonically increasing, then 1/0 or</FONT>
-<FONT COLOR=red>-1/0 is returned if the values returned by </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>are real;</FONT>
-<FONT COLOR=red>otherwise #f.</FONT>
-
-
-<P>
-<FONT COLOR=red>If the magnitudes of differences are constant (within the positive</FONT>
-<FONT COLOR=red>inexact number closest to 0), then the value of </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>on the</FONT>
-<FONT COLOR=red>second argument is returned, unless the magnitudes of differences are</FONT>
-<FONT COLOR=red>zero; in which case the value of </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>on the second to last</FONT>
-<FONT COLOR=red>value is returned.  If the magnitudes of differences are not</FONT>
-<FONT COLOR=red>monotonic, then #f is returned.</FONT>
-
-
-
-<PRE>
-<FONT COLOR=red>(limit / 0 1.0e-9)                              ==&#62; 1/0 </FONT>
-<FONT COLOR=red>(limit / 0 -1.0e-9)                             ==&#62; -1/0 </FONT>
-<FONT COLOR=red>(limit / -1/0)                                  ==&#62; 0.0 </FONT>
-<FONT COLOR=red>(limit / 1/0)                                   ==&#62; 0.0 </FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ x x)) 0 1.0e-9)           ==&#62; 1.0 </FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ (log x) x)) 0 1.0e-9)     ==&#62; -1/0 </FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ (log x) x)) 0 -1.0e-9)    ==&#62; #f </FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ (magnitude (log x)) x)) 0 -1.0e-9)</FONT>
-                                                <FONT COLOR=red>==&#62; -1/0 </FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ x (log x))) 0 1.0e-9)     ==&#62; 0.0 </FONT>
-<FONT COLOR=red>(limit sin 1/0)                                 ==&#62; #f </FONT>
-<FONT COLOR=red>(limit (lambda (x) (sin (/ x))) 0 1.0e-9)       ==&#62; #f </FONT>
-<FONT COLOR=red>(limit (lambda (x) (sin (/ x))) 0 -1.0e-9)      ==&#62; #f </FONT>
-<FONT COLOR=red>(limit (lambda (x) (sin (/ x))) 1/0)            ==&#62; 0.0 </FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ (+ (exp (/ x)) 1))) 0 1.0e-9)</FONT>
-                                                <FONT COLOR=red>==&#62; 0.0 </FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ (+ (exp (/ x)) 1))) 0 -1.0e-9)</FONT>
-                                                <FONT COLOR=red>==&#62; 1.0 </FONT>
-<FONT COLOR=red>(limit (lambda (x) (expt (tan x) (cos x))) (/ pi 2) 1.0e-18)</FONT>
-                                                <FONT COLOR=red>==&#62; 1.0000000000000022 </FONT>
-</PRE>
-
-</DL>
 
 
 <A NAME="6.2.3"></A>
@@ -1750,6 +1661,129 @@ all.
 
 <P>
 <DL>
+<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>limit</FONT></B> <I><FONT COLOR=red>proc x1 x2 k</FONT></I>
+<DD><A NAME="IDX1"></A>
+<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>limit</FONT></B> <I><FONT COLOR=red>proc x1 x2</FONT></I>
+<DD><A NAME="IDX2"></A>
+
+
+<P>
+<VAR><FONT COLOR=red>Proc</FONT></VAR> <FONT COLOR=red>must be a procedure taking a single inexact real argument.</FONT>
+<VAR><FONT COLOR=red>K</FONT></VAR> <FONT COLOR=red>is the number of points on which </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>will be called; it</FONT>
+<FONT COLOR=red>defaults to 8.</FONT>
+
+
+<P>
+<FONT COLOR=red>If </FONT><VAR><FONT COLOR=red>x1</FONT></VAR> <FONT COLOR=red>is finite, then </FONT><VAR><FONT COLOR=red>Proc</FONT></VAR> <FONT COLOR=red>must be continuous on the</FONT>
+<FONT COLOR=red>half-open interval:</FONT>
+
+
+<P>
+ <FONT COLOR=red>( </FONT><VAR><FONT COLOR=red>x1</FONT></VAR> <FONT COLOR=red>.. </FONT><VAR><FONT COLOR=red>x1</FONT></VAR><FONT COLOR=red>+</FONT><VAR><FONT COLOR=red>x2</FONT></VAR> <FONT COLOR=red>]</FONT>
+
+
+<P>
+<FONT COLOR=red>And </FONT><VAR><FONT COLOR=red>x2</FONT></VAR> <FONT COLOR=red>should be chosen small enough so that </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>is</FONT>
+<FONT COLOR=red>expected to be monotonic or constant on arguments between </FONT><VAR><FONT COLOR=red>x1</FONT></VAR> <FONT COLOR=red>and</FONT>
+<VAR><FONT COLOR=red>x1</FONT></VAR> <FONT COLOR=red>+ </FONT><VAR><FONT COLOR=red>x2</FONT></VAR><FONT COLOR=red>.</FONT>
+
+
+<P>
+<CODE><FONT COLOR=red>Limit</FONT></CODE> <FONT COLOR=red>computes the limit of </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>as its argument</FONT>
+<FONT COLOR=red>approaches </FONT><VAR><FONT COLOR=red>x1</FONT></VAR> <FONT COLOR=red>from </FONT><VAR><FONT COLOR=red>x1</FONT></VAR> <FONT COLOR=red>+ </FONT><VAR><FONT COLOR=red>x2</FONT></VAR><FONT COLOR=red>.</FONT>
+<CODE><FONT COLOR=red>Limit</FONT></CODE> <FONT COLOR=red>returns a real number or real infinity or </FONT><SAMP><FONT COLOR=red>`#f'</FONT></SAMP><FONT COLOR=red>.</FONT>
+
+
+<P>
+<FONT COLOR=red>If </FONT><VAR><FONT COLOR=red>x1</FONT></VAR> <FONT COLOR=red>is not finite, then </FONT><VAR><FONT COLOR=red>x2</FONT></VAR> <FONT COLOR=red>must be a finite nonzero real</FONT>
+<FONT COLOR=red>with the same sign as </FONT><VAR><FONT COLOR=red>x1</FONT></VAR><FONT COLOR=red>; in which case </FONT><CODE><FONT COLOR=red>limit</FONT></CODE> <FONT COLOR=red>returns:</FONT>
+
+
+<P>
+<CODE><FONT COLOR=red>(limit (lambda (x) (proc (/ x))) 0.0 (/ </FONT><VAR><FONT COLOR=red>x2</FONT></VAR><FONT COLOR=red>) </FONT><VAR><FONT COLOR=red>k</FONT></VAR><FONT COLOR=red>)</FONT></CODE>
+
+
+<P>
+<CODE><FONT COLOR=red>Limit</FONT></CODE> <FONT COLOR=red>examines the magnitudes of the differences between</FONT>
+<FONT COLOR=red>successive values returned by </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>called with a succession of</FONT>
+<FONT COLOR=red>numbers from </FONT><VAR><FONT COLOR=red>x1</FONT></VAR><FONT COLOR=red>+</FONT><VAR><FONT COLOR=red>x2</FONT></VAR><FONT COLOR=red>/</FONT><VAR><FONT COLOR=red>k</FONT></VAR> <FONT COLOR=red>to </FONT><VAR><FONT COLOR=red>x1</FONT></VAR><FONT COLOR=red>.</FONT>
+
+
+<P>
+<FONT COLOR=red>If the magnitudes of differences are monotonically decreasing, then</FONT>
+<FONT COLOR=red>then the limit is extrapolated from the degree n polynomial passing</FONT>
+<FONT COLOR=red>through the samples returned by </FONT><VAR><FONT COLOR=red>proc</FONT></VAR><FONT COLOR=red>.</FONT>
+
+
+<P>
+<FONT COLOR=red>If the magnitudes of differences are increasing as fast or faster than</FONT>
+<FONT COLOR=red>a hyperbola matching at </FONT><VAR><FONT COLOR=red>x1</FONT></VAR><FONT COLOR=red>+</FONT><VAR><FONT COLOR=red>x2</FONT></VAR><FONT COLOR=red>, then a real infinity with</FONT>
+<FONT COLOR=red>sign the same as the differences is returned.</FONT>
+
+
+<P>
+<FONT COLOR=red>If the magnitudes of differences are increasing more slowly than the</FONT>
+<FONT COLOR=red>hyperbola matching at </FONT><VAR><FONT COLOR=red>x1</FONT></VAR><FONT COLOR=red>+</FONT><VAR><FONT COLOR=red>x2</FONT></VAR><FONT COLOR=red>, then the limit is</FONT>
+<FONT COLOR=red>extrapolated from the quadratic passing through the three samples</FONT>
+<FONT COLOR=red>closest to </FONT><VAR><FONT COLOR=red>x1</FONT></VAR><FONT COLOR=red>.</FONT>
+
+
+<P>
+<FONT COLOR=red>If the magnitudes of differences are not monotonic or are not</FONT>
+<FONT COLOR=red>completely within one of the above categories, then #f is returned.</FONT>
+
+
+
+<PRE>
+<FONT COLOR=red>;; constant</FONT>
+<FONT COLOR=red>(limit (lambda (x) (/ x x)) 0 1.0e-9)           ==&#62; 1.0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (expt 0 x)) 0 1.0e-9)        ==&#62; 0.0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (expt 0 x)) 0 -1.0e-9)       ==&#62; 1/0</FONT>
+<FONT COLOR=red>;; linear</FONT>
+<FONT COLOR=red>(limit + 0 976.5625e-6)                         ==&#62; 0.0</FONT>
+<FONT COLOR=red>(limit - 0 976.5625e-6)                         ==&#62; 0.0</FONT>
+<FONT COLOR=red>;; vertical point of inflection</FONT>
+<FONT COLOR=red>(limit sqrt 0 1.0e-18)                          ==&#62; 0.0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (* x (log x))) 0 1.0e-9)     ==&#62; -102.70578127633066e-12</FONT>
+<FONT COLOR=red>(limit (lambda (x) (/ x (log x))) 0 1.0e-9)     ==&#62; 96.12123142321669e-15</FONT>
+<FONT COLOR=red>;; limits tending to infinity</FONT>
+<FONT COLOR=red>(limit + 1/0 1.0e9)                             ==&#62; 1/0</FONT>
+<FONT COLOR=red>(limit + -1/0 -1.0e9)                           ==&#62; -1/0</FONT>
+<FONT COLOR=red>(limit / 0 1.0e-9)                              ==&#62; 1/0</FONT>
+<FONT COLOR=red>(limit / 0 -1.0e-9)                             ==&#62; -1/0</FONT>
+<FONT COLOR=red>(limit tan (atan 1/0) -1.0e-15)                 ==&#62; 1/0</FONT>
+<FONT COLOR=red>(limit tan (atan -1/0) 1.0e-15)                 ==&#62; -1/0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (/ (log x) x)) 0 1.0e-9)     ==&#62; -1/0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (/ (magnitude (log x)) x)) 0 -1.0e-9)</FONT>
+                                                <FONT COLOR=red>==&#62; -1/0</FONT>
+<FONT COLOR=red>;; limit doesn't exist</FONT>
+<FONT COLOR=red>(limit sin 1/0 1.0e9)                           ==&#62; #f</FONT>
+<FONT COLOR=red>(limit (lambda (x) (sin (/ x))) 0 1.0e-9)       ==&#62; #f</FONT>
+<FONT COLOR=red>(limit (lambda (x) (sin (/ x))) 0 -1.0e-9)      ==&#62; #f</FONT>
+<FONT COLOR=red>(limit (lambda (x) (/ (log x) x)) 0 -1.0e-9)    ==&#62; #f</FONT>
+<FONT COLOR=red>;; conditionally convergent - return #f</FONT>
+<FONT COLOR=red>(limit (lambda (x) (/ (sin x) x)) 1/0 1.0e222)  ==&#62; #f</FONT>
+<FONT COLOR=red>;; asymptotes</FONT>
+<FONT COLOR=red>(limit / -1/0 -1.0e222)                         ==&#62; 0.0</FONT>
+<FONT COLOR=red>(limit / 1/0 1.0e222)                           ==&#62; 0.0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (expt x x)) 0 1.0e-18)       ==&#62; 1.0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (sin (/ x))) 1/0 1.0e222)    ==&#62; 0.0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (/ (+ (exp (/ x)) 1))) 0 1.0e-9)</FONT>
+                                                <FONT COLOR=red>==&#62; 0.0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (/ (+ (exp (/ x)) 1))) 0 -1.0e-9)</FONT>
+                                                <FONT COLOR=red>==&#62; 1.0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (real-part (expt (tan x) (cos x)))) (/ pi 2) 1.0e-9)</FONT>
+                                                <FONT COLOR=red>==&#62; 1.0</FONT>
+<FONT COLOR=red>;; This example from the 1979 Macsyma manual grows so rapidly</FONT>
+<FONT COLOR=red>;;  that x2 must be less than 41.  It correctly returns e^2.</FONT>
+<FONT COLOR=red>(limit (lambda (x) (expt (+ x (exp x) (exp (* 2 x))) (/ x))) 1/0 40)</FONT>
+                                                <FONT COLOR=red>==&#62; 7.3890560989306504</FONT>
+</PRE>
+
+</DL>
+
+<P>
+<DL>
 <DT><U>procedure:</U> <B>exp</B> <I><VAR>z</VAR></I>
 <DD>
 <DT><U>procedure:</U> <B>log</B> <I><VAR>z</VAR></I>
@@ -2185,81 +2219,91 @@ Here is code for the procedures extended from R5RS:
   (/ (apply integer-gcd (map numerator args))
      (apply integer-lcm (map denominator args))))
 
-(define sequence-&gt;limit
-  (let ((almost-zero
-	 (do ((inc 0.5 (/ inc 2)) (linc 1.0 inc))
-	     ((zero? inc) linc))))
-    (lambda (proc sequence)
-      (define val (proc (cadr sequence)))
-      (define lval (proc (car sequence)))
-      (define (loop sequence trend ldelta)
-	(cond ;; don't PROC last X if diverging or there is no trend
-	 ((and (null? (cdr sequence)) (not trend) (zero? ldelta)) val)
-	 ((and (null? (cdr sequence)) (not trend) (not (real? val))) #f)
-	 ((and (null? (cdr sequence)) (eq? trend 'diverging))
-	  (and (real? val) (* (- val lval) 1/0)))
-	 (else
-	  (set! lval val)
-	  (set! val (proc (car sequence)))
-	  (if (finite? val)
-	      (let ((delta (magnitude (- val lval))))
-		;;(print (car sequence) '==&gt; val 'delta delta trend)
-		(case trend
-		  ((converging)
-		   (cond ((null? (cdr sequence)) val)
-			 ((&gt; delta (+ almost-zero ldelta)) #f)
-			 (else (loop (cdr sequence) trend delta))))
-		  ((diverging)
-		   (cond ((&lt; delta ldelta) #f)
-			 ((null? (cdr sequence)) val)
-			 (else (loop (cdr sequence) trend delta))))
-		  (else
-		   (cond ((null? (cdr sequence)) val)
-			 ((&gt; delta (+ almost-zero ldelta))
-			  (loop (cdr sequence) 'diverging delta))
-			 ((&lt; delta ldelta)
-			  (loop (cdr sequence) 'converging delta))
-			 (else
-			  (loop (cdr sequence) trend delta))))))
-	      val))))
-      (cond ((and (finite? val) (finite? lval))
-	     (loop (cddr sequence) #f (magnitude (- val lval))))
-	    ((finite? lval) val)
-	    (else lval)))))
+(define (invintp f1 f2 f3)
+  (define f1^2 (* f1 f1))
+  (define f2^2 (* f2 f2))
+  (define f3^2 (expt f3 2))
+  (let ((c (+ (* -3 f1^2 f2)
+	      (* 3 f1 f2^2)
+	      (* (- (* 2 f1^2) f2^2) f3)
+	      (* (- f2 (* 2 f1)) f3^2)))
+	(b (+ (- f1^2 (* 2 f2^2)) f3^2))
+	(a (- (* 2 f2) f1 f3)))
+    (define disc (- (* b b) (* 4 a c)))
+    (if (negative? (real-part disc))
+	(/ b -2 a)
+	(let ((sqrt-disc (sqrt disc)))
+	  (define root+ (/ (- sqrt-disc b) 2 a))
+	  (define root- (/ (+ sqrt-disc b) -2 a))
+	  (if (&lt; (magnitude (- root+ f1)) (magnitude (- root- f1)))
+	      root+
+	      root-)))))
 
-(define limit
-  (let ((almost-inc #f)
-	(almost-inf #f)
-	(sequence+1/0 #f)
-	(sequence-1/0 #f))
-    (do ((x 1.0 (+ x x))
-	 (x-prev 0.0 x))
-	((= x 1/0)
-	 (do ((x x-prev (+ x frac))
-	      (frac (/ x-prev 2) (/ frac 2)))
-	     ((= x 1/0))
-	   (set! almost-inc (* 2 frac))
-	   (set! almost-inf x))))
-    (set! sequence+1/0
-	  (let ((inc (* 1024 almost-inc)))
-	    (do ((x (+ almost-inf (* -8 inc)) (+ x inc))
-		 (lst '() (cons x lst)))
-		((not (finite? x)) (reverse (cons x lst))))))
-    (set! sequence-1/0 (map - sequence+1/0))
-    (lambda (proc z1 . z2)
-      (cond ((finite? z1)
-	     (set! z2 (car z2))
-	     (if (= z1 (+ z1 z2))
-		 (proc z1)
-		 (let ((dec (/ z2 8.0)))
-		   (do ((x (+ z1 z2) (- x dec))
-			(cnt 7 (+ -1 cnt))
-			(lst '() (cons x lst)))
-		       ((negative? cnt)
-			(sequence-&gt;limit proc (reverse (cons z1 lst))))))))
-	    (else (sequence-&gt;limit proc (if (positive? z1)
-					    sequence+1/0
-					    sequence-1/0)))))))
+(define (extrapolate-0 fs)
+  (define n (length fs))
+  (define (choose n k)
+    (do ((kdx 1 (+ 1 kdx))
+	 (prd 1 (/ (* (- n kdx -1) prd) kdx)))
+	((&gt; kdx k) prd)))
+  (do ((k 1 (+ 1 k))
+       (lst fs (cdr lst))
+       (L 0 (+ (* -1 (expt -1 k) (choose n k) (car lst)) L)))
+      ((null? lst) L)))
+
+(define (sequence-&gt;limit proc sequence)
+  (define lval (proc (car sequence)))
+  (if (finite? lval)
+      (let ((val (proc (cadr sequence))))
+	(define h_n*nsamps (* (length sequence) (magnitude (- val lval))))
+	(if (finite? val)
+	    (let loop ((sequence (cddr sequence))
+		       (fxs (list val lval))
+		       (trend #f)
+		       (ldelta (- val lval))
+		       (jdx (+ -1 (length sequence))))
+	      (cond ((null? sequence)
+		     (case trend
+		       ((diverging) (and (real? val) (* ldelta 1/0)))
+		       ((bounded) (invintp val lval (caddr fxs)))
+		       (else (cond ((zero? ldelta) val)
+				   ((not (real? val)) #f)
+				   (else (extrapolate-0 fxs))))))
+		    (else
+		     (set! lval val)
+		     (set! val (proc (car sequence)))
+		     (if (finite? val)
+			 (let ((delta (- val lval)))
+			   (define h_j (/ h_n*nsamps jdx))
+			   (cond ((case trend
+				    ((converging) (&lt;= (magnitude delta) h_j))
+				    ((bounded)    (&lt;= (magnitude ldelta) (magnitude delta)))
+				    ((diverging)  (&gt;= (magnitude delta) h_j))
+				    (else #f))
+				  (loop (cdr sequence) (cons val fxs) trend delta (+ -1 jdx)))
+				 (trend #f)
+				 (else
+				  (loop (cdr sequence) (cons val fxs)
+					(cond ((&gt; (magnitude delta) h_j) 'diverging)
+					      ((&lt; (magnitude ldelta) (magnitude delta)) 'bounded)
+					      (else 'converging))
+					delta (+ -1 jdx)))))
+			 (and (eq? trend 'diverging) val)))))
+	    (and (real? val) val)))
+      (and (real? lval) lval)))
+
+(define (limit proc x1 x2 . k)
+  (set! k (if (null? k) 8 (car k)))
+  (cond ((not (finite? x2)) (slib:error 'limit 'infinite 'x2 x2))
+	((not (finite? x1))
+	 (or (positive? (* x1 x2)) (slib:error 'limit 'start 'mismatch x1 x2))
+	 (limit (lambda (x) (proc (/ x))) 0.0 (/ x2) k))
+	((= x1 (+ x1 x2)) (slib:error 'limit 'null 'range x1 (+ x1 x2)))
+	(else (let ((dec (/ x2 k)))
+		(do ((x (+ x1 x2 0.0) (- x dec))
+		     (cnt (+ -1 k) (+ -1 cnt))
+		     (lst '() (cons x lst)))
+		    ((negative? cnt)
+		     (sequence-&gt;limit proc (reverse lst))))))))
 </pre>
 
 <h1>Copyright</h1>
@@ -2287,6 +2331,6 @@ DEALINGS IN THE SOFTWARE.
     <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Mon May 30 02:13:26 CEST 2005
+Last modified: Wed Jun 15 08:54:49 CEST 2005
 <!-- hhmts end -->
   </body></html>
