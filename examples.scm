@@ -146,6 +146,16 @@
             (x))
           => 1)
 
+; --- nasty things ---
+
+(my-check (let ((values 1)) values) => 1)
+
+(my-check (let (((values values) 1)) values) => 1)
+
+(my-check (let (((values bad values) (values 1 2)))
+	    (list bad values))
+	  => '(1 2))
+
 ; --- quo-rem ---
 
 (define (quo-rem x y)
