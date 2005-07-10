@@ -29,6 +29,7 @@ archive of the mailing list</a>.
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.4">2005/05/22</a></li>
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.5">2005/05/24</a></li>
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.6">2005/06/15</a></li>
+  <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.7">2005/07/08</a></li>
 </ul>
 
 <h1>Abstract</h1>
@@ -68,24 +69,123 @@ This SRFI reworks section 6.2 "Numbers" of R5RS to:
 <h1>Issues</h1>
 
 <ul>
-<li> (expt 0 0) has many similarities to (/ 0 0).  Having it be an
-     error or return 0/0 is the right thing to do, but conflicts with
-     R5RS, which returns 1.
+
+<li>Some have expressed doubts that <code>LIMIT</code> should be a core
+procedure.  Choices for its disposition are:
+
+<ul>
+<li> <code>LIMIT</code> is a library procedure.
+<li> <code>LIMIT</code> is an optional procedure.
+<li> <code>LIMIT</code> is removed from SRFI-70.
+</ul>
 <p>
-</p></li><li> Should the result of <code>(/ 0 0)</code> be mandated to
-"be an error or return 0/0"?
+
+<li>Choices for <code>(/ 0.0 0.0)</code> are:
+<ul>
+<li> <code>(/ 0.0 0.0)</code> is an error (implementations are not constrained).
+<li> <strike><code>(/ 0.0 0.0)</code> behavior is unspecified (must not signal error).</strike>
+<li> <code>(/ 0.0 0.0)</code> returns <code>0/0</code> or signals an error.
+</ul>
 <p>
-</p></li><li> Should <code>odd?</code> and <code>even?</code> be restricted to
-     exact integer arguments?
+
+<li>The affirmative <code>finite?</code> predicate was added by analogy
+with existing numerical predicates (<code>zero?</code> not
+<code>nonzero?</code>).
+Chongkai Zhu points out that Scheme numerical predicates select a
+minority with some single characteristic, instead of the larger part
+that can be further divided.  Choices are:
+
+<ul>
+<li> The predicate <code>finite?</code> is added.
+<li> The predicate <code>infinite?</code> is added.
+<li> Predicates <code>finite?</code> and <code>infinite?</code> are added.
+</ul>
 <p>
-<!-- </p></li><li> Should <code>round</code>, <code>truncate</code>, -->
-<!--      <code>ceiling</code>, and <code>floor</code> be changed to return -->
-<!--      exact integers? -->
-<!-- <p> -->
-</p></li><li> Should there be exact-only versions of <code>expt</code> and
-     <code>sqrt</code>?
+
+<li>Should <code>odd?</code> and <code>even?</code> be restricted to
+exact integer arguments?
 <p>
-</p></li></ul>
+<li>Should there be exact-only versions of <code>expt</code> and
+<code>sqrt</code>?
+<p>
+
+<li>Choices for inexact infinity notations are:
+
+<table cellpadding=4 BORDER=1>
+<tr><th><th>positive<br>infinity<th>negative<br>infinity<th>indeterminate<br>number<th>Scheme<br>implementations
+<tr><th>A<td><code>+#.#</code><td><code>-#.#</code><td><code>#.#</code><td>Scm 5d7, Guile 1.3.4, Bigloo 2.5c
+<tr><th>B<td><code>+/0</code><td><code>-/0</code><td><code>0/0</code><td>
+<tr><th>C<td><code>+/0.</code><td><code>-/0.</code><td><code>0/0.</code><td>
+<tr><th>D<td><code>#i+/0</code><td><code>#i-/0</code><td><code>#i0/0</code><td>
+<tr><th>E<td><code>1/0</code><td><code>-1/0</code><td><code>0/0</code><td>Scm 5d8
+<tr><th>F<td><code>+1/0</code><td><code>-1/0</code><td><code>0/0</code><td>
+<tr><th>G<td><code>+1/0.</code><td><code>-1/0.</code><td><code>0/0.</code><td>
+<tr><th>H<td><code>#i1/0</code><td><code>#i-1/0</code><td><code>#i0/0</code><td>Kawa 1.7
+<tr><th>I<td><code>#i+1/0</code><td><code>#i-1/0</code><td><code>#i0/0</code><td>
+<tr><th>J<td><code>inf.0</code><td><code>-inf.0</code><td><code>NaN</code><td>Elk 3.0
+<tr><th>K<td><code>+inf.</code><td><code>-inf.</code><td><code>+nan.</code><td>Gambit 3.0
+<tr><th>L<td><code>+inf.0</code><td><code>-inf.0</code><td><code>+nan.0</code><td>Mz Scheme 202
+<tr><th>M<td><code>#i+inf</code><td><code>#i-inf</code><td><code>#i+nan</code><td>
+</table>
+<p>
+
+The notation for indeterminate numbers need not be readable, as it
+signifies an error condition.  The unsigned notations of <b>J</b> do
+not meet the stipulations of R5RS section 2.1 "Identifiers":
+
+<blockquote>
+... in all implementations a sequence of letters, digits, and
+"extended alphabetic characters" that begins with a character that
+cannot begin a number is an identifier.
+</blockquote>
+
+Notations <b>K</b> and <b>L</b> use <samp>`.'</samp> to indicate the
+inexactness of infinities.  The trailing <samp>`0'</samp> of <b>L</b>
+seems superfluous, but mzscheme will not accept infinity literals
+without it.  Prefixing <dfn>nan</dfn> with <samp>`+'</samp> can be
+misleading, as it is used to indicate numbers about which nothing,
+including the sign, is known.  In mathematical parlance, "inf" stands
+for <A HREF="http://en.wikipedia.org/wiki/Infimum"><dfn>infimum</dfn></A>,
+the greatest lower bound.
+<p>
+
+Notations <b>E</b>, <b>F</b>, <b>H</b>, and <b>I</b> can be read in
+some implementations without modifying the Scheme reader.  Of course
+in those implementations, the <samp>`1'</samp> can be replaced by any
+positive integer.
+<P>
+As Paul Schlie points out, negative infinity is just as reasonable a
+result of 1/0 as is positive infinity.  So for output, notations
+<b>F</b> and <b>I</b> should be used in preference to <b>E</b> and
+<b>H</b> because the <samp>`+'</samp> emphasizes the sign of the
+positive infinity.  Notations <b>B</b>, <b>C</b>, and <b>D</b>
+eliminate the <samp>`1'</samp> for positive and negative infinities,
+further emphasizing the sign of the infinity.
+<p>
+
+Notations <b>C</b> and <b>G</b> use a trailing <samp>`.'</samp> to
+indicate inexactness as <b>K</b> does.  This requires a small
+extension to R5RS number syntax, as rational notation
+(<samp>`1/0'</samp>) does not currently allow a trailing period.
+<p>
+
+<A HREF="http://srfi.schemers.org/srfi-73"><CITE>SRFI 73: Exact Infinities</CITE></A>
+uses notation <b>E</b> with a <samp>`#e'</samp> prefix.  So notations
+<b>E</b>, <b>F</b>, and <b>B</b> should probably be not be used for
+inexact infinities to avoid confusion with SRFI-73.
+<p>
+
+Someone unfamiliar with R5RS when encountering notation <b>D</b> might
+guess that <samp>`#i'</samp> signifies an infinity.  This is an
+improvement over notation <b>I</b>, which might be mistaken for a
+complex number.  So I have converted this revision of SRFI-70 to use
+notation <b>D</b>.
+<p>
+<A HREF="srfi.70.html">http://srfi.schemers.org/srfi-70/srfi.70.html</A>
+is a version of SRFI-70 using notation <b>C</b>.
+
+</ul>
+
 
 <h1>Rationale</h1>
 
@@ -224,27 +324,27 @@ number formats.
 </li></ul>
 
 This SRFI attempts to strike a balance between tolerance and signaling
-of range errors.  Having 1/0 and -1/0 allows one level of calculation
+of range errors.  Having #i+/0 and #i-/0 allows one level of calculation
 to be executed before bounds checking.  Subsequent numerical
 calculations on infinities can signal an error or return a non-real
-infinity: 0/0.  0/0 can be considered an error waiting to happen.
+infinity: #i0/0.  #i0/0 can be considered an error waiting to happen.
 <p>
 This SRFI mandates the real infinities for implementations with
 inexacts, but leaves to the implementations the decision of whether to
-implement 0/0 or not.
+implement #i0/0 or not.
 </p><p>
 </p><dl>
 <dt>Are there predicates for infinities?
 
 </dt><dd>The new <code>`finite?'</code> predicate will return <samp>`#f'</samp>
 for infinities, <samp>`#t'</samp> for other numbers;<br>
-<code>`real?'</code> will return <samp>`#f'</samp> for <samp>`0/0'</samp>; and<br>
+<code>`real?'</code> will return <samp>`#f'</samp> for <samp>`#i0/0'</samp>; and<br>
 the two real infinities have opposite signs.
 <p>
 </p></dd><dt><a name="exact infinities">What about exact infinities?</a>
 
 </dt><dd>The short answer is:
-1/0 + 1 = 1/0; the only numbers which can be their own increments
+#i+/0 + 1 = #i+/0; the only numbers which can be their own increments
 are inexact numbers.
 <P>
 <a href="#6.2.2x">6.2.2x Inexactness</a> gives semantics for inexact
@@ -262,17 +362,17 @@ or multiplication.
 
 </dt><dd>
 
-</p><pre>(= 1/0 1/0)                 ==&gt;  #t
-(= -1/0 1/0)                ==&gt;  #f
-(= -1/0 -1/0)               ==&gt;  #t
+</p><pre>(= #i+/0 #i+/0)             ==&gt;  #t
+(= #i-/0 #i+/0)             ==&gt;  #f
+(= #i-/0 #i-/0)             ==&gt;  #t
 </pre>
 
 For any finite real number <var>x</var>:
 
-<pre>(= -1/0 <var>x</var>))                 ==&gt;  #f
-(= 1/0 <var>x</var>))                  ==&gt;  #f
-(&lt; -1/0 <var>x</var> 1/0))             ==&gt;  #t
-(&gt; 1/0 <var>x</var> -1/0))             ==&gt;  #t
+<pre>(= #i-/0 <var>x</var>))                ==&gt;  #f
+(= #i+/0 <var>x</var>))                ==&gt;  #f
+(&lt; #i-/0 <var>x</var> #i+/0))          ==&gt;  #t
+(&gt; #i+/0 <var>x</var> #i-/0))          ==&gt;  #t
 </pre>
 <p>
 
@@ -303,17 +403,20 @@ For any finite real number <var>x</var>:
 </p></dd><dt>What about complex (non-real) infinities?
 
 </dt><dd>Infinities in rectangular notation leads to strange beasts like
-1/0+5i.  I know of no mathematical system having such numbers.  Polar
+#i-/0+5i.  I know of no mathematical system having such numbers.  Polar
 notation allows an infinitude of numbers having infinite magnitude and
 finite angle.  Multiplication and division of complex infinities would
 work, but at the price of forcing their representations to be polar.
 <p>
+Chongkai Zhu points out that #i-/0 cannot be encoded by polar notation
+unless pi is a number in the implementation.
+
 </p></dd><dt>What about +0.0 and -0.0?
 
 </dt><dd>Dealing with zero is certainly thorny; but having more varieties
 of zero does not make dealing with unsigned zero any easier.
 
-The <a href="#6.2.2x">limit</a> procedure provides a mathematical
+The <a href="#IDX1">limit</a> procedure provides a mathematical
 alternative to non-standard analysis half-measures.
 
 <!-- If real infinities are inexact, than their reciprocals are also -->
@@ -322,7 +425,7 @@ alternative to non-standard analysis half-measures.
 
 </dd></dl>
 
-<h3>0/0 = 0/0</h3>
+<h3>#i0/0 = #i0/0</h3>
 
 The bad boy of IEEE Standard 754 is <em>not-a-number</em>, which
 does not equal itself.  This was a cute trick to provide a means for
@@ -412,7 +515,7 @@ Common-Lisp</a> says:
   of x, 0<font size="-1"><sup>x</sup></font> is an error.
 </blockquote>
 
-With log(0) being -1/0, and because exp(-1/0) is 0.0, Common-Lisp
+With log(0) being #i-/0, and because exp(#i-/0) is 0.0, Common-Lisp
 behavior would follow from:
 
 <pre>    (define (expt b x) (exp (* x (log b))))
@@ -420,8 +523,8 @@ behavior would follow from:
 
 except when <var>b</var> is zero.
 <p>
-With <code>(log 0)</code> being -1/0, the product of <var>x</var> and
--1/0 determines the trajectory of <code>exp</code>.
+With <code>(log 0)</code> being #i-/0, the product of <var>x</var> and
+#i-/0 determines the trajectory of <code>exp</code>.
 <code>Exp</code>'s domain repeats every 2*pi radians in the imaginary
 direction.  This multiplication rotates the negative real infinity.
 If it rotates into a direction other than pure real, then the limit of
@@ -432,12 +535,12 @@ Common-Lisp's criterion of testing the sign of the real part of
 <var>x</var> can be seen as snapping the direction of the product to
 either a positive or negative real infinity.
 
-</p><pre>(exp (* 1 -1/0))            ==&gt;  0.0
-(exp (* -1 -1/0))           ==&gt;  1/0
+</p><pre>(exp (* 1 #i-/0))           ==&gt;  0.0
+(exp (* -1 #i-/0))          ==&gt;  #i+/0
 </pre>
 
 Because Common-Lisp doesn't have explicit infinities, it signals an
-error for negative real parts of <var>x</var>.  The Common-Lisp
+error for negative real parts of <var>x</var>.  The Common-Lisp float
 behavior except, for <code>(expt 0.0 0.0)</code>, can be produced by
 
 <pre>(define (expt <var>z1</var> <var>z2</var>) (exp (* (if (zero? <var>z1</var>) (real-part <var>z2</var>) <var>z2</var>) (log <var>z1</var>))))
@@ -449,17 +552,28 @@ Having real infinities enables these definitions to work when
 mathematically satisfying, the "real-part" variant allows
 
 <code>(expt 0.0 <var>z</var>)</code> to return something other than
-0/0 when the exponent has small imaginary parts due to inexact
+#i0/0 when the exponent has small imaginary parts due to inexact
 inaccuracies.
 </p><p>
-The approach of this SRFI is to use this latter definition without
-excepting <code>(expt 0.0 0.0)</code>, which either returns 0/0 or
-signals an error.  <code>(expt 0.0 <var>z</var>)</code>, where
-<var>z</var> has a negative real-part, returns 1/0, where Common-Lisp
-signals an error.  Otherwise the behavior is the same as Common-Lisp's
-<code>expt</code>.
 
+<pre>(define (expt <var>z1</var> <var>z2</var>)
+  (cond ((and (exact? <var>z2</var>) (not (and (zero? <var>z1</var>) (negative? <var>z2</var>))))
+	 (integer-expt <var>z1</var> <var>z2</var>))
+	((zero? <var>z2</var>) (+ 1 (* <var>z1</var> <var>z2</var>)))
+	(else
+	 (exp (* (if (zero? <var>z1</var>) (real-part <var>z2</var>) <var>z2</var>) (log <var>z1</var>))))))
+</pre>
+<!-- 	((and (real? <var>z2</var>) (real? <var>z1</var>) (positive? <var>z1</var>)) -->
+<!-- 	 (real-expt <var>z1</var> <var>z2</var>)) -->
 
+In the (above) definition from the reference implementation,
+<code>(expt <var>z</var> 0.0)</code> returns 1 or 1.0 when
+<var>z</var> is finite; and #i0/0 otherwise.
+
+<p>
+<code>(expt 0.0 <var>z</var>)</code>, where <var>z</var> has a
+negative real-part, returns #i+/0, where Common-Lisp signals an error.
+Otherwise the behavior is the same as Common-Lisp's <code>expt</code>.
 
 </p><h3>Inexactness Considered Harmful?</h3>
 
@@ -576,12 +690,12 @@ for inexact does not change the computation.
   NaN is quite useful in numerical computations.
 </blockquote>
 
-While finding 1/0 and -1/0 to be very useful in computation, I cannot
-say the same for 0/0.  It usually arises as the result of operating on
+While finding #i+/0 and #i-/0 to be very useful in computation, I cannot
+say the same for #i0/0.  It usually arises as the result of operating on
 a real infinity.  Tolerating one error is useful; tolerating more than
 one error in a computation masks programming errors.  That is why this
 SRFI leaves to the implementation whether to signal an error or return
-0/0.
+#i0/0.
 
 <blockquote>
   The problem with NaN is that the program control structure will
@@ -594,7 +708,7 @@ SRFI leaves to the implementation whether to signal an error or return
 </blockquote>
 
 Because it has no sensible place in the total-order of real numbers,
-0/0 is not a real number.  Thus it is an illegal argument to the
+#i0/0 is not a real number.  Thus it is an illegal argument to the
 comparison procedures <samp>`&lt;'</samp>, <samp>`&lt;='</samp>,
 <samp>`&gt;'</samp>, and <samp>`&gt;='</samp>.
 
@@ -634,7 +748,7 @@ Cases can be made for 1.0 and 0.0 because the limits of
 respectively.  But why are we statically determining behavior in a
 dynamic language?  This SRFI introduces the
 
-<samp>`<a href="#6.2.2x">limit</a>'</samp> procedure to produce the
+<samp>`<a href="#IDX1">limit</a>'</samp> procedure to produce the
 mathematically expected behavior of finite and infinite limits of
 continuous functions.  Its mathematical basis and algorithm are
 detailed in the article
@@ -665,7 +779,6 @@ Additions and changes are <font color="red">marked in red</font>.
 </blockquote>
 
 
-
 <H2><U>6.2 Numbers</U></H2>
 
 <P>
@@ -680,7 +793,7 @@ Additions and changes are <font color="red">marked in red</font>.
 Numerical computation has traditionally been neglected by the Lisp
 community.  Until Common Lisp there was no carefully thought out
 strategy for organizing numerical computation, and with the exception
-of the MacLisp system <A HREF="r5rs_13.html#BIB20">[Pitman83]</A>
+of the MacLisp system <A HREF="http://swiss.csail.mit.edu/~jaffer/r5rs_13.html#BIB20">[Pitman83]</A>
 little effort was made to execute numerical code efficiently.  This
 report recognizes the excellent work of the Common Lisp committee and
 accepts many of their recommendations.  In some ways this report
@@ -822,8 +935,7 @@ inexact.
 <FONT COLOR=red>IEEE-754 64-bit flonums:</FONT>
 
 <pre>
-<FONT COLOR=red>(= 3.141592653589793</FONT>
-   <FONT COLOR=red>3.14159265358979323846</FONT>
+<FONT COLOR=red>(= 3.14159265358979323846</FONT>
    <FONT COLOR=red>3.1415926535897932384626433</FONT>
    <FONT COLOR=red>3.141592653589793238462643383279</FONT>
    <FONT COLOR=red>3.14159265358979323846264338327950288)       ==&gt;  #t</FONT>
@@ -834,24 +946,24 @@ inexact.
 <FONT COLOR=red>inexact calculations are due to misalignment of functional projection</FONT>
 <FONT COLOR=red>of a given neighborhood onto the real line neighborhoods.</FONT>
 <p>
-<FONT COLOR=red>The interpretation of real infinities is that 1/0 represents real</FONT>
+<FONT COLOR=red>The interpretation of real infinities is that #i+/0 represents real</FONT>
 <FONT COLOR=red>numbers greater than can be encoded by finite inexacts in the</FONT>
 <FONT COLOR=red>implementation (&gt;&nbsp;179.76931348623158e306 for IEEE-754 64-bit</FONT>
-<FONT COLOR=red>flonums) and that -1/0 represents numbers less than can be encoded by</FONT>
+<FONT COLOR=red>flonums) and that #i-/0 represents numbers less than can be encoded by</FONT>
 <FONT COLOR=red>finite inexacts in the implementation</FONT>
 <FONT COLOR=red>(&lt;&nbsp;-179.76931348623158e306 for IEEE-754 64-bit flonums).  This</FONT>
 <FONT COLOR=red>preserves the total ordering of the (mathematical) real numbers and</FONT>
 <FONT COLOR=red>extends Scheme's representation to cover the entire real line.  Note</FONT>
 <FONT COLOR=red>that no numerical infinity, with its attendant theoretical problems,</FONT>
-<FONT COLOR=red>is constructed; 1/0 and -1/0 represent the half-lines beyond either</FONT>
+<FONT COLOR=red>is constructed; #i+/0 and #i-/0 represent the half-lines beyond either</FONT>
 <FONT COLOR=red>end of the implementation's inexact rational range.</FONT>
 
 <FONT COLOR=red>For any finite real number </FONT><var><FONT COLOR=red>x</FONT></var><FONT COLOR=red>:</FONT>
 
-<pre><FONT COLOR=red>(= -1/0 </FONT><var><FONT COLOR=red>x</FONT></var><FONT COLOR=red>))                 ==&gt;  #f</FONT>
-<FONT COLOR=red>(= 1/0 </FONT><var><FONT COLOR=red>x</FONT></var><FONT COLOR=red>))                  ==&gt;  #f</FONT>
-<FONT COLOR=red>(&lt; -1/0 </FONT><var><FONT COLOR=red>x</FONT></var> <FONT COLOR=red>1/0))             ==&gt;  #t</FONT>
-<FONT COLOR=red>(&gt; 1/0 </FONT><var><FONT COLOR=red>x</FONT></var> <FONT COLOR=red>-1/0))             ==&gt;  #t</FONT>
+<pre><FONT COLOR=red>(= #i-/0 </FONT><var><FONT COLOR=red>x</FONT></var><FONT COLOR=red>))                ==&gt;  #f</FONT>
+<FONT COLOR=red>(= #i+/0 </FONT><var><FONT COLOR=red>x</FONT></var><FONT COLOR=red>))                ==&gt;  #f</FONT>
+<FONT COLOR=red>(&lt; #i-/0 </FONT><var><FONT COLOR=red>x</FONT></var> <FONT COLOR=red>#i+/0))          ==&gt;  #t</FONT>
+<FONT COLOR=red>(&gt; #i+/0 </FONT><var><FONT COLOR=red>x</FONT></var> <FONT COLOR=red>#i-/0))          ==&gt;  #t</FONT>
 </pre>
 
 <P>
@@ -959,7 +1071,7 @@ This report recommends, but does not require, that the IEEE 32-bit
 and 64-bit floating point standards be followed by implementations that use
 flonum representations, and that implementations using
 other representations should match or exceed the precision achievable
-using these floating point standards <A HREF="r5rs_13.html#BIB12">[IEEE]</A>.
+using these floating point standards <A HREF="http://swiss.csail.mit.edu/~jaffer/r5rs_13.html#BIB12">[IEEE]</A>.
 
 
 <P>
@@ -998,7 +1110,7 @@ constant by an inexact number.
 
 <P>
 The syntax of the written representations for numbers is described formally in
-section <A HREF="#7.1.1">7.1.1 Lexical structure</A>.  Note that case is not significant in numerical
+section <A HREF="http://swiss.csail.mit.edu/~jaffer/r5rs_9.html#7.1.1">7.1.1 Lexical structure</A>.  Note that case is not significant in numerical
 constants.
 
 
@@ -1022,16 +1134,13 @@ for exact, and <SAMP>`#i'</SAMP> for inexact.  An exactness
 prefix may appear before or after any radix prefix that is used.  If
 the written representation of a number has no exactness prefix, the
 constant may be either inexact or exact.  It is inexact if it contains
-a decimal point, an exponent, a "#" character in the place of a digit,
-<FONT COLOR=red>or ends with "/0"; </FONT>otherwise it is exact.
+a decimal point, an exponent, a "#" character in the place of a <FONT COLOR=red>digit;</FONT>
+otherwise it is exact.
 
 <P>
-<FONT COLOR=red>Negative infinity is written </FONT><SAMP><FONT COLOR=red>`-1/0'</FONT></SAMP> <FONT COLOR=red>(or</FONT>
-<SAMP><FONT COLOR=red>`#i-1/0'</FONT></SAMP><FONT COLOR=red>).  Positive infinity is written</FONT>
-<SAMP><FONT COLOR=red>`1/0'</FONT></SAMP> <FONT COLOR=red>or </FONT><SAMP><FONT COLOR=red>`+1/0'</FONT></SAMP><FONT COLOR=red>.  The (optional) non-real</FONT>
-<FONT COLOR=red>infinity is written </FONT><SAMP><FONT COLOR=red>`0/0'</FONT></SAMP><FONT COLOR=red>.  Although the written forms of</FONT>
-<FONT COLOR=red>infinity look like exact rational numbers, infinities are neither</FONT>
-<FONT COLOR=red>exact nor rational.</FONT>
+<FONT COLOR=red>Negative infinity is written </FONT><SAMP><FONT COLOR=red>`#i-/0'</FONT></SAMP><FONT COLOR=red>.  Positive infinity</FONT>
+<FONT COLOR=red>is written </FONT><SAMP><FONT COLOR=red>`#i+/0'</FONT></SAMP><FONT COLOR=red>.  The (optional) non-real infinity is</FONT>
+<FONT COLOR=red>written </FONT><SAMP><FONT COLOR=red>`#i0/0'</FONT></SAMP><FONT COLOR=red>.</FONT>
 
 <P>
 In systems with inexact numbers
@@ -1068,7 +1177,7 @@ implementations may wish to allow this default to be set by the user.
 <H3>6.2.5 Numerical operations</H3>
 
 <P>
-The reader is referred to section <A HREF="#1.3.3">1.3.3 Entry
+The reader is referred to section <A HREF="http://swiss.csail.mit.edu/~jaffer/r5rs_3.html#SEC11">1.3.3 Entry
 format</A> for a summary of the naming conventions used to specify
 restrictions on the types of arguments to numerical routines.
 
@@ -1127,14 +1236,14 @@ real number, then <SAMP>`(integer? <VAR>x</VAR>)'</SAMP> is true if and only if
 (integer? 3+0i)                        ==&#62;  #t
 (integer? 3.0)                         ==&#62;  #t
 (integer? 8/4)                         ==&#62;  #t
-<FONT COLOR=red>(number? 0/0)                          ==>  #t</FONT>
-<FONT COLOR=red>(complex? 0/0)                         ==>  #f</FONT>
-<FONT COLOR=red>(complex? 1/0)                         ==>  #t</FONT>
-<FONT COLOR=red>(real? 0/0)                            ==>  #f</FONT>
-<FONT COLOR=red>(real? -1/0)                           ==>  #t</FONT>
-<FONT COLOR=red>(rational? 1/0)                        ==>  #f</FONT>
-<FONT COLOR=red>(rational? 0/0)                        ==>  #f</FONT>
-<FONT COLOR=red>(integer? -1/0)                        ==>  #f</FONT>
+<FONT COLOR=red>(number? #i0/0)                        ==>  #t</FONT>
+<FONT COLOR=red>(complex? #i0/0)                       ==>  #f</FONT>
+<FONT COLOR=red>(complex? #i+/0)                       ==>  #t</FONT>
+<FONT COLOR=red>(real? #i0/0)                          ==>  #f</FONT>
+<FONT COLOR=red>(real? #i-/0)                          ==>  #t</FONT>
+<FONT COLOR=red>(rational? #i+/0)                      ==>  #f</FONT>
+<FONT COLOR=red>(rational? #i0/0)                      ==>  #f</FONT>
+<FONT COLOR=red>(integer? #i-/0)                       ==>  #f</FONT>
 </PRE>
 
 
@@ -1177,8 +1286,8 @@ is true.
 
 <PRE>
 <FONT COLOR=red>(exact? 5)                   ==>  #t</FONT>
-<FONT COLOR=red>(inexact? 1/0)               ==>  #t</FONT>
-<FONT COLOR=red>(inexact? 0/0)               ==>  #t</FONT>
+<FONT COLOR=red>(inexact? #i+/0)             ==>  #t</FONT>
+<FONT COLOR=red>(inexact? #i0/0)             ==>  #t</FONT>
 </PRE>
 
 
@@ -1204,17 +1313,17 @@ equal, monotonically increasing, monotonically decreasing,
 monotonically nondecreasing, or monotonically nonincreasing.
 
 <PRE>
-<FONT COLOR=red>(= 1/0 1/0)                 ==>  #t</FONT>
-<FONT COLOR=red>(= -1/0 1/0)                ==&gt;  #f</FONT>
-<FONT COLOR=red>(= -1/0 -1/0)               ==>  #t</FONT>
-<FONT COLOR=red>(= 0/0 0/0)                 ==>  #t</FONT>
+<FONT COLOR=red>(= #i+/0 #i+/0)             ==>  #t</FONT>
+<FONT COLOR=red>(= #i-/0 #i+/0)             ==&gt;  #f</FONT>
+<FONT COLOR=red>(= #i-/0 #i-/0)             ==>  #t</FONT>
+<FONT COLOR=red>(= #i0/0 #i0/0)             ==>  #t</FONT>
 </PRE>
 
 <FONT COLOR=red>For any finite real number </FONT><VAR><FONT COLOR=red>x</FONT></VAR><FONT COLOR=red>:</FONT>
 
 <PRE>
-<FONT COLOR=red>(&lt -1/0 </FONT><VAR><FONT COLOR=red>x</FONT></VAR> <FONT COLOR=red>1/0))             ==>  #t</FONT>
-<FONT COLOR=red>(&gt 1/0 </FONT><VAR><FONT COLOR=red>x</FONT></VAR> <FONT COLOR=red>-1/0))             ==>  #t</FONT>
+<FONT COLOR=red>(&lt #i-/0 </FONT><VAR><FONT COLOR=red>x</FONT></VAR> <FONT COLOR=red>#i+/0))          ==>  #t</FONT>
+<FONT COLOR=red>(&gt #i+/0 </FONT><VAR><FONT COLOR=red>x</FONT></VAR> <FONT COLOR=red>#i-/0))          ==>  #t</FONT>
 </PRE>
 
 <P>
@@ -1247,6 +1356,8 @@ When in doubt, consult a numerical analyst.
 <DL>
 <DT><U>library procedure:</U> <B><FONT COLOR=red>finite?</FONT></B> <I><VAR><FONT COLOR=red>z</FONT></VAR></I>
 <DD>
+<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>infinite?</FONT></B> <I><VAR><FONT COLOR=red>z</FONT></VAR></I>
+<DD>
 <DT><U><FONT COLOR=red>library procedure:</FONT></U> <B>zero?</B> <I><VAR>z</VAR></I>
 <DD>
 <DT><U>library procedure:</U> <B>positive?</B> <I><VAR>x</VAR></I>
@@ -1264,10 +1375,12 @@ These numerical predicates test a number for a particular property,
 returning <TT>#t</TT> or <TT>#f</TT>.  See note above.
 
 <PRE>
-<FONT COLOR=red>(positive? 1/0)             ==>  #t</FONT>
-<FONT COLOR=red>(negative? -1/0)            ==>  #t</FONT>
-<FONT COLOR=red>(finite? -1/0)              ==>  #f</FONT>
-<FONT COLOR=red>(finite? 0/0)               ==>  #f</FONT>
+<FONT COLOR=red>(positive? #i+/0)           ==>  #t</FONT>
+<FONT COLOR=red>(negative? #i-/0)           ==>  #t</FONT>
+<FONT COLOR=red>(finite? #i-/0)             ==>  #f</FONT>
+<FONT COLOR=red>(infinite? #i+/0)           ==>  #t</FONT>
+<FONT COLOR=red>(finite? #i0/0)             ==>  #f</FONT>
+<FONT COLOR=red>(infinite? #i0/0)           ==>  #t</FONT>
 </PRE>
 
 </DL>
@@ -1293,8 +1406,8 @@ These procedures return the maximum or minimum of their arguments.
 <FONT COLOR=red>For any real number </FONT><VAR><FONT COLOR=red>x</FONT></VAR><FONT COLOR=red>:</FONT>
 
 <PRE>
-<FONT COLOR=red>(max 1/0 </FONT><VAR><FONT COLOR=red>x</FONT></VAR><FONT COLOR=red>)                            ==>  1/0</FONT>
-<FONT COLOR=red>(min -1/0 </FONT><VAR><FONT COLOR=red>x</FONT></VAR><FONT COLOR=red>)                           ==>  -1/0</FONT>
+<FONT COLOR=red>(max #i+/0 </FONT><VAR><FONT COLOR=red>x</FONT></VAR><FONT COLOR=red>)                          ==>  #i+/0</FONT>
+<FONT COLOR=red>(min #i-/0 </FONT><VAR><FONT COLOR=red>x</FONT></VAR><FONT COLOR=red>)                          ==>  #i-/0</FONT>
 </PRE>
 
 
@@ -1329,30 +1442,30 @@ These procedures return the sum or product of their arguments.
 (+ 3 4)                                ==&#62;  7
 (+ 3)                                  ==&#62;  3
 (+)                                    ==&#62;  0
-<FONT COLOR=red>(+ 1/0 1/0)                            ==>  1/0</FONT>
-<FONT COLOR=red>(+ 1/0 -1/0)                           ==>  0/0</FONT>
+<FONT COLOR=red>(+ #i+/0 #i+/0)                        ==>  #i+/0</FONT>
+<FONT COLOR=red>(+ #i+/0 #i-/0)                        ==>  #i0/0</FONT>
 
 (* 4)                                  ==&#62;  4
 (*)                                    ==&#62;  1
-<FONT COLOR=red>(* 5 1/0)                              ==>  1/0</FONT>
-<FONT COLOR=red>(* -5 1/0)                             ==>  -1/0</FONT>
-<FONT COLOR=red>(* 1/0 1/0)                            ==>  1/0</FONT>
-<FONT COLOR=red>(* 1/0 -1/0)                           ==>  -1/0</FONT>
-<FONT COLOR=red>(* 0 1/0)                              ==>  0/0</FONT>
+<FONT COLOR=red>(* 5 #i+/0)                            ==>  #i+/0</FONT>
+<FONT COLOR=red>(* -5 #i+/0)                           ==>  #i-/0</FONT>
+<FONT COLOR=red>(* #i+/0 #i+/0)                        ==>  #i+/0</FONT>
+<FONT COLOR=red>(* #i+/0 #i-/0)                        ==>  #i-/0</FONT>
+<FONT COLOR=red>(* 0 #i+/0)                            ==>  #i0/0</FONT>
 </PRE>
 
 <FONT COLOR=red>For any finite number </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>:</FONT>
 
 <PRE>
-<FONT COLOR=red>(+ 1/0 </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)                              ==>  1/0</FONT>
-<FONT COLOR=red>(+ -1/0 </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)                             ==>  -1/0</FONT>
+<FONT COLOR=red>(+ #i+/0 </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)                            ==>  #i+/0</FONT>
+<FONT COLOR=red>(+ #i-/0 </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)                            ==>  #i-/0</FONT>
 </PRE>
 
 <FONT COLOR=red>For any number </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>:</FONT>
 
 <PRE>
-<FONT COLOR=red>(+ 0/0 </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)                              ==>  0/0</FONT>
-<FONT COLOR=red>(* 0/0 </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)                              ==>  0/0</FONT>
+<FONT COLOR=red>(+ #i0/0 </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)                            ==>  #i0/0</FONT>
+<FONT COLOR=red>(* #i0/0 </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)                            ==>  #i0/0</FONT>
 </PRE>
 
 <P>
@@ -1387,17 +1500,17 @@ however, they return the additive or multiplicative inverse of their argument.
 (- 3 4)                                ==&#62;  -1
 (- 3 4 5)                              ==&#62;  -6
 (- 3)                                  ==&#62;  -3
-<FONT COLOR=red>(- 1/0 1/0)                            ==>  0/0</FONT>
+<FONT COLOR=red>(- #i+/0 #i+/0)                        ==>  #i0/0</FONT>
 
 (/ 3 4 5)                              ==&#62;  3/20
 (/ 3)                                  ==&#62;  1/3
-<FONT COLOR=red>(/ 0.0)                                ==>  1/0</FONT>
-<FONT COLOR=red>(/ 1.0 0)                              ==>  1/0</FONT>
-<FONT COLOR=red>(/ -1 0.0)                             ==>  -1/0</FONT>
-<FONT COLOR=red>(/ 1/0)                                ==>  0.0</FONT>
-<FONT COLOR=red>(/ 0 0.0)                              ==>  0/0</FONT>
-<FONT COLOR=red>(/ 0.0 0)                              ==>  0/0</FONT>
-<FONT COLOR=red>(/ 0.0 0.0)                            ==>  0/0</FONT>
+<FONT COLOR=red>(/ 0.0)                                ==>  #i+/0</FONT>
+<FONT COLOR=red>(/ 1.0 0)                              ==>  #i+/0</FONT>
+<FONT COLOR=red>(/ -1 0.0)                             ==>  #i-/0</FONT>
+<FONT COLOR=red>(/ #i+/0)                              ==>  0.0</FONT>
+<FONT COLOR=red>(/ 0 0.0)                              ==>  #i0/0</FONT>
+<FONT COLOR=red>(/ 0.0 0)                              ==>  #i0/0</FONT>
+<FONT COLOR=red>(/ 0.0 0.0)                            ==>  #i0/0</FONT>
 </PRE>
 
 </DL>
@@ -1415,7 +1528,7 @@ however, they return the additive or multiplicative inverse of their argument.
 
 <PRE>
 (abs -7)                               ==&#62;  7
-<FONT COLOR=red>(abs -1/0)                             ==>  1/0</FONT>
+<FONT COLOR=red>(abs #i-/0)                            ==>  #i+/0</FONT>
 </PRE>
 
 </DL>
@@ -1620,9 +1733,6 @@ result should be passed to the <SAMP>`inexact-&#62;exact'</SAMP> procedure.
 
 (round 7/2)                            ==&#62;  4    ; exact
 (round 7)                              ==&#62;  7
-
-<FONT COLOR=red>(floor 1/0)                            ==>  1/0</FONT>
-<FONT COLOR=red>(ceiling -1/0)                         ==>  -1/0</FONT>
 </PRE>
 
 </DL>
@@ -1652,9 +1762,9 @@ all.
   (inexact-&#62;exact .3) 1/10)            ==&#62; 1/3    ; exact
 (rationalize .3 1/10)                  ==&#62; #i1/3  ; inexact
 
-<FONT COLOR=red>(rationalize 1/0 3)                    ==>  1/0</FONT>
-<FONT COLOR=red>(rationalize 1/0 1/0)                  ==>  0/0</FONT>
-<FONT COLOR=red>(rationalize 3 1/0)                    ==>  0</FONT>
+<FONT COLOR=red>(rationalize #i+/0 3)                  ==>  #i+/0</FONT>
+<FONT COLOR=red>(rationalize #i+/0 #i+/0)              ==>  #i0/0</FONT>
+<FONT COLOR=red>(rationalize 3 #i+/0)                  ==>  0</FONT>
 </PRE>
 
 </DL>
@@ -1736,48 +1846,56 @@ all.
 
 <PRE>
 <FONT COLOR=red>;; constant</FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ x x)) 0 1.0e-9)           ==&#62; 1.0</FONT>
-<FONT COLOR=red>(limit (lambda (x) (expt 0 x)) 0 1.0e-9)        ==&#62; 0.0</FONT>
-<FONT COLOR=red>(limit (lambda (x) (expt 0 x)) 0 -1.0e-9)       ==&#62; 1/0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (/ x x)) 0 1.0e-9)           ==&gt; 1.0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (expt 0 x)) 0 1.0e-9)        ==&gt; 0.0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (expt 0 x)) 0 -1.0e-9)       ==&gt; #i+/0</FONT>
 <FONT COLOR=red>;; linear</FONT>
-<FONT COLOR=red>(limit + 0 976.5625e-6)                         ==&#62; 0.0</FONT>
-<FONT COLOR=red>(limit - 0 976.5625e-6)                         ==&#62; 0.0</FONT>
+<FONT COLOR=red>(limit + 0 976.5625e-6)                         ==&gt; 0.0</FONT>
+<FONT COLOR=red>(limit - 0 976.5625e-6)                         ==&gt; 0.0</FONT>
 <FONT COLOR=red>;; vertical point of inflection</FONT>
-<FONT COLOR=red>(limit sqrt 0 1.0e-18)                          ==&#62; 0.0</FONT>
-<FONT COLOR=red>(limit (lambda (x) (* x (log x))) 0 1.0e-9)     ==&#62; -102.70578127633066e-12</FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ x (log x))) 0 1.0e-9)     ==&#62; 96.12123142321669e-15</FONT>
+<FONT COLOR=red>(limit sqrt 0 1.0e-18)                          ==&gt; 0.0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (* x (log x))) 0 1.0e-9)     ==&gt; -102.70578127633066e-12</FONT>
+<FONT COLOR=red>(limit (lambda (x) (/ x (log x))) 0 1.0e-9)     ==&gt; 96.12123142321669e-15</FONT>
 <FONT COLOR=red>;; limits tending to infinity</FONT>
-<FONT COLOR=red>(limit + 1/0 1.0e9)                             ==&#62; 1/0</FONT>
-<FONT COLOR=red>(limit + -1/0 -1.0e9)                           ==&#62; -1/0</FONT>
-<FONT COLOR=red>(limit / 0 1.0e-9)                              ==&#62; 1/0</FONT>
-<FONT COLOR=red>(limit / 0 -1.0e-9)                             ==&#62; -1/0</FONT>
-<FONT COLOR=red>(limit tan (atan 1/0) -1.0e-15)                 ==&#62; 1/0</FONT>
-<FONT COLOR=red>(limit tan (atan -1/0) 1.0e-15)                 ==&#62; -1/0</FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ (log x) x)) 0 1.0e-9)     ==&#62; -1/0</FONT>
+<FONT COLOR=red>(limit + #i+/0 1.0e9)                           ==&gt; #i+/0</FONT>
+<FONT COLOR=red>(limit + #i-/0 -1.0e9)                          ==&gt; #i-/0</FONT>
+<FONT COLOR=red>(limit / 0 1.0e-9)                              ==&gt; #i+/0</FONT>
+<FONT COLOR=red>(limit / 0 -1.0e-9)                             ==&gt; #i-/0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (/ (log x) x)) 0 1.0e-9)     ==&gt; #i-/0</FONT>
 <FONT COLOR=red>(limit (lambda (x) (/ (magnitude (log x)) x)) 0 -1.0e-9)</FONT>
-                                                <FONT COLOR=red>==&#62; -1/0</FONT>
+                                                <FONT COLOR=red>==&gt; #i-/0</FONT>
 <FONT COLOR=red>;; limit doesn't exist</FONT>
-<FONT COLOR=red>(limit sin 1/0 1.0e9)                           ==&#62; #f</FONT>
-<FONT COLOR=red>(limit (lambda (x) (sin (/ x))) 0 1.0e-9)       ==&#62; #f</FONT>
-<FONT COLOR=red>(limit (lambda (x) (sin (/ x))) 0 -1.0e-9)      ==&#62; #f</FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ (log x) x)) 0 -1.0e-9)    ==&#62; #f</FONT>
+<FONT COLOR=red>(limit sin #i+/0 1.0e9)                         ==&gt; #f</FONT>
+<FONT COLOR=red>(limit (lambda (x) (sin (/ x))) 0 1.0e-9)       ==&gt; #f</FONT>
+<FONT COLOR=red>(limit (lambda (x) (sin (/ x))) 0 -1.0e-9)      ==&gt; #f</FONT>
+<FONT COLOR=red>(limit (lambda (x) (/ (log x) x)) 0 -1.0e-9)    ==&gt; #f</FONT>
 <FONT COLOR=red>;; conditionally convergent - return #f</FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ (sin x) x)) 1/0 1.0e222)  ==&#62; #f</FONT>
+<FONT COLOR=red>(limit (lambda (x) (/ (sin x) x)) #i+/0 1.0e222)</FONT>
+                                                <FONT COLOR=red>==&gt; #f</FONT>
 <FONT COLOR=red>;; asymptotes</FONT>
-<FONT COLOR=red>(limit / -1/0 -1.0e222)                         ==&#62; 0.0</FONT>
-<FONT COLOR=red>(limit / 1/0 1.0e222)                           ==&#62; 0.0</FONT>
-<FONT COLOR=red>(limit (lambda (x) (expt x x)) 0 1.0e-18)       ==&#62; 1.0</FONT>
-<FONT COLOR=red>(limit (lambda (x) (sin (/ x))) 1/0 1.0e222)    ==&#62; 0.0</FONT>
+<FONT COLOR=red>(limit / #i-/0 -1.0e222)                        ==&gt; 0.0</FONT>
+<FONT COLOR=red>(limit / #i+/0 1.0e222)                         ==&gt; 0.0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (expt x x)) 0 1.0e-18)       ==&gt; 1.0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (sin (/ x))) #i+/0 1.0e222)  ==&gt; 0.0</FONT>
 <FONT COLOR=red>(limit (lambda (x) (/ (+ (exp (/ x)) 1))) 0 1.0e-9)</FONT>
-                                                <FONT COLOR=red>==&#62; 0.0</FONT>
+                                                <FONT COLOR=red>==&gt; 0.0</FONT>
 <FONT COLOR=red>(limit (lambda (x) (/ (+ (exp (/ x)) 1))) 0 -1.0e-9)</FONT>
-                                                <FONT COLOR=red>==&#62; 1.0</FONT>
+                                                <FONT COLOR=red>==&gt; 1.0</FONT>
 <FONT COLOR=red>(limit (lambda (x) (real-part (expt (tan x) (cos x)))) (/ pi 2) 1.0e-9)</FONT>
-                                                <FONT COLOR=red>==&#62; 1.0</FONT>
+                                                <FONT COLOR=red>==&gt; 1.0</FONT>
 <FONT COLOR=red>;; This example from the 1979 Macsyma manual grows so rapidly</FONT>
 <FONT COLOR=red>;;  that x2 must be less than 41.  It correctly returns e^2.</FONT>
-<FONT COLOR=red>(limit (lambda (x) (expt (+ x (exp x) (exp (* 2 x))) (/ x))) 1/0 40)</FONT>
-                                                <FONT COLOR=red>==&#62; 7.3890560989306504</FONT>
+<FONT COLOR=red>(limit (lambda (x) (expt (+ x (exp x) (exp (* 2 x))) (/ x))) #i+/0 40)</FONT>
+                                                <FONT COLOR=red>==&gt; 7.3890560989306504</FONT>
+<FONT COLOR=red>;; LIMIT can calculate the proper answer when evaluation</FONT>
+<FONT COLOR=red>;; of the function at the limit point does not:</FONT>
+<FONT COLOR=red>(tan (atan #i+/0))                              ==&gt; 16.331778728383844e15</FONT>
+<FONT COLOR=red>(limit tan (atan #i+/0)-1.0e-15)                ==&gt; #i+/0</FONT>
+<FONT COLOR=red>(tan (atan #i+/0))                              ==&gt; 16.331778728383844e15</FONT>
+<FONT COLOR=red>(limit tan (atan #i+/0)1.0e-15)                 ==&gt; #i-/0</FONT>
+<FONT COLOR=red>((lambda (x) (expt (exp (/ -1 x)) x)) 0)        ==&gt; 1.0</FONT>
+<FONT COLOR=red>(limit (lambda (x) (expt (exp (/ -1 x)) x)) 0 1.0e-9)</FONT>
+                                                <FONT COLOR=red>==&gt; 0.0</FONT>
 </PRE>
 
 </DL>
@@ -1839,36 +1957,36 @@ and <FONT COLOR=red>tan</FONT><FONT SIZE="-1"><SUP><FONT COLOR=red>-1</FONT></SU
 
 
 <P>
-The above specification follows <A HREF="r5rs_13.html#BIB27">[CLtL]</A>, which in turn
-cites <A HREF="r5rs_13.html#BIB19">[Penfield81]</A>; refer to these sources for more detailed
+The above specification follows <A HREF="http://swiss.csail.mit.edu/~jaffer/r5rs_13.html#BIB27">[CLtL]</A>, which in turn
+cites <A HREF="http://swiss.csail.mit.edu/~jaffer/r5rs_13.html#BIB19">[Penfield81]</A>; refer to these sources for more detailed
 discussion of branch cuts, boundary conditions, and implementation of
 these functions.  When it is possible these procedures produce a real
 result from a real argument.
 <P>
 <FONT COLOR=red>If the function has a real-valued limit as its argument tends toward</FONT>
 <FONT COLOR=red>positive infinity, then that is the value returned by the function</FONT>
-<FONT COLOR=red>applied to 1/0.</FONT>
+<FONT COLOR=red>applied to #i+/0.</FONT>
 
 <FONT COLOR=red>If the function has a real-valued limit as its argument tends toward</FONT>
 <FONT COLOR=red>negative infinity, then that is the value returned by the function</FONT>
-<FONT COLOR=red>applied to -1/0.</FONT>
+<FONT COLOR=red>applied to #i-/0.</FONT>
 
 <PRE>
-<FONT COLOR=red>(exp 1/0)                   ==> 1/0</FONT>
-<FONT COLOR=red>(exp -1/0)                  ==> 0.0</FONT>
-<FONT COLOR=red>(log 1/0)                   ==> 1/0</FONT>
-<FONT COLOR=red>(log 0.0)                   ==> -1/0</FONT>
-<FONT COLOR=red>(log -1/0)                  ==> 0/0</FONT>
-<FONT COLOR=red>(atan -1/0)                 ==> -1.5707963267948965</FONT>
-<FONT COLOR=red>(atan 1/0)                  ==> 1.5707963267948965</FONT>
+<FONT COLOR=red>(exp #i+/0)                 ==> #i+/0</FONT>
+<FONT COLOR=red>(exp #i-/0)                 ==> 0.0</FONT>
+<FONT COLOR=red>(log #i+/0)                 ==> #i+/0</FONT>
+<FONT COLOR=red>(log 0.0)                   ==> #i-/0</FONT>
+<FONT COLOR=red>(log #i-/0)                 ==> #i0/0</FONT>
+<FONT COLOR=red>(atan #i-/0)                ==> -1.5707963267948965</FONT>
+<FONT COLOR=red>(atan #i+/0)                ==> 1.5707963267948965</FONT>
 </PRE>
 
 <FONT COLOR=red>The functions </FONT><CODE><FONT COLOR=red>sin</FONT></CODE><FONT COLOR=red>, </FONT><CODE><FONT COLOR=red>cos</FONT></CODE><FONT COLOR=red>, </FONT><CODE><FONT COLOR=red>tan</FONT></CODE><FONT COLOR=red>,</FONT>
 <CODE><FONT COLOR=red>asin</FONT></CODE><FONT COLOR=red>, and </FONT><CODE><FONT COLOR=red>acos</FONT></CODE> <FONT COLOR=red>either return</FONT>
 <CODE><FONT COLOR=red>0/0</FONT></CODE> <FONT COLOR=red>or</FONT>
 <FONT COLOR=red>report a violation of an implementation restriction</FONT>
-<FONT COLOR=red>when given </FONT><CODE><FONT COLOR=red>1/0</FONT></CODE><FONT COLOR=red>,</FONT>
-<CODE><FONT COLOR=red>-1/0</FONT></CODE><FONT COLOR=red>, or </FONT><CODE><FONT COLOR=red>0/0</FONT></CODE> <FONT COLOR=red>as an argument.</FONT>
+<FONT COLOR=red>when given </FONT><CODE><FONT COLOR=red>#i+/0</FONT></CODE><FONT COLOR=red>,</FONT>
+<CODE><FONT COLOR=red>#i-/0</FONT></CODE><FONT COLOR=red>, or </FONT><CODE><FONT COLOR=red>0/0</FONT></CODE> <FONT COLOR=red>as an argument.</FONT>
 
 <P>
 
@@ -1887,8 +2005,8 @@ zero real part and non-negative imaginary part.
 
 <PRE>
 <FONT COLOR=red>(sqrt -5)                   ==>  0.0+2.23606797749979i</FONT>
-<FONT COLOR=red>(sqrt 1/0)                  ==>  1/0</FONT>
-<FONT COLOR=red>(sqrt -1/0)                 ==>  0/0</FONT>
+<FONT COLOR=red>(sqrt #i+/0)                ==>  #i+/0</FONT>
+<FONT COLOR=red>(sqrt #i-/0)                ==>  #i0/0</FONT>
 </PRE>
 
 </DL>
@@ -1902,33 +2020,34 @@ zero real part and non-negative imaginary part.
 
 <P>
 Returns <VAR>z1</VAR> raised to the power <VAR>z2</VAR>.
-For <STRIKE>z_1 ~= 0</STRIKE>
-<FONT COLOR=red>inexact arguments</FONT>
+<STRIKE>For z_1 ~= 0</STRIKE>
 <P>
 <STRIKE>z_1^z_2 = e^z_2 log z_1</STRIKE>
-
+<P>
+<STRIKE>0^z is 1 if <VAR>z</VAR> = 0 and 0 otherwise.</STRIKE>
+<FONT COLOR=red>0^0 is 1.</FONT>
+<P>
+<FONT COLOR=red>For inexact arguments not both zero</FONT>
 <PRE>
 <FONT COLOR=red>(define (expt </FONT><VAR><FONT COLOR=red>z1</FONT></VAR> <VAR><FONT COLOR=red>z2</FONT></VAR><FONT COLOR=red>) (exp (* (if (zero? </FONT><VAR><FONT COLOR=red>z1</FONT></VAR><FONT COLOR=red>) (real-part </FONT><VAR><FONT COLOR=red>z2</FONT></VAR><FONT COLOR=red>) </FONT><VAR><FONT COLOR=red>z2</FONT></VAR><FONT COLOR=red>) (log </FONT><VAR><FONT COLOR=red>z1</FONT></VAR><FONT COLOR=red>))))</FONT>
 </PRE>
 
-<P>
-<STRIKE>0^z is 1 if <VAR>z</VAR> = 0 and 0 otherwise.</STRIKE>
-
-<CODE><FONT COLOR=red>(expt 0.0 </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)</FONT></CODE> <FONT COLOR=red>is 0.0 for </FONT><VAR><FONT COLOR=red>z</FONT></VAR>
-<FONT COLOR=red>(including 1/0) having positive real part; is 1/0 for </FONT><VAR><FONT COLOR=red>z</FONT></VAR>
-<FONT COLOR=red>(including -1/0) having negative real part; and is 0/0 or</FONT>
-<FONT COLOR=red>reports a violation of an implementation restriction</FONT>
-<FONT COLOR=red>for </FONT><VAR><FONT COLOR=red>z</FONT></VAR> <FONT COLOR=red>having zero real part.</FONT>
+<CODE><FONT COLOR=red>(expt 0.0 </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)</FONT></CODE><BR>
+<FONT COLOR=red>is 1.0 for </FONT><VAR><FONT COLOR=red>z</FONT></VAR> <FONT COLOR=red>equal to 0;</FONT><BR>
+<FONT COLOR=red>is 0.0 for </FONT><VAR><FONT COLOR=red>z</FONT></VAR> <FONT COLOR=red>(including #i+/0)having positive real part;</FONT><BR>
+<FONT COLOR=red>is #i+/0 for </FONT><VAR><FONT COLOR=red>z</FONT></VAR> <FONT COLOR=red>(including #i-/0)having negative real part; and</FONT><BR>
+<FONT COLOR=red>is #i0/0 or reports a violation of an implementation restriction otherwise.</FONT>
 
 <PRE>
 <FONT COLOR=red>(expt 5 3)                  ==>  125</FONT>
-<FONT COLOR=red>(expt 5 -3)                 ==>  8.0e-3</FONT>
+<FONT COLOR=red>(expt 5 -3)                 ==>  1/125</FONT>
 <FONT COLOR=red>(expt 5 0)                  ==>  1</FONT>
 <FONT COLOR=red>(expt 0 5)                  ==>  0</FONT>
-<FONT COLOR=red>(expt 0 5+.0000312i)        ==>  0</FONT>
-<FONT COLOR=red>(expt 0 -5)                 ==>  1/0</FONT>
-<FONT COLOR=red>(expt 0 -5+.0000312i)       ==>  1/0</FONT>
-<FONT COLOR=red>(expt 0 0)                  ==>  0/0</FONT>
+<FONT COLOR=red>(expt 0 0)                  ==>  1.0</FONT>
+<FONT COLOR=red>(expt 0 5+.0000312i)        ==>  0.0</FONT>
+<FONT COLOR=red>(expt 0 -5)                 ==>  #i+/0</FONT>
+<FONT COLOR=red>(expt 0 -5+.0000312i)       ==>  #i+/0</FONT>
+<FONT COLOR=red>(expt 0 0.0)                ==>  1.0</FONT>
 </PRE>
 
 
@@ -1982,8 +2101,8 @@ where -pi &#60; x_angle &#60;= pi with x_angle = <VAR>x4</VAR> + 2pi n
 for some integer n.
 
 <PRE>
-<FONT COLOR=red>(angle 1/0)                 ==> 0.0</FONT>
-<FONT COLOR=red>(angle -1/0)                ==> 3.141592653589793</FONT>
+<FONT COLOR=red>(angle #i+/0)               ==> 0.0</FONT>
+<FONT COLOR=red>(angle #i-/0)               ==> 3.141592653589793</FONT>
 </PRE>
 
 <BLOCKQUOTE>
@@ -2077,7 +2196,7 @@ can be satisfied by a result that contains a decimal point,
 then the result contains a decimal point and is expressed using the
 minimum number of digits (exclusive of exponent and trailing
 zeroes) needed to make the above expression
-true <A HREF="r5rs_13.html#BIB3">[howtoprint]</A>, <A HREF="r5rs_13.html#BIB5">[howtoread]</A>;
+true <A HREF="http://swiss.csail.mit.edu/~jaffer/r5rs_13.html#BIB3">[howtoprint]</A>, <A HREF="http://swiss.csail.mit.edu/~jaffer/r5rs_13.html#BIB5">[howtoread]</A>;
 otherwise the format of the result is unspecified.
 
 
@@ -2130,8 +2249,8 @@ returns <TT>#f</TT>.
 (string-&#62;number "100" 16)              ==&#62;  256
 (string-&#62;number "1e2")                 ==&#62;  100.0
 (string-&#62;number "15##")                ==&#62;  1500.0
-<FONT COLOR=red>(string->number "1/0")                 ==>  1/0</FONT>
-<FONT COLOR=red>(string->number "-1/0")                ==>  -1/0</FONT>
+<FONT COLOR=red>(string->number "#i+/0")               ==>  #i+/0</FONT>
+<FONT COLOR=red>(string->number "#i-/0")               ==>  #i-/0</FONT>
 </TT>
 </PRE>
 
@@ -2159,6 +2278,8 @@ a decimal point is used.
 
 </DL>
 
+  <P>
+
 
 
 <h1>Implementation</h1>
@@ -2171,8 +2292,9 @@ into Scheme procedures handling complex numbers can be found in
 <p>
 Here is code for the procedures extended from R5RS:
 
-</p><pre>(define (finite? z)
-  (not (and (= z (* 2 z)) (not (zero? z)))))
+</p><pre>
+(define (infinite? z) (and (= z (* 2 z)) (not (zero? z))))
+(define (finite? z) (not (infinite? z)))
 
 (define (ipow-by-squaring x n acc proc)
   (cond ((zero? n) acc)
@@ -2182,12 +2304,13 @@ Here is code for the procedures extended from R5RS:
 				(if (even? n) acc (proc acc x))
 				proc))))
 
-(define (integer-expt x n) (ipow-by-squaring x n 1 *))
+(define (integer-expt x n) (ipow-by-squaring x n (if (exact? x) 1 1.) *))
 
 (define (expt z1 z2)
-  (if (and (exact? z2) (positive? z2))
-      (integer-expt z1 z2)
-      (exp (* (if (zero? z1) (real-part z2) z2) (log z1)))))
+  (cond ((and (exact? z2) (not (and (zero? z1) (negative? z2))))
+	 (integer-expt z1 z2))
+	((zero? z2) (+ 1 (* z1 z2)))
+	(else (exp (* (if (zero? z1) (real-part z2) z2) (log z1))))))
 
 (define integer-quotient quotient)
 (define integer-remainder remainder)
@@ -2263,7 +2386,7 @@ Here is code for the procedures extended from R5RS:
 		       (jdx (+ -1 (length sequence))))
 	      (cond ((null? sequence)
 		     (case trend
-		       ((diverging) (and (real? val) (* ldelta 1/0)))
+		       ((diverging) (and (real? val) (/ ldelta 0.0)))
 		       ((bounded) (invintp val lval (caddr fxs)))
 		       (else (cond ((zero? ldelta) val)
 				   ((not (real? val)) #f)
@@ -2331,6 +2454,6 @@ DEALINGS IN THE SOFTWARE.
     <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Wed Jun 15 08:54:49 CEST 2005
+Last modified: Sun Jul 10 12:12:34 CEST 2005
 <!-- hhmts end -->
   </body></html>
