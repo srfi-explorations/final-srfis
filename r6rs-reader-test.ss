@@ -100,19 +100,4 @@
   (test-hex-error "\\U0000d900")
   (test-hex-error "\\U00125678")
 
-  (test "" "#<<EOF\nEOF\n")
-  (test "" "#<<EOF\nEOF")
-  (test "" "#<<\n\n")
-  (test "a" "#<<EOF\na\nEOF\n")
-  (test "a\nb" "#<<EOF\na\nb\nEOF\n")
-  (test "a\nb" "#<<EOF\na\nb\nEOF")
-  (test "a\n\nb" "#<<EOF\na\n\nb\nEOF")
-  (test "a\r\nb\r" "#<<EOF\r\na\r\nb\r\nEOF\r\n")
-
-  (test-error "#<")
-  (test-error "#<x")
-  (test-error "#<<")
-  (test-error "#<<EOF\n")
-  (test-error "#<<EOF\rEOF\r")
-
   (printf "~a tests passed\n" passed))

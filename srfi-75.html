@@ -51,6 +51,7 @@ archive of the mailing list</a>.
 <ul>
   <li>Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-75/srfi-75.html?rev=1.1">2005/07/11</a></li>
   <li>Draft: 2005/07/12 - 2005/09/08</li>
+  <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-75/srfi-75.html?rev=1.2">2005/07/21</a></li>
 </ul>
 
 <h1>Abstract</h1>
@@ -60,9 +61,9 @@ archive of the mailing list</a>.
 Unicode is a widespread universal character code that supports most of
 the world's (natural) languages.  The extensions to Scheme specified
 in this SRFI concern the support of Unicode in Scheme's character,
-string and symbol datatypes.  This SRFI does not (fully) specify how
+string, and symbol datatypes.  This SRFI does not (fully) specify how
 I/O of Unicode data is performed or how Scheme source code is encoded
-in files.  These aspects are left for other SRFIs to specify.
+in files; these aspects are left for other SRFIs to specify.
 
 </p>
 
@@ -96,27 +97,52 @@ in files.  These aspects are left for other SRFIs to specify.
       standards. Another possibility would be to use a delimited
       Scheme number within a string, as in Gambit.
 
- <li> Here strings might be generalized as in Perl, where multiple
-      #<< can appear on a line, and the completing of each follows
-      in later lines:
+ <li> Here strings appeared in an earlier draft, but they have been
+      removed, perhaps to reappear in future SRFI.
 
-<pre>
-        (string-append #&lt;&lt;ONE #&lt;&lt;TWO)
-        a b c
-        d e f
-        ONE
-        g h i
-        j k l
-        TWO
-        =&gt; "a b c\nd e fg h i\nj k l"
-</pre>
-
- <li> The <code>\&lt;newline&gt;&lt;intraline-whitespace&gt;</code> may not be necessary.
+ <li> The <code>\&lt;linefeed&gt;&lt;intraline-whitespace&gt;</code> may not be necessary.
       Meanwhile, unescaped newlines perhaps should be prohibited in strings.
 
  <li> The current draft provides no locale-specific operations on
       strings. Probably it belongs in another standard, but a few
       placeholders might be useful here.
+
+ <li> The <code>string-titlecase</code> procedure is not the same as
+      Unicode's titlecase conversion for strings, because Unicode
+      defines a more elaborate word-breaking algorithm. More
+      generally, it's not clear that titlecase operations are useful
+      enough to include in the standard.
+
+</ul>
+
+<h1>Revision History</h1>
+
+<ul>
+
+ <li> Second draft:
+ <ul>
+
+   <li> Removed here strings.
+ 
+   <li> Added <code>char-foldcase</code> and <code>string-foldcase</code>
+        and redefined the case-insensitive operations in terms of these.
+
+   <li> Added <code>string-upcase</code>, <code>string-downcase</code>,
+        and <code>string-titlecase</code>.
+
+   <li> Changed the definition of <code>char-lower-case?</code> and
+   <code>char-upper-case?</code> to better match Unicode instead of SRFI-14.
+
+   <li> Removed <code>char-symbolic?</code>,
+   <code>char-punctuation?</code>, <code>char-graphic?</code>,
+   <code>char-blank?</code>, and <code>char-iso-control?</code>.
+
+   <li> Removed <code>\'</code> and <code>\?</code> string/symbol escapes.
+
+   <li> Added examples for character and string operations.
+
+   <li> Expanded rationale.
+ </ul>
 
 </ul>
 
@@ -124,24 +150,43 @@ in files.  These aspects are left for other SRFIs to specify.
 
 <p>
 
-The manipulation of text is a fundamental information processing task.
-Increasingly it is important for software to process text in a variety
-of natural languages, possibly multiple languages in the same
-document.  The Unicode standard specifies how the textual data of most
-of the world's languages is represented and handled.  Several
-operating systems, programming languages, libraries, and software
-tools have now embraced the Unicode standard.  Adding Unicode support
-to Scheme, as specified by this SRFI, will allow
+The manipulation of text is a fundamental information processing task,
+and software increasingly must process text in a variety of natural
+languages, possibly multiple languages in the same document.  The
+Unicode standard specifies how the textual data of most of the world's
+languages is represented and handled.  Several operating systems,
+programming languages, libraries, and software tools have now embraced
+the Unicode standard.  Adding Unicode support to Scheme, as specified
+by this SRFI, will allow
 
 <ul>
-  <li> multilingual text processing
+  <li> multilingual text processing;
   <li> internationalization (adaptation of software to the
-       linguistic preference of its users)
+       linguistic preference of its users);
   <li> improved interoperability with operating systems, programming
-       languages, libraries, and software tools that support Unicode
+       languages, libraries, and software tools that support Unicode; and
   <li> improved portability of programs between R6RS Scheme
-       implementations
-</ul>
+       implementations.
+</ul></p>
+
+<p>The SRFI mandates a specific set of values for characters, a
+specific definition of strings in terms of characterm, and a specific
+definitiond of operations like <code>char&lt;?</code> and
+<code>string-ci=?</code> in terms of those characters and strings. The
+goal of such mandates is to dramatically increase portability of
+Scheme programs through to well understand (if imperfect) concepts and
+definitions.</p>
+
+<p>For some implementations of Scheme, such as those that are targeted
+to small devices, the mandates of this SRFI ask too much.  For other
+implementations of Scheme, such as those that can support a more
+sophisticated definition of "character", this SRFI interferes by
+requiring specifically less. In the long run, a module system for
+Scheme should support a considerably broader range of conformant
+implementations, allowing implementations to support certain modules
+and not support others. The purpose of this SRFI, however, is to
+establish a baseline from which we can define simplifications for
+"smaller" Scheme and elaborations for "larger" Schemes.</p>
 
 <h2>Unicode Background</h2>
 
@@ -169,9 +214,9 @@ the ``code point'' approximation of ``character'' works well for many
 purposes. It is thus appropriate to define Scheme characters as Unicode
 <strong>scalar values</strong>, which includes all code points except
 those designated as <strong>surrogates</strong>.  A surrogate is a code
-point in the range #xd800 to #xdfff that is used in pairs in the UTF-16
+point in the range #xD800 to #xDFFF that is used in pairs in the UTF-16
 encoding to encode a <strong>supplementary character</strong> (whose
-code is in the range #x10000 to #x10ffff).
+code is in the range #x10000 to #x10FFFF).
 </p>
 
 <h2>String and Symbol Literals</h2>
@@ -194,7 +239,7 @@ meaning as a Scheme string literal.</p>
 <p>This SRFI also extends the lexical syntax of symbols, and it puts
 symbols in one-to-one correspondence with immutable strings. In the
 revised lexical syntax, most Unicode characters can be used directly
-as symbol characters. Furthermore, an explicitly quoted from for
+as symbol characters. Furthermore, an explicitly quoted form for
 symbols supports an arbitrary sequence of characters in a symbol
 literal.</p>
 
@@ -241,36 +286,33 @@ and <b>symbol</b>.
 
 <p> The Scheme character type corresponds to the set of Unicode scalar
 values.  Specifically, each character corresponds to a number in the
-range [0, #xd7ff] union [#xe000, #x10ffff], and properties of the
+range [0, #xD7FF] union [#xE000, #x10FFFF], and properties of the
 character are as defined for the corresponding Unicode scalar value.</p>
 
 <p> The <code>integer-&gt;char</code> procedure takes a Unicode scalar
-value as an exact integer, it and produces the corresponding
+value as an exact integer, and it produces the corresponding
 character. The <code>char-&gt;integer</code> procedure takes a
 character and produces the corresponding scalar value. It is an error
 to call <code>integer-&gt;char</code> with an integer that is not in
-the range [0, #xd7ff] union [#xe000, #x10ffff].</p>
+the range [0, #xD7FF] union [#xE000, #x10FFFF].</p>
 
 <p>Examples:
 <pre>
       (integer-&gt;char 32) =&gt; #\space
       (char-&gt;integer (integer-&gt;char 5000)) =&gt; 5000
-      (integer-&gt;char #xd800) =&gt; *error*
+      (integer-&gt;char #xD800) =&gt; *error*
 </pre>
 </p>
 
 <h3>String Type</h3>
 
-<p>
-Like in R5RS, a Scheme string is a fixed-length array of Scheme
-characters.  The procedure call <code>(string-ref <i>str</i>
-<i>i</i>)</code> returns the Scheme character at index
-<code><i>i</i></code> in the string <code><i>str</code></i>.  The
-procedure call <code>(string-set!
+<p> Like in R5RS, a Scheme string is a sequence of Scheme characters.
+The procedure call <code>(string-ref <i>str</i> <i>i</i>)</code>
+returns the Scheme character at index <code><i>i</i></code> in the
+string <code><i>str</code></i>.  The procedure call <code>(string-set!
 <i>str</i> <i>i</i> <i>char</i>)</code> stores the Scheme character
 <code><i>char</i></code> at index <code><i>i</i></code> in the string
-<code><i>str</i></code>, and an unspecified value is returned.
-</p>
+<code><i>str</i></code>, and an unspecified value is returned.  </p>
 
 <h3>Symbol Type</h3>
 
@@ -283,7 +325,7 @@ procedure call <code>(string-set!
 
 <h2>Lexical Syntax</h2>
 
-The Syntax of Scheme is defined in terms of characters, not bytes, and
+The syntax of Scheme is defined in terms of characters, not bytes, and
 remains largely unchanged with the refined definition of character.
 This SRFI defines and extends only the lexical syntax of characters,
 strings, and symbols.
@@ -309,27 +351,27 @@ following set of named characters is defined by this SRFI:
   <li> <code>#\return</code> : Unicode 13
   <li> <code>#\esc</code> : Unicode 27
   <li> <code>#\space</code> : Unicode 32 (as in R5RS)
-  <li> <code>#\rubout</code> : Unicode 127
+  <li> <code>#\delete</code> : Unicode 127
 </ul>
-
-Note that the linefeed character has two external representations:
-<code>#\linefeed</code> and <code>#\newline</code>.
 
 <p>
 To allow denoting any Unicode character using the ASCII subset of
 Unicode and for consistency with the string escape sequences, this
-SRFI specifies these escape character syntaxes:
+SRFI specifies the following escape character syntaxes:
 
 <ul>
   <li> <code>#\x&lt;x&gt;&lt;x&gt;</code> : where <code>&lt;x&gt;</code> is a hexadecimal digit and the sequence of two 
-       <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #xff
+       <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #xFF
   <li> <code>#\u&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;</code> : where <code>&lt;x&gt;</code> is a hexadecimal digit and the 
-       sequence of four <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #xffff excluding the range [#xd800, #xdfff]
+       sequence of four <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #xFFFF excluding the range [#xD800, #xDFFF]
   <li> <code>#\U&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;</code> : where <code>&lt;x&gt;</code> is 
-       a hexadecimal digit and the sequence of eight <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #x10ffff 
-       excluding the range [#xd800, #xdfff]; the range restriction implies that the first two <code>&lt;x&gt;</code>s
+       a hexadecimal digit and the sequence of eight <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #x10FFFF 
+       excluding the range [#xD800, #xDFFF]; the range restriction implies that the first two <code>&lt;x&gt;</code>s
        are <code>0</code>
 </ul>
+In short, <code>\x</code> specifies a character using 2 hex digits, <code>\u</code> using 4 hex digits, 
+and <code>\U</code> using 8 hex digits.
+</p>
 
 <p>
 All character syntaxes are case-sensitive, except that
@@ -352,20 +394,17 @@ delimiter. </p>
   #\alert     ; <i>parse error</i>
   #\xFF       ; Unicode 255
   #\xff       ; Unicode 255
-  #\x ff      ; Unicode 120 followed by ff
-  #\x(ff)     ; Unicode 120 followed by a parenthesized ff
+  #\x ff      ; Unicode 120 followed by another datum, ff
+  #\x(ff)     ; Unicode 120 followed by another datum, a parenthesized ff
   #\(x)       ; <i>parse error</i>
-  #\((x)      ; Unicode 40 followed by a parenthesized x
+  #\((x)      ; Unicode 40 followed by another datum, parenthesized x
+  #\U00110000 ; <i>parse error (out of range)</i>
+  #\uD800     ; <i>parse error (in excluded range)</i>
 </pre>
 
 <h3>String Lexical Syntax</h3>
 
-A string can be written in either of two forms: using R5RS-style 
- double quotes, or using a new here-string style.
-
-<h4>Quoted Strings</h4>
-
-As in R5RS, a string datum can be enclosed between double quotes ("),
+<p>As in R5RS, a string datum is enclosed between double quotes ("),
  where a backslash adjusts the meaning of a character within the
  double quotes. The set of escape sequences is as follows:
 
@@ -378,28 +417,28 @@ As in R5RS, a string datum can be enclosed between double quotes ("),
   <li> <code>\f</code> : formfeed, Unicode 12
   <li> <code>\r</code> : return, Unicode 13
   <li> <code>\"</code> : doublequote, Unicode 34
-  <li> <code>\'</code> : quote, Unicode 39
-  <li> <code>\?</code> : question mark, Unicode 63
   <li> <code>\\</code> : backslash, Unicode 92
   <li> <code>\|</code> : vertical bar, Unicode 124
-  <li> <code>\&lt;newline&gt;&lt;intraline-whitespace&gt;</code> : nothing,
-       where <code>&lt;newline&gt;</code> is Unicode 10,
-       and <code>&lt;intraline-whitespace&gt;</code> is a sequence of non-newline whitescape characters
+  <li> <code>\&lt;linefeed&gt;&lt;intraline-whitespace&gt;</code> : nothing,
+       where <code>&lt;linefeed&gt;</code> is Unicode 10,
+       and <code>&lt;intraline-whitespace&gt;</code> is a sequence of non-linefeed whitespace characters
        (where whitespace is defined in <a href="http://srfi.schemers.org/srfi-14/">SRFI-14</a>)
   <li> <code>\&lt;space&gt;</code> : space, Unicode 32, where <code>&lt;space&gt;</code> is the character Unicode 32 (useful for
        terminating the previous escape sequence before continuing with whitespace)
-  <li> <code>\x&lt;x&gt;&lt;x&gt;</code> : where <code>&lt;x&gt;</code> is a hexadecimal digit and the sequence of two <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #xff
-  <li> <code>\u&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;</code> : where <code>&lt;x&gt;</code> is a hexadecimal digit and the sequence of four <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #xffff excluding the range [#xd800, #xdfff]
+  <li> <code>\x&lt;x&gt;&lt;x&gt;</code> : where <code>&lt;x&gt;</code> is a hexadecimal digit and the sequence of two <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #xFF
+  <li> <code>\u&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;</code> : where <code>&lt;x&gt;</code> is a hexadecimal digit and the sequence of four <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #xFFFF excluding the range [#xD800, #xDFFF]
   <li> <code>\U&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;</code> : where <code>&lt;x&gt;</code> 
        is a hexadecimal digit 
-       and the sequence of eight <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #x10ffff excluding the range 
-       [#xd800, #xdfff]; the range restriction implies that the first two <code>&lt;x&gt;</code>s
+       and the sequence of eight <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #x10FFFF excluding the range 
+       [#xD800, #xDFFF]; the range restriction implies that the first two <code>&lt;x&gt;</code>s
        are <code>0</code>
-</ul>
+</ul></p>
 
-These escape sequences are case-sensitive, except that
+<p>These escape sequences are case-sensitive, except that
 <code>&lt;x&gt;</code> can be an uppercase or lowercase hexadecimal
-digit.
+digit. As in character constants, <code>\x</code> specifies a character
+using 2 hex digits, <code>\u</code> using 4 hex digits, and
+<code>\U</code> using 8 hex digits. </p>
 
 
 <p>
@@ -417,59 +456,34 @@ different in Java, because Java handles this escape sequence in the
 escape-processing phase, which can be viewed as preprocessing that
 precedes lexical analysis.  </p>
 
-<h4>Here Strings</h4>
-
-<p> <b>Here strings</b> are a new syntax for denoting string literals
-that eliminates the quoting problem inherent in the traditional string
-syntax.  The sequence <code>#&lt;&lt;</code> marks the start of a here
-string.  The part of the line after the <code>#&lt;&lt;</code> up to
-and including the newline character (Unicode 10) is the <i>key</i>.
-The first line afterward that matches the key marks the end of the
-here string.  The string contains all the characters between the start
-key and the end key, with the exception of the newline before the end
-key. The end key can be terminated by an end-of-file instead of a
-newline.
-
-<p>Example:</p>
-
+<p>Examples:
 <pre>
-      #&lt;&lt;THE-END
-      printf("hello\n");
-      THE-END
-        =&gt; "printf(\"hello\\n\");"
-      
-      #&lt;&lt;THE-END
-      printf("hello\n");
-      
-      THE-END
-        =&gt; "printf(\"hello\\n\");\n"
+ "abc"        ; Unicode sequence 97, 98, 99
+ "\x41bc"     ; "Abc", which is Unicode sequence 65, 98, 99
+ "\x41 bc"    ; "A bc", which is Unicode sequence 65, 32, 98, 99
+ "\u41bc"     ; Unicode sequence 16828
+ "\u41 bc"    ; <i>parse error</i>
+ "\u41"       ; <i>parse error</i>
+ "\x0041"     ; Unicode sequence 0, 52, 49
+ "\u0041"     ; "A", which is Unicode sequence 65
+ "\U0041"     ; <i>parse error</i>
+ "\U00000041" ; "A", which is Unicode sequence 65
+ "\U0010FFFF" ; "Unicode sequence #x10FFFF
+ "\U00110000" ; <i>parse error (out of range)</i>
+ "\uD800"     ; <i>parse error (in excluded range)</i>
 </pre>
-
-
-<p>
-Here strings are particularly useful to include verbatim the text of
-some other document, that has its own syntax that might conflict with
-the traditional Scheme string syntax, for example a source code
-fragment or a TeX document.
-</p>
-
-<p>The here string syntax of this SRFI is based on the line-delimited
-here strings of Scsh (see <a
-href="http://www.scsh.net/docu/html/man.html">Scsh Reference
-Manual</a>), which in turn resemble ``here documents'' in shells
-such as bash and csh.
 
 
 <h3>Symbol Lexical Syntax</h3>
 
-<p>The syntax of symbols extends R5RS in three ways.:
+<p>The syntax of symbols extends R5RS in three ways:
 <ul>
 
  <li> Symbols are case-sensitive.
 
  <li> Where R5RS allows a <code>&lt;letter&gt;</code>, this SRFI allows
       any character whose scalar value is greater than 127 and that is
-      not considered whitescape according to <a
+      not considered whitespace according to <a
       href="http://srfi.schemers.org/srfi-14/">SRFI-14</a>.
 
  <li> A vertical bar (|) begins a quoted symbol.  Like the
@@ -502,6 +516,9 @@ such as bash and csh.
 <h2>Procedures</h2>
 
 This SRFI defines and extends procedures for characters and strings.
+ Programmers should recognize that these procedures may not produce
+ results that an end-user would consider sensible with a particular
+ locale. This SRFI defines no locale-sensitive operations.
 
 <h3>Character Procedures</h3>
 
@@ -521,13 +538,32 @@ This SRFI defines and extends procedures for characters and strings.
 </pre>
 
 <p>Unicode defines locale-independent mappings from scalar values to
-scalar values for upcase, downcase, and titlecase operations. (These
+scalar values for upcase, downcase, titlecase, and case-folding operations. (These
 mappings can be extracted from <a
 href="http://www.unicode.org/Public/UNIDATA/UnicodeData.txt">UnicodeData.txt</a>
+and <a
+href="http://www.unicode.org/Public/UNIDATA/CaseFolding.txt">CaseFolding.txt</a>
 from the Unicode Consortium.) The following Scheme procedures map
-characters consistent with the Unicode specification: <ul> <li>
-<code>char-upcase</code> <li> <code>char-downcase</code> <li>
-<code>char-titlecase</code> </ul>
+characters consistent with the Unicode specification:
+<ul> 
+<li> <code>char-upcase</code>
+<li> <code>char-downcase</code>
+<li> <code>char-titlecase</code>
+<li> <code>char-foldcase</code>
+</ul>
+These procedures take a character argument and return a character
+result.  If the argument is an uppercase or titlecase character, and
+if there is a single character which is its lowercase form, then
+<code>char-downcase</code> returns that character.  If the argument is
+a lowercase or titlecase character, and if there is a single character
+which is its uppercase form, then <code>char-upcase</code> returns
+that character.  Otherwise, the character returned is the same as the
+argument. Note that this is an incomplete approximation to case
+conversion, even ignoring the user's locale; in general, case mappings
+require the context of a string, both in arguments and in result.  See
+<code>string-upcase</code> and <code>string-downcase</code> for more
+general case-conversion procedures.
+</p>
 
 <p>Case-insensitive character-comparison procedures are defined as
 follows:
@@ -536,7 +572,7 @@ follows:
    ;; used only to define other procedures
    (define (char-ci-comparator cs-comp)
      (lambda (a-char b-char)
-       (cs-comp (char-downcase a-char) (char-downcase b-char))))
+       (cs-comp (char-foldcase a-char) (char-foldcase b-char))))
 
    (define char-ci=? (char-ci-comparator char=?))
    (define char-ci&lt;? (char-ci-comparator char&lt;?))
@@ -544,25 +580,60 @@ follows:
    (define char-ci&lt;=? (char-ci-comparator char&lt;=?))
    (define char-ci&gt;=? (char-ci-comparator char&gt;=?))
 </pre>
-Programmers should recognize that these procedures may not produce
- results that an end-user would consider sensible with a particular
- locale. This SRFI defines no locale-sensitive comparisons for characters.
 
-<p>The following predicates are as defined by <a
- href="http://srfi.schemers.org/srfi-14/">SRFI-14</a>:
+<p>Among the following predicates, the first three are as defined by
+ <a href="http://srfi.schemers.org/srfi-14/">SRFI-14</a>; the last
+ three are defined as scalar values having the Unicode "Uppercase" property,
+ the "Lowercase" property, and the "Lt" general category,
+ respectively.
 <ul>
  <li> <code>char-alphabetic?</code>
- <li> <code>char-lower-case?</code>
- <li> <code>char-upper-case?</code>
- <li> <code>char-title-case?</code>
  <li> <code>char-numeric?</code>
- <li> <code>char-symbolic?</code>
- <li> <code>char-punctuation?</code>
- <li> <code>char-graphic?</code>
  <li> <code>char-whitespace?</code>
- <li> <code>char-blank?</code>
- <li> <code>char-iso-control?</code>
-</ul>
+ <li> <code>char-upper-case?</code>
+ <li> <code>char-lower-case?</code>
+ <li> <code>char-title-case?</code>
+</ul></p>
+
+<p>Examples:
+<pre>
+  (char&lt;? #\z #\&#xDF;) =&gt; #t
+  (char&lt;? #\z #\Z) =&gt; #f
+  (char-ci&lt;? #\z #\Z) =&gt; #f
+  (char-ci=? #\z #\Z) =&gt; #t
+  (char-ci=? #\&#x3C2; #\&#x3C3;) =&gt; #t
+
+  (char-upcase #\i) =&gt; #\I
+  (char-downcase #\i) =&gt; #\i
+  (char-titlecase #\i) =&gt; #\I
+  (char-foldcase #\i) =&gt; #\i
+
+  (char-upcase #\&#xDF;) =&gt; #\&#xDF;
+  (char-downcase #\&#xDF;) =&gt; #\&#xDF;
+  (char-titlecase #\&#xDF;) =&gt; #\&#xDF;
+  (char-foldcase #\&#xDF;) =&gt; #\&#xDF;
+
+  (char-upcase #\&#x3A3;) =&gt; #\&#x3A3;
+  (char-downcase #\&#x3A3;) =&gt; #\&#x3C3;
+  (char-titlecase #\&#x3A3;) =&gt; #\&#x3A3;
+  (char-foldcase #\&#x3A3;) =&gt; #\&#x3C3;
+
+  (char-upcase #\&#x3C2;) =&gt; #\&#x3A3;
+  (char-downcase #\&#x3C2;) =&gt; #\&#x3C2;
+  (char-titlecase #\&#x3C2;) =&gt; #\&#x3A3;
+  (char-foldcase #\&#x3C2;) =&gt; #\&#x3C3;
+
+  (char-alphabetic? #\a) =&gt; #t
+  (char-numeric? #\1) =&gt; #t
+  (char-whitespace? #\space) =&gt; #t
+  (char-whitespace? #\u00A0) =&gt; #t
+  (char-upper-case? #\&#x3A3;) =&gt; #t
+  (char-lower-case? #\&#x3C3;) =&gt; #t
+  (char-lower-case? #\u00AA) =&gt; #t
+  (char-title-case? #\I) =&gt; #f
+  (char-title-case? #\u01C5) =&gt; #t
+</pre></p>
+
 
 <h3>String Procedures</h3>
 
@@ -575,23 +646,102 @@ characters:
  <li> <code>string=?</code>
  <li> <code>string&lt;=?</code>
  <li> <code>string&gt;=?</code>
- <li> <code>string-ci&lt;?</code>
- <li> <code>string-ci&gt;?</code>
- <li> <code>string-ci=?</code>
- <li> <code>string-ci&lt;=?</code>
- <li> <code>string-ci&gt;=?</code>
 </ul>
-Programmers should recognize that these procedures may not produce
- results that an end-user would consider sensible with a particular
- locale. This SRFI defines no locale-sensitive comparisons for strings.
+</p>
+
+<p>The following string operations are <i>not</i> defined in terms of
+character-by-character conversions. Instead, they are defined as in
+terms of Unicode's locale-independent string mappings from
+scalar-value sequences to scalar-value sequences. (These mappings can be
+extracted from <a
+href="http://www.unicode.org/Public/UNIDATA/UnicodeData.txt">UnicodeData.txt</a>,
+<a
+href="http://www.unicode.org/Public/UNIDATA/SpecialCasing.txt">SpecialCasing.txt</a>,
+and <a
+href="http://www.unicode.org/Public/UNIDATA/CaseFolding.txt">CaseFolding.txt</a>
+from the Unicode Consortium.) In particular, the length of the result
+string can be different than the length of the input string:
+<ul>
+ <li> <code>string-upcase</code>
+ <li> <code>string-downcase</code>
+ <li> <code>string-titlecase</code>
+ <li> <code>string-foldcase</code>
+</ul>
+
+These procedures take a string argument argument and return a string
+result.  The <code>string-upcase</code> procedure converts a string to
+uppercase, <code>string-downcase</code> converts a string to
+lowercase, and <code>string-foldcase</code> converts each character in
+the string to its case-folded representative(s). The
+<code>string-titlecase</code> procedure converts the first character
+to titlecase in each contiguous sequence of cased characters within
+\var{string}, and it downcases all other cased characters; for the
+purposes of detecting cased-character sequences, case-ignorable
+characters are ignored (i.e., they do not interrupt the
+sequence). Since each of these procedures is locale-independent, they
+still are suboptimal for some locales, but this SRFI defines no
+locale-sensitive operations.</p>
+
+<p>Case-insensitive string-comparison procedures are defined as
+follows:
+<pre>
+   ;; string-ci-comparator itself is not part of this SRFI; it is
+   ;; used only to define other procedures
+   (define (string-ci-comparator cs-comp)
+     (lambda (a-string b-string)
+       (cs-comp (string-foldcase a-string) (string-foldcase b-string))))
+
+   (define string-ci=? (string-ci-comparator string=?))
+   (define string-ci&lt;? (string-ci-comparator string&lt;?))
+   (define string-ci&gt;? (string-ci-comparator string&gt;?))
+   (define string-ci&lt;=? (string-ci-comparator string&lt;=?))
+   (define string-ci&gt;=? (string-ci-comparator string&gt;=?))
+</pre>
+
+<p>Examples:
+<pre>
+  (string&lt;? "z" "&#xDF") =&gt; #t
+  (string&lt;? "z" "zz") =&gt; #t
+  (string&lt;? "z" "Z") =&gt; #f
+  (string=? "Stra&#xDF;e" "Strasse") =&gt; #f
+
+  (string-upcase "Hi") =&gt; "HI"
+  (string-downcase "Hi") =&gt; "hi"
+  (string-foldcase "Hi") =&gt; "hi"
+
+  (string-upcase "Stra&#xDF;e") =&gt; "STRASSE"
+  (string-downcase "Stra&#xDF;e") =&gt; "stra&#xDF;e"
+  (string-foldcase "Stra&#xDF;e") =&gt; "strasse"
+  (string-downcase "STRASSE")  =&gt; "strasse"
+
+  (string-upcase "&#x03A7;&#x0391;&#x039F;&#x03A3;") =&gt; "&#x03A7;&#x0391;&#x039F;&#x03A3;"
+  (string-downcase "&#x03A3;") =&gt; "&#x03C3;"
+  (string-downcase "&#x03A7;&#x0391;&#x039F;&#x03A3;") =&gt; "&#x03C7;&#x03B1;&#x03BF;&#x03C2;"
+  (string-downcase "&#x03A7;&#x0391;&#x039F;&#x03A3;&#x03A3;") =&gt; "&#x03C7;&#x03B1;&#x03BF;&#x03C3;&#x03C2;"
+  (string-downcase "&#x03A7;&#x0391;&#x039F;&#x03A3; &#x03A3;") =&gt; "&#x03C7;&#x03B1;&#x03BF;&#x03C2; &#x03C3;"
+  (string-foldcase "&#x03A7;&#x0391;&#x039F;&#x03A3;&#x03A3;") =&gt; "&#x03C7;&#x03B1;&#x03BF;&#x03C3;&#x03C3;"
+  (string-upcase "&#x03C7;&#x03B1;&#x03BF;&#x03C2;") =&gt; "&#x03A7;&#x0391;&#x039F;&#x03A3;"
+  (string-upcase "&#x03C7;&#x03B1;&#x03BF;&#x03C3;") =&gt; "&#x03A7;&#x0391;&#x039F;&#x03A3;"
+  
+  (string-titlecase "kNock KNoCK") =gt; "Knock Knock"
+  (string-titlecase "who's there?") =gt; "Who's There?"
+  (string-titlecase "r6rs") =gt; "R6Rs"
+  (string-titlecase "R6RS") =gt; "R6Rs"
+
+  (string-ci&lt;? "z" "Z") =&gt; #f
+  (string-ci=? "z" "Z") =&gt; #t
+  (string-ci=? "Stra&#xDF;e" "Strasse") =&gt; #t
+  (string-ci=? "Stra&#xDF;e" "STRASSE") =&gt; #t
+  (string-ci=? "&#x03A7;&#x0391;&#x039F;&#x03A3;" "&#x03C7;&#x03B1;&#x03BF;&#x03C3;") =&gt; #t
+</pre></p>
 
 
 <h1>Reference Implementation</h1>
 
-<p> MzScheme version 299.100 and up implements the character and
+<p> MzScheme version 299.108 and up implements the character and
 string operations described in this SRFI. A portable implementation
 using R5RS Scheme (to implement a distinct character type) will
-accompany the next draft of this SRFI.</p>
+accompany a future draft of this SRFI.</p>
 
 <p> The file <a href="r6rs-reader.ss">r6rs-reader.ss</a> implements a
 MzScheme-specific reader for the character, string, and symbol syntax
@@ -610,7 +760,9 @@ contains a test suite.
 <p>
 This SRFI was written in consultation with the full set of R6RS
 editors: Will Clinger, Kent Dybvig, Marc Feeley, Matthew Flatt, Manuel Serrano,
-Michael Sperber, and Anton van Straaten.
+Michael Sperber, and Anton van Straaten. In addition, Ray Dillinger
+supplied part of the text, and many other helpful suggestions from the
+SRFI-75 mailing have been incoporated.
 </p>
 
 <h1>References</h1>
@@ -624,9 +776,7 @@ Michael Sperber, and Anton van Straaten.
   <li> <i>Unicode Demystified</i> by Richard Gillam, Addison-Wesley
     Professional, 2002.
 
-  <li> <cite><a href="http://www.scsh.net/docu/html/man.html">Scsh
-   Reference Manual</a></cite> by Olin Shivers, Brian D. Carlstrom,
-   Martin Gasbichler, and Mike Sperber, 2004.</ul>
+</ul>
 
 <h1>Copyright</h1>
 

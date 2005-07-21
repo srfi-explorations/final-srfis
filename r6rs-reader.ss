@@ -141,8 +141,6 @@
 			      [(#\f) 12]
 			      [(#\r) 13]
 			      [(#\") 34]
-			      [(#\') 39]
-			      [(#\?) 63]
 			      [(#\\) 92]
 			      [(#\|) 124]
 			      ;; not a valid escape!
@@ -223,7 +221,7 @@
 		[(return) (integer->char 13)]
 		[(esc) (integer->char 27)]
 		[(space) (integer->char 32)]
-		[(rubout) (integer->char 127)]
+		[(delete) (integer->char 127)]
 		[else
 		 ;; Hex?
 		 (case (car chars)
@@ -265,69 +263,6 @@
 		  (read-char port)
 		  (loop (add1 len) (cons ch chars))])))))))
 
-  ;; read-here-string
-  ;;  Reader macro for here strings
-  (define (read-here-string ch port src line col pos)
-    
-    ;; read-line : int -> string int bool
-    ;;  Given the number of chars read so far,
-    ;;  reads one line and produces three values:
-    ;;  a string for the line (not including the newline),
-    ;;  a new count for bytes read, and a boolean
-    ;;  indicating whether the line was ended by an EOF
-    ;;  instead of a newline.
-    (define (read-line len)
-      (let loop ([len len][chars null])
-	(let ([ch (read-char port)])
-	  (cond
-	   [(eof-object? ch)
-	    (values (list->string (reverse chars)) len #t)]
-	   [(char=? #\newline ch)
-	    (values (list->string (reverse chars)) (+ len 1) #f)]
-	   [else
-	    (loop (+ len 1) (cons ch chars))]))))
-
-    ;; read the first char:
-    (let ([ch (read-char port)])
-      ;; should be #\< ...
-      (when (eof-object? ch)
-	(raise-read-eof-error 
-	 "unexpected end-of-file after #<"
-	 src line col pos 2))
-      (unless (char=? #\< ch)
-	(raise-read-error 
-	 (format "expected < after #<, found ~a" ch)
-	 src line col pos 3))
-      ;; read first line to get key
-      (let-values ([(end-str len found-eof?) (read-line 3)])
-	;; key must be newline-terminated, not EOF
-	(when found-eof?
-	  (raise-read-eof-error 
-	   "unexpected end-of-file in #<<"
-	   src line col pos len))
-	;; loop until finding the key
-	(let loop ([strs '()][len len])
-	  (let-values ([(str len found-eof?) (read-line len)])
-	    (cond
-	     [(string=? str end-str)
-	      ;; found end key (EOF terminator is ok);
-	      ;; produce the result string
-	      (if (null? strs)
-		  ""
-		  (apply string-append (reverse (cdr strs))))]
-	     [found-eof?
-	      ;; found EOF before end key
-	      (raise-read-eof-error 
-	       "unexpected end-of-file in #<<"
-	       src line col pos len)]
-	     [else
-	      ;; content line; remember it, along with 
-	      ;;  a newline consumed by read-line
-	      (loop (cons "\n" (cons str strs))
-		    len)]))))))
-
-    ;; read-here-string
-  ;;  Reader macro for here strings
   (define (reject-backslash ch port src line col pos)
     (raise-read-error 
      "illegal character in input: \\"
@@ -335,14 +270,13 @@
 
   ;; r6rs-readtable
   ;;  Extends MzScheme's default reader to handle quoted symbols,
-  ;;   strings, characters, and here strings:
+  ;;   strings, and characters:
   (define r6rs-readtable
     (make-readtable #f
 		    ;; New syntax:
 		    #\| 'terminating-macro read-quoted-symbol
 		    #\" 'terminating-macro read-quoted-string
 		    #\\ 'dispatch-macro read-character
-		    #\< 'dispatch-macro read-here-string
 		    ;; Disable \ symbol escape:
 		    #\\ 'terminating-macro reject-backslash))
 		    
