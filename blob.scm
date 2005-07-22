@@ -26,16 +26,13 @@
 
 (define *endianness/little* (list 'little))
 (define *endianness/big* (list 'big))
-(define *endianness/native* (list 'native))
 
 (define-syntax endianness
   (syntax-rules (little big native)
     ((endianness little) *endianness/little*)
     ((endianness big) *endianness/big*)
-    ((endianness native) *endianness/native*)))
-
-; change this to the endianness of your architecture
-(define *native-endianness* (endianness big))
+    ;; change this to the endianness of your architecture
+    ((endianness native) *endianness/big*)))
 
 (define (make-blob k)
   (make-u8vector k 0))
@@ -64,11 +61,6 @@
       (+ val 256)
       val))
 
-(define (normalize-endianness e)
-  (if (eq? (endianness native) e)
-      *native-endianness*
-      e))
-
 (define (index-iterate start count low-first?
 		       unit proc)
   (if low-first?
@@ -88,18 +80,16 @@
 
 (define (blob-uint-ref size endness blob index)
   (index-iterate index size
-		       (eq? (endianness big)
-			    (normalize-endianness endness))
+		       (eq? (endianness big) endness)
 		       0
 		       (lambda (index acc)
 			 (+ (u8vector-ref blob index) (arithmetic-shift acc 8)))))
 
 (define (blob-sint-ref size endness blob index)
-  (let* ((endness (normalize-endianness endness))
-	 (high-byte (u8vector-ref blob
-				  (if (eq? endness (endianness big))
-				      index
-				      (- (+ index size) 1)))))
+  (let ((high-byte (u8vector-ref blob
+				 (if (eq? endness (endianness big))
+				     index
+				     (- (+ index size) 1)))))
 
     (if (> high-byte 127)
 	(- (+ 1
@@ -122,8 +112,7 @@
   (cut blob-sint-ref size <> <> <>))
 
 (define (blob-uint-set! size endness blob index val)
-  (index-iterate index size (eq? (endianness little)
-				       (normalize-endianness endness))
+  (index-iterate index size (eq? (endianness little) endness)
 		 val
 		 (lambda (index acc)
 		   (u8vector-set! blob index (remainder acc 256))
@@ -132,15 +121,13 @@
 
 (define (blob-sint-set! size endness blob index val)
   (if (negative? val)
-      (index-iterate index size (eq? (endianness little)
-				     (normalize-endianness endness))
+      (index-iterate index size (eq? (endianness little) endness)
 		     (- -1 val)
 		     (lambda (index acc)
 		       (u8vector-set! blob index (- 255 (remainder acc 256)))
 		       (quotient acc 256)))
       
-      (index-iterate index size (eq? (endianness little)
-				     (normalize-endianness endness))
+      (index-iterate index size (eq? (endianness little) endness)
 		     val
 		     (lambda (index acc)
 		       (u8vector-set! blob index (remainder acc 256))
@@ -156,12 +143,12 @@
 (define (make-ref/native base base-ref)
   (lambda (endness blob index)
     (ensure-aligned index base)
-    (base-ref *native-endianness* blob index)))
+    (base-ref (endianness native) blob index)))
 
 (define (make-set!/native base base-set!)
   (lambda (endness blob index val)
     (ensure-aligned index base)
-    (base-set! *native-endianness* blob index val)))
+    (base-set! (endianness native) blob index val)))
 
 (define (ensure-aligned index base)
   (if (not (zero? (remainder index base)))
