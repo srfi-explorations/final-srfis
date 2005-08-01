@@ -30,7 +30,9 @@ archive of the mailing list</A>.
   <LI>Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-71/srfi-71.html?rev=1.1">2005/05/16</a></LI>
   <li>Draft: 2005/05/16 - 2005/07/14</li>
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-71/srfi-71.html?rev=1.2">2005/05/18</a>
+  <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-71/srfi-71.html?rev=1.3">2005/08/01</a>
 </UL>
+
 
 <H1>Abstract</H1>
 
@@ -239,19 +241,42 @@ lambda-expression.
 
 The following procedures, specified in terms of standard procedures,
 are added to the set of standard procedures:
-
 <pre>
-(define (uncons   pair)   (values (car pair) (cdr pair)))
-(define (unlist   list)   (apply values list))
-(define (unvector vector) (apply values (vector->list vector)))
-</pre>
+(define (uncons pair)
+  (values (car pair) (cdr pair)))
 
+(define (uncons-2 list)
+  (values (car list) (cadr list) (cddr list)))
+
+(define (uncons-3 list)
+  (values (car list) (cadr list) (caddr list) (cdddr list)))
+
+(define (uncons-4 list)
+  (values (car list) (cadr list) (caddr list) (cadddr list) (cddddr list)))
+
+(define (uncons-cons alist)
+  (values (caar alist) (cdar alist) (cdr alist)))
+
+(define (unlist list)
+  (apply values list))
+
+(define (unvector vector)
+  (apply values (vector->list vector)))
+</pre>
 These procedures decompose the standard concrete data structures
 (pair, list, vector) and deliver the components as values.
 It is an error if the argument cannot be decomposed as expected.
 Note that the procedures are not necessarily implemented by
 the definition given above.
-
+<p>
+The preferred way of decomposing a list into the first two elements
+and the rest list is <code>(let ((x1 x2 x3+ (uncons-2 x))) body)</code>,
+and similar for three or four elements and a rest.
+This is <i>not</i> equivalent to 
+<code>(let (((values x1 x2 . x3+) (unlist x))) body)</code>
+because the latter binds <code>x4+</code> to a newly allocated
+copy of <code>(cddr x)</code>.
+<p>
 Finally, the following two macros are added to the standard macros:
 
 <pre>
@@ -261,7 +286,9 @@ Finally, the following two macros are added to the standard macros:
 
 These operation receive all values (if any) delivered by their 
 argument expression and return a newly allocated list (vector, resp.)
-of these values.
+of these values. 
+Note that <code>values->list</code> is <i>not</i> the same as 
+<code>list</code> (the procedure returning the list of its arguments).
 
 <H1>Design Rationale</H1>
 
@@ -408,6 +435,22 @@ Please also refer to the double-ended queue (deque) example
 in <a href="examples.scm">examples.scm</a> to see how to
 use decomposition procedures for dealing with data structures.
 
+<h3>Which decomposition operations are included?</h3>
+
+The particular set of operations specified in this SRFI 
+for decomposing lists represents a trade-off between limiting
+the number of operations and convenience.
+<p>
+As Al Petrofsky has pointed out during the discussion
+(<a href="http://srfi.schemers.org/srfi-71/mail-archive/msg00018.html">
+msg00018</a>) it is not sufficient to have only 
+<code>unlist</code> as this will copy the rest list.
+For this reason specialized decomposition operations
+for splitting off the first 1, ..., 4 elements are
+provided, and a decomposition operation expecting the
+first element to be a pair itself.
+These appear to be the most common cases.
+
 <H1>Implementation</H1>
 
 The reference implementation is written in <a href="#R5RS">R5RS</a> 
@@ -498,10 +541,11 @@ THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMP
 
     <hr>
     <address>Author: <a href="mailto:sebastian.egner@philips.com">Sebastian Egner</a></address>
-    <address>Editors: <a href="mailto:srfi-editors@srfi.schemers.org">SRFI editors</a></address>
+    <address>Editor: <a
+    href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
 <!-- Created: Fri Apr 29 09:30:00 CEST 2005 -->
 <!-- hhmts start -->
-Last modified: Wed May 18 13:16:18 CEST 2005
+Last modified: Mon Aug  1 19:32:50 CEST 2005
 <!-- hhmts end -->
   </body>
 </html>

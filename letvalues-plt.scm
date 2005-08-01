@@ -32,7 +32,7 @@
 ; --- textual copy of 'letvalues.scm' starts here ---
 
 ; Reference implementation of SRFI-71 (generic part)
-; Sebastian.Egner@philips.com, 28-Apr-2005, PLT 208
+; Sebastian.Egner@philips.com, 20-May-2005, PLT 208
 ;
 ; In order to avoid conflicts with the existing let etc.
 ; the macros defined here are called srfi-let etc.,
@@ -211,6 +211,18 @@
 
 (define (uncons pair)
   (values (car pair) (cdr pair)))
+
+(define (uncons-2 list)
+  (values (car list) (cadr list) (cddr list)))
+
+(define (uncons-3 list)
+  (values (car list) (cadr list) (caddr list) (cdddr list)))
+
+(define (uncons-4 list)
+  (values (car list) (cadr list) (caddr list) (cadddr list) (cddddr list)))
+
+(define (uncons-cons alist)
+  (values (caar alist) (cdar alist) (cdr alist)))
 
 (define (unlist list)
   (apply values list))

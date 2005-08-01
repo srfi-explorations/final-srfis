@@ -1,5 +1,5 @@
 ; Examples for SRFI-71.
-; Sebastian.Egner@philips.com, 29-Apr-2005, R5RS + SRFI-71.
+; Sebastian.Egner@philips.com, 1-Aug-2005, R5RS + SRFI-71.
 ;
 ; PLT 208:
 ;   (load "letvalues-plt.scm")
@@ -155,6 +155,30 @@
 (my-check (let (((values bad values) (values 1 2)))
 	    (list bad values))
 	  => '(1 2))
+
+; --- values->list etc. ---
+
+(my-check (values->list (values)) => '())
+(my-check (values->list (values 1)) => '(1))
+(my-check (values->list (values 1 2)) => '(1 2))
+(my-check (values->list (values 1 2 3)) => '(1 2 3))
+
+(my-check (values->vector (values)) => '#())
+(my-check (values->vector (values 1)) => '#(1))
+(my-check (values->vector (values 1 2)) => '#(1 2))
+(my-check (values->vector (values 1 2 3)) => '#(1 2 3))
+
+; --- uncons etc. ---
+
+(my-check (values->vector (uncons   '(1 2 3 4 5))) => '#(1 (2  3  4  5)))
+(my-check (values->vector (uncons-2 '(1 2 3 4 5))) => '#(1  2 (3  4  5)))
+(my-check (values->vector (uncons-3 '(1 2 3 4 5))) => '#(1  2  3 (4  5)))
+(my-check (values->vector (uncons-4 '(1 2 3 4 5))) => '#(1  2  3  4 (5)))
+
+(my-check (values->vector (uncons-cons '((1 2) 3))) => '#(1 (2) (3)))
+
+(my-check (values->vector (unlist '(1 2 3))) => '#(1 2 3))
+(my-check (values->vector (unvector '#(1 2 3))) => '#(1 2 3))
 
 ; --- quo-rem ---
 
