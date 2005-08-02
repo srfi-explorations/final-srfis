@@ -371,16 +371,15 @@
 ;;;   Copy elements from SSTART to SEND from SOURCE to TARGET, in the
 ;;;   reverse order.
 (define %vector-reverse-copy!
-  (letrec ((loop (lambda (target source sstart i j)
-                   (cond ((>= i sstart)
-                          (vector-set! target j (vector-ref source i))
-                          (loop target source sstart
-                                (- i 1)
-                                (+ j 1)))))))
-    (lambda (target tstart source sstart send)
-      (loop target source sstart
-            (- send 1)
-            tstart))))
+  (letrec ((loop (lambda (kons knil len vectors i)
+                   (if (= i len)
+                       knil
+                       (loop kons
+                             (apply kons i knil
+                                    (vectors-ref vectors i))
+                             len vectors (+ i 1))))))
+    (lambda (kons knil len vectors)
+      (loop kons knil len vectors 0))))
 
 ;;; (%VECTOR-REVERSE! <vector>)
 (define %vector-reverse!
@@ -429,7 +428,7 @@
                                       (f j (vector-ref vec j)))
                          (loop f target vec j))))))
     (lambda (f target vec len)
-      (loop f target vec (- len 1)))))
+      (loop f target vec len))))
 
 (define %vector-map2+!
   (letrec ((loop (lambda (f target vectors i)
@@ -440,7 +439,7 @@
                            (apply f j (vectors-ref vectors j)))
                          (loop f target vectors j))))))
     (lambda (f target vectors len)
-      (loop f target vectors (- len 1)))))
+      (loop f target vectors len))))
 
 
 
@@ -737,7 +736,7 @@
                                   (test (vector-ref vector-a i)
                                         (vector-ref vector-b i)
                                         i)))))
-                 (test (lambda (elt-a)
+                 (test (lambda (elt-a elt-b i)
                          (and (or (eq? elt-a elt-b) ;+++
                                   (elt=? elt-a elt-b))
                               (loop (+ i 1))))))
@@ -841,7 +840,7 @@
         (let ((len (%smallest-length vectors
                                      (vector-length vec)
                                      vector-map)))
-          (%vector-map2+! f (make-vector len) vectors len)))))
+          (%vector-map2+! f (make-vector len) (cons vec vectors) len)))))
 
 ;;; (VECTOR-MAP! <f> <vector> ...) -> unspecified
 ;;;     (F <elt> ...) -> element' ; N vectors -> N args
@@ -1140,18 +1139,18 @@
          (tstart (check-index target tstart vector-copy!)))
     (let-vector-start+end vector-copy! source maybe-sstart+send
                           (sstart send)
-      (let ((source-length (vector-length source))
-            (lose (lambda (argument)
-                    (error "Vector range out of bounds"
-                           argument
-                           `(while calling ,vector-copy!)
-                           `(target was ,target)
-                           `(target-length was ,(vector-length target))
-                           `(tstart was ,tstart)
-                           `(source was ,source)
-                           `(source-length was ,source-length)
-                           `(sstart was ,sstart)
-                           `(send   was ,send)))))
+      (let* ((source-length (vector-length source))
+             (lose (lambda (argument)
+                     (error "vector range out of bounds"
+                            argument
+                            `(while calling ,vector-copy!)
+                            `(target was ,target)
+                            `(target-length was ,(vector-length target))
+                            `(tstart was ,tstart)
+                            `(source was ,source)
+                            `(source-length was ,source-length)
+                            `(sstart was ,sstart)
+                            `(send   was ,send)))))
         (cond ((< sstart 0)
                (lose '(sstart < 0)))
               ((< send 0)
@@ -1172,18 +1171,18 @@
          (tstart (check-index target tstart vector-reverse-copy!)))
     (let-vector-start+end vector-reverse-copy source maybe-sstart+send
                           (sstart send)
-      (let ((source-length (vector-length source))
-            (lose (lambda (argument)
-                    (error "Vector range out of bounds"
-                           thing
-                           `(while calling ,vector-reverse-copy!)
-                           `(target was ,target)
-                           `(target-length was ,(vector-length target))
-                           `(tstart was ,tstart)
-                           `(source was ,source)
-                           `(source-length was ,source-length)
-                           `(sstart was ,sstart)
-                           `(send   was ,send)))))
+      (let* ((source-length (vector-length source))
+             (lose (lambda (argument)
+                     (error "vector range out of bounds"
+                            argument
+                            `(while calling ,vector-reverse-copy!)
+                            `(target was ,target)
+                            `(target-length was ,(vector-length target))
+                            `(tstart was ,tstart)
+                            `(source was ,source)
+                            `(source-length was ,source-length)
+                            `(sstart was ,sstart)
+                            `(send   was ,send)))))
         (cond ((< sstart 0)
                (lose '(sstart < 0)))
               ((< send 0)
@@ -1199,12 +1198,11 @@
                (%vector-reverse! target tstart send))
               ((and (eq? target source)
                     (or (between? sstart tstart send)
-                        (between? sstart (+ tstart (- send sstart))
-                                  send)))
+                        (between? tstart sstart (+ tstart (- send sstart)))))
                (error "Vector range for self-copying overlaps"
                       vector-reverse-copy!
                       `(vector was ,target)
-                      `(tstart was ,tstart)
+                      `(tstart wa ,tstart)
                       `(sstart was ,sstart)
                       `(send   was ,send)))
               (else
