@@ -9,13 +9,13 @@
 </head>
 <body>
 
-<a name="label.1"><H1>Title</H1></a>
+<a name="Ttl"><H1>Title</H1></a><p>
 
 Basic hash tables
 
-<a name="label.2"><H1>Author</H1></a>
+<a name="thr"><H1>Author</H1></a><p>
 
-Panu Kalliokoski.
+Panu Kalliokoski
 
 <H1>Status</H1>
 
@@ -33,17 +33,18 @@ archive of the mailing list</a>.
 <ul>
   <li>Received: 2005/04/25</li>
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-69/srfi-69.html?rev=1.1">2005/05/09</a></li>
+  <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-69/srfi-69.html?rev=1.2">2005/08/03</a></li>
 </ul>
 
-<a name="label.3"><H1>Abstract</H1></a>
+<h1><a name="bstr">Abstract</a></h1>
 
 <p>This SRFI specifies an API for basic hash tables.  Hash tables are data
 structures that provide a mapping from some set of keys to some set of
 values associated to those keys.  Hash tables have no intrinsic order
 for these associations, and allow key lookup and destructive updating in
-amortised constant time.
+amortised constant time (when a good hash function is used).
 
-<a name="label.4"><H1>Issues</H1></a>
+<h1><a name="sss">Issues</a></h1>
 
 <p>There is no single best way to make hash tables.  The tables presented
 in this SRFI aim at being both conceptually simple and usable for a wide
@@ -62,7 +63,7 @@ API presented here; however, these issues are left open.
 encouraged to provide a SRFI 44 interface to hash tables in addition to
 the one presented here.
 
-<a name="label.5"><H1>Rationale</H1></a>
+<h1><a name="Rtn">Rationale</a></h1>
 
 <p>Hash tables are widely recognised as a fundamental data structure for
 many kinds of computational tasks.  Almost every non-minimal Scheme
@@ -83,35 +84,36 @@ table API that will answer most of users' needs for basic usage of hash
 tables; the reference implementation just shows one way of meeting the
 requirements of the API.
 
-<a name="label.6"><H1>Specification</H1></a>
+<h1><a name="Spcf">Specification</a></h1>
 
 <p>Names defined in this SRFI:
 
 <dl><dt>Type constructors and predicate</dt>
-<dd><a href="#label.8">make-hash-table</a>, <a href="#label.9">make-symbol-hash-table</a>,
-<a href="#label.10">make-string-hash-table</a>, <a href="#label.11">make-string-ci-hash-table</a>,
-<a href="#label.12">make-integer-hash-table</a>, <a href="#label.13">hash-table?</a>,
-<a href="#label.14">alist-&gt;hash-table</a>
+<dd><a href="#mkh">make-hash-table</a>, <a href="#mks">make-symbol-hash-table</a>,
+<a href="#mks1">make-string-hash-table</a>, <a href="#mks2">make-string-ci-hash-table</a>,
+<a href="#mk">make-integer-hash-table</a>, <a href="#hsht">hash-table?</a>,
+<a href="#lst">alist-&gt;hash-table</a>
 
 </dd><dt>Reflective queries</dt>
-<dd><a href="#label.16">hash-table-equivalence-function</a>, <a href="#label.17">hash-table-hash-function</a>
+<dd><a href="#hsht3">hash-table-equivalence-function</a>, <a href="#hsht4">hash-table-hash-function</a>
 
 </dd><dt>Dealing with single elements</dt>
-<dd><a href="#label.19">hash-table-ref</a>, <a href="#label.20">hash-table-get</a>, <a href="#label.21">hash-table-set!</a>,
-<a href="#label.22">hash-table-put!</a>, <a href="#label.23">hash-table-delete!</a>, <a href="#label.24">hash-table-remove!</a>,
-<a href="#label.25">hash-table-exists?</a>, <a href="#label.26">hash-table-update!</a>
+<dd><a href="#hsht5">hash-table-ref</a>, <a href="#hsht6">hash-table-ref/default</a>, <a href="#hsht7">hash-table-set!</a>,
+<a href="#hsht8">hash-table-delete!</a>, <a href="#hsht9">hash-table-exists?</a>,
+<a href="#hsht10">hash-table-update!</a>, <a href="#hsht11">hash-table-update!/default</a>
 
 </dd><dt>Dealing with the whole contents</dt>
-<dd><a href="#label.28">hash-table-size</a>, <a href="#label.29">hash-table-keys</a>, <a href="#label.30">hash-table-values</a>,
-<a href="#label.31">hash-table-walk</a>, <a href="#label.32">hash-table-fold</a>, <a href="#label.33">hash-table-&gt;alist</a>,
-<a href="#label.34">hash-table-copy</a>
+<dd><a href="#hsht13">hash-table-size</a>, <a href="#hsht14">hash-table-keys</a>, <a href="#hsht15">hash-table-values</a>,
+<a href="#hsht16">hash-table-walk</a>, <a href="#hsht17">hash-table-fold</a>, <a href="#hsht18">hash-table-&gt;alist</a>,
+<a href="#hsht19">hash-table-copy</a>, <a href="#hsht20">hash-table-merge!</a>
 
 </dd><dt>Hashing</dt>
-<dd><a href="#label.36">hash</a>, <a href="#label.39">symbol-hash</a>, <a href="#label.37">string-hash</a>, <a href="#label.38">string-ci-hash</a>
+<dd><a href="#hsh">hash</a>, <a href="#smbl">symbol-hash</a>, <a href="#strng">string-hash</a>, <a href="#strng21">string-ci-hash</a>,
+<a href="#hshb">hash-by-identity</a>
 
-</dd></dl><h2><a name="label.7">Type constructors and predicate</a></h2>
+</dd></dl><h2><a name="Tpc">Type constructors and predicate</a></h2>
 
-<p>Procedure: <a name="label.8">make-hash-table</a> [ <var>equal?</var> ] [ <var>hash</var> ] [ <var>sizehint</var> ]
+<p>Procedure: <a name="mkh">make-hash-table</a> [ <var>equal?</var> [ <var>hash</var> [ <var>sizehint</var> ]]]
 &rarr; <var>hash-table</var>
 
 <p>Create a new hash table with no associations.  <var>equal?</var> is a
@@ -119,7 +121,7 @@ predicate that should accept two keys and return a boolean telling
 whether they denote the same key value; it defaults to <tt>equal?</tt>.
 
 <p><var>hash</var> is a hash function, and defaults to an appropriate hash function
-for the given <var>equal?</var> predicate (see section <a href="#label.35">Hashing</a>).  However,
+for the given <var>equal?</var> predicate (see section <a href="#Hshn">Hashing</a>).  However,
 an acceptable default is not guaranteed to be given for any equivalence
 predicate coarser than <tt>equal?</tt>, except for <tt>string-ci=?</tt>.  A
 equivalence predicate <var>c1</var> is coarser than a equivalence predicate <var>c2</var> if
@@ -133,22 +135,22 @@ parameter.
 <p><var>sizehint</var>, when given, can be used to directly make the hash table of
 good size for <var>sizehint</var> associations, but may be ignored.
 
-<p>Procedure: <a name="label.9">make-symbol-hash-table</a> [ <var>sizehint</var> ] &rarr; <var>hash-table</var> <br>
-Procedure: <a name="label.10">make-string-hash-table</a> [ <var>sizehint</var> ] &rarr; <var>hash-table</var> <br>
-Procedure: <a name="label.11">make-string-ci-hash-table</a> [ <var>sizehint</var> ] &rarr; <var>hash-table</var> <br>
-Procedure: <a name="label.12">make-integer-hash-table</a> [ <var>sizehint</var> ] &rarr; <var>hash-table</var>
+<p>Procedure: <a name="mks">make-symbol-hash-table</a> [ <var>sizehint</var> ] &rarr; <var>hash-table</var> <br>
+Procedure: <a name="mks1">make-string-hash-table</a> [ <var>sizehint</var> ] &rarr; <var>hash-table</var> <br>
+Procedure: <a name="mks2">make-string-ci-hash-table</a> [ <var>sizehint</var> ] &rarr; <var>hash-table</var> <br>
+Procedure: <a name="mk">make-integer-hash-table</a> [ <var>sizehint</var> ] &rarr; <var>hash-table</var>
 
 <p>These procedures are provided as shorthands for creating hash tables
 whose keys are symbols, strings, case-insensitive strings, and integers,
 respectively.
 
-<p>Procedure: <a name="label.13">hash-table?</a> <var>obj</var> &rarr; <var>boolean</var>
+<p>Procedure: <a name="hsht">hash-table?</a> <var>obj</var> &rarr; <var>boolean</var>
 
 <p>A predicate to test whether a given object <var>obj</var> is a hash table.  The
 hash table type should be disjoint from all other types, if possible.
 
-<p>Procedure: <a name="label.14">alist-&gt;hash-table</a> <var>alist</var> [ <var>equal?</var> ] [ <var>hash</var> ]
-[ <var>sizehint</var> ] &rarr; <var>hash-table</var>
+<p>Procedure: <a name="lst">alist-&gt;hash-table</a> <var>alist</var> [ <var>equal?</var> [ <var>hash</var> 
+[ <var>sizehint</var> ]]] &rarr; <var>hash-table</var>
 
 <p>Takes an <q>association list</q> <var>alist</var> and creates a hash table
 <var>hash-table</var> which maps the <tt>car</tt> of every element in <var>alist</var> to the
@@ -160,34 +162,35 @@ using <tt>cdr</tt> (instead of <tt>cadr</tt>) for values tries to strike balance
 between the two approaches: using <tt>cadr</tt> would rend this procedure
 unusable for <tt>cdr</tt> alists, but not vice versa.)
 
-<h2><a name="label.15">Reflective queries</a></h2>
+<h2><a name="Rflc">Reflective queries</a></h2>
 
-<p>Procedure: <a name="label.16">hash-table-equivalence-function</a> <var>hash-table</var>
+<p>Procedure: <a name="hsht3">hash-table-equivalence-function</a> <var>hash-table</var>
 
 <p>Returns the equivalence predicate used for keys of <var>hash-table</var>.
 
-<p>Procedure: <a name="label.17">hash-table-hash-function</a> <var>hash-table</var>
+<p>Procedure: <a name="hsht4">hash-table-hash-function</a> <var>hash-table</var>
 
 <p>Returns the hash function used for keys of <var>hash-table</var>.
 
-<h2><a name="label.18">Dealing with single elements</a></h2>
+<h2><a name="Dln">Dealing with single elements</a></h2>
 
-<p>Procedure: <a name="label.19">hash-table-ref</a> <var>hash-table</var>  <var>key</var> [ <var>default</var> ] &rarr; <var>value</var> <br>
-Procedure: <a name="label.20">hash-table-get</a> <var>hash-table</var>  <var>key</var> [ <var>default</var> ] &rarr; <var>value</var>
+<p>Procedure: <a name="hsht5">hash-table-ref</a> <var>hash-table</var>  <var>key</var> [ <var>thunk</var> ] &rarr; <var>value</var>
 
 <p>These procedures return the <var>value</var> associated to <var>key</var> in <var>hash-table</var>.
-If no <var>value</var> is associated is associated to <var>key</var>, <var>default</var> is
-returned if given; if not, an error is signalled.  
+If no <var>value</var> is associated is associated to <var>key</var> and <var>thunk</var> is given,
+it is called and its value is returned; if <var>thunk</var> is not given, an
+error is signalled.  
 Given a good hash function, this operation should have an (amortised)
 complexity of O(1) with respect to the number of associations in
 <var>hash-table</var>.  (Note: this rules out implementation by association lists
 or fixed-length hash tables.)
 
-(Note: the name <tt>hash-table-get</tt> is provided for compatibility.  Don't
-use it.)
+<p>Procedure: <a name="hsht6">hash-table-ref/default</a> <var>hash-table</var>  <var>key</var>  <var>default</var> &rarr;
+<var>value</var>
 
-<p>Procedure: <a name="label.21">hash-table-set!</a> <var>hash-table</var>  <var>key</var>  <var>value</var> &rarr; undefined <br>
-Procedure: <a name="label.22">hash-table-put!</a> <var>hash-table</var>  <var>key</var>  <var>value</var> &rarr; undefined
+<p>Equivalent to <tt>(hash-table-ref hash-table key (lambda () default))</tt>.
+
+<p>Procedure: <a name="hsht7">hash-table-set!</a> <var>hash-table</var>  <var>key</var>  <var>value</var> &rarr; undefined
 
 <p>These procedures set the <var>value</var> associated to <var>key</var> in <var>hash-table</var>.
 The previous association (if any) is removed.  
@@ -196,11 +199,7 @@ complexity of O(1) with respect to the number of associations in
 <var>hash-table</var>.  (Note: this rules out implementation by association lists
 or fixed-length hash tables.)
 
-(Note: the name <tt>hash-table-put!</tt> is provided for compatibility.  Don't
-use it.)
-
-<p>Procedure: <a name="label.23">hash-table-delete!</a> <var>hash-table</var>  <var>key</var> &rarr; undefined <br>
-Procedure: <a name="label.24">hash-table-remove!</a> <var>hash-table</var>  <var>key</var> &rarr; undefined
+<p>Procedure: <a name="hsht8">hash-table-delete!</a> <var>hash-table</var>  <var>key</var> &rarr; undefined
 
 <p>These procedures remove any association to <var>key</var> in <var>hash-table</var>.  It is
 not an error if no association for that key exists; in this case,
@@ -208,11 +207,9 @@ nothing is done.
 Given a good hash function, this operation should have an (amortised)
 complexity of O(1) with respect to the number of associations in
 <var>hash-table</var>.  (Note: this rules out implementation by association lists
-or fixed-length hash tables.)  
-(Note: the name <tt>hash-table-remove!</tt> is provided for compatibility.  Don't
-use it.)
+or fixed-length hash tables.)
 
-<p>Procedure: <a name="label.25">hash-table-exists?</a> <var>hash-table</var>  <var>key</var> &rarr; <var>boolean</var>
+<p>Procedure: <a name="hsht9">hash-table-exists?</a> <var>hash-table</var>  <var>key</var> &rarr; <var>boolean</var>
 
 <p>This predicate tells whether there is any association to <var>key</var> in
 <var>hash-table</var>.  
@@ -221,36 +218,42 @@ complexity of O(1) with respect to the number of associations in
 <var>hash-table</var>.  (Note: this rules out implementation by association lists
 or fixed-length hash tables.)
 
-<p>Procedure: <a name="label.26">hash-table-update!</a> <var>hash-table</var>  <var>key</var>  <var>function</var>
-[ <var>default</var> ] &rarr; undefined
+<p>Procedure: <a name="hsht10">hash-table-update!</a> <var>hash-table</var>  <var>key</var>  <var>function</var>
+[ <var>thunk</var> ] &rarr; undefined
 
 <p>Semantically equivalent to, but may be implemented more efficiently
 than, the following code:
 <pre>
 (hash-table-set! hash-table key
-		 (function (hash-table-ref hash-table key default)))
+                 (function (hash-table-ref hash-table key thunk)))
 </pre>
 
-<h2><a name="label.27">Dealing with the whole contents</a></h2>
+<p>Procedure: <a name="hsht11">hash-table-update!/default</a> <var>hash-table</var>  <var>key</var>
+/function/  <var>default</var> &rarr; undefined
 
-<p>Procedure: <a name="label.28">hash-table-size</a> <var>hash-table</var> &rarr; <var>integer</var>
+<p>Equivalent to <tt>(hash-table-update! hash-table key function (lambda ()
+default))</tt>.
+
+<h2><a name="Dln12">Dealing with the whole contents</a></h2>
+
+<p>Procedure: <a name="hsht13">hash-table-size</a> <var>hash-table</var> &rarr; <var>integer</var>
 
 <p>Returns the number of associations in <var>hash-table</var>.  This operation
 must have a complexity of O(1) with respect to the number of
 associations in <var>hash-table</var>.
 
-<p>Procedure: <a name="label.29">hash-table-keys</a> <var>hash-table</var> &rarr; <var>list</var>
+<p>Procedure: <a name="hsht14">hash-table-keys</a> <var>hash-table</var> &rarr; <var>list</var>
 
 <p>Returns a list of keys in <var>hash-table</var>.  The order of the keys is
 unspecified.
 
-<p>Procedure: <a name="label.30">hash-table-values</a> <var>hash-table</var> &rarr; <var>list</var>
+<p>Procedure: <a name="hsht15">hash-table-values</a> <var>hash-table</var> &rarr; <var>list</var>
 
 <p>Returns a list of values in <var>hash-table</var>.  The order of the values is
 unspecified, and is not guaranteed to match the order of keys in the
-result of <a href="#label.29">hash-table-keys</a>.
+result of <a href="#hsht14">hash-table-keys</a>.
 
-<p>Procedure: <a name="label.31">hash-table-walk</a> <var>hash-table</var>  <var>proc</var> &rarr; unspecified
+<p>Procedure: <a name="hsht16">hash-table-walk</a> <var>hash-table</var>  <var>proc</var> &rarr; unspecified
 
 <p><var>proc</var> should be a function taking two arguments, a <var>key</var> and a <var>value</var>.
 This procedure calls <var>proc</var> for each association in <var>hash-table</var>, giving
@@ -265,7 +268,7 @@ implementation that I know of, <tt>hash-table-map</tt> does a real functorial
 map that lifts an ordinary function to the domain of hash tables.
 Because of these reasons, <tt>hash-table-map</tt> is left outside this SRFI.)
 
-<p>Procedure: <a name="label.32">hash-table-fold</a> <var>hast-table</var>  <var>f</var>  <var>init-value</var>
+<p>Procedure: <a name="hsht17">hash-table-fold</a> <var>hast-table</var>  <var>f</var>  <var>init-value</var>
 &rarr; <var>final-value</var>
 
 <p>This procedure calls <var>f</var> for every association in <var>hash-table</var> with
@@ -277,7 +280,7 @@ The value <var>final-value</var> returned by <tt>hash-table-fold</tt> is the ret
 value of the last invocation of <var>f</var>.  The order in which <var>f</var> is called
 for different associations is unspecified.
 
-<p>Procedure: <a name="label.33">hash-table-&gt;alist</a> <var>hash-table</var> &rarr; <var>alist</var>
+<p>Procedure: <a name="hsht18">hash-table-&gt;alist</a> <var>hash-table</var> &rarr; <var>alist</var>
 
 <p>Returns an association list such that the <tt>car</tt> of each element in
 <var>alist</var> is a key in <var>hash-table</var> and the corresponding <tt>cdr</tt> of each
@@ -288,16 +291,23 @@ The order of the elements is unspecified.
 as a hash table <tt>h</tt>:
 <pre>
 (alist-&gt;hash-table (hash-table-&gt;alist h)
-			(hash-table-equivalence-function h)
-			(hash-table-hash-function h))
+                        (hash-table-equivalence-function h)
+                        (hash-table-hash-function h))
 </pre>
 
-<p>Procedure: <a name="label.34">hash-table-copy</a> <var>hash-table</var> &rarr; <var>hash-table</var>
+<p>Procedure: <a name="hsht19">hash-table-copy</a> <var>hash-table</var> &rarr; <var>hash-table</var>
 
 <p>Returns a new hash table with the same equivalence predicate, hash
 function and mappings as in <var>hash-table</var>.
 
-<h2><a name="label.35">Hashing</a></h2>
+<p>Procedure: <a name="hsht20">hash-table-merge!</a> <var>hash-table1</var>  <var>hash-table2</var> &rarr;
+<var>hash-table</var>
+
+<p>Adds all mappings in <var>hash-table2</var> into <var>hash-table1</var> and returns the
+resulting hash table.  This function may modify <var>hash-table1</var>
+destructively.
+
+<h2><a name="Hshn">Hashing</a></h2>
 
 <p>Hashing means the act of taking some value and producing a number from
 the value.  A hash function is a function that does this.  Every
@@ -313,13 +323,13 @@ by e.g. having common subsequences.  This definition is vague but should
 be enough to assert that e.g. a constant function is <em>not</em> a good hash
 function.
 
-<p>When the definition of <a href="#label.8">make-hash-table</a> above talks about an
+<p>When the definition of <a href="#mkh">make-hash-table</a> above talks about an
 <q>appropriate</q> hashing function for <var>e</var>, it means a hashing function that
 gives decent performance (for the hashing operation) while being both
 acceptable and good for <var>e</var>.  This definition, too, is intentionally
 vague.
 
-<p>Procedure: <a name="label.36">hash</a> <var>object</var> [ <var>bound</var> ] &rarr; <var>integer</var>
+<p>Procedure: <a name="hsh">hash</a> <var>object</var> [ <var>bound</var> ] &rarr; <var>integer</var>
 
 <p>Produces a hash value for <var>object</var> in the range ( 0, <var>bound</var> (.  If
 <var>bound</var> is not given, the implementation is free to choose any bound,
@@ -328,21 +338,28 @@ hash table in a normal application.  (This is so that the implementation
 may choose some very big value in fixnum range for the default bound.)
 This hash function is acceptable for <tt>equal?</tt>.
 
-<p>Procedure: <a name="label.37">string-hash</a> <var>string</var> [ <var>bound</var> ] &rarr; <var>integer</var>
+<p>Procedure: <a name="strng">string-hash</a> <var>string</var> [ <var>bound</var> ] &rarr; <var>integer</var>
 
-<p>The same as <a href="#label.36">hash</a>, except that the argument <var>string</var> must be a string.
+<p>The same as <a href="#hsh">hash</a>, except that the argument <var>string</var> must be a string.
 
-<p>Procedure: <a name="label.38">string-ci-hash</a> <var>string</var> [ <var>bound</var> ] &rarr; <var>integer</var>
+<p>Procedure: <a name="strng21">string-ci-hash</a> <var>string</var> [ <var>bound</var> ] &rarr; <var>integer</var>
 
-<p>The same as <a href="#label.37">string-hash</a>, except that the case of characters in
+<p>The same as <a href="#strng">string-hash</a>, except that the case of characters in
 <var>string</var> does not affect the hash value produced.
 
-<p>Procedure: <a name="label.39">symbol-hash</a> <var>symbol</var> [ <var>bound</var> ] &rarr; <var>integer</var>
+<p>Procedure: <a name="smbl">symbol-hash</a> <var>symbol</var> [ <var>bound</var> ] &rarr; <var>integer</var>
 
-<p>The same as <a href="#label.36">hash</a>, except that the argument <var>symbol</var> must be a symbol.
+<p>The same as <a href="#hsh">hash</a>, except that the argument <var>symbol</var> must be a symbol.
 Implementations are encouraged to provide this function as a builtin.
 
-<a name="label.40"><H1>Implementation</H1></a>
+<p>Procedure: <a name="hshb">hash-by-identity</a> <var>object</var> [ <var>bound</var> ] &rarr; <var>integer</var>
+
+<p>The same as <a href="#hsh">hash</a>, except that this function is only guaranteed to be
+acceptable for <tt>eq?</tt>.  The reason for providing this function is that
+it might be implemented significantly more efficiently than <tt>hash</tt>.
+Implementations are encouraged to provide this function as a builtin.
+
+<h1><a name="mplm">Implementation</a></h1>
 
 <p>This implementation relies on SRFI-9 for distinctness of the hash table
 type, and on SRFI-23 for error reporting.  Otherwise, the implementation
@@ -350,16 +367,16 @@ is pure R5RS.
 
 <pre>
 
-(define *default-bound* (- (expt 2 29) 2))
+(define *default-bound* (- (expt 2 29) 3))
 
 (define (%string-hash s ch-conv bound)
   (let ((hash 31)
 	(len (string-length s)))
     (do ((index 0 (+ index 1)))
-      ((&gt;= index len) hash)
+      ((&gt;= index len) (modulo hash bound))
       (set! hash (modulo (+ (* 37 hash)
 			    (char-&gt;integer (ch-conv (string-ref s index))))
-			 bound)))))
+			 *default-bound*)))))
 
 (define (string-hash s . maybe-bound)
   (let ((bound (if (null? maybe-bound) *default-bound* (car maybe-bound))))
@@ -391,13 +408,15 @@ is pure R5RS.
 	  ((procedure? obj) (error "hash: procedures cannot be hashed" obj))
 	  (else 1))))
 
+(define hash-by-identity hash)
+
 (define (vector-hash v bound)
   (let ((hashvalue 571)
 	(len (vector-length v)))
     (do ((index 0 (+ index 1)))
-      ((&gt;= index len) hashvalue)
+      ((&gt;= index len) (modulo hashvalue bound))
       (set! hashvalue (modulo (+ (* 257 hashvalue) (hash (vector-ref v index)))
-			      bound)))))
+			      *default-bound*)))))
 
 (define %make-hash-node cons)
 (define %hash-node-set-value! set-cdr!)
@@ -502,9 +521,10 @@ is pure R5RS.
 	 =&gt; %hash-node-value)
 	((null? maybe-default)
 	 (error "hash-table-ref: no value associated with" key))
-	(else (car maybe-default))))
+	(else ((car maybe-default)))))
 
-(define hash-table-get hash-table-ref)
+(define (hash-table-ref/default hash-table key default)
+  (hash-table-ref hash-table key (lambda () default)))
 
 (define (hash-table-set! hash-table key value)
   (let ((hash (%hash-table-hash hash-table key))
@@ -518,8 +538,6 @@ is pure R5RS.
 				       (+ 1 (hash-table-size hash-table)))
 		(%hash-table-maybe-resize! hash-table)))))
 
-(define hash-table-put! hash-table-set!)
-
 (define (hash-table-update! hash-table key function . maybe-default)
   (let ((hash (%hash-table-hash hash-table key))
 	(entries (hash-table-entries hash-table)))
@@ -530,18 +548,20 @@ is pure R5RS.
 	        (%hash-node-set-value! node (function (%hash-node-value node)))))
 	  ((null? maybe-default)
 	   (error "hash-table-update!: no value exists for key" key))
-	  (else (%hash-table-add! entries hash key (function (car maybe-default)))
+	  (else (%hash-table-add! entries hash key
+				  (function ((car maybe-default))))
 		(hash-table-set-size! hash-table
 				       (+ 1 (hash-table-size hash-table)))
 		(%hash-table-maybe-resize! hash-table)))))
+
+(define (hash-table-update!/default hash-table key function default)
+  (hash-table-update! hash-table key function (lambda () default)))
 
 (define (hash-table-delete! hash-table key)
   (if (%hash-table-delete! (hash-table-entries hash-table)
 			   (hash-table-equivalence-function hash-table)
 			   (%hash-table-hash hash-table key) key)
     (hash-table-set-size! hash-table (- (hash-table-size hash-table) 1))))
-
-(define hash-table-remove! hash-table-delete!)
 
 (define (hash-table-exists? hash-table key)
   (and (%hash-table-find (hash-table-entries hash-table)
@@ -581,6 +601,12 @@ is pure R5RS.
     (hash-table-walk hash-table (lambda (key value) (hash-table-set! new key value)))
     new))
 
+(define (hash-table-merge! hash-table1 hash-table2)
+  (hash-table-walk
+    hash-table2
+    (lambda (key value) (hash-table-set! hash-table1 key value)))
+  hash-table1)
+
 (define (hash-table-keys hash-table)
   (hash-table-fold hash-table (lambda (key val acc) (cons key acc)) '()))
 
@@ -590,7 +616,7 @@ is pure R5RS.
 
 </pre>
 
-<H1><a name="label.36">Copyright</a></H1>
+<h1><a name="Cpr">Copyright</a></h1>
 
 <p>Copyright &copy; Panu Kalliokoski (2005). All Rights Reserved.
 
