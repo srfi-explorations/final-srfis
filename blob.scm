@@ -219,7 +219,7 @@
 
 (define (make-int-list->blob blob-set!)
   (lambda (size endness l)
-    (let* ((blob (make-blob (* size (length l)) 0))
+    (let* ((blob (make-blob (* size (length l))))
 	   (set! (cut blob-set! size endness blob <> <>)))
       (let loop ((i 0) (l l))
 	(if (null? l)
