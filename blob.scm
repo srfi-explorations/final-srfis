@@ -34,6 +34,8 @@
     ;; change this to the endianness of your architecture
     ((endianness native) *endianness/big*)))
 
+(define blob? u8vector?)
+
 (define (make-blob k)
   (make-u8vector k 0))
 
@@ -160,6 +162,8 @@
 (define blob-s16-set! (make-sint-set! 2))
 (define blob-u16-native-ref (make-ref/native 2 blob-u16-ref))
 (define blob-u16-native-set! (make-set!/native 2 blob-u16-set!))
+(define blob-s16-native-ref (make-ref/native 2 blob-s16-ref))
+(define blob-s16-native-set! (make-set!/native 2 blob-s16-set!))
 
 (define blob-u32-ref (make-uint-ref 4))
 (define blob-u32-set! (make-uint-set! 4))
@@ -167,6 +171,8 @@
 (define blob-s32-set! (make-sint-set! 4))
 (define blob-u32-native-ref (make-ref/native 4 blob-u32-ref))
 (define blob-u32-native-set! (make-set!/native 4 blob-u32-set!))
+(define blob-s32-native-ref (make-ref/native 4 blob-s32-ref))
+(define blob-s32-native-set! (make-set!/native 4 blob-s32-set!))
 
 (define blob-u64-ref (make-uint-ref 8))
 (define blob-u64-set! (make-uint-set! 8))
@@ -174,6 +180,8 @@
 (define blob-s64-set! (make-sint-set! 8))
 (define blob-u64-native-ref (make-ref/native 8 blob-u64-ref))
 (define blob-u64-native-set! (make-set!/native 8 blob-u64-set!))
+(define blob-s64-native-ref (make-ref/native 8 blob-s64-ref))
+(define blob-s64-native-set! (make-set!/native 8 blob-s64-set!))
 
 ; Auxiliary stuff
 
