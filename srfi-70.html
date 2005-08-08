@@ -31,10 +31,18 @@ archive of the mailing list</a>.
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.6">2005/06/15</a></li>
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.7">2005/07/08</a></li>
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.8">2005/07/15</a></li>
+  <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.9">2005/08/07</a></li>
 </ul>
 
 <h1>Abstract</h1>
 
+When Scheme was an experimental and research language, the Scheme
+reports were written sparsely to provide a framework which allowed
+unusual implementations.  With many experiments having been tried and
+hopefully having gained knowledge from them, and with a growing user
+base wanting portability for their programs, this SRFI attempts to
+tighten the specifications for Scheme's numeric subsystems.
+<p>
 Checks for division by zero (and their absence) remain one of the most
 common programming errors.  In numerical code the conscientious
 programmer must deeply nest conditionals to assure that checks for
@@ -48,7 +56,9 @@ corner cases need not crash programs.
 This SRFI reworks section 6.2 "Numbers" of R5RS to:
 
 </p><ul>
- <li> include inexact real positive and negative infinities,
+ <li> sharpen the distinctions between exact and inexact numbers,
+
+ </li><li> include inexact real positive and negative infinities,
 
  </li><li> define complete semantics for <samp>`expt'</samp>,
 
@@ -57,6 +67,13 @@ This SRFI reworks section 6.2 "Numbers" of R5RS to:
 
  </li><li> extend <samp>`quotient'</samp>, <samp>`modulo'</samp>, and
       <samp>`remainder'</samp> to finite real numbers,
+
+ </li><li> add convenience procedures <samp>`round->exact'</samp>,
+      <samp>`ceiling->exact'</samp>, <samp>`floor->exact'</samp>, and
+      <samp>`truncate->exact'</samp>,
+
+ </li><li> add <samp>`limit'</samp> procedure calculating one-sided
+      finite and infinite limits.
 
  </li><li> remove a contradiction related to exactness,
 
@@ -249,20 +266,55 @@ This revision of SRFI-70 uses notation <b>C</b>.
 
 <h1>Rationale</h1>
 
+<h3>Exactness</h3>
+
+This SRFI strengthens the definition of exact numbers by constraining
+each exact number to represent a single mathematical number.  With
+that proviso, exact number systems have limits in how precise a number
+can be represented in a finite amount of storage.  Operations which
+would return too precise exact numbers can either return an inexact
+number (assuming the range of inexacts is sufficient) or report a
+violation of an implementation restriction.
+<p>
+Note that the iterative series often used in floating-point
+calculations cannot be summarily converted to work on exact numbers
+without the danger of exceeding the implementation limits just
+mentioned.
+
 <h3>Inexactness</h3>
 
-<!-- "6.2.1 Numerical types" states: -->
-<!-- <BLOCKQUOTE> -->
-<!--   In order to catch uses of inexact numbers where exact numbers are -->
-<!--   required, Scheme explicitly distinguishes exact from inexact numbers. -->
-<!--   This distinction is orthogonal to the dimension of type. -->
-<!-- </BLOCKQUOTE> -->
+The definition of inexact numbers is strengthened by delineating their
+approximate nature:
 
-Inexactness is as much a property of calculation as it is of data
-sources.  A language having latent types does not obviate the
-programmer's expectation that a calculation involving transcendental
-functions should return an inexact result.  To this end, two sentences
-are struck from the 6.2.2 "Exactness" section:
+<blockquote>
+  Every mathematical number within the (convex) range of inexacts
+  supported by an implementation will round to an inexact number on
+  input or as a result of computation.  The neighborhood of
+  mathematical numbers rounding to a particular inexact number must be
+  simply connected.
+</blockquote>
+
+With this clear distinction between exact and inexact numbers, the
+last sentence of section <a href="#6.2.1">6.2.1 Numerical types</a>,
+which seems to imply that each internal number representation is
+instantiated both in exact and inexact forms, is struck:
+
+<blockquote>
+  ... In order to catch uses of inexact numbers where exact numbers are
+  required, Scheme explicitly distinguishes exact from inexact numbers.
+  <strike>This distinction is orthogonal to the dimension of type.</strike>
+</blockquote>
+
+Section <a href="#6.2.2">6.2.2 Exactness</a> states:
+
+<blockquote>
+  A number is inexact if it was written as an inexact constant, if it
+  was derived using inexact ingredients, or if it was derived using
+  inexact operations.  Thus inexactness is a contagious property of a
+  number.
+</blockquote>
+
+But this section also states:
 
 <blockquote>
   An operation may, however, return an exact result if it can prove
@@ -272,48 +324,25 @@ are struck from the 6.2.2 "Exactness" section:
   inexact.
 </blockquote>
 
-<!-- Those sentences allowed the change of exactness of results of -->
-<!-- multiplication and transcendental functions <EM>only</EM> for the case -->
-<!-- of an exact 0 argument (unless some implementation has exact -->
-<!-- transcendentals). -->
-<!-- <P> -->
-
 By those sentences, <em>inexactness</em> is a contagious property of
-all numbers; except 0, the only number whose <em>exactness</em> is
-contagious!  This conflicts with the statement earlier in 6.2.2:
+all numbers except 0, the only number whose <em>exactness</em> is
+contagious!  To resolve this conflict, the latter two sentences are
+struck.
+<!-- <p> -->
+<!-- In <a href="#6.2.3">6.2.3 Implementation restrictions</a> a redundant -->
+<!-- clause is struck: -->
 
-<blockquote>
-  ... Thus inexactness is a contagious property of a number.
-</blockquote>
-
-<!-- Exactness depending on value is worse than the -->
-<!-- exactness-dependent-on-type disallowed by the orthogonality quote -->
-<!-- above. -->
-
-For code expecting inexact arguments, such an exception creates a
-latent bug which may be exercised only rarely.  SRFI-63 is a case in
-point:
-
-<blockquote>
-  When assigning an exact number to an inexact array-type, the
-  procedure may report a violation of an implementation restriction.
-</blockquote>
-
-<!-- The programmer's expectation that transcendental functions return -->
-<!-- inexacts becomes ambiguous for <SAMP>`expt'</SAMP> (and -->
-<!-- <SAMP>`sqrt'</SAMP>, which isn't transcendental, just irrational). -->
-
-Also struck is the last sentence of section
-<a href="#6.2.1">6.2.1 Numerical types</a>:
-
-<blockquote>
-  ... In order to catch uses of inexact numbers where exact numbers are
-  required, Scheme explicitly distinguishes exact from inexact numbers.
-  <strike>This distinction is orthogonal to the dimension of type.</strike>
-</blockquote>
-
-which seems to imply that each internal number representation is
-instantiated both in exact and inexact forms.
+<!-- <blockquote> -->
+<!--   If, however, an -->
+<!--   exact number is operated upon so as to produce an inexact result -->
+<!--   (as by <SAMP>`sqrt'</SAMP>), -->
+<!--   <STRIKE> -->
+<!--   and if the result is represented as a flonum, then -->
+<!--   the most precise flonum format available must be used; but if the result -->
+<!--   is represented in some other way</STRIKE> -->
+<!--   then the representation must have at least as -->
+<!--   much precision as the most precise flonum format available. -->
+<!-- </blockquote> -->
 
 <h3>Integer versus Exact</h3>
 
@@ -367,7 +396,26 @@ predicates instead accept only exact integers, then their behavior is
 predictable; and conversion from inexacts to exacts must be explicit.
 
 
-</p><h3>Infinities</h3>
+<h3>Convenience Functions</h3>
+
+Grepping through SLIB and several Scheme applications' source for
+occurrences of <samp>`round'</samp>, <samp>`ceiling'</samp>,
+<samp>`floor'</samp>, and <samp>`truncate'</samp> finds that in
+essentially all 30+ cases <SAMP>`inexact-&#62;exact'</SAMP> was called
+with the results of these functions.
+<p>
+One possibility is having those functions also convert to exact, like
+the Common-Lisp functions of the same names do.  But implementation of
+the extension of <samp>`quotient'</samp>, <samp>`modulo'</samp>, and
+<samp>`remainder'</samp> to finite real numbers requires inexact
+<samp>`floor'</samp> and <samp>`truncate'</samp>.
+<p>
+To capture these common patterns of usage,
+<samp>`round-&gt;exact'</samp>, <samp>`ceiling-&gt;exact'</samp>,
+<samp>`floor-&gt;exact'</samp>, and <samp>`truncate-&gt;exact'</samp>
+are added.
+
+<h3>Infinities</h3>
 
 This SRFI introduces inexact real infinities for implementations with
 inexact numbers.  These infinities arise as the result of:
@@ -396,27 +444,28 @@ implement 0/0. or not.
 </p><dl>
 <dt>Are there predicates for infinities?
 
-</dt><dd>The new <code>`finite?'</code> predicate will return <samp>`#f'</samp>
+</dt><dd>The <code>`infinite?'</code> predicate will return <samp>`#t'</samp>
+for infinities, <samp>`#f'</samp> for other numbers;<br>
+</dt><dd>The <code>`finite?'</code> predicate will return <samp>`#f'</samp>
 for infinities, <samp>`#t'</samp> for other numbers;<br>
 <code>`real?'</code> will return <samp>`#f'</samp> for <samp>`0/0.'</samp>; and<br>
 the two real infinities have opposite signs.
 <p>
 </p></dd><dt><a name="exact infinities">What about exact infinities?</a>
 
-</dt><dd>The short answer is:
+</dt><dd>
 +/0. + 1 = +/0.; the only numbers which can be their own increments
 are inexact numbers.
 <P>
-<a href="#6.2.2x">6.2.2x Inexactness</a> gives semantics for inexact
-numbers, which correspond to mathematical neighborhoods on the real
-line.  Its real analysis with (mathematical) limits.
+<a href="#6.2.2">6.2.2 Exactness</a> gives semantics for inexact
+numbers, which correspond to mathematical neighborhoods.  Its standard
+analysis with (mathematical) limits.
 <P>
 In contrast, each exact number corresponds to exactly one mathematical
-number, because it must be written and read uniquely.  An exact
-infinity "number" would have no additive inverse and a non-unique
-multiplicative inverse (0).  If one gives the negative infinity an
-infinitesimal reciprocal, then the field is not closed under addition
-or multiplication.
+number.  An exact infinity would have no additive inverse and a
+non-unique multiplicative inverse (0).  If one gives the negative
+infinity an infinitesimal reciprocal, then the field is not closed
+under addition or multiplication.
 <p>
 </p></dd><dt>How do infinities behave in comparisons?
 
@@ -802,17 +851,11 @@ an error for <code>(/ 0.0 0)</code>.  This leads to the use of
 exactness coercions to select behavior of <samp>`/'</samp> and
 <samp>`expt'</samp>; a practice which is very opaque.
 <p>
-Each implementation supporting flonums must decide how to evaluate
-<code>(/ 0.0 0.0)</code> and <code>(expt 0.0 0.0)</code> because those
-functions are mathematically ill-defined for all-zero arguments.
-Cases can be made for 1.0 and 0.0 because the limits of
-
-<code>(/ x x)</code> and <code>(/ 0.0 x)</code> are 1.0 and 0.0
-respectively.  But why are we statically determining behavior in a
-dynamic language?  This SRFI introduces the
-
-<samp>`<a href="#IDX1">limit</a>'</samp> procedure to produce the
-mathematically expected behavior of finite and infinite limits of
+This SRFI specifies that division of zeros be 0/0. or signal an error
+so long as one of the zeros is inexact.  But why be restricted to that
+single choice?  This SRFI introduces the <samp>`<a
+href="#IDX1">limit</a>'</samp> procedure to produce the mathematically
+expected behavior of finite and infinite one-sided limits of
 continuous functions.  Its mathematical basis and algorithm are
 detailed in the article
 
@@ -955,6 +998,23 @@ if it was
 derived using inexact ingredients, or if it was derived using
 inexact operations. Thus inexactness is a contagious
 property of a number.
+<P>
+<FONT COLOR=red>Each exact number corresponds to a single mathematical number.  It is</FONT>
+<FONT COLOR=red>the programmer's responsibility to avoid using exact numbers with</FONT>
+<FONT COLOR=red>magnitude or precision too large to be represented in the</FONT>
+<FONT COLOR=red>implementation.</FONT>
+<P>
+<FONT COLOR=red>Inexact numbers are approximate.  Every mathematical number within</FONT>
+<FONT COLOR=red>the (convex) range of inexacts supported by an implementation will</FONT>
+<FONT COLOR=red>round to an inexact number on input or as a result of computation.</FONT>
+<FONT COLOR=red>The neighborhood of mathematical numbers rounding to a particular</FONT>
+<FONT COLOR=red>inexact number must be simply connected.</FONT>
+<P>
+<FONT COLOR=red>Because real infinities are mandated (in implementations supporting</FONT>
+<FONT COLOR=red>inexacts), all mathematical real numbers map to inexact numbers.  It</FONT>
+<FONT COLOR=red>is the programmer's responsibility to avoid using non-real complex</FONT>
+<FONT COLOR=red>numbers with magnitude too large to be represented in the</FONT>
+<FONT COLOR=red>implementation.</FONT>
 
 
 <P>
@@ -979,7 +1039,10 @@ See section <A HREF="#6.2.3">6.2.3 Implementation restrictions</A>.
 
 
 <P>
-With the exception of <CODE>inexact-&#62;exact</CODE>, the operations
+With the exception of <CODE>inexact-&#62;exact</CODE>,
+<samp><FONT COLOR=red>`round->exact'</FONT></samp><FONT COLOR=red>, </FONT><samp><FONT COLOR=red>`ceiling->exact'</FONT></samp><FONT COLOR=red>,</FONT>
+<samp><FONT COLOR=red>`floor->exact'</FONT></samp><FONT COLOR=red>, and </FONT><samp><FONT COLOR=red>`truncate->exact'</FONT></samp><FONT COLOR=red>,</FONT>
+the operations
 described in this section must
 <STRIKE>generally</STRIKE>
 return inexact results when given any inexact arguments.
@@ -991,24 +1054,14 @@ may produce an exact zero result, even if the other argument is
 inexact.
 </STRIKE>
 
+
 <A NAME="6.2.2x"></A>
-<H3><FONT COLOR=red>6.2.2x Inexactness</FONT></H3>
+<H3><FONT COLOR=red>6.2.2x Infinities</FONT></H3>
 
-<FONT COLOR=red>In an implementation which represents inexact real numbers with</FONT>
-<FONT COLOR=red>IEEE-754 64-bit flonums:</FONT>
-
-<pre>
-<FONT COLOR=red>(= 3.14159265358979323846</FONT>
-   <FONT COLOR=red>3.1415926535897932384626433</FONT>
-   <FONT COLOR=red>3.141592653589793238462643383279</FONT>
-   <FONT COLOR=red>3.14159265358979323846264338327950288)       ==&gt;  #t</FONT>
-</pre>
-
-<FONT COLOR=red>Thus an inexact real number represents not a single value, but a</FONT>
-<FONT COLOR=red>neighborhood of (mathematical) real numbers.  The inaccuracies of</FONT>
-<FONT COLOR=red>inexact calculations are due to misalignment of functional projection</FONT>
-<FONT COLOR=red>of a given neighborhood onto the real line neighborhoods.</FONT>
-<p>
+<!-- Each inexact number represents not a single value, but the -->
+<!-- neighborhood of (mathematical) numbers which are closer to it than to -->
+<!-- any other inexact number. -->
+<!-- <p> -->
 <FONT COLOR=red>The interpretation of real infinities is that +/0. represents real</FONT>
 <FONT COLOR=red>numbers greater than can be encoded by finite inexacts in the</FONT>
 <FONT COLOR=red>implementation (&gt;&nbsp;179.76931348623157e306 for IEEE-754 64-bit</FONT>
@@ -1016,10 +1069,9 @@ inexact.
 <FONT COLOR=red>finite inexacts in the implementation</FONT>
 <FONT COLOR=red>(&lt;&nbsp;-179.76931348623157e306 for IEEE-754 64-bit flonums).  This</FONT>
 <FONT COLOR=red>preserves the total ordering of the (mathematical) real numbers and</FONT>
-<FONT COLOR=red>extends Scheme's representation to cover the entire real line.  Note</FONT>
-<FONT COLOR=red>that no numerical infinity, with its attendant theoretical problems,</FONT>
-<FONT COLOR=red>is constructed; +/0. and -/0. represent the half-lines beyond either</FONT>
-<FONT COLOR=red>end of the implementation's inexact rational range.</FONT>
+<FONT COLOR=red>extends Scheme's representation to cover the entire real line.</FONT>
+<FONT COLOR=red>+/0. and -/0. represent the half-lines beyond either end of the</FONT>
+<FONT COLOR=red>implementation's inexact rational range.</FONT>
 
 <FONT COLOR=red>For any finite real number </FONT><var><FONT COLOR=red>x</FONT></var><FONT COLOR=red>:</FONT>
 
@@ -1036,8 +1088,8 @@ inexact.
 <FONT COLOR=red>real numbers.</FONT>
 <P>
 <FONT COLOR=red>An optional third infinity, which is </FONT><EM><FONT COLOR=red>not</FONT></EM> <FONT COLOR=red>real, may be</FONT>
-<FONT COLOR=red>returned by a numerical function when no inexact neighborhood</FONT>
-<FONT COLOR=red>(including infinities) contains the correct answer.  An implementation</FONT>
+<FONT COLOR=red>returned by a numerical function when no inexact number</FONT>
+<FONT COLOR=red>(including infinities) is the correct answer.  An implementation</FONT>
 <FONT COLOR=red>may report a violation of an implementation restriction in any</FONT>
 <FONT COLOR=red>calculation for which the result would be an unreal infinity.</FONT>
 <P>
@@ -1110,7 +1162,8 @@ max          min           abs
 numerator    denominator   gcd
 lcm          floor         ceiling
 truncate     round         rationalize
-expt
+expt<!--          floor-&gt;exact  ceiling-&gt;exact -->
+<!-- truncate-&gt;exact            round-&gt;exact -->
 
 </PRE>
 
@@ -1124,11 +1177,10 @@ unable to deliver an exact result when given exact arguments, then it
 may either report a violation of an implementation restriction or it
 may silently coerce its result to an inexact number.  Such a coercion
 may cause an error later.
-<P>
 
+<P>
 An implementation may use floating point and other approximate
 representation strategies for inexact numbers.
-
 
 <P>
 This report recommends, but does not require, that the IEEE 32-bit
@@ -1148,9 +1200,13 @@ arguments, to produce exact answers whenever possible (for example the
 square root of an exact 4 ought to be an exact 2).
 If, however, an
 exact number is operated upon so as to produce an inexact result
-(as by <SAMP>`sqrt'</SAMP>), and if the result is represented as a flonum, then
+(as by <SAMP>`sqrt'</SAMP>),
+
+and if the result is represented as a flonum, then
 the most precise flonum format available must be used; but if the result
-is represented in some other way then the representation must have at least as
+is represented in some other way
+
+then the representation must have at least as
 much precision as the most precise flonum format available.
 
 <P>
@@ -1801,6 +1857,26 @@ result should be passed to the <SAMP>`inexact-&#62;exact'</SAMP> procedure.
 
 <P>
 <DL>
+<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>floor->exact</FONT></B> <I><FONT COLOR=red>x</FONT></I>
+<DD>
+<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>ceiling->exact</FONT></B> <I><FONT COLOR=red>x</FONT></I>
+<DD>
+<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>truncate->exact</FONT></B> <I><FONT COLOR=red>x</FONT></I>
+<DD>
+<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>round->exact</FONT></B> <I><FONT COLOR=red>x</FONT></I>
+<DD>
+
+
+<P>
+<FONT COLOR=red>These procedures are the compositions of</FONT>
+<SAMP><FONT COLOR=red>`inexact-&#62;exact'</FONT></SAMP> <FONT COLOR=red>with </FONT><SAMP><FONT COLOR=red>`floor'</FONT></SAMP><FONT COLOR=red>,</FONT>
+<SAMP><FONT COLOR=red>`ceiling'</FONT></SAMP><FONT COLOR=red>, </FONT><SAMP><FONT COLOR=red>`truncate'</FONT></SAMP><FONT COLOR=red>, and</FONT>
+<SAMP><FONT COLOR=red>`round'</FONT></SAMP><FONT COLOR=red>.</FONT>
+
+</DL>
+
+<P>
+<DL>
 <DT><U>library procedure:</U> <B>rationalize</B> <I>x y</I>
 <DD>
 
@@ -2340,8 +2416,6 @@ a decimal point is used.
 
   <P>
 
-
-
 <h1>Implementation</h1>
 
 Most of the glibc transcendental functions do the right things when
@@ -2401,6 +2475,11 @@ Here is code for the procedures extended from R5RS:
 (define (gcd . args)
   (/ (apply integer-gcd (map numerator args))
      (apply integer-lcm (map denominator args))))
+
+(define (round-&gt;exact x) (inexact-&gt;exact (round x)))
+(define (floor-&gt;exact x) (inexact-&gt;exact (floor x)))
+(define (ceiling-&gt;exact x) (inexact-&gt;exact (ceiling x)))
+(define (truncate-&gt;exact x) (inexact-&gt;exact (truncate x)))
 
 (define (invintp f1 f2 f3)
   (define f1^2 (* f1 f1))
@@ -2514,6 +2593,6 @@ DEALINGS IN THE SOFTWARE.
     <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Mon Jul 18 13:48:18 CEST 2005
+Last modified: Mon Aug  8 07:42:55 CEST 2005
 <!-- hhmts end -->
   </body></html>
