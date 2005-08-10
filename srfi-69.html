@@ -22,7 +22,7 @@ Panu Kalliokoski
 This SRFI is currently in ``draft'' status. To see an explanation of each
 status that a SRFI can hold, see
 <a HREF="http://srfi.schemers.org/srfi-process.html">here</a>.
-It will remain in draft status until 2005/06/24, or as amended. To
+It will remain in draft status until 2005/09/09, or as amended. To
 provide input on this SRFI, please <code>
 <a HREF="mailto:srfi-69@srfi.schemers.org">mailto:srfi-69@srfi.schemers.org</a></code>.
 See <a HREF="http://srfi.schemers.org/srfi-list-subscribe.html">instructions
@@ -34,6 +34,8 @@ archive of the mailing list</a>.
   <li>Received: 2005/04/25</li>
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-69/srfi-69.html?rev=1.1">2005/05/09</a></li>
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-69/srfi-69.html?rev=1.2">2005/08/03</a></li>
+  <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-69/srfi-69.html?rev=1.3">2005/08/10</a></li>
+  <li>Draft extended: 2005/08/10 - 2005/09/09</li>
 </ul>
 
 <h1><a name="bstr">Abstract</a></h1>
@@ -53,10 +55,10 @@ provided, Scheme implementations can speed things up considerably by
 e.g. providing an internal hash function for symbols.  Moreover, almost
 every Scheme implementation already has some kind of low-level hash
 table functionality, because that's the natural way to implement
-the global namespace, and specifically, to provide support for
+the global environment, and specifically, to provide support for
 <tt>string-&gt;symbol</tt>.  There might be some benefit in integration
-between implementation-specific namespace data types and the hash table
-API presented here; however, these issues are left open.
+between implementation-specific environment data types and the hash
+table API presented here; however, these issues are left open.
 
 <p>This SRFI does not conform to the interface of maps presented in SRFI
 44.  An implementation supporting both SRFI 44 and this SRFI is
@@ -159,7 +161,7 @@ hash table type should be disjoint from all other types, if possible.
 occurs multiple times in <var>alist</var>, it is unspecified which of the
 corresponding values will end up in <var>hash-table</var>.  (Note: the choice of
 using <tt>cdr</tt> (instead of <tt>cadr</tt>) for values tries to strike balance
-between the two approaches: using <tt>cadr</tt> would rend this procedure
+between the two approaches: using <tt>cadr</tt> would render this procedure
 unusable for <tt>cdr</tt> alists, but not vice versa.)
 
 <h2><a name="Rflc">Reflective queries</a></h2>
@@ -176,10 +178,10 @@ unusable for <tt>cdr</tt> alists, but not vice versa.)
 
 <p>Procedure: <a name="hsht5">hash-table-ref</a> <var>hash-table</var>  <var>key</var> [ <var>thunk</var> ] &rarr; <var>value</var>
 
-<p>These procedures return the <var>value</var> associated to <var>key</var> in <var>hash-table</var>.
-If no <var>value</var> is associated is associated to <var>key</var> and <var>thunk</var> is given,
-it is called and its value is returned; if <var>thunk</var> is not given, an
-error is signalled.  
+<p>This procedure returns the <var>value</var> associated to <var>key</var> in <var>hash-table</var>.
+If no <var>value</var> is associated to <var>key</var> and <var>thunk</var> is given, it is called
+and its value is returned; if <var>thunk</var> is not given, an error is
+signalled.  
 Given a good hash function, this operation should have an (amortised)
 complexity of O(1) with respect to the number of associations in
 <var>hash-table</var>.  (Note: this rules out implementation by association lists
@@ -192,7 +194,7 @@ or fixed-length hash tables.)
 
 <p>Procedure: <a name="hsht7">hash-table-set!</a> <var>hash-table</var>  <var>key</var>  <var>value</var> &rarr; undefined
 
-<p>These procedures set the <var>value</var> associated to <var>key</var> in <var>hash-table</var>.
+<p>This procedure sets the <var>value</var> associated to <var>key</var> in <var>hash-table</var>.
 The previous association (if any) is removed.  
 Given a good hash function, this operation should have an (amortised)
 complexity of O(1) with respect to the number of associations in
@@ -201,7 +203,7 @@ or fixed-length hash tables.)
 
 <p>Procedure: <a name="hsht8">hash-table-delete!</a> <var>hash-table</var>  <var>key</var> &rarr; undefined
 
-<p>These procedures remove any association to <var>key</var> in <var>hash-table</var>.  It is
+<p>This procedure removes any association to <var>key</var> in <var>hash-table</var>.  It is
 not an error if no association for that key exists; in this case,
 nothing is done.  
 Given a good hash function, this operation should have an (amortised)
@@ -228,8 +230,8 @@ than, the following code:
                  (function (hash-table-ref hash-table key thunk)))
 </pre>
 
-<p>Procedure: <a name="hsht11">hash-table-update!/default</a> <var>hash-table</var>  <var>key</var>
-/function/  <var>default</var> &rarr; undefined
+<p>Procedure: <a name="hsht11">hash-table-update!/default</a>
+<var>hash-table</var>  <var>key</var>  <var>function</var>  <var>default</var> &rarr; undefined
 
 <p>Equivalent to <tt>(hash-table-update! hash-table key function (lambda ()
 default))</tt>.
@@ -268,7 +270,7 @@ implementation that I know of, <tt>hash-table-map</tt> does a real functorial
 map that lifts an ordinary function to the domain of hash tables.
 Because of these reasons, <tt>hash-table-map</tt> is left outside this SRFI.)
 
-<p>Procedure: <a name="hsht17">hash-table-fold</a> <var>hast-table</var>  <var>f</var>  <var>init-value</var>
+<p>Procedure: <a name="hsht17">hash-table-fold</a> <var>hash-table</var>  <var>f</var>  <var>init-value</var>
 &rarr; <var>final-value</var>
 
 <p>This procedure calls <var>f</var> for every association in <var>hash-table</var> with
