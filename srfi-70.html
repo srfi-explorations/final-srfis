@@ -32,35 +32,30 @@ archive of the mailing list</a>.
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.7">2005/07/08</a></li>
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.8">2005/07/15</a></li>
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.9">2005/08/07</a></li>
+  <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-70/srfi-70.html?rev=1.10">2005/08/12</a></li>
 </ul>
 
 <h1>Abstract</h1>
 
-When Scheme was an experimental and research language, the Scheme
-reports were written sparsely to provide a framework which allowed
-unusual implementations.  With many experiments having been tried and
-hopefully having gained knowledge from them, and with a growing user
-base wanting portability for their programs, this SRFI attempts to
-tighten the specifications for Scheme's numeric subsystems.
-<p>
-Checks for division by zero (and their absence) remain one of the most
-common programming errors.  In numerical code the conscientious
-programmer must deeply nest conditionals to assure that checks for
-zero preceed each division.
-<p>
-With infinities added to the number system we find that division by
-zero "works".  It lets initialization of variables precede bounds
-checks and gives flexibility in placement of those checks.  Limit and
-corner cases need not crash programs.
-</p><p>
-This SRFI reworks section 6.2 "Numbers" of R5RS to:
+This SRFI proposes text to replace section 6.2 "Numbers" of R5RS in
+order to:
 
-</p><ul>
- <li> sharpen the distinctions between exact and inexact numbers,
+<ul>
 
- </li><li> include inexact real positive and negative infinities,
+ <li> incorporate an inexact real positive infinity and an inexact
+      real negative infinity,
 
- </li><li> define complete semantics for <samp>`expt'</samp>,
+ </li><li> extend number syntax to incorporate inexact real
+      infinities,
+
+ </li><li> adapt Common-Lisp semantics for <samp>`expt'</samp> and
+      extend them to include inexact real infinities,
+
+ </li><li> correct the description of <samp>`sqrt'</samp>,
+
+ </li><li> sharpen the distinction between exact and inexact numbers,
+
+ </li><li> remove a contradiction related to exactness,
 
  </li><li> extend <samp>`gcd'</samp> and <samp>`lcm'</samp> to exact
       rational numbers,
@@ -68,14 +63,18 @@ This SRFI reworks section 6.2 "Numbers" of R5RS to:
  </li><li> extend <samp>`quotient'</samp>, <samp>`modulo'</samp>, and
       <samp>`remainder'</samp> to finite real numbers,
 
- </li><li> add convenience procedures <samp>`round->exact'</samp>,
-      <samp>`ceiling->exact'</samp>, <samp>`floor->exact'</samp>, and
-      <samp>`truncate->exact'</samp>,
+ </li><li> clarify the behavior of <samp>`inexact-&gt;exact'</samp>
+      applied to an exact argument,
 
- </li><li> add <samp>`limit'</samp> procedure calculating one-sided
-      finite and infinite limits.
+ </li><li> clarify the behavior of <samp>`exact-&gt;inexact'</samp>
+      applied to an inexact argument,
 
- </li><li> remove a contradiction related to exactness,
+ </li><li> add convenience procedures <samp>`round-&gt;exact'</samp>,
+      <samp>`ceiling-&gt;exact'</samp>, <samp>`floor-&gt;exact'</samp>, and
+      <samp>`truncate-&gt;exact'</samp>,
+
+<!--  </li><li> add <samp>`limit'</samp> procedure calculating one-sided -->
+<!--       finite and infinite limits. -->
 
  </li><li> add examples, and
 
@@ -88,23 +87,23 @@ This SRFI reworks section 6.2 "Numbers" of R5RS to:
 
 <ul>
 
-<li>Some have expressed doubts that <code>LIMIT</code> should be a core
-procedure.  Choices for its disposition are:
+<!-- <li>Some have expressed doubts that <code>LIMIT</code> should be a core -->
+<!-- procedure.  Choices for its disposition are: -->
+<!-- <ul> -->
+<!-- <li> <code>LIMIT</code> is a library procedure. -->
+<!-- <li> <code>LIMIT</code> is an optional procedure. -->
+<!-- <li> <code>LIMIT</code> is removed from SRFI-70. -->
+<!-- </ul> -->
+<!-- <p> -->
 
-<ul>
-<li> <code>LIMIT</code> is a library procedure.
-<li> <code>LIMIT</code> is an optional procedure.
-<li> <code>LIMIT</code> is removed from SRFI-70.
-</ul>
-<p>
-
-<li>Choices for <code>(/ 0.0 0.0)</code> are:
-<ul>
-<li> <code>(/ 0.0 0.0)</code> is an error (implementations are not constrained).
-<li> <strike><code>(/ 0.0 0.0)</code> behavior is unspecified (must not signal error).</strike>
-<li> <code>(/ 0.0 0.0)</code> returns <code>0/0.</code> or signals an error.
-</ul>
-<p>
+<!-- <li>Choices for <code>(/ 0.0 0.0)</code> are: -->
+<!-- <ul> -->
+<!-- <li> <code>(/ 0.0 0.0)</code> is an error (implementations are not constrained). -->
+<!-- <li> <strike><code>(/ 0.0 0.0)</code> behavior is unspecified (must not signal error).</strike> -->
+<!-- <li> <code>(/ 0.0 0.0)</code> returns <code>0/0</code> or reports a -->
+<!-- violation of an implementation restriction. -->
+<!-- </ul> -->
+<!-- <p> -->
 
 <li>The affirmative <code>finite?</code> predicate was added by analogy
 with existing numerical predicates (<code>zero?</code> not
@@ -123,180 +122,208 @@ that can be further divided.  Choices are:
 <li>Should <code>odd?</code> and <code>even?</code> be restricted to
 exact integer arguments?
 <p>
-<li>Should there be exact-only versions of <code>expt</code> and
-<code>sqrt</code>?
+In inexact calculations, one is not guaranteed that results will yield
+integers.  Thus <code>odd?</code> and <code>even?</code> will
+sometimes signal errors or give false negatives when inexact integer
+calculations are slightly wide of their integer marks.  If these
+predicates instead accept only exact integers, then their behavior is
+predictable; and conversion from inexacts to exacts must be explicit.
 <p>
 
-<li>Choices for inexact infinity notations are:
-
-<table cellpadding=4 BORDER=1>
-<tr><th><th>positive<br>infinity<th>negative<br>infinity<th>indeterminate<br>number<th>Scheme<br>implementations
-<tr><th>A<td><code>+#.#</code><td><code>-#.#</code><td><code>#.#</code><td>Scm 5d7, Guile 1.3.4, Bigloo 2.5c
-<tr><th>B<td><code>+/0</code><td><code>-/0</code><td><code>0/0</code><td>
-<tr><th>C<td><code>+/0.</code><td><code>-/0.</code><td><code>0/0.</code><td>
-<tr><th>D<td><code>#i+/0</code><td><code>#i-/0</code><td><code>#i0/0</code><td>
-<tr><th>E<td><code>1/0</code><td><code>-1/0</code><td><code>0/0</code><td>Scm 5d8
-<tr><th>F<td><code>+1/0</code><td><code>-1/0</code><td><code>0/0</code><td>
-<tr><th>G<td><code>+1/0.</code><td><code>-1/0.</code><td><code>0/0.</code><td>
-<tr><th>H<td><code>#i1/0</code><td><code>#i-1/0</code><td><code>#i0/0</code><td>Kawa 1.7
-<tr><th>I<td><code>#i+1/0</code><td><code>#i-1/0</code><td><code>#i0/0</code><td>
-<tr><th>J<td><code>inf.0</code><td><code>-inf.0</code><td><code>NaN</code><td>Elk 3.0
-<tr><th>K<td><code>+inf.</code><td><code>-inf.</code><td><code>+nan.</code><td>Gambit 3.0
-<tr><th>L<td><code>+inf.0</code><td><code>-inf.0</code><td><code>+nan.0</code><td>Mz Scheme 202, Chez, Larceny
-<tr><th>M<td><code>#i+inf</code><td><code>#i-inf</code><td><code>#i+nan</code><td>
-</table>
-<p>
-
-The notation for indeterminate numbers need not be readable, as it
-signifies an error condition.  The unsigned notations of <b>J</b> do
-not meet the stipulations of R5RS section 2.1 "Identifiers":
-
-<blockquote>
-... in all implementations a sequence of letters, digits, and
-"extended alphabetic characters" that begins with a character that
-cannot begin a number is an identifier.
-</blockquote>
-
-Notations <b>K</b> and <b>L</b> use <samp>`.'</samp> to indicate the
-inexactness of infinities.  The trailing <samp>`0'</samp> of <b>L</b>
-seems superfluous, but mzscheme will not accept infinity literals
-without it.  Prefixing <dfn>nan</dfn> with <samp>`+'</samp> can be
-misleading, as it is used to indicate numbers about which nothing,
-including the sign, is known.  In mathematical parlance, "inf" stands
-for <A HREF="http://en.wikipedia.org/wiki/Infimum"><dfn>infimum</dfn></A>,
-the greatest lower bound.  These notations require extensions to R5RS
-number syntax.
-<p>
-
-Notations <b>E</b>, <b>F</b>, <b>H</b>, and <b>I</b> can be read in
-some implementations without modifying the Scheme reader.  Of course
-in those implementations, the <samp>`1'</samp> can be replaced by any
-positive integer.
-<P>
-As Paul Schlie points out, negative infinity is just as reasonable a
-result of 1/0 as is positive infinity.  So for output, notations
-<b>F</b> and <b>I</b> should be used in preference to <b>E</b> and
-<b>H</b> because the <samp>`+'</samp> emphasizes the sign of the
-positive infinity.  Notations <b>B</b>, <b>C</b>, and <b>D</b>
-eliminate the <samp>`1'</samp> for positive and negative infinities,
-further emphasizing the sign of the infinity.
-<p>
-
-Notations <b>C</b> and <b>G</b> use a trailing <samp>`.'</samp> to
-indicate inexactness as <b>K</b> does.  This requires a small
-extension to R5RS number syntax, as rational notation
-(<samp>`1/0'</samp>) does not currently allow a trailing period.
-<p>
-
-<A HREF="http://srfi.schemers.org/srfi-73"><CITE>SRFI 73: Exact Infinities</CITE></A>
-uses notation <b>E</b> with a <samp>`#e'</samp> prefix.  So notations
-<b>E</b>, <b>F</b>, and <b>B</b> should probably be not be used for
-inexact infinities to avoid confusion with SRFI-73.
-<p>
-
-Someone unfamiliar with R5RS when encountering notation <b>D</b> might
-guess that <samp>`#i'</samp> signifies an infinity.  This is an
-improvement over notation <b>I</b>, which might be mistaken for a
-complex number.
-<p>
-<!-- <A HREF="srfi.70.html">http://srfi.schemers.org/srfi-70/srfi.70.html</A> -->
-<!-- is a version of SRFI-70 using notation <b>C</b>. -->
-
-Here are samples of three of these notations:
-
-<H2>Notation C</H2>
-
-<PRE>
-(+ 3 4)                                ==>  7
-(+ 3)                                  ==>  3
-(+)                                    ==>  0
-(+ +/0. +/0.)                          ==>  +/0.
-(+ +/0. -/0.)                          ==>  0/0.
-
-(* 4)                                  ==>  4
-(*)                                    ==>  1
-(* 5 +/0.)                             ==>  +/0.
-(* -5 +/0.)                            ==>  -/0.
-(* +/0. +/0.)                          ==>  +/0.
-(* +/0. -/0.)                          ==>  -/0.
-(* 0 +/0.)                             ==>  0/0.
-</PRE>
-
-<H2>Notation D</H2>
-
-<PRE>
-(+ 3 4)                                ==>  7
-(+ 3)                                  ==>  3
-(+)                                    ==>  0
-(+ #i+/0 #i+/0)                        ==>  #i+/0
-(+ #i+/0 #i-/0)                        ==>  #i0/0
-
-(* 4)                                  ==>  4
-(*)                                    ==>  1
-(* 5 #i+/0)                            ==>  #i+/0
-(* -5 #i+/0)                           ==>  #i-/0
-(* #i+/0 #i+/0)                        ==>  #i+/0
-(* #i+/0 #i-/0)                        ==>  #i-/0
-(* 0 #i+/0)                            ==>  #i0/0
-</PRE>
-
-<H2>Notation L</H2>
-
-<PRE>
-(+ 3 4)                                ==>  7
-(+ 3)                                  ==>  3
-(+)                                    ==>  0
-(+ +inf.0 +inf.0)                      ==>  +inf.0
-(+ +inf.0 -inf.0)                      ==>  +nan.0
-
-(* 4)                                  ==>  4
-(*)                                    ==>  1
-(* 5 +inf.0)                           ==>  +inf.0
-(* -5 +inf.0)                          ==>  -inf.0
-(* +inf.0 +inf.0)                      ==>  +inf.0
-(* +inf.0 -inf.0)                      ==>  -inf.0
-(* 0 +inf.0)                           ==>  +nan.0
-</PRE>
-
-This revision of SRFI-70 uses notation <b>C</b>.
-<p>
+<!-- <li>Should there be exact-only versions of <code>expt</code> and -->
+<!-- <code>sqrt</code>? -->
+<!-- <p> -->
 
 </ul>
 
 
 <h1>Rationale</h1>
 
+The Scheme report is undergoing revision.  Changes to Scheme numerics
+potentially affect over 50 procedures.  The changes to incorporate
+infinities modify the descriptions of or add examples to most of the
+numeric procedures.  The proposed semantics for <samp>`expt'</samp>
+and exactness interract strongly with the infinity changes.
+<p>
+Rather than create several SRFI documents which labor over semantics
+with and without the other numerical SRFI proposals, SRFI-70 proposes
+them together.
+
+<h3>Infinities</h3>
+
+The most far-reaching change proposed is to incorporate one positive
+and one negative real infinity, like those defined by the "IEEE 754:
+Standard for Binary Floating-Point Arithmetic", to inexact number
+systems.  The behaviors of most mathematical functions when passed an
+infinity are described or demonstrated through examples.
+<p>
+
+Checks for division by zero (and their absence) are one of the most
+common programming errors.  In numerical code, the conscientious
+programmer must deeply nest conditionals to assure that checks for
+zero precede each division.
+<p>
+With infinities incorporated into the number system, division by zero
+returns an infinity rather than signaling an error.  It lets
+initialization of variables precede bounds checks and gives
+flexibility in placement of those checks.
+<p>
+Floating-point overflow is more difficult to check for; programs often
+have vulnerabilities to numeric inputs in certain ranges.  Because the
+overflow can occur in multiple places in mathematical expressions,
+fixing the program to run test cases which previously produced
+overflow errors does not guarantee that overflow from every possible
+input will be handled.
+<p>
+In an implementation supporting infinities, infinities propagate
+upward through most mathematical expressions.  Complete input coverage
+can be achieved with checks at fewer points in the program than would
+be needed without infinities.
+<p>
+At least nine implementations of Scheme incorporate IEEE-754
+infinities.  Porting those implementations should be easy.
+Programs written without recourse to infinities are compatible with
+implementations having them; but programs using infinities will not be
+compatible with implementations lacking them.  Thus incorporation of
+inexact infinities into R6RS improves portability of code written to
+use infinities.
+<p>
+
+<!-- This SRFI attempts to strike a balance between tolerance and signaling -->
+<!-- of range errors.  Having +inf.0 and -inf.0 allows one level of -->
+<!-- calculation to be executed before bounds checking.  Subsequent -->
+<!-- numerical calculations on infinities can report a violation of an -->
+<!-- implementation restriction or return a numerical error-object (0/0). -->
+<!-- <p> -->
+<!-- This SRFI mandates the real infinities for implementations with -->
+<!-- inexacts, but leaves to the implementations the decision of whether to -->
+<!-- implement 0/0 or not.  If an implementation chooses to not support -->
+<!-- 0/0, then each instance where it would be returned is an error. -->
+
+<dl>
+<dt>Are there predicates for infinities?
+
+</dt><dd>The <code>`infinite?'</code> predicate will return <samp>`#t'</samp>
+for infinities, <samp>`#f'</samp> for other numbers;<br>
+</dt><dd>The <code>`finite?'</code> predicate will return <samp>`#f'</samp>
+for infinities, <samp>`#t'</samp> for other numbers; and<br>
+the two real infinities have opposite signs.
+<p>
+</p></dd><dt><a name="exact infinities">What about exact infinities?</a>
+
+</dt><dd>
+<code>(+ 1 +inf.0) ==> +inf.0</code>; the only numbers which can be
+their own increments are inexact numbers.
+<p>
+
+</dd><dt>How do real infinities behave in comparisons?
+
+</dt><dd>
+
+</p><pre>
+(= +inf.0 +inf.0)           ==&gt;  #t
+(= -inf.0 +inf.0)           ==&gt;  #f
+(= -inf.0 -inf.0)           ==&gt;  #t
+</pre>
+
+For any finite real number <var>x</var>:
+
+<pre>
+(= -inf.0 <var>x</var>))               ==&gt;  #f
+(= +inf.0 <var>x</var>))               ==&gt;  #f
+(&lt; -inf.0 <var>x</var> +inf.0))        ==&gt;  #t
+(&gt; +inf.0 <var>x</var> -inf.0))        ==&gt;  #t
+</pre>
+<p>
+
+<!-- </dd><dt>Can infinities be the only inexacts an implementation supports? -->
+
+<!-- </dt><dd>That would mean that any divisions not returning exact -->
+<!-- numbers would either signal an error or return an infinity.  Most of -->
+<!-- the transcendental functions would return only zero and infinities. -->
+<!-- Making this into a "coherent" number system would be difficult: -->
+
+<!-- <blockquote> -->
+<!--     Implementations of Scheme are not required to implement the whole -->
+<!--     tower of subtypes ..., but they must implement a coherent subset -->
+<!--     consistent with both the purposes of the implementation and the -->
+<!--     spirit of the Scheme language. -->
+<!-- </blockquote> -->
+</p><p>
+</p></dd><dt>Are real infinities rational?
+
+</dt><dd>No; (mathematical) rational numbers have non-zero denominators.
+
+<p>
+</p></dd><dt>Are real infinities integers?
+
+</dt><dd>Because they are not rational they cannot be integers.
+
+<p>
+</p></dd><dt>What about complex (non-real) infinities?
+
+</dt><dd>Infinities in rectangular notation leads to strange beasts like
+-inf.0+5i.  I know of no mathematical system having such numbers.  Polar
+notation allows an infinitude of numbers having infinite magnitude and
+finite angle.  Multiplication and division of complex infinities would
+work, but at the price of forcing their representations to be polar.
+<p>
+Chongkai Zhu points out that -inf.0 cannot be encoded by polar notation
+unless pi is a number in the implementation.
+
+</p></dd><dt>What about +0.0 and -0.0?
+
+</dt><dd>Dealing with zero is certainly thorny; but having more varieties
+of zero does not make dealing with unsigned zero any easier.
+
+<!-- The <a href="#IDX1">limit</a> procedure provides a mathematical -->
+<!-- alternative to non-standard analysis half-measures. -->
+
+</dd></dl>
+
 <h3>Exactness</h3>
 
-This SRFI strengthens the definition of exact numbers by constraining
-each exact number to represent a single mathematical number.  With
-that proviso, exact number systems have limits in how precise a number
-can be represented in a finite amount of storage.  Operations which
-would return too precise exact numbers can either return an inexact
-number (assuming the range of inexacts is sufficient) or report a
-violation of an implementation restriction.
+That the programmer is responsible to avoid using numbers with
+magnitude too large to be represented in an implementation is
+reasonably assumed.  All implementations have size limitations, either
+deliberate or due to their platform's having finite storage.
 <p>
-Note that the iterative series often used in floating-point
-calculations cannot be summarily converted to work on exact numbers
-without the danger of exceeding the implementation limits just
-mentioned.
+But what about numbers whose precision is too large to be represented?
+R5RS is unclear about this.  Such an important property of number
+systems should be explicit.  This SRFI assigns that responsibility for
+exact numbers to the programmer:
+
+<blockquote>
+  Each exact number corresponds to a single mathematical number.  It
+  is the programmer's responsibility to avoid using exact numbers with
+  magnitude or precision too large to be represented in the
+  implementation.
+</blockquote>
+
+Operations which would return too precise exact numbers can either
+return an inexact number (assuming the range of inexacts is
+sufficient) or report a violation of an implementation restriction.
+<!-- <p> -->
+<!-- Note that the iterative series often used in floating-point -->
+<!-- calculations cannot be summarily converted to work on exact numbers -->
+<!-- without the danger of exceeding the implementation's precision limit. -->
 
 <h3>Inexactness</h3>
 
-The definition of inexact numbers is strengthened by delineating their
-approximate nature:
+In this SRFI, the definition of inexact numbers is strengthened by
+their not being subject to the caution about "precision too large to
+be represented in the implementation".  Only magnitudes too large are
+cautioned: <!-- , and only for the non-real case: -->
 
 <blockquote>
-  Every mathematical number within the (convex) range of inexacts
-  supported by an implementation will round to an inexact number on
-  input or as a result of computation.  The neighborhood of
-  mathematical numbers rounding to a particular inexact number must be
-  simply connected.
+  For inexact numbers, it is the programmer's responsibility to avoid
+  using complex numbers with magnitude too large to be represented in
+  the implementation.
 </blockquote>
 
-With this clear distinction between exact and inexact numbers, the
-last sentence of section <a href="#6.2.1">6.2.1 Numerical types</a>,
-which seems to imply that each internal number representation is
+With this distinction between exact and inexact numbers, the last
+sentence of section <a href="#6.2.1">6.2.1 Numerical types</a>, which
+seems to imply that each internal number representation is
 instantiated both in exact and inexact forms, is struck:
 
 <blockquote>
@@ -304,6 +331,13 @@ instantiated both in exact and inexact forms, is struck:
   required, Scheme explicitly distinguishes exact from inexact numbers.
   <strike>This distinction is orthogonal to the dimension of type.</strike>
 </blockquote>
+
+Some Scheme implementations treat an exact 0 as <em>stronger</em> than
+an inexact 0.0; returning 0 for <code>(/ 0 0.0)</code> while signaling
+an error for <code>(/ 0.0 0)</code>.  This leads to the use of
+exactness coercions to select behavior of <samp>`/'</samp> and
+<samp>`expt'</samp>; a practice which is very opaque.
+<p>
 
 Section <a href="#6.2.2">6.2.2 Exactness</a> states:
 
@@ -324,11 +358,20 @@ But this section also states:
   inexact.
 </blockquote>
 
-By those sentences, <em>inexactness</em> is a contagious property of
+By those paragraphs, <em>inexactness</em> is a contagious property of
 all numbers except 0, the only number whose <em>exactness</em> is
 contagious!  To resolve this conflict, the latter two sentences are
-struck.
+struck.  This change enhances portability of programs because the
+exactness of mixed exactness products and quotients are specified, and
+no longer at the discretion of implementations.
+<p>
+
+<!-- With inexactness contagion applying to 0, this SRFI specifies that -->
+<!-- division of zeros be 0/0 or report a violation of an implementation -->
+<!-- restriction so long as one of the zeros is inexact.  By standardizing -->
+<!-- this behavior the portability of code will be improved. -->
 <!-- <p> -->
+
 <!-- In <a href="#6.2.3">6.2.3 Implementation restrictions</a> a redundant -->
 <!-- clause is struck: -->
 
@@ -343,6 +386,159 @@ struck.
 <!--   then the representation must have at least as -->
 <!--   much precision as the most precise flonum format available. -->
 <!-- </blockquote> -->
+
+<h3>expt</h3>
+
+In R3RS and R4RS the description of <code>expt</code> is very simple:
+
+<blockquote>
+    <dl>
+    <dt><u>procedure:</u> <b>expt</b> <i>z1 z2</i>
+    </dt><dd><a name="IDX388"></a>
+
+
+    <p>
+    Returns <var>z1</var> raised to the power <var>z2</var>:
+
+
+    </p><p>
+    z_1<font size="-1"><sup>z_2</sup></font> = e<font size="-1"><sup>z_2 log z_1</sup></font>
+
+
+    </p><p>
+    0<font size="-1"><sup>0</sup></font> is defined to be equal to 1.
+    </p></dd></dl>
+</blockquote>
+
+The simplicity is nice, but in the absence of infinities, the
+straightforward scheme implementation
+
+<pre>    (define (expt b x) (exp (* x (log b))))
+</pre>
+
+is incapable of operating when <var>b</var> is zero.
+<p>
+According to G. Sussman, the change in R5RS to
+</p><blockquote>
+<blockquote>
+0<font size="-1"><sup>z</sup></font> is 1 if z = 0 and 0 otherwise.
+</blockquote>
+</blockquote>
+
+was "... attempting to follow Common Lisp and APL when it came to
+boundary conditions and branch cuts."  That line failed in its
+attempt; in R5RS <code>(expt 0 -1) ==> 1</code>.
+
+<p>
+About <code>expt</code>,
+<a href="http://www-2.cs.cmu.edu/Groups/AI/html/hyperspec/HyperSpec/Body/fun_expcm_expt.html">
+Common-Lisp</a> says:
+
+</p><blockquote>
+  <code>expt</code> is defined as b<font size="-1"><sup>x</sup></font> = e<font size="-1"><sup>x</sup></font> log b.  This defines the
+  principal values precisely.  The range of expt is the entire complex
+  plane.  Regarded as a function of x, with b fixed, there is no branch
+  cut.  Regarded as a function of b, with x fixed, there is in general a
+  branch cut along the negative real axis, continuous with quadrant II.
+  The domain excludes the origin.  By definition, 0<font size="-1"><sup>0</sup></font>=1.  If b=0 and the
+  real part of x is strictly positive, then b<font size="-1"><sup>x</sup></font>=0.  For all other values
+  of x, 0<font size="-1"><sup>x</sup></font> is an error.
+</blockquote>
+
+With log(0) being -inf.0, and because exp(-inf.0) is 0.0, Common-Lisp
+behavior would follow from:
+
+<pre>    (define (expt b x) (exp (* x (log b))))
+</pre>
+
+except when <var>b</var> is zero.
+<p>
+With <code>(log 0)</code> being -inf.0, the product of <var>x</var> and
+-inf.0 determines the trajectory of <code>exp</code>.
+<code>Exp</code>'s domain repeats every 2*pi radians in the imaginary
+direction.  This multiplication rotates the negative real infinity.
+If it rotates into a direction other than pure real, then the limit of
+<code>(exp (* b (log x)))</code> does not exist (because of the 2*pi
+periodicity).
+</p><p>
+Common-Lisp's criterion of testing the sign of the real part of
+<var>x</var> can be seen as snapping the direction of the product to
+either a positive or negative real infinity.
+
+</p><pre>
+(exp (* 1 -inf.0))          ==&gt;  0.0
+(exp (* -1 -inf.0))         ==&gt;  +inf.0
+</pre>
+
+Because Common-Lisp doesn't have explicit infinities, it signals an
+error for negative real parts of <var>x</var>.  The Common-Lisp float
+behavior, except for <code>(expt 0.0 0.0)</code>, can be produced by
+
+<pre>(define (expt <var>z1</var> <var>z2</var>) (exp (* (if (zero? <var>z1</var>) (real-part <var>z2</var>) <var>z2</var>) (log <var>z1</var>))))
+</pre>
+
+<p>
+Having real infinities enables these definitions to work when
+<var>z1</var> is zero.  Although the simpler definition is
+mathematically satisfying, the "real-part" variant allows
+
+<code>(expt 0.0 <var>z</var>)</code> to return something other than
+0/0 when the exponent has small imaginary parts due to inexact
+inaccuracies.
+</p><p>
+
+<pre>(define (expt <var>z1</var> <var>z2</var>)
+  (cond ((and (integer? <var>z2</var>) (not (and (zero? <var>z1</var>) (negative? <var>z2</var>))))
+	 (integer-expt <var>z1</var> <var>z2</var>))
+	((zero? <var>z2</var>) (+ 1 (* <var>z1</var> <var>z2</var>)))
+	(else
+	 (exp (* (if (zero? <var>z1</var>) (real-part <var>z2</var>) <var>z2</var>) (log <var>z1</var>))))))
+</pre>
+<!-- 	((and (real? <var>z2</var>) (real? <var>z1</var>) (positive? <var>z1</var>)) -->
+<!-- 	 (real-expt <var>z1</var> <var>z2</var>)) -->
+
+In the (above) definition from the reference implementation,
+<code>(expt <var>z</var> 0.0)</code> returns 1 or 1.0 when
+<var>z</var> is finite; and 0/0 otherwise.
+
+<p>
+<code>(expt 0.0 <var>z</var>)</code>, where <var>z</var> has a
+negative real-part, returns +inf.0, where Common-Lisp signals an error.
+Otherwise the behavior is the same as Common-Lisp's <code>expt</code>.
+</p>
+
+
+<h3>sqrt</h3>
+
+The description of <code>sqrt</code> has been wrong since R3RS.
+Prepending "For real <var>z</var>" to the second sentence corrects it.
+
+
+<h3>Idempotency</h3>
+
+The description of <SAMP>`inexact-&gt;exact'</SAMP> and
+<SAMP>`exact-&gt;inexact'</SAMP> states:
+
+<blockquote>
+  These procedures implement the natural one-to-one correspondence
+  between exact and inexact integers throughout an
+  implementation-dependent range.
+</blockquote>
+
+But what if <SAMP>`inexact-&gt;exact'</SAMP> is passed an exact
+number?  Writing code to test exactness before calling
+<SAMP>`inexact-&gt;exact'</SAMP> adds opportunities for mistakes with
+no compensating benefits.  A paragraph is added to clarify:
+
+<blockquote>
+  <SAMP>`Exact-&gt;inexact'</SAMP> given an inexact argument returns
+  that argument.
+  <SAMP>`Inexact-&gt;exact'</SAMP> given an exact argument returns
+  that argument.
+  Thus <SAMP>`exact-&#62;inexact'</SAMP> and
+  <SAMP>`inexact-&#62;exact'</SAMP> are idempotent.
+</blockquote>
+
 
 <h3>Integer versus Exact</h3>
 
@@ -388,14 +584,6 @@ This SRFI extends <code>quotient</code>, <code>remainder</code>, and
 <!-- exact integers. -->
 <!-- <P> -->
 
-In inexact calculations, one is not guaranteed that results will yield
-integers.  Thus <code>odd?</code> and <code>even?</code> will
-sometimes signal errors or give false negatives when inexact integer
-calculations are slightly wide of their integer marks.  If these
-predicates instead accept only exact integers, then their behavior is
-predictable; and conversion from inexacts to exacts must be explicit.
-
-
 <h3>Convenience Functions</h3>
 
 Grepping through SLIB and several Scheme applications' source for
@@ -415,279 +603,7 @@ To capture these common patterns of usage,
 <samp>`floor-&gt;exact'</samp>, and <samp>`truncate-&gt;exact'</samp>
 are added.
 
-<h3>Infinities</h3>
-
-This SRFI introduces inexact real infinities for implementations with
-inexact numbers.  These infinities arise as the result of:
-
-<ul>
-<li>division by 0
-
-</li><li>taking logarithm of 0.
-
-</li><li>product, division, sum, difference, tangent, or exponentiation
-whose mathematical result is outside the range of the implementation's
-number formats.
-
-</li></ul>
-
-This SRFI attempts to strike a balance between tolerance and signaling
-of range errors.  Having +/0. and -/0. allows one level of calculation
-to be executed before bounds checking.  Subsequent numerical
-calculations on infinities can signal an error or return a non-real
-infinity: 0/0..  0/0. can be considered an error waiting to happen.
-<p>
-This SRFI mandates the real infinities for implementations with
-inexacts, but leaves to the implementations the decision of whether to
-implement 0/0. or not.
-</p><p>
-</p><dl>
-<dt>Are there predicates for infinities?
-
-</dt><dd>The <code>`infinite?'</code> predicate will return <samp>`#t'</samp>
-for infinities, <samp>`#f'</samp> for other numbers;<br>
-</dt><dd>The <code>`finite?'</code> predicate will return <samp>`#f'</samp>
-for infinities, <samp>`#t'</samp> for other numbers;<br>
-<code>`real?'</code> will return <samp>`#f'</samp> for <samp>`0/0.'</samp>; and<br>
-the two real infinities have opposite signs.
-<p>
-</p></dd><dt><a name="exact infinities">What about exact infinities?</a>
-
-</dt><dd>
-+/0. + 1 = +/0.; the only numbers which can be their own increments
-are inexact numbers.
-<P>
-<a href="#6.2.2">6.2.2 Exactness</a> gives semantics for inexact
-numbers, which correspond to mathematical neighborhoods.  Its standard
-analysis with (mathematical) limits.
-<P>
-In contrast, each exact number corresponds to exactly one mathematical
-number.  An exact infinity would have no additive inverse and a
-non-unique multiplicative inverse (0).  If one gives the negative
-infinity an infinitesimal reciprocal, then the field is not closed
-under addition or multiplication.
-<p>
-</p></dd><dt>How do infinities behave in comparisons?
-
-</dt><dd>
-
-</p><pre>
-(= +/0. +/0.)               ==&gt;  #t
-(= -/0. +/0.)               ==&gt;  #f
-(= -/0. -/0.)               ==&gt;  #t
-</pre>
-
-For any finite real number <var>x</var>:
-
-<pre>
-(= -/0. <var>x</var>))                 ==&gt;  #f
-(= +/0. <var>x</var>))                 ==&gt;  #f
-(&lt; -/0. <var>x</var> +/0.))            ==&gt;  #t
-(&gt; +/0. <var>x</var> -/0.))            ==&gt;  #t
-</pre>
-<p>
-
-<!-- </dd><dt>Can infinities be the only inexacts an implementation supports? -->
-
-<!-- </dt><dd>That would mean that any divisions not returning exact -->
-<!-- numbers would either signal an error or return an infinity.  Most of -->
-<!-- the transcendental functions would return only zero and infinities. -->
-<!-- Making this into a "coherent" number system would be difficult: -->
-
-<!-- <blockquote> -->
-<!--     Implementations of Scheme are not required to implement the whole -->
-<!--     tower of subtypes ..., but they must implement a coherent subset -->
-<!--     consistent with both the purposes of the implementation and the -->
-<!--     spirit of the Scheme language. -->
-<!-- </blockquote> -->
-</p><p>
-</p></dd><dt>Are real infinities rational?
-
-</dt><dd>No; (mathematical) rational numbers have non-zero denominators.
-
-<p>
-</p></dd><dt>Are real infinities integers?
-
-</dt><dd>Because they are not rational they cannot be integers.
-
-<p>
-</p></dd><dt>What about complex (non-real) infinities?
-
-</dt><dd>Infinities in rectangular notation leads to strange beasts like
--/0.+5i.  I know of no mathematical system having such numbers.  Polar
-notation allows an infinitude of numbers having infinite magnitude and
-finite angle.  Multiplication and division of complex infinities would
-work, but at the price of forcing their representations to be polar.
-<p>
-Chongkai Zhu points out that -/0. cannot be encoded by polar notation
-unless pi is a number in the implementation.
-
-</p></dd><dt>What about +0.0 and -0.0?
-
-</dt><dd>Dealing with zero is certainly thorny; but having more varieties
-of zero does not make dealing with unsigned zero any easier.
-
-The <a href="#IDX1">limit</a> procedure provides a mathematical
-alternative to non-standard analysis half-measures.
-
-<!-- If real infinities are inexact, than their reciprocals are also -->
-<!-- inexact.  If +0.0 and -0.0 are close enough to 0.0 to behave like 0.0, -->
-<!-- then they are 0.0. -->
-
-</dd></dl>
-
-<h3>0/0. = 0/0.</h3>
-
-The bad boy of IEEE Standard 754 is <em>not-a-number</em>, which
-does not equal itself.  This was a cute trick to provide a means for
-software to detect it without requiring literal constants or new
-comparison primitives.
-<p>
-But reflexive identity is one of the most basic mathematical
-principals.  In implementations where inexact numbers are boxed
-
-</p><pre>    (let ((narn (/ 0.0 0.0))) (eq? narn narn))
-</pre>
-
-is required to be true, which forces <code>eqv?</code> to return true
-in the same situation:
-
-<blockquote>
-     <code>Eq?</code>'s behavior on numbers and characters is
-     implementation-dependent, but it will always return either true
-     or false, and <u>will return true only when <code>eqv?</code> would
-     also return true.</u>
-</blockquote>
-
-The <samp>`='</samp> procedure is similarly forced to find
-<var>narn</var> equal to itself.
-
-<h3>sqrt</h3>
-
-The description of <code>sqrt</code> has been wrong since R3RS.
-Prepending "For real <var>z</var>" to the second sentence corrects it.
-
-
-
-<h3>expt</h3>
-
-In R3RS and R4RS the description of <code>expt</code> is very simple:
-
-<blockquote>
-    <dl>
-    <dt><u>procedure:</u> <b>expt</b> <i>z1 z2</i>
-    </dt><dd><a name="IDX388"></a>
-
-
-    <p>
-    Returns <var>z1</var> raised to the power <var>z2</var>:
-
-
-    </p><p>
-    z_1<font size="-1"><sup>z_2</sup></font> = e<font size="-1"><sup>z_2 log z_1</sup></font>
-
-
-    </p><p>
-    0<font size="-1"><sup>0</sup></font> is defined to be equal to 1.
-    </p></dd></dl>
-</blockquote>
-
-The simplicity is nice, but in the absence of infinities, the
-straightforward scheme implementation
-
-<pre>    (define (expt b x) (exp (* x (log b))))
-</pre>
-
-is incapable of operating when <var>b</var> is zero.
-<p>
-According to G. Sussman, the change in R5RS to
-</p><blockquote>
-<blockquote>
-0<font size="-1"><sup>z</sup></font> is 1 if z = 0 and 0 otherwise.
-</blockquote>
-</blockquote>
-
-was "... attempting to follow Common Lisp and APL when it came to
-boundary conditions and branch cuts."
-
-<p>
-About <code>expt</code>,
-<a href="http://www-2.cs.cmu.edu/Groups/AI/html/hyperspec/HyperSpec/Body/fun_expcm_expt.html">
-Common-Lisp</a> says:
-
-</p><blockquote>
-  <code>expt</code> is defined as b<font size="-1"><sup>x</sup></font> = e<font size="-1"><sup>x</sup></font> log b.  This defines the
-  principal values precisely.  The range of expt is the entire complex
-  plane.  Regarded as a function of x, with b fixed, there is no branch
-  cut.  Regarded as a function of b, with x fixed, there is in general a
-  branch cut along the negative real axis, continuous with quadrant II.
-  The domain excludes the origin.  By definition, 0<font size="-1"><sup>0</sup></font>=1.  If b=0 and the
-  real part of x is strictly positive, then b<font size="-1"><sup>x</sup></font>=0.  For all other values
-  of x, 0<font size="-1"><sup>x</sup></font> is an error.
-</blockquote>
-
-With log(0) being -/0., and because exp(-/0.) is 0.0, Common-Lisp
-behavior would follow from:
-
-<pre>    (define (expt b x) (exp (* x (log b))))
-</pre>
-
-except when <var>b</var> is zero.
-<p>
-With <code>(log 0)</code> being -/0., the product of <var>x</var> and
--/0. determines the trajectory of <code>exp</code>.
-<code>Exp</code>'s domain repeats every 2*pi radians in the imaginary
-direction.  This multiplication rotates the negative real infinity.
-If it rotates into a direction other than pure real, then the limit of
-<code>(exp (* b (log x)))</code> does not exist (because of the 2*pi
-periodicity).
-</p><p>
-Common-Lisp's criterion of testing the sign of the real part of
-<var>x</var> can be seen as snapping the direction of the product to
-either a positive or negative real infinity.
-
-</p><pre>
-(exp (* 1 -/0.))            ==&gt;  0.0
-(exp (* -1 -/0.))           ==&gt;  +/0.
-</pre>
-
-Because Common-Lisp doesn't have explicit infinities, it signals an
-error for negative real parts of <var>x</var>.  The Common-Lisp float
-behavior except, for <code>(expt 0.0 0.0)</code>, can be produced by
-
-<pre>(define (expt <var>z1</var> <var>z2</var>) (exp (* (if (zero? <var>z1</var>) (real-part <var>z2</var>) <var>z2</var>) (log <var>z1</var>))))
-</pre>
-
-<p>
-Having real infinities enables these definitions to work when
-<var>z1</var> is zero.  Although the simpler definition is
-mathematically satisfying, the "real-part" variant allows
-
-<code>(expt 0.0 <var>z</var>)</code> to return something other than
-0/0. when the exponent has small imaginary parts due to inexact
-inaccuracies.
-</p><p>
-
-<pre>(define (expt <var>z1</var> <var>z2</var>)
-  (cond ((and (exact? <var>z2</var>) (not (and (zero? <var>z1</var>) (negative? <var>z2</var>))))
-	 (integer-expt <var>z1</var> <var>z2</var>))
-	((zero? <var>z2</var>) (+ 1 (* <var>z1</var> <var>z2</var>)))
-	(else
-	 (exp (* (if (zero? <var>z1</var>) (real-part <var>z2</var>) <var>z2</var>) (log <var>z1</var>))))))
-</pre>
-<!-- 	((and (real? <var>z2</var>) (real? <var>z1</var>) (positive? <var>z1</var>)) -->
-<!-- 	 (real-expt <var>z1</var> <var>z2</var>)) -->
-
-In the (above) definition from the reference implementation,
-<code>(expt <var>z</var> 0.0)</code> returns 1 or 1.0 when
-<var>z</var> is finite; and 0/0. otherwise.
-
-<p>
-<code>(expt 0.0 <var>z</var>)</code>, where <var>z</var> has a
-negative real-part, returns +/0., where Common-Lisp signals an error.
-Otherwise the behavior is the same as Common-Lisp's <code>expt</code>.
-
-</p><h3>Inexactness Considered Harmful?</h3>
+<h3>Inexactness Considered Harmful?</h3>
 
 Sebastian Egner, Richard Kelsey, Michael Sperber:<br>
 <a href="http://www-pu.informatik.uni-tuebingen.de/users/sperber/papers/numerical-tower.pdf"><cite>Cleaning up the Tower: Numbers in Scheme</cite></a>,<br>
@@ -802,12 +718,12 @@ for inexact does not change the computation.
   NaN is quite useful in numerical computations.
 </blockquote>
 
-While finding +/0. and -/0. to be very useful in computation, I cannot
-say the same for 0/0..  It usually arises as the result of operating on
-a real infinity.  Tolerating one error is useful; tolerating more than
-one error in a computation masks programming errors.  That is why this
-SRFI leaves to the implementation whether to signal an error or return
-0/0..
+While finding +inf.0 and -inf.0 to be very useful in computation, I
+cannot say the same for 0/0.  It usually arises as the result of
+operating on a real infinity.  Tolerating one error is useful;
+tolerating more than one error in a computation masks programming
+errors.  That is why this SRFI leaves to the implementation whether to
+report a violation of an implementation restriction or return 0/0.
 
 <blockquote>
   The problem with NaN is that the program control structure will
@@ -820,7 +736,7 @@ SRFI leaves to the implementation whether to signal an error or return
 </blockquote>
 
 Because it has no sensible place in the total-order of real numbers,
-0/0. is not a real number.  Thus it is an illegal argument to the
+0/0 is not a real number.  Thus it is an illegal argument to the
 comparison procedures <samp>`&lt;'</samp>, <samp>`&lt;='</samp>,
 <samp>`&gt;'</samp>, and <samp>`&gt;='</samp>.
 
@@ -842,31 +758,27 @@ exact calculations easier.  Not only will the <samp>`finite?'</samp>,
 <samp>`rational?'</samp>, and <samp>`exact?'</samp> procedures return
 <samp>`#f'</samp> for infinities; but passing infinities to exact-only
 or integer-only procedures is an error.
+</p>
 
-</p><h3>The Limit</h3>
-
-Many Scheme implementations treat an exact 0 as <em>stronger</em> than
-an inexact 0.0; returning 0 for <code>(/ 0 0.0)</code> while signaling
-an error for <code>(/ 0.0 0)</code>.  This leads to the use of
-exactness coercions to select behavior of <samp>`/'</samp> and
-<samp>`expt'</samp>; a practice which is very opaque.
-<p>
-This SRFI specifies that division of zeros be 0/0. or signal an error
-so long as one of the zeros is inexact.  But why be restricted to that
-single choice?  This SRFI introduces the <samp>`<a
-href="#IDX1">limit</a>'</samp> procedure to produce the mathematically
-expected behavior of finite and infinite one-sided limits of
-continuous functions.  Its mathematical basis and algorithm are
-detailed in the article
-
-<a href="http://swiss.csail.mit.edu/~jaffer/III/Limit.html">Computing
-the Limit</a>.
-
-
-</p><h1>Specification</h1>
+<h1>Specification</h1>
 
 <!-- <A HREF="Specification.html">Specification</A> -->
 
+In R5RS section "7.1.1 Lexical structure" replace the line:
+
+<pre>
+  &#60;real R&#62; --&#62; &#60;sign&#62; &#60;ureal R&#62;
+</pre>
+
+with the line:
+
+<pre>
+  &#60;real R&#62; --&#62; &#60;sign&#62; &#60;ureal R&#62; | &#60;sign&#62; I N F . 0
+</pre>
+
+in order to extend number syntax to include <SAMP>`+inf.0'</SAMP> and
+<SAMP>`-inf.0'</SAMP>.
+<p>
 Here is the text proposed to replace section "6.2 Numbers" of R5RS.
 Deleted text is <strike>marked with a line through it</strike>.
 Additions and changes are <font color="red">marked in red</font>.
@@ -1003,18 +915,15 @@ property of a number.
 <FONT COLOR=red>the programmer's responsibility to avoid using exact numbers with</FONT>
 <FONT COLOR=red>magnitude or precision too large to be represented in the</FONT>
 <FONT COLOR=red>implementation.</FONT>
-<P>
-<FONT COLOR=red>Inexact numbers are approximate.  Every mathematical number within</FONT>
-<FONT COLOR=red>the (convex) range of inexacts supported by an implementation will</FONT>
-<FONT COLOR=red>round to an inexact number on input or as a result of computation.</FONT>
-<FONT COLOR=red>The neighborhood of mathematical numbers rounding to a particular</FONT>
-<FONT COLOR=red>inexact number must be simply connected.</FONT>
-<P>
-<FONT COLOR=red>Because real infinities are mandated (in implementations supporting</FONT>
-<FONT COLOR=red>inexacts), all mathematical real numbers map to inexact numbers.  It</FONT>
-<FONT COLOR=red>is the programmer's responsibility to avoid using non-real complex</FONT>
-<FONT COLOR=red>numbers with magnitude too large to be represented in the</FONT>
-<FONT COLOR=red>implementation.</FONT>
+<!-- <P> -->
+<!-- Although real infinities provide a representation of real numbers of -->
+<!-- arbitrarily large magnitude, -->
+<FONT COLOR=red>For inexact numbers,</FONT>
+<FONT COLOR=red>it is the programmer's responsibility to</FONT>
+<FONT COLOR=red>avoid using</FONT>
+<!-- non-real -->
+<FONT COLOR=red>complex numbers with magnitude too large to be</FONT>
+<FONT COLOR=red>represented in the implementation.</FONT>
 
 
 <P>
@@ -1040,8 +949,8 @@ See section <A HREF="#6.2.3">6.2.3 Implementation restrictions</A>.
 
 <P>
 With the exception of <CODE>inexact-&#62;exact</CODE>,
-<samp><FONT COLOR=red>`round->exact'</FONT></samp><FONT COLOR=red>, </FONT><samp><FONT COLOR=red>`ceiling->exact'</FONT></samp><FONT COLOR=red>,</FONT>
-<samp><FONT COLOR=red>`floor->exact'</FONT></samp><FONT COLOR=red>, and </FONT><samp><FONT COLOR=red>`truncate->exact'</FONT></samp><FONT COLOR=red>,</FONT>
+<samp><FONT COLOR=red>`round-&gt;exact'</FONT></samp><FONT COLOR=red>, </FONT><samp><FONT COLOR=red>`ceiling-&gt;exact'</FONT></samp><FONT COLOR=red>,</FONT>
+<samp><FONT COLOR=red>`floor-&gt;exact'</FONT></samp><FONT COLOR=red>, and </FONT><samp><FONT COLOR=red>`truncate-&gt;exact'</FONT></samp><FONT COLOR=red>,</FONT>
 the operations
 described in this section must
 <STRIKE>generally</STRIKE>
@@ -1062,36 +971,57 @@ inexact.
 <!-- neighborhood of (mathematical) numbers which are closer to it than to -->
 <!-- any other inexact number. -->
 <!-- <p> -->
-<FONT COLOR=red>The interpretation of real infinities is that +/0. represents real</FONT>
-<FONT COLOR=red>numbers greater than can be encoded by finite inexacts in the</FONT>
-<FONT COLOR=red>implementation (&gt;&nbsp;179.76931348623157e306 for IEEE-754 64-bit</FONT>
-<FONT COLOR=red>flonums) and that -/0. represents numbers less than can be encoded by</FONT>
+
+<FONT COLOR=red>Implementations of Scheme which provide inexact real numbers shall</FONT>
+<FONT COLOR=red>implement positive infinity and negative infinity as inexact real</FONT>
+<FONT COLOR=red>number objects.</FONT>
+<P>
+
+<SAMP><FONT COLOR=red>`+inf.0'</FONT></SAMP> <FONT COLOR=red>represents real numbers greater than can be</FONT>
+<FONT COLOR=red>encoded by finite inexacts in the implementation</FONT>
+<FONT COLOR=red>(&gt;&nbsp;179.76931348623157e306 for IEEE-754 64-bit flonums).</FONT>
+<SAMP><FONT COLOR=red>`-inf.0'</FONT></SAMP> <FONT COLOR=red>represents numbers less than can be encoded by</FONT>
 <FONT COLOR=red>finite inexacts in the implementation</FONT>
-<FONT COLOR=red>(&lt;&nbsp;-179.76931348623157e306 for IEEE-754 64-bit flonums).  This</FONT>
-<FONT COLOR=red>preserves the total ordering of the (mathematical) real numbers and</FONT>
-<FONT COLOR=red>extends Scheme's representation to cover the entire real line.</FONT>
-<FONT COLOR=red>+/0. and -/0. represent the half-lines beyond either end of the</FONT>
-<FONT COLOR=red>implementation's inexact rational range.</FONT>
+<FONT COLOR=red>(&lt;&nbsp;-179.76931348623157e306 for IEEE-754 64-bit flonums).</FONT>
+
+<!-- This preserves the total ordering of the (mathematical) real numbers -->
+<!-- and extends Scheme's representation of inexacts to cover the entire -->
+<!-- real line. -->
+
+<!-- +inf.0 and -inf.0 represent the half-lines beyond either end of the -->
+<!-- implementation's inexact rational range. -->
+<p>
+<FONT COLOR=red>Infinities are returned by some operations which would otherwise cause</FONT>
+<FONT COLOR=red>errors:</FONT>
+
+<blockquote>
+<FONT COLOR=red>division by 0.</FONT>
+</blockquote>
+
+<blockquote>
+<FONT COLOR=red>taking logarithm of 0.</FONT>
+</blockquote>
+
+<blockquote>
+<FONT COLOR=red>product, division, sum, difference, tangent, or exponentiation</FONT>
+<FONT COLOR=red>whose mathematical result is outside the range of the implementation's</FONT>
+<FONT COLOR=red>number formats.</FONT>
+</blockquote>
 
 <FONT COLOR=red>For any finite real number </FONT><var><FONT COLOR=red>x</FONT></var><FONT COLOR=red>:</FONT>
 
 <pre>
-<FONT COLOR=red>(= -/0. </FONT><var><FONT COLOR=red>x</FONT></var><FONT COLOR=red>))                 ==&gt;  #f</FONT>
-<FONT COLOR=red>(= +/0. </FONT><var><FONT COLOR=red>x</FONT></var><FONT COLOR=red>))                 ==&gt;  #f</FONT>
-<FONT COLOR=red>(&lt; -/0. </FONT><var><FONT COLOR=red>x</FONT></var> <FONT COLOR=red>+/0.))            ==&gt;  #t</FONT>
-<FONT COLOR=red>(&gt; +/0. </FONT><var><FONT COLOR=red>x</FONT></var> <FONT COLOR=red>-/0.))            ==&gt;  #t</FONT>
+<FONT COLOR=red>(= -inf.0 </FONT><var><FONT COLOR=red>x</FONT></var><FONT COLOR=red>))               ==&gt;  #f</FONT>
+<FONT COLOR=red>(= +inf.0 </FONT><var><FONT COLOR=red>x</FONT></var><FONT COLOR=red>))               ==&gt;  #f</FONT>
+<FONT COLOR=red>(&lt; -inf.0 </FONT><var><FONT COLOR=red>x</FONT></var> <FONT COLOR=red>+inf.0))        ==&gt;  #t</FONT>
+<FONT COLOR=red>(&gt; +inf.0 </FONT><var><FONT COLOR=red>x</FONT></var> <FONT COLOR=red>-inf.0))        ==&gt;  #t</FONT>
 </pre>
 
-<P>
-<FONT COLOR=red>Implementations of Scheme which provide inexact real numbers shall</FONT>
-<FONT COLOR=red>implement positive infinity and negative infinity as unique inexact</FONT>
-<FONT COLOR=red>real numbers.</FONT>
-<P>
-<FONT COLOR=red>An optional third infinity, which is </FONT><EM><FONT COLOR=red>not</FONT></EM> <FONT COLOR=red>real, may be</FONT>
-<FONT COLOR=red>returned by a numerical function when no inexact number</FONT>
-<FONT COLOR=red>(including infinities) is the correct answer.  An implementation</FONT>
-<FONT COLOR=red>may report a violation of an implementation restriction in any</FONT>
-<FONT COLOR=red>calculation for which the result would be an unreal infinity.</FONT>
+<FONT COLOR=red>The notation 0/0 is used within this report to designate a numerical</FONT>
+<FONT COLOR=red>error-object.  A numerical function may return such an object when no</FONT>
+<FONT COLOR=red>other number (including real infinities) is the correct value.  An</FONT>
+<FONT COLOR=red>implementation may report a violation of an implementation restriction</FONT>
+<FONT COLOR=red>in any calculation for which the result would be 0/0.</FONT>
 <P>
 
 
@@ -1258,9 +1188,8 @@ a decimal point, an exponent, a "#" character in the place of a <FONT COLOR=red>
 otherwise it is exact.
 
 <P>
-<FONT COLOR=red>Negative infinity is written </FONT><SAMP><FONT COLOR=red>`-/0.'</FONT></SAMP><FONT COLOR=red>.  Positive infinity</FONT>
-<FONT COLOR=red>is written </FONT><SAMP><FONT COLOR=red>`+/0.'</FONT></SAMP><FONT COLOR=red>.  The (optional) non-real infinity is</FONT>
-<FONT COLOR=red>written </FONT><SAMP><FONT COLOR=red>`0/0.'</FONT></SAMP><FONT COLOR=red>.</FONT>
+<FONT COLOR=red>Negative infinity is written </FONT><SAMP><FONT COLOR=red>`-inf.0'</FONT></SAMP><FONT COLOR=red>.  Positive infinity</FONT>
+<FONT COLOR=red>is written </FONT><SAMP><FONT COLOR=red>`+inf.0'</FONT></SAMP><FONT COLOR=red>.</FONT>
 
 <P>
 In systems with inexact numbers
@@ -1356,14 +1285,10 @@ real number, then <SAMP>`(integer? <VAR>x</VAR>)'</SAMP> is true if and only if
 (integer? 3+0i)                        ==&#62;  #t
 (integer? 3.0)                         ==&#62;  #t
 (integer? 8/4)                         ==&#62;  #t
-<FONT COLOR=red>(number? 0/0.)                         ==>  #t</FONT>
-<FONT COLOR=red>(complex? 0/0.)                        ==>  #f</FONT>
-<FONT COLOR=red>(complex? +/0.)                        ==>  #t</FONT>
-<FONT COLOR=red>(real? 0/0.)                           ==>  #f</FONT>
-<FONT COLOR=red>(real? -/0.)                           ==>  #t</FONT>
-<FONT COLOR=red>(rational? +/0.)                       ==>  #f</FONT>
-<FONT COLOR=red>(rational? 0/0.)                       ==>  #f</FONT>
-<FONT COLOR=red>(integer? -/0.)                        ==>  #f</FONT>
+<FONT COLOR=red>(complex? +inf.0)                      ==>  #t</FONT>
+<FONT COLOR=red>(real? -inf.0)                         ==>  #t</FONT>
+<FONT COLOR=red>(rational? +inf.0)                     ==>  #f</FONT>
+<FONT COLOR=red>(integer? -inf.0)                      ==>  #f</FONT>
 </PRE>
 
 
@@ -1406,8 +1331,7 @@ is true.
 
 <PRE>
 <FONT COLOR=red>(exact? 5)                   ==>  #t</FONT>
-<FONT COLOR=red>(inexact? +/0.)              ==>  #t</FONT>
-<FONT COLOR=red>(inexact? 0/0.)              ==>  #t</FONT>
+<FONT COLOR=red>(inexact? +inf.0)            ==>  #t</FONT>
 </PRE>
 
 
@@ -1433,17 +1357,16 @@ equal, monotonically increasing, monotonically decreasing,
 monotonically nondecreasing, or monotonically nonincreasing.
 
 <PRE>
-<FONT COLOR=red>(= +/0. +/0.)               ==>  #t</FONT>
-<FONT COLOR=red>(= -/0. +/0.)               ==&gt;  #f</FONT>
-<FONT COLOR=red>(= -/0. -/0.)               ==>  #t</FONT>
-<FONT COLOR=red>(= 0/0. 0/0.)               ==>  #t</FONT>
+<FONT COLOR=red>(= +inf.0 +inf.0)           ==>  #t</FONT>
+<FONT COLOR=red>(= -inf.0 +inf.0)           ==&gt;  #f</FONT>
+<FONT COLOR=red>(= -inf.0 -inf.0)           ==>  #t</FONT>
 </PRE>
 
 <FONT COLOR=red>For any finite real number </FONT><VAR><FONT COLOR=red>x</FONT></VAR><FONT COLOR=red>:</FONT>
 
 <PRE>
-<FONT COLOR=red>(&lt -/0. </FONT><VAR><FONT COLOR=red>x</FONT></VAR> <FONT COLOR=red>+/0.))            ==>  #t</FONT>
-<FONT COLOR=red>(&gt +/0. </FONT><VAR><FONT COLOR=red>x</FONT></VAR> <FONT COLOR=red>-/0.))            ==>  #t</FONT>
+<FONT COLOR=red>(&lt -inf.0 </FONT><VAR><FONT COLOR=red>x</FONT></VAR> <FONT COLOR=red>+inf.0))        ==>  #t</FONT>
+<FONT COLOR=red>(&gt +inf.0 </FONT><VAR><FONT COLOR=red>x</FONT></VAR> <FONT COLOR=red>-inf.0))        ==>  #t</FONT>
 </PRE>
 
 <P>
@@ -1495,12 +1418,10 @@ These numerical predicates test a number for a particular property,
 returning <TT>#t</TT> or <TT>#f</TT>.  See note above.
 
 <PRE>
-<FONT COLOR=red>(positive? +/0.)            ==>  #t</FONT>
-<FONT COLOR=red>(negative? -/0.)            ==>  #t</FONT>
-<FONT COLOR=red>(finite? -/0.)              ==>  #f</FONT>
-<FONT COLOR=red>(infinite? +/0.)            ==>  #t</FONT>
-<FONT COLOR=red>(finite? 0/0.)              ==>  #f</FONT>
-<FONT COLOR=red>(infinite? 0/0.)            ==>  #t</FONT>
+<FONT COLOR=red>(positive? +inf.0)          ==>  #t</FONT>
+<FONT COLOR=red>(negative? -inf.0)          ==>  #t</FONT>
+<FONT COLOR=red>(finite? -inf.0)            ==>  #f</FONT>
+<FONT COLOR=red>(infinite? +inf.0)          ==>  #t</FONT>
 </PRE>
 
 </DL>
@@ -1526,8 +1447,8 @@ These procedures return the maximum or minimum of their arguments.
 <FONT COLOR=red>For any real number </FONT><VAR><FONT COLOR=red>x</FONT></VAR><FONT COLOR=red>:</FONT>
 
 <PRE>
-<FONT COLOR=red>(max +/0. </FONT><VAR><FONT COLOR=red>x</FONT></VAR><FONT COLOR=red>)                           ==>  +/0.</FONT>
-<FONT COLOR=red>(min -/0. </FONT><VAR><FONT COLOR=red>x</FONT></VAR><FONT COLOR=red>)                           ==>  -/0.</FONT>
+<FONT COLOR=red>(max +inf.0 </FONT><VAR><FONT COLOR=red>x</FONT></VAR><FONT COLOR=red>)                         ==>  +inf.0</FONT>
+<FONT COLOR=red>(min -inf.0 </FONT><VAR><FONT COLOR=red>x</FONT></VAR><FONT COLOR=red>)                         ==>  -inf.0</FONT>
 </PRE>
 
 
@@ -1562,30 +1483,23 @@ These procedures return the sum or product of their arguments.
 (+ 3 4)                                ==&#62;  7
 (+ 3)                                  ==&#62;  3
 (+)                                    ==&#62;  0
-<FONT COLOR=red>(+ +/0. +/0.)                          ==>  +/0.</FONT>
-<FONT COLOR=red>(+ +/0. -/0.)                          ==>  0/0.</FONT>
+<FONT COLOR=red>(+ +inf.0 +inf.0)                      ==>  +inf.0</FONT>
+<FONT COLOR=red>(+ +inf.0 -inf.0)                      ==>  0/0</FONT>
 
 (* 4)                                  ==&#62;  4
 (*)                                    ==&#62;  1
-<FONT COLOR=red>(* 5 +/0.)                             ==>  +/0.</FONT>
-<FONT COLOR=red>(* -5 +/0.)                            ==>  -/0.</FONT>
-<FONT COLOR=red>(* +/0. +/0.)                          ==>  +/0.</FONT>
-<FONT COLOR=red>(* +/0. -/0.)                          ==>  -/0.</FONT>
-<FONT COLOR=red>(* 0 +/0.)                             ==>  0/0.</FONT>
+<FONT COLOR=red>(* 5 +inf.0)                           ==>  +inf.0</FONT>
+<FONT COLOR=red>(* -5 +inf.0)                          ==>  -inf.0</FONT>
+<FONT COLOR=red>(* +inf.0 +inf.0)                      ==>  +inf.0</FONT>
+<FONT COLOR=red>(* +inf.0 -inf.0)                      ==>  -inf.0</FONT>
+<FONT COLOR=red>(* 0 +inf.0)                           ==>  0/0</FONT>
 </PRE>
 
 <FONT COLOR=red>For any finite number </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>:</FONT>
 
 <PRE>
-<FONT COLOR=red>(+ +/0. </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)                             ==>  +/0.</FONT>
-<FONT COLOR=red>(+ -/0. </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)                             ==>  -/0.</FONT>
-</PRE>
-
-<FONT COLOR=red>For any number </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>:</FONT>
-
-<PRE>
-<FONT COLOR=red>(+ 0/0. </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)                             ==>  0/0.</FONT>
-<FONT COLOR=red>(* 0/0. </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)                             ==>  0/0.</FONT>
+<FONT COLOR=red>(+ +inf.0 </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)                           ==>  +inf.0</FONT>
+<FONT COLOR=red>(+ -inf.0 </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)                           ==>  -inf.0</FONT>
 </PRE>
 
 <P>
@@ -1620,17 +1534,17 @@ however, they return the additive or multiplicative inverse of their argument.
 (- 3 4)                                ==&#62;  -1
 (- 3 4 5)                              ==&#62;  -6
 (- 3)                                  ==&#62;  -3
-<FONT COLOR=red>(- +/0. +/0.)                          ==>  0/0.</FONT>
+<FONT COLOR=red>(- +inf.0 +inf.0)                      ==>  0/0</FONT>
 
 (/ 3 4 5)                              ==&#62;  3/20
 (/ 3)                                  ==&#62;  1/3
-<FONT COLOR=red>(/ 0.0)                                ==>  +/0.</FONT>
-<FONT COLOR=red>(/ 1.0 0)                              ==>  +/0.</FONT>
-<FONT COLOR=red>(/ -1 0.0)                             ==>  -/0.</FONT>
-<FONT COLOR=red>(/ +/0.)                               ==>  0.0</FONT>
-<FONT COLOR=red>(/ 0 0.0)                              ==>  0/0.</FONT>
-<FONT COLOR=red>(/ 0.0 0)                              ==>  0/0.</FONT>
-<FONT COLOR=red>(/ 0.0 0.0)                            ==>  0/0.</FONT>
+<FONT COLOR=red>(/ 0.0)                                ==>  +inf.0</FONT>
+<FONT COLOR=red>(/ 1.0 0)                              ==>  +inf.0</FONT>
+<FONT COLOR=red>(/ -1 0.0)                             ==>  -inf.0</FONT>
+<FONT COLOR=red>(/ +inf.0)                             ==>  0.0</FONT>
+<FONT COLOR=red>(/ 0 0.0)                              ==>  0/0</FONT>
+<FONT COLOR=red>(/ 0.0 0)                              ==>  0/0</FONT>
+<FONT COLOR=red>(/ 0.0 0.0)                            ==>  0/0</FONT>
 </PRE>
 
 </DL>
@@ -1648,7 +1562,7 @@ however, they return the additive or multiplicative inverse of their argument.
 
 <PRE>
 (abs -7)                               ==&#62;  7
-<FONT COLOR=red>(abs -/0.)                             ==>  +/0.</FONT>
+<FONT COLOR=red>(abs -inf.0)                           ==>  +inf.0</FONT>
 </PRE>
 
 </DL>
@@ -1857,13 +1771,13 @@ result should be passed to the <SAMP>`inexact-&#62;exact'</SAMP> procedure.
 
 <P>
 <DL>
-<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>floor->exact</FONT></B> <I><FONT COLOR=red>x</FONT></I>
+<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>floor-&gt;exact</FONT></B> <I><FONT COLOR=red>x</FONT></I>
 <DD>
-<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>ceiling->exact</FONT></B> <I><FONT COLOR=red>x</FONT></I>
+<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>ceiling-&gt;exact</FONT></B> <I><FONT COLOR=red>x</FONT></I>
 <DD>
-<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>truncate->exact</FONT></B> <I><FONT COLOR=red>x</FONT></I>
+<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>truncate-&gt;exact</FONT></B> <I><FONT COLOR=red>x</FONT></I>
 <DD>
-<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>round->exact</FONT></B> <I><FONT COLOR=red>x</FONT></I>
+<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>round-&gt;exact</FONT></B> <I><FONT COLOR=red>x</FONT></I>
 <DD>
 
 
@@ -1900,138 +1814,7 @@ all.
   (inexact-&#62;exact .3) 1/10)            ==&#62; 1/3    ; exact
 (rationalize .3 1/10)                  ==&#62; #i1/3  ; inexact
 
-<FONT COLOR=red>(rationalize 3 +/0.)                   ==>  0</FONT>
-</PRE>
-
-</DL>
-
-<P>
-<DL>
-<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>limit</FONT></B> <I><FONT COLOR=red>proc x1 x2 k</FONT></I>
-<DD><A NAME="IDX1"></A>
-<DT><U><FONT COLOR=red>library procedure:</FONT></U> <B><FONT COLOR=red>limit</FONT></B> <I><FONT COLOR=red>proc x1 x2</FONT></I>
-<DD><A NAME="IDX2"></A>
-
-
-<P>
-<VAR><FONT COLOR=red>Proc</FONT></VAR> <FONT COLOR=red>must be a procedure taking a single inexact real argument.</FONT>
-<VAR><FONT COLOR=red>K</FONT></VAR> <FONT COLOR=red>is the number of points on which </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>will be called; it</FONT>
-<FONT COLOR=red>defaults to 8.</FONT>
-
-
-<P>
-<FONT COLOR=red>If </FONT><VAR><FONT COLOR=red>x1</FONT></VAR> <FONT COLOR=red>is finite, then </FONT><VAR><FONT COLOR=red>Proc</FONT></VAR> <FONT COLOR=red>must be continuous on the</FONT>
-<FONT COLOR=red>half-open interval:</FONT>
-
-
-<P>
- <FONT COLOR=red>( </FONT><VAR><FONT COLOR=red>x1</FONT></VAR> <FONT COLOR=red>.. </FONT><VAR><FONT COLOR=red>x1</FONT></VAR><FONT COLOR=red>+</FONT><VAR><FONT COLOR=red>x2</FONT></VAR> <FONT COLOR=red>]</FONT>
-
-
-<P>
-<FONT COLOR=red>And </FONT><VAR><FONT COLOR=red>x2</FONT></VAR> <FONT COLOR=red>should be chosen small enough so that </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>is</FONT>
-<FONT COLOR=red>expected to be monotonic or constant on arguments between </FONT><VAR><FONT COLOR=red>x1</FONT></VAR> <FONT COLOR=red>and</FONT>
-<VAR><FONT COLOR=red>x1</FONT></VAR> <FONT COLOR=red>+ </FONT><VAR><FONT COLOR=red>x2</FONT></VAR><FONT COLOR=red>.</FONT>
-
-
-<P>
-<CODE><FONT COLOR=red>Limit</FONT></CODE> <FONT COLOR=red>computes the limit of </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>as its argument</FONT>
-<FONT COLOR=red>approaches </FONT><VAR><FONT COLOR=red>x1</FONT></VAR> <FONT COLOR=red>from </FONT><VAR><FONT COLOR=red>x1</FONT></VAR> <FONT COLOR=red>+ </FONT><VAR><FONT COLOR=red>x2</FONT></VAR><FONT COLOR=red>.</FONT>
-<CODE><FONT COLOR=red>Limit</FONT></CODE> <FONT COLOR=red>returns a real number or real infinity or </FONT><SAMP><FONT COLOR=red>`#f'</FONT></SAMP><FONT COLOR=red>.</FONT>
-
-
-<P>
-<FONT COLOR=red>If </FONT><VAR><FONT COLOR=red>x1</FONT></VAR> <FONT COLOR=red>is not finite, then </FONT><VAR><FONT COLOR=red>x2</FONT></VAR> <FONT COLOR=red>must be a finite nonzero real</FONT>
-<FONT COLOR=red>with the same sign as </FONT><VAR><FONT COLOR=red>x1</FONT></VAR><FONT COLOR=red>; in which case </FONT><CODE><FONT COLOR=red>limit</FONT></CODE> <FONT COLOR=red>returns:</FONT>
-
-
-<P>
-<CODE><FONT COLOR=red>(limit (lambda (x) (proc (/ x))) 0.0 (/ </FONT><VAR><FONT COLOR=red>x2</FONT></VAR><FONT COLOR=red>) </FONT><VAR><FONT COLOR=red>k</FONT></VAR><FONT COLOR=red>)</FONT></CODE>
-
-
-<P>
-<CODE><FONT COLOR=red>Limit</FONT></CODE> <FONT COLOR=red>examines the magnitudes of the differences between</FONT>
-<FONT COLOR=red>successive values returned by </FONT><VAR><FONT COLOR=red>proc</FONT></VAR> <FONT COLOR=red>called with a succession of</FONT>
-<FONT COLOR=red>numbers from </FONT><VAR><FONT COLOR=red>x1</FONT></VAR><FONT COLOR=red>+</FONT><VAR><FONT COLOR=red>x2</FONT></VAR><FONT COLOR=red>/</FONT><VAR><FONT COLOR=red>k</FONT></VAR> <FONT COLOR=red>to </FONT><VAR><FONT COLOR=red>x1</FONT></VAR><FONT COLOR=red>.</FONT>
-
-
-<P>
-<FONT COLOR=red>If the magnitudes of differences are monotonically decreasing, then</FONT>
-<FONT COLOR=red>then the limit is extrapolated from the degree n polynomial passing</FONT>
-<FONT COLOR=red>through the samples returned by </FONT><VAR><FONT COLOR=red>proc</FONT></VAR><FONT COLOR=red>.</FONT>
-
-
-<P>
-<FONT COLOR=red>If the magnitudes of differences are increasing as fast or faster than</FONT>
-<FONT COLOR=red>a hyperbola matching at </FONT><VAR><FONT COLOR=red>x1</FONT></VAR><FONT COLOR=red>+</FONT><VAR><FONT COLOR=red>x2</FONT></VAR><FONT COLOR=red>, then a real infinity with</FONT>
-<FONT COLOR=red>sign the same as the differences is returned.</FONT>
-
-
-<P>
-<FONT COLOR=red>If the magnitudes of differences are increasing more slowly than the</FONT>
-<FONT COLOR=red>hyperbola matching at </FONT><VAR><FONT COLOR=red>x1</FONT></VAR><FONT COLOR=red>+</FONT><VAR><FONT COLOR=red>x2</FONT></VAR><FONT COLOR=red>, then the limit is</FONT>
-<FONT COLOR=red>extrapolated from the quadratic passing through the three samples</FONT>
-<FONT COLOR=red>closest to </FONT><VAR><FONT COLOR=red>x1</FONT></VAR><FONT COLOR=red>.</FONT>
-
-
-<P>
-<FONT COLOR=red>If the magnitudes of differences are not monotonic or are not</FONT>
-<FONT COLOR=red>completely within one of the above categories, then #f is returned.</FONT>
-
-
-
-<PRE>
-<FONT COLOR=red>;; constant</FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ x x)) 0 1.0e-9)           ==&gt; 1.0</FONT>
-<FONT COLOR=red>(limit (lambda (x) (expt 0 x)) 0 1.0e-9)        ==&gt; 0.0</FONT>
-<FONT COLOR=red>(limit (lambda (x) (expt 0 x)) 0 -1.0e-9)       ==&gt; +/0.</FONT>
-<FONT COLOR=red>;; linear</FONT>
-<FONT COLOR=red>(limit + 0 976.5625e-6)                         ==&gt; 0.0</FONT>
-<FONT COLOR=red>(limit - 0 976.5625e-6)                         ==&gt; 0.0</FONT>
-<FONT COLOR=red>;; vertical point of inflection</FONT>
-<FONT COLOR=red>(limit sqrt 0 1.0e-18)                          ==&gt; 0.0</FONT>
-<FONT COLOR=red>(limit (lambda (x) (* x (log x))) 0 1.0e-9)     ==&gt; -102.70578127633066e-12</FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ x (log x))) 0 1.0e-9)     ==&gt; 96.12123142321669e-15</FONT>
-<FONT COLOR=red>;; limits tending to infinity</FONT>
-<FONT COLOR=red>(limit + +/0. 1.0e9)                            ==&gt; +/0.</FONT>
-<FONT COLOR=red>(limit + -/0. -1.0e9)                           ==&gt; -/0.</FONT>
-<FONT COLOR=red>(limit / 0 1.0e-9)                              ==&gt; +/0.</FONT>
-<FONT COLOR=red>(limit / 0 -1.0e-9)                             ==&gt; -/0.</FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ (log x) x)) 0 1.0e-9)     ==&gt; -/0.</FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ (magnitude (log x)) x)) 0 -1.0e-9)</FONT>
-                                                <FONT COLOR=red>==&gt; -/0.</FONT>
-<FONT COLOR=red>;; limit doesn't exist</FONT>
-<FONT COLOR=red>(limit sin +/0. 1.0e9)                          ==&gt; #f</FONT>
-<FONT COLOR=red>(limit (lambda (x) (sin (/ x))) 0 1.0e-9)       ==&gt; #f</FONT>
-<FONT COLOR=red>(limit (lambda (x) (sin (/ x))) 0 -1.0e-9)      ==&gt; #f</FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ (log x) x)) 0 -1.0e-9)    ==&gt; #f</FONT>
-<FONT COLOR=red>;; conditionally convergent - return #f</FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ (sin x) x)) +/0. 1.0e222)</FONT>
-                                                <FONT COLOR=red>==&gt; #f</FONT>
-<FONT COLOR=red>;; asymptotes</FONT>
-<FONT COLOR=red>(limit / -/0. -1.0e222)                         ==&gt; 0.0</FONT>
-<FONT COLOR=red>(limit / +/0. 1.0e222)                          ==&gt; 0.0</FONT>
-<FONT COLOR=red>(limit (lambda (x) (expt x x)) 0 1.0e-18)       ==&gt; 1.0</FONT>
-<FONT COLOR=red>(limit (lambda (x) (sin (/ x))) +/0. 1.0e222)   ==&gt; 0.0</FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ (+ (exp (/ x)) 1))) 0 1.0e-9)</FONT>
-                                                <FONT COLOR=red>==&gt; 0.0</FONT>
-<FONT COLOR=red>(limit (lambda (x) (/ (+ (exp (/ x)) 1))) 0 -1.0e-9)</FONT>
-                                                <FONT COLOR=red>==&gt; 1.0</FONT>
-<FONT COLOR=red>(limit (lambda (x) (real-part (expt (tan x) (cos x)))) (/ pi 2) 1.0e-9)</FONT>
-                                                <FONT COLOR=red>==&gt; 1.0</FONT>
-<FONT COLOR=red>;; This example from the 1979 Macsyma manual grows so rapidly</FONT>
-<FONT COLOR=red>;;  that x2 must be less than 41.  It correctly returns e^2.</FONT>
-<FONT COLOR=red>(limit (lambda (x) (expt (+ x (exp x) (exp (* 2 x))) (/ x))) +/0. 40)</FONT>
-                                                <FONT COLOR=red>==&gt; 7.3890560989306504</FONT>
-<FONT COLOR=red>;; LIMIT can calculate the proper answer when evaluation</FONT>
-<FONT COLOR=red>;; of the function at the limit point does not:</FONT>
-<FONT COLOR=red>(tan (atan +/0.))                               ==&gt; 16.331778728383844e15</FONT>
-<FONT COLOR=red>(limit tan (atan +/0.)-1.0e-15)                 ==&gt; +/0.</FONT>
-<FONT COLOR=red>(tan (atan +/0.))                               ==&gt; 16.331778728383844e15</FONT>
-<FONT COLOR=red>(limit tan (atan +/0.)1.0e-15)                  ==&gt; -/0.</FONT>
-<FONT COLOR=red>((lambda (x) (expt (exp (/ -1 x)) x)) 0)        ==&gt; 1.0</FONT>
-<FONT COLOR=red>(limit (lambda (x) (expt (exp (/ -1 x)) x)) 0 1.0e-9)</FONT>
-                                                <FONT COLOR=red>==&gt; 0.0</FONT>
+<FONT COLOR=red>(rationalize 3 +inf.0)                 ==>  0</FONT>
 </PRE>
 
 </DL>
@@ -2101,28 +1884,27 @@ result from a real argument.
 <P>
 <FONT COLOR=red>If the function has a real-valued limit as its argument tends toward</FONT>
 <FONT COLOR=red>positive infinity, then that is the value returned by the function</FONT>
-<FONT COLOR=red>applied to +/0..</FONT>
+<FONT COLOR=red>applied to +inf.0.</FONT>
 
 <FONT COLOR=red>If the function has a real-valued limit as its argument tends toward</FONT>
 <FONT COLOR=red>negative infinity, then that is the value returned by the function</FONT>
-<FONT COLOR=red>applied to -/0..</FONT>
+<FONT COLOR=red>applied to -inf.0.</FONT>
 
 <PRE>
-<FONT COLOR=red>(exp +/0.)                  ==> +/0.</FONT>
-<FONT COLOR=red>(exp -/0.)                  ==> 0.0</FONT>
-<FONT COLOR=red>(log +/0.)                  ==> +/0.</FONT>
-<FONT COLOR=red>(log 0.0)                   ==> -/0.</FONT>
-<FONT COLOR=red>(log -/0.)                  ==> 0/0.</FONT>
-<FONT COLOR=red>(atan -/0.)                 ==> -1.5707963267948965</FONT>
-<FONT COLOR=red>(atan +/0.)                 ==> 1.5707963267948965</FONT>
+<FONT COLOR=red>(exp +inf.0)                ==> +inf.0</FONT>
+<FONT COLOR=red>(exp -inf.0)                ==> 0.0</FONT>
+<FONT COLOR=red>(log +inf.0)                ==> +inf.0</FONT>
+<FONT COLOR=red>(log 0.0)                   ==> -inf.0</FONT>
+<FONT COLOR=red>(log -inf.0)                ==> 0/0</FONT>
+<FONT COLOR=red>(atan -inf.0)               ==> -1.5707963267948965</FONT>
+<FONT COLOR=red>(atan +inf.0)               ==> 1.5707963267948965</FONT>
 </PRE>
 
 <FONT COLOR=red>The functions </FONT><CODE><FONT COLOR=red>sin</FONT></CODE><FONT COLOR=red>, </FONT><CODE><FONT COLOR=red>cos</FONT></CODE><FONT COLOR=red>, </FONT><CODE><FONT COLOR=red>tan</FONT></CODE><FONT COLOR=red>,</FONT>
 <CODE><FONT COLOR=red>asin</FONT></CODE><FONT COLOR=red>, and </FONT><CODE><FONT COLOR=red>acos</FONT></CODE> <FONT COLOR=red>either return</FONT>
-<CODE><FONT COLOR=red>0/0.</FONT></CODE> <FONT COLOR=red>or</FONT>
-<FONT COLOR=red>report a violation of an implementation restriction</FONT>
-<FONT COLOR=red>when given </FONT><CODE><FONT COLOR=red>+/0.</FONT></CODE><FONT COLOR=red>,</FONT>
-<CODE><FONT COLOR=red>-/0.</FONT></CODE><FONT COLOR=red>, or </FONT><CODE><FONT COLOR=red>0/0.</FONT></CODE> <FONT COLOR=red>as an argument.</FONT>
+<CODE><FONT COLOR=red>0/0</FONT></CODE> <FONT COLOR=red>or report a violation of an implementation</FONT>
+<FONT COLOR=red>restriction when given </FONT><CODE><FONT COLOR=red>+inf.0</FONT></CODE> <FONT COLOR=red>or </FONT><CODE><FONT COLOR=red>-inf.0</FONT></CODE> <FONT COLOR=red>as</FONT>
+<FONT COLOR=red>an argument.</FONT>
 
 <P>
 
@@ -2136,13 +1918,13 @@ result from a real argument.
 
 <P>
 Returns the principal square root of <VAR>z</VAR>.  <FONT COLOR=red>For real</FONT>
-<VAR><FONT COLOR=red>z</FONT></VAR> The result will have either positive real part, or
+<VAR><FONT COLOR=red>z</FONT></VAR> <FONT COLOR=red>the </FONT>result will have either positive real part, or
 zero real part and non-negative imaginary part.
 
 <PRE>
 <FONT COLOR=red>(sqrt -5)                   ==>  0.0+2.23606797749979i</FONT>
-<FONT COLOR=red>(sqrt +/0.)                 ==>  +/0.</FONT>
-<FONT COLOR=red>(sqrt -/0.)                 ==>  0/0.</FONT>
+<FONT COLOR=red>(sqrt +inf.0)               ==>  +inf.0</FONT>
+<FONT COLOR=red>(sqrt -inf.0)               ==>  0/0</FONT>
 </PRE>
 
 </DL>
@@ -2170,9 +1952,9 @@ Returns <VAR>z1</VAR> raised to the power <VAR>z2</VAR>.
 
 <CODE><FONT COLOR=red>(expt 0.0 </FONT><VAR><FONT COLOR=red>z</FONT></VAR><FONT COLOR=red>)</FONT></CODE><BR>
 <FONT COLOR=red>returns 1.0 for </FONT><VAR><FONT COLOR=red>z</FONT></VAR> <FONT COLOR=red>equal to 0;</FONT><BR>
-<FONT COLOR=red>returns 0.0 for </FONT><VAR><FONT COLOR=red>z</FONT></VAR> <FONT COLOR=red>having positive real part (including +/0.);</FONT><BR>
-<FONT COLOR=red>returns +/0. for </FONT><VAR><FONT COLOR=red>z</FONT></VAR> <FONT COLOR=red>having negative real part (including -/0.); and</FONT><BR>
-<FONT COLOR=red>returns 0/0. or reports a violation of an implementation restriction otherwise.</FONT>
+<FONT COLOR=red>returns 0.0 for </FONT><VAR><FONT COLOR=red>z</FONT></VAR> <FONT COLOR=red>having positive real part (including +inf.0);</FONT><BR>
+<FONT COLOR=red>returns +inf.0 for </FONT><VAR><FONT COLOR=red>z</FONT></VAR> <FONT COLOR=red>having negative real part (including -inf.0); and</FONT><BR>
+<FONT COLOR=red>returns 0/0 or reports a violation of an implementation restriction otherwise.</FONT>
 
 <PRE>
 <FONT COLOR=red>(expt 5 3)                  ==>  125</FONT>
@@ -2181,9 +1963,11 @@ Returns <VAR>z1</VAR> raised to the power <VAR>z2</VAR>.
 <FONT COLOR=red>(expt 0 5)                  ==>  0</FONT>
 <FONT COLOR=red>(expt 0 0)                  ==>  1</FONT>
 <FONT COLOR=red>(expt 0 5+.0000312i)        ==>  0.0</FONT>
-<FONT COLOR=red>(expt 0 -5)                 ==>  +/0.</FONT>
-<FONT COLOR=red>(expt 0 -5+.0000312i)       ==>  +/0.</FONT>
+<FONT COLOR=red>(expt 0 -5)                 ==>  +inf.0</FONT>
+<FONT COLOR=red>(expt 0 -5+.0000312i)       ==>  +inf.0</FONT>
 <FONT COLOR=red>(expt 0 0.0)                ==>  1.0</FONT>
+<FONT COLOR=red>(expt 5 +inf.0)             ==>  +inf.0</FONT>
+<FONT COLOR=red>(expt 5 -inf.0)             ==>  0.0</FONT>
 </PRE>
 
 
@@ -2237,8 +2021,8 @@ where -pi &#60; x_angle &#60;= pi with x_angle = <VAR>x4</VAR> + 2pi n
 for some integer n.
 
 <PRE>
-<FONT COLOR=red>(angle +/0.)                ==> 0.0</FONT>
-<FONT COLOR=red>(angle -/0.)                ==> 3.141592653589793</FONT>
+<FONT COLOR=red>(angle +inf.0)              ==> 0.0</FONT>
+<FONT COLOR=red>(angle -inf.0)              ==> 3.141592653589793</FONT>
 </PRE>
 
 <BLOCKQUOTE>
@@ -2282,7 +2066,11 @@ These procedures implement the natural one-to-one correspondence between
 exact and inexact integers throughout an
 implementation-dependent range.  See section <A HREF="#6.2.3">6.2.3 Implementation restrictions</A>.
 <P>
-<SAMP><FONT COLOR=red>`Exact-&#62;inexact'</FONT></SAMP> <FONT COLOR=red>and</FONT>
+<SAMP><FONT COLOR=red>`Exact-&gt;inexact'</FONT></SAMP> <FONT COLOR=red>given an inexact argument returns</FONT>
+<FONT COLOR=red>that argument.</FONT>
+<SAMP><FONT COLOR=red>`Inexact-&gt;exact'</FONT></SAMP> <FONT COLOR=red>given an exact argument returns</FONT>
+<FONT COLOR=red>that argument.</FONT>
+<FONT COLOR=red>Thus </FONT><SAMP><FONT COLOR=red>`exact-&#62;inexact'</FONT></SAMP> <FONT COLOR=red>and</FONT>
 <SAMP><FONT COLOR=red>`inexact-&#62;exact'</FONT></SAMP> <FONT COLOR=red>are idempotent.</FONT>
 
 </DL>
@@ -2385,8 +2173,8 @@ returns <TT>#f</TT>.
 (string-&#62;number "100" 16)              ==&#62;  256
 (string-&#62;number "1e2")                 ==&#62;  100.0
 (string-&#62;number "15##")                ==&#62;  1500.0
-<FONT COLOR=red>(string->number "+/0.")                ==>  +/0.</FONT>
-<FONT COLOR=red>(string->number "-/0.")                ==>  -/0.</FONT>
+<FONT COLOR=red>(string-&gt;number "+inf.0")              ==>  +inf.0</FONT>
+<FONT COLOR=red>(string-&gt;number "-inf.0")              ==>  -inf.0</FONT>
 </TT>
 </PRE>
 
@@ -2409,7 +2197,6 @@ a <TT>#</TT> appears in place of a digit.  If all inexact
 numbers are integers, then
 <SAMP>`string-&#62;number'</SAMP> may return <TT>#f</TT> whenever
 a decimal point is used.
-<FONT COLOR=red>An implementation may return </FONT><TT><FONT COLOR=red>#f</FONT></TT> <FONT COLOR=red>for "0/0.".</FONT>
 </BLOCKQUOTE>
 
 </DL>
@@ -2441,7 +2228,7 @@ Here is code for the procedures extended from R5RS:
 (define (integer-expt x n) (ipow-by-squaring x n (if (exact? x) 1 1.) *))
 
 (define (expt z1 z2)
-  (cond ((and (exact? z2) (not (and (zero? z1) (negative? z2))))
+  (cond ((and (integer? z2) (not (and (zero? z1) (negative? z2))))
 	 (integer-expt z1 z2))
 	((zero? z2) (+ 1 (* z1 z2)))
 	(else (exp (* (if (zero? z1) (real-part z2) z2) (log z1))))))
@@ -2481,91 +2268,6 @@ Here is code for the procedures extended from R5RS:
 (define (ceiling-&gt;exact x) (inexact-&gt;exact (ceiling x)))
 (define (truncate-&gt;exact x) (inexact-&gt;exact (truncate x)))
 
-(define (invintp f1 f2 f3)
-  (define f1^2 (* f1 f1))
-  (define f2^2 (* f2 f2))
-  (define f3^2 (expt f3 2))
-  (let ((c (+ (* -3 f1^2 f2)
-	      (* 3 f1 f2^2)
-	      (* (- (* 2 f1^2) f2^2) f3)
-	      (* (- f2 (* 2 f1)) f3^2)))
-	(b (+ (- f1^2 (* 2 f2^2)) f3^2))
-	(a (- (* 2 f2) f1 f3)))
-    (define disc (- (* b b) (* 4 a c)))
-    (if (negative? (real-part disc))
-	(/ b -2 a)
-	(let ((sqrt-disc (sqrt disc)))
-	  (define root+ (/ (- sqrt-disc b) 2 a))
-	  (define root- (/ (+ sqrt-disc b) -2 a))
-	  (if (&lt; (magnitude (- root+ f1)) (magnitude (- root- f1)))
-	      root+
-	      root-)))))
-
-(define (extrapolate-0 fs)
-  (define n (length fs))
-  (define (choose n k)
-    (do ((kdx 1 (+ 1 kdx))
-	 (prd 1 (/ (* (- n kdx -1) prd) kdx)))
-	((&gt; kdx k) prd)))
-  (do ((k 1 (+ 1 k))
-       (lst fs (cdr lst))
-       (L 0 (+ (* -1 (expt -1 k) (choose n k) (car lst)) L)))
-      ((null? lst) L)))
-
-(define (sequence-&gt;limit proc sequence)
-  (define lval (proc (car sequence)))
-  (if (finite? lval)
-      (let ((val (proc (cadr sequence))))
-	(define h_n*nsamps (* (length sequence) (magnitude (- val lval))))
-	(if (finite? val)
-	    (let loop ((sequence (cddr sequence))
-		       (fxs (list val lval))
-		       (trend #f)
-		       (ldelta (- val lval))
-		       (jdx (+ -1 (length sequence))))
-	      (cond ((null? sequence)
-		     (case trend
-		       ((diverging) (and (real? val) (/ ldelta 0.0)))
-		       ((bounded) (invintp val lval (caddr fxs)))
-		       (else (cond ((zero? ldelta) val)
-				   ((not (real? val)) #f)
-				   (else (extrapolate-0 fxs))))))
-		    (else
-		     (set! lval val)
-		     (set! val (proc (car sequence)))
-		     (if (finite? val)
-			 (let ((delta (- val lval)))
-			   (define h_j (/ h_n*nsamps jdx))
-			   (cond ((case trend
-				    ((converging) (&lt;= (magnitude delta) h_j))
-				    ((bounded)    (&lt;= (magnitude ldelta) (magnitude delta)))
-				    ((diverging)  (&gt;= (magnitude delta) h_j))
-				    (else #f))
-				  (loop (cdr sequence) (cons val fxs) trend delta (+ -1 jdx)))
-				 (trend #f)
-				 (else
-				  (loop (cdr sequence) (cons val fxs)
-					(cond ((&gt; (magnitude delta) h_j) 'diverging)
-					      ((&lt; (magnitude ldelta) (magnitude delta)) 'bounded)
-					      (else 'converging))
-					delta (+ -1 jdx)))))
-			 (and (eq? trend 'diverging) val)))))
-	    (and (real? val) val)))
-      (and (real? lval) lval)))
-
-(define (limit proc x1 x2 . k)
-  (set! k (if (null? k) 8 (car k)))
-  (cond ((not (finite? x2)) (slib:error 'limit 'infinite 'x2 x2))
-	((not (finite? x1))
-	 (or (positive? (* x1 x2)) (slib:error 'limit 'start 'mismatch x1 x2))
-	 (limit (lambda (x) (proc (/ x))) 0.0 (/ x2) k))
-	((= x1 (+ x1 x2)) (slib:error 'limit 'null 'range x1 (+ x1 x2)))
-	(else (let ((dec (/ x2 k)))
-		(do ((x (+ x1 x2 0.0) (- x dec))
-		     (cnt (+ -1 k) (+ -1 cnt))
-		     (lst '() (cons x lst)))
-		    ((negative? cnt)
-		     (sequence-&gt;limit proc (reverse lst))))))))
 </pre>
 
 <h1>Copyright</h1>
@@ -2593,6 +2295,6 @@ DEALINGS IN THE SOFTWARE.
     <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Mon Aug  8 07:42:55 CEST 2005
+Last modified: Sat Aug 13 15:44:18 CEST 2005
 <!-- hhmts end -->
   </body></html>
