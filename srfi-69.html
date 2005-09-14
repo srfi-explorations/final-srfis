@@ -9,17 +9,17 @@
 </head>
 <body>
 
-<a name="Ttl"><H1>Title</H1></a><p>
+<a name="Ttl"><H1>Title</H1></a>
 
 Basic hash tables
 
-<a name="thr"><H1>Author</H1></a><p>
+<a name="thr"><H1>Author</H1></a>
 
 Panu Kalliokoski
 
 <H1>Status</H1>
 
-This SRFI is currently in ``draft'' status. To see an explanation of each
+This SRFI is currently in ``final'' status. To see an explanation of each
 status that a SRFI can hold, see
 <a HREF="http://srfi.schemers.org/srfi-process.html">here</a>.
 It will remain in draft status until 2005/09/09, or as amended. To
@@ -37,6 +37,7 @@ archive of the mailing list</a>.
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-69/srfi-69.html?rev=1.3">2005/08/10</a></li>
   <li>Draft extended: 2005/08/10 - 2005/09/09</li>
   <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-69/srfi-69.html?rev=1.4">2005/08/30</a></li>
+  <li>Final: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-69/srfi-69.html?rev=1.5">2005/09/14</a></li>
 </ul>
 
 <h1><a name="bstr">Abstract</a></h1>
@@ -210,8 +211,8 @@ implementation-specific extensions.
 
 <p>This procedure returns the <var>value</var> associated to <var>key</var> in <var>hash-table</var>.
 If no <var>value</var> is associated to <var>key</var> and <var>thunk</var> is given, it is called
-and its value is returned; if <var>thunk</var> is not given, an error is
-signalled.  
+with no arguments and its value is returned; if <var>thunk</var> is not given, an
+error is signalled.  
 Given a good hash function, this operation should have an (amortised)
 complexity of O(1) with respect to the number of associations in
 <var>hash-table</var>.  (Note: this rules out implementation by association lists
@@ -220,7 +221,12 @@ or fixed-length hash tables.)
 <p>Procedure: <a name="hsht4">hash-table-ref/default</a> <var>hash-table</var>  <var>key</var>  <var>default</var> &rarr;
 <var>value</var>
 
-<p>Equivalent to <tt>(hash-table-ref hash-table key (lambda () default))</tt>.
+<p>Evaluates to the same value as <tt>(hash-table-ref hash-table key (lambda
+() default))</tt>.  
+Given a good hash function, this operation should have an (amortised)
+complexity of O(1) with respect to the number of associations in
+<var>hash-table</var>.  (Note: this rules out implementation by association lists
+or fixed-length hash tables.)
 
 <p>Procedure: <a name="hsht5">hash-table-set!</a> <var>hash-table</var>  <var>key</var>  <var>value</var> &rarr; undefined
 
@@ -263,8 +269,8 @@ than, the following code:
 <p>Procedure: <a name="hsht9">hash-table-update!/default</a>
 <var>hash-table</var>  <var>key</var>  <var>function</var>  <var>default</var> &rarr; undefined
 
-<p>Equivalent to <tt>(hash-table-update! hash-table key function (lambda ()
-default))</tt>.
+<p>Behaves as if it evaluates to <tt>(hash-table-update! hash-table key
+function (lambda () default))</tt>.
 
 <h2><a name="Dln10">Dealing with the whole contents</a></h2>
 
