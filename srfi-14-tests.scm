@@ -5,7 +5,7 @@
 		     ((test form ...)
 		      (cond ((not form) (error "Test failed" 'form)) ...
 			    (else 'OK))))))
-  (let ((vowel (lambda (c) (member c '(#\a #\e #\i #\o #\u)))))
+  (let ((vowel? (lambda (c) (member c '(#\a #\e #\i #\o #\u)))))
 
 (test
  (not (char-set? 5))
