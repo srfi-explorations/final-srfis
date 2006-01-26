@@ -1,0 +1,555 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html40/loose.dtd">
+<html><head>
+
+<title>SRFI 84: Universal Identifiers</title>
+
+</head>
+
+<body>
+
+
+<H1>Title</H1>
+
+Universal Identifiers
+
+
+<H1>Author</H1>
+
+Andrew Wilcox
+<br><a href="http://andrewwilcox.name/">http://andrewwilcox.name/</a>
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status. To see an explanation of each
+status that a SRFI can hold, see
+<a HREF="http://srfi.schemers.org/srfi-process.html">here</a>.
+It will remain in draft status until 2006/03/27, or as amended. To
+provide input on this SRFI, please <CODE>
+<a HREF="mailto:srfi-84@srfi.schemers.org">mailto:srfi-84@srfi.schemers.org</a></CODE>.
+See <a HREF="http://srfi.schemers.org/srfi-list-subscribe.html">instructions
+here</a> to subscribe to the list. You can access previous messages via
+<a HREF="http://srfi.schemers.org/srfi-84/mail-archive/maillist.html">the
+archive of the mailing list</a>.
+<p>
+<ul>
+  <li>Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-84/srfi-84.html?rev=1.1">2006/01/25</a></li>
+  <li>Draft: 2006/01/26 - 2006/03/27</li>
+</ul>
+
+<H1>Abstract</H1>
+
+<p>This SRFI proposes a social convention to allow programmers to
+easily create short, simple Scheme symbols which are guaranteed to be
+universally unique: No other programmer also following this SRFI will
+accidentally create a symbol eq? to yours.
+
+<p>Universally unique symbols are useful to identify standards,
+languages, libraries, types, classes, and other resources.
+
+
+<H1>Issues</H1>
+
+<ul>
+
+<li><p>This SRFI is unusual in that it discusses an issue raised by
+two other SRFI's... which themselves are going to be withdrawn as part
+of the R6RS standards process.
+
+<p>The issue of universal identifiers seemed large enough to me to
+make it useful to pull the topic into its own SRFI where it could be
+discussed separately from what SRFI-76 and SRFI-83 are mainly focused
+on...  but that does leave open the question of how we (or, I should
+say, the SRFI editors) would reach the point of deciding whether this
+SRFI should be finalized or withdrawn.
+
+<li>Versioning of resources (such as libraries) is an important issue,
+but is not addressed here in this SRFI.
+
+<li>What more rules do we need so that a universal identifier created
+by following this SRFI can be read into any conforming R6RS Scheme
+implementation without quoting?
+
+<li>There is as yet no way to register an open source library at
+schemers.org.
+
+<li>It would be nice to have a proof that no identifier can be created
+using one method that is the same as an identifier created by another
+method.  Would any theorists like to take this on?
+
+</ul>
+
+
+<H1>Rationale</H1>
+
+<p>Universal identifiers feature in a couple recent SRFI proposals.
+The 2005-10-17 draft of <a
+href="http://srfi.schemers.org/srfi-76/srfi-76.html">SRFI-76</a>: R6RS
+Records recommends using UUID's (<a
+href="http://www.ietf.org/rfc/rfc4122.txt">RFC 4122</a>) to uniquely
+identify non-generative records, and the 2005-11-30 draft of <a
+href="http://srfi.schemers.org/srfi-83/srfi-83.html">SRFI-83</a>: R6RS
+Library Syntax uses a URI (<a
+href="http://www.ietf.org/rfc/rfc2396.txt">RFC 2396</a>) to identify
+the R6RS language.
+
+<p>While URI's and UUID's are adequate for providing computers with
+unambiguous identifiers, people also have needs with respect to
+universal identifiers that I suggest can be better met with the
+alternative described here.
+
+
+<h2>Why Not URI's?</h2>
+
+<p>The URI syntax is more complex than we need.  (Without going to
+look, is the identifier in SRFI-83 for R6RS "scheme://r6rs/" or is it
+"scheme://r6rs"?)
+
+<p>URI's also don't give you guidance for constructing your own
+unique identifier.  (You've written a library.  Quick!  Come up with
+an URI that's short, easy to type, and you <i>know</i> no one else is
+using).
+
+
+<h2>Why Not UUID's?</h2>
+
+<p>UUID's are great for computers.  Your average computer can generate
+10 million UUID's in a second and every one is guaranteed to be
+different from any other UUID.
+
+<p>But they're not so great for people.  (Quick!  Is
+urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6 the same or different
+than the example UUID found in the middle of page 4 of <a
+href="http://www.ietf.org/rfc/rfc4122.txt">RFC 4122</a>?)
+
+<p>And people are important.  We copy and paste code.  We look at
+libraries and try to figure out why they are colliding when they
+shouldn't be.
+
+<p>It's easy to <i>say</i> that one should use UUID's correctly, but
+we also can look at what people have had trouble with in practice:
+consider the experience of using the Microsoft Windows installer,
+which uses UUID's to track the components of installed programs.  It's
+a great hassle when you've updated your component's UUID's when you
+weren't supposed to, or not updated your UUID's when you should, and
+now the Window's installer is broken...
+
+<p>The Java, Perl, Python, and Ruby communities all manage a large
+namespace of code, and they avoid collisions through social
+conventions instead of using machine generated unique identifiers.
+
+
+<h2>Use Symbols For Identifiers</h2>
+
+<p>Lisp languages and Scheme have an elegant property that "two
+symbols are identical if and only if they are spelled the same way"
+[<a
+href="http://schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-9.html#%_sec_6.3.3">R5RS</a>].
+
+<p>This makes symbols ideal for universal identifiers, instead of
+using strings or some other type.
+
+
+<h2>Make the Names of Important Standards Really Short</h2>
+
+<p>As I mentioned above, the <a
+href="http://srfi.schemers.org/srfi-83/srfi-83.html">SRFI-83</a> R6RS
+Library Syntax draft of 2005-10-31 proposes that the identifier for
+R6RS be:
+
+<blockquote><p>"scheme://r6rs"</blockquote>
+
+<p>(look, no slash at the end...)
+
+<p>Many millions of people in future generations will be using Scheme,
+so we want to make this <i>really easy</i>.  This SRFI proposes
+that the universal identifier for R6RS be simply instead:
+
+<blockquote><p>r6rs</blockquote>
+
+
+<h2>Libraries Organized by Category</h2>
+
+<p>Many popular open source library collections are organized by
+category, sometimes with subcategories within the category, and then
+libraries within the (sub)category.
+
+<p>Looking forward to the time that we have a large body of reusable
+libraries that can be used in any R6RS implementation, this SRFI
+proposes and reserves a naming system for public libraries:
+
+<blockquote><p>web:server:spiffy
+<br>web:server:plt
+<br>web:servlet:kawa
+<br>...
+</blockquote>
+
+<p>Such a naming system will require community support, such as through
+<a href="http://schemers.org">schemers.org</a>, to allow people to
+register the names of their libraries.
+
+
+<h2>Domain Names</h2>
+
+<p>Many projects, groups, and businesses have registered their own
+domain name.  Your domain name is a natural choice to use as the base
+for your universal identifier... when, of course, the the domain is
+relevant to the resource you are naming.
+
+<blockquote><p>call-with-current-continuation.org
+<br>plt-scheme.org
+<br>...
+</blockquote>
+
+
+<h2>HTTP URL's</h2>
+
+<p>Many people and projects, even if they don't have their own domain
+name, do have their own home page on the web.
+
+<blockquote><p>http://swissnet.ai.mit.edu/~jaffer/SLIB.html
+<br>http://www.gnu.org/software/kawa/
+<br>...
+</blockquote>
+
+<p>This SRFI supports using HTTP URL's as the base of a universal
+identifier when that is convenient.
+
+
+<h2>Building Upon the Base</h2>
+
+<p>Once you have selected a base unique identifier which is simple,
+convenient, and easy to read for your resource, more unique
+identifiers can be easily constructed.
+
+<blockquote><p>web:server:plt::request-type
+<br>plt-scheme.org::drscheme
+<br>http://swissnet.ai.mit.edu/~jaffer/SLIB.html::solid
+</blockquote>
+
+<p>The rules of this SRFI guarantee that none of these different schemes
+will clash with each other.
+
+
+<h2>Now Use It</h2>
+
+<p>This SRFI is designed so that any universal identifier constructed
+following these rules can be read into any conforming R6RS
+implementation and used as an identifier without needing to be quoted
+with the vertical bar (|) syntax.
+
+
+
+<H1>Specification</H1>
+
+<p>A universal identifier is a Scheme symbol that has a base part and an
+optional extension.
+
+<pre>
+  &lt;universal-identifier&gt; = &lt;base-part&gt;
+                         | &lt;base-part&gt; :: &lt;extension&gt;
+</pre>
+
+<p>The "::", if present, is part of the symbol, as if the symbol were
+created by:
+
+<pre>
+    (string->symbol (string-append base-part "::" extension))
+</pre>
+
+<p>The base part is something that you own and is unique to you.  The
+extension can be whatever you like, as long as the resulting universal
+identifier can be read into an R6RS implementation without quoting.
+
+<h2>Valid Identifiers</h2>
+
+<p>To be valid, a universal identifier must be a name that can be used
+as a Scheme identifier and does not need to be quoted with the
+vertical bar (|) character:
+
+<ul>
+<li>A zero length name is disallowed.
+<li>The name may not start with a character that can start a number.
+<li>The name may not contain whitespace, the vertical bar (|) character, or
+the backslash (\) character.
+</ul>
+
+<p>Note that this disallows some base-part's that could otherwise be
+constructed, such as some HTTP URL's.
+
+<h2>Base-Part Options</h2>
+
+<p>You may choose whichever kind of base part that
+is most convenient for you:
+
+<pre>
+  &lt;base-part&gt; = &lt;open-source-library&gt;
+              | &lt;rNrs&gt;
+              | &lt;srfi-N&gt;
+              | &lt;domain-name&gt;
+              | &lt;http-url&gt;
+
+</pre>
+
+<p>Restrictions and requirements for each kind of base part are
+described here.
+
+<ul>
+
+<li>
+  <p><b>open-source-library</b>
+
+  <blockquote>
+    <p>Syntax: <code>name ( ":" name )+</code>
+    <p>Requirements:
+    <ul>
+      <li>You are an author of this open source library registered at
+      schemers.org.
+    </ul>
+
+    <p>Example:
+    <blockquote><p>games:adventure:colossal-cave</blockquote>
+
+    <p>Restrictions:
+    <ul>
+      <li>The name may not contain slash (/) or period (.) characters.
+      <li>The name must contain at least one colon (:) character.
+      <li>The name may not begin with a character that can start a number.
+    </ul>
+
+    <p>Recommendations:
+    <ul>
+      <li>Use lower case letters for the name.
+    </ul>
+  </blockquote>
+
+<li>
+  <p><b>rNrs</b>
+
+  <blockquote>
+    <p>Syntax: <code>rNrs</code>, where N is a positive integer.
+
+    <p>Requirements:
+    <ul>
+      <li>You are a member of the Scheme Language Editor's Committee.
+    </ul>
+
+    <p>Example:
+    <blockquote><p>r6rs</blockquote>
+  </blockquote>
+
+<li>
+  <p><b>srfi-N</b>
+
+  <blockquote>
+    <p>Syntax: <code>srfi-N</code>, where N is a positive integer.
+
+    <p>Requirements:
+    <ul>
+      <li>You are an author of the SRFI.
+    </ul>
+
+    <p>Example:
+    <blockquote><p>srfi-75</blockquote>
+  </blockquote>
+
+<li>
+  <p><b>domain-name</b>
+
+  <blockquote>
+    <p>Syntax: See <a href="http://www.ietf.org/rfc/rfc1035.txt">RFC 1035</a>.
+
+    <p>Requirements:
+    <ul>
+      <li>You own the domain name.
+    </ul>
+
+    <p>Example:
+    <blockquote><p>schemers.org</blockquote>
+
+    <p>Recommendations:
+    <ul>
+      <li>Write the domain name in lower case.
+    </ul>
+  </blockquote>
+
+<li>
+  <p><b>http-url</b>
+
+
+  <blockquote>
+    <p>Syntax: See <a href="http://www.ietf.org/rfc/rfc1738.txt">RFC 1738</a>.
+    
+    <p>Requirements:
+    <ul>
+      <li>The scheme is "http", and
+      <li>an http GET operation on the URL returns content, and
+      <li>you own the content.
+    </ul>
+
+    <p>Example:
+    <blockquote><p>http://swissnet.ai.mit.edu/~jaffer/SLIB.html</blockquote>
+
+    <p>Restrictions:
+    <ul>
+      <li>The URL path must not contain unencoded ::, \, or |
+      character sequences.
+    </ul>
+
+    <p>Recommendations:
+    <ul>
+      <li>Write the hostname part in lower case.
+    </ul>
+  </blockquote>
+</ul>
+
+
+<H1>Implementation</H1>
+
+<p>No code is needed to use this SRFI.
+
+<p>The following code (R5RS with SRFI-13: String Libraries and
+SRFI-14: Character-set Library) may be used to check if a universal
+identifier has a correct form and can be used unquoted in R6RS Scheme
+implementations.
+
+<p>It does not check whether domain names are legal domain names or if
+HTTP URL's are valid URL's.
+
+<pre>
+
+(define needs-quoting
+  (char-set-union char-set:whitespace
+                  (char-set #\| #\\)))
+
+(define can-begin-a-number
+  (char-set-union char-set:digit
+                  (char-set #\# #\+ #\. #\-)))
+
+(define (rnrs? s)
+  (and (string-prefix? "r"  s)
+       (string-suffix? "rs" s)
+       (> (string-length s) 3)
+       (string-every char-set:digit s 1 (- (string-length s) 2))))
+
+(define (srfi? s)
+  (and (string-prefix? "srfi-" s)
+       (> (string-length s) 5)
+       (string-every char-set:digit s 5 (string-length s))))
+
+(define (universal-identifier-type x)
+  
+  (let* ((s (cond ((string? x)  x)
+                  ((symbol? x)  (symbol->string x))
+                  (else         #f)))
+
+         (base (cond ((string-contains s "::")
+                      => (lambda (index)
+                           (string-take s index)))
+                     (else s))))
+
+    (cond ((equal? base "")
+           'error:empty-base-part)
+
+          ((char-set-contains? can-begin-a-number (string-ref base 0))
+           'error:can-begin-a-number)
+
+          ((string-any needs-quoting base)
+           'error:can-not-be-used-unquoted)
+
+          ((string-prefix? "http:" base)
+           ;; TODO: add tests for unencoded ::, \, or | chars here?
+           'http-url)
+
+          ((string-index base #\.)
+           (if (string-index base #\:)
+               'error:ambiguous-library-or-domain-name
+               'domain-name))
+                
+          ((string-index base #\:)
+           (if (string-index base #\/)
+               'error:library-should-not-contain-slash
+               'open-source-library))
+
+          ((rnrs? base) 'rNrs)
+
+          ((srfi? base) 'srfi-N)
+
+          (else
+           'error:unidentified))))
+
+(define tests
+  '((""                                error:empty-base-part)
+    ("::foo"                           error:empty-base-part)
+
+    ("1my-library:one"                 error:can-begin-a-number)
+    ("-my-library:minus"               error:can-begin-a-number)
+
+    ("games:adventure:colossal-cave"   open-source-library)
+    ("games:/adventure"                error:library-should-not-contain-slash)
+    ("games:->|"                       error:can-not-be-used-unquoted)
+
+    ("r6rs"                            rNrs)
+    ("r600rs"                          rNrs)
+    ("rrs"                             error:unidentified)
+    ("rx6rs"                           error:unidentified)
+    ("r6xrs"                           error:unidentified)
+
+    ("srfi-75"                         srfi-N)
+    ("srfi-"                           error:unidentified)
+    ("srfi-x75"                        error:unidentified)
+    ("srfi-75x"                        error:unidentified)
+
+    ("schemers.org"                    domain-name)
+    ("schemers.org:srfi"               error:ambiguous-library-or-domain-name)
+    ("schemers.org::srfi"              domain-name)
+
+    ("http://swissnet.ai.mit.edu/~jaffer/SLIB.html"
+     http-url)
+    ))
+
+(for-each (lambda (test)
+            (let ((input           (car test))
+                  (expected-result (cadr test)))
+              (let ((actual-result (universal-identifier-type input)))
+                (cond ((equal? expected-result actual-result)
+                       (display "ok ") (display input) (newline))
+                      (else
+                       (display "FAIL ")        (display input)
+                       (display ", expected: ") (write expected-result)
+                       (display ", actual: ")   (write actual-result)
+                       (newline))))))
+          tests)
+</pre>
+
+
+<H1>Copyright</H1>
+<p>Copyright (C) Andrew M. Wilcox (2005). All Rights Reserved. 
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+<p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+    <hr>
+    <address>Editor: <a
+    href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
+<!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
+<!-- hhmts start -->
+Last modified: Thu Jan 26 08:53:34 CET 2006
+<!-- hhmts end -->
+  </body>
+</html>
+
