@@ -26,7 +26,7 @@ here</a> to subscribe to the list. You can access previous messages via
 archive of the mailing list</a>.
 
 <UL>
-<LI>Received: 2006/03/09
+<LI>Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-85/srfi-85.html?rev=1.2">2006/03/09</a>
 <LI>Draft: 2006/03/09 - 2006/05/04
 </UL>
 
@@ -60,9 +60,9 @@ returns the same value as <code>equal?</code>.
 
 <ul>
 <li>
-  Should <code>dag-equiv?</code> be required to use
-  <code>eqv?</code> instead of <code>eq?</code> when
-  comparing leaf nodes?
+  Should <code>dag-equiv?</code> be allowed or required
+  to use <code>eq?</code> instead of <code>eqv?</code>
+  when comparing leaf nodes?
 <li>
   The R5RS does not provide a mechanism or means for representing
   arbitrary finite functions (tables) that look up their results
@@ -97,7 +97,7 @@ natural notions of equivalence are:
     procedures, and procedures defined using those
     procedures.
     (This is the <code>equiv?</code> predicate described
-    in this SRFI.)
+    in this SRFI, more or less.)
 </ol>
 
 <p>
@@ -142,14 +142,19 @@ the same when drawn as DAGs.
 </p>
 
 <p>
-Both <code>equiv?</code> and <code>dag-equiv?</code> can be
-made to run in O(<var>n</var>) time and space, where
+The <code>equiv?</code> predicate can be computed in
+O(<var>mn</var>) time and O(<var>n</var>) space, where
 <var>n</var> is the number of objects used to represent the
-larger argument.
+larger argument and <var>m</var> is the length of the longest
+vector within that argument.
+The <code>dag-equiv?</code> predicate can also be computed in
+O(<var>mn</var>) time and O(<var>n</var>) space, where
+<var>n</var> and <var>m</var> are defined in the same way
+but for the smaller argument.
 </p>
 
 <p>
-Unfortunately, the O(<var>n</var>) time complexity is achieved
+Unfortunately, the O(<var>mn</var>) time complexity is achieved
 under the assumption of amortized constant-time lookup for
 finite functions that map pairs and vectors to finite sets or
 integers.  The R5RS does not provide any mechanism or means
@@ -175,11 +180,21 @@ if and only if its arguments are equal when interpreted as
 directed acyclic graphs.
 </p>
 
+<p>
+Both <code>equiv?</code> and <code>dag-equiv?</code>
+<ul>
+<li>treat pairs and vectors as nodes with outgoing edges;
+<li>use <code>string=?</code> to compare strings;
+<li>use <code>eqv?</code> to compare other leaf nodes.
+</ul>
+The <code>dag-equiv?</code> predicate uses <code>eq?</code>
+(not <code>eqv?</code>) to detect sharing.
+
 <pre>
-    (equiv? '() '())                            ==>  #t
-    (equiv? (vector 34.5) '#(34.5))             ==>  #t
-    (dag-equiv? (vector 34.5) '#(34.5))         ==>  <var>unspecified</var>
-    (dag-equiv? (vector 'abc) '#(abc))          ==>  #t
+    (equiv? '() '())                                ==>  #t
+    (equiv? (vector 34.5 34.5) '#(34.5 34.5))       ==>  #t
+    (dag-equiv? (vector 34.5 34.5) '#(34.5 34.5))   ==>  <var>unspecified</var>
+    (dag-equiv? (vector 'abc 'abc) '#(abc abc))     ==>  #t
 
     (let* ((x (list 'a))
            (y (list 'a))
@@ -187,7 +202,7 @@ directed acyclic graphs.
       (list (equiv? z (list y x))
             (dag-equiv? z (list y x))
             (equiv? z (list x x))
-            (dag-equiv? z (list x x))))         ==>  (#t #t #t #f)
+            (dag-equiv? z (list x x))))             ==>  (#t #t #t #f)
 
     (let ((x (list 'a 'b 'c 'a))
           (y (list 'a 'b 'c 'a 'b 'c 'a)))
@@ -198,7 +213,7 @@ directed acyclic graphs.
        (dag-equiv? x x)
        (equiv? x y)
        (dag-equiv? x y)
-       (equiv? (list x y 'a) (list y x 'b))))   ==>  (#t #t #t #f #f)
+       (equiv? (list x y 'a) (list y x 'b))))       ==>  (#t #t #t #f #f)
 </pre>
 
 </DD>
@@ -221,12 +236,32 @@ directed acyclic graphs.
 ;;; hash-table-set!
 ;;;
 ;;; Only one argument is passed to make-hash-table, and that
-;;; argument is always the eq? procedure.  (It should be noted
-;;; that the reference implementation of SRFI 69 contains
-;;; several bugs that will prevent it from working out of the
-;;; box.)
+;;; argument is always the eq? procedure.
+;;;
+;;; The reference implementation of SRFI 69 contains several
+;;; bugs that prevent it from working out of the box.
+;;; The three definitions that follow this comment provide
+;;; a portable implementation of the tiny fragment of SRFI 69
+;;; needed to test EQUIV? and DAG-EQUIV?, but will make the
+;;; algorithms run in quadratic time instead of linear.
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (make-hash-table . args)
+  (list 'hash-table-for-eq?))
+
+(define (hash-table-ref/default t x default)
+  (let ((probe (assq x (cdr t))))
+    (if probe
+        (cdr probe)
+        default)))
+
+(define (hash-table-set! t x value)
+  (let ((probe (assq x (cdr t))))
+    (if probe
+        (set-cdr! probe value)
+        (set-cdr! t (cons (cons x value) (cdr t))))
+    #t))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -634,4 +669,3 @@ DEALINGS IN THE SOFTWARE.
     href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
 
 </body></html>
-
