@@ -1,0 +1,138 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+  <head>
+    <title>SRFI 87: =&gt; in case clauses</title>
+  </head>
+
+<BODY>
+
+<H1>Title</H1>
+
+=&gt; in case clauses
+
+<H1>Author</H1>
+
+Chongkai Zhu
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status. To see an explanation of each
+status that a SRFI can hold, see
+<a HREF="http://srfi.schemers.org/srfi-process.html">here</a>.
+It will remain in draft status until 2006/06/08, or as amended. To
+provide input on this SRFI, please <CODE>
+<a HREF="mailto:srfi-87@srfi.schemers.org">mailto:srfi-87@srfi.schemers.org</a></CODE>.
+See <a HREF="http://srfi.schemers.org/srfi-list-subscribe.html">instructions
+here</a> to subscribe to the list. You can access previous messages via
+<a HREF="http://srfi.schemers.org/srfi-87/mail-archive/maillist.html">the
+archive of the mailing list</a>.
+<p>
+<ul>
+  <li>Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-87/srfi-87.html?rev=1.1">2006/04/10</a></li>
+  <li>Draft: 2006/04/10 - 2006/06/08</li>
+</ul>
+
+<H1>Abstract</H1>This SRFI proposes an extension to the <code>case</code> syntax 
+to allow the <code>=&gt;</code> clauses as in <code>cond</code>.<H1>Rationale</H1><code>case</code> 
+is introduced as a syntax sugar based on
+<code>cond</code>, which helps to save a explicit calling to <code>let</code>. But without the <code>=&gt;</code> clause, if the <CODE>result </CODE>
+expression needs the value of <CODE>key</CODE>, the <code>let </code>can't be 
+saved. For an easy example, suppose we want the following:<BLOCKQUOTE><PRE>(case (get-symbol)
+  ((true) #t)
+  ((false) #f)
+  (else =&gt; (lambda (x) x)))</PRE></BLOCKQUOTE>
+<p>Without the <code>=&gt;</code> clause in <code>case</code>, we have to write:</p>
+<BLOCKQUOTE><PRE>(let ((key (get-symbol)))
+  (cond ((eq? key 'true) #t)
+        ((eq? key 'false) #f)
+        (else key)))</PRE></BLOCKQUOTE>
+<H1>Specification</H1>
+<p>(Based on R5RS section 4.2.1 Conditionals)</p>
+<dl>
+  <dt><u>library syntax:</u> <b>case</b> <i>&lt;key&gt; &lt;clause1&gt; &lt;clause2&gt; ...</i>
+  </dt>
+  <dd><em>Syntax:</em> &lt;Key&gt; may be any expression. Each &lt;clause&gt; should have 
+  the form
+  <pre><tt>((&lt;datum1&gt; ...) &lt;expression1&gt; &lt;expression2&gt; ...),</tt></pre>
+  <p>where each &lt;datum&gt; is an external representation of some object. All the 
+  &lt;datum&gt;s must be distinct. The last &lt;clause&gt; may be an &quot;else clause,&quot; which 
+  has the form </p>
+  <pre><tt>(else &lt;expression1&gt; &lt;expression2&gt; ...).</tt></pre>
+  <p><font color="#FF0000">Alternatively, a &lt;clause&gt; may be of the form </font>
+  </p>
+  <pre><font color="#FF0000"><tt>((&lt;datum1&gt; ...) =&gt; &lt;expression&gt;)</tt></font></pre>
+  <p><font color="#FF0000">and the last &lt;clause&gt; may be of the form</font></p>
+  <pre><font color="#FF0000"><tt>(else =&gt; &lt;expression&gt;)</tt></font></pre>
+  <p><em>Semantics:</em> A <samp>`case'</samp> expression is evaluated as 
+  follows. &lt;Key&gt; is evaluated and its result is compared against each &lt;datum&gt;. 
+  If the result of evaluating &lt;key&gt; is equivalent (in the sense of <samp>`eqv?'</samp>; 
+  see section see section
+  <a href="http://www.swiss.ai.mit.edu/~jaffer/r5rs_8.html#SEC49">6.1 
+  Equivalence predicates</a>) to a &lt;datum&gt;, then the expressions in the 
+  corresponding &lt;clause&gt; are evaluated from left to right and the result(s) of 
+  the last expression in the &lt;clause&gt; is(are) returned as the result(s) of the
+  <samp>`case'</samp> expression. If the result of evaluating &lt;key&gt; is different 
+  from every &lt;datum&gt;, then if there is an else clause its expressions are 
+  evaluated and the result(s) of the last is(are) the result(s) of the <samp>
+  `case'</samp> expression; otherwise the result of the <samp>`case'</samp> 
+  expression is unspecified. <font color="#FF0000">If the selected &lt;clause&gt; uses 
+  the <code>=&gt;</code> alternate form, then the &lt;expression&gt; is evaluated. Its 
+  value must be a procedure that accepts one argument; this procedure is then 
+  called on the value of &lt;Key&gt; and the value(s) returned by this procedure 
+  is(are) returned by the <samp>`case'</samp> expression. </font></dd>
+</dl>
+<H1>Implementation</H1>
+<BLOCKQUOTE><PRE><CODE>(define-syntax case
+  (syntax-rules (else =>)
+    ((case (key ...)
+       clauses ...)
+     (let ((atom-key (key ...)))
+       (case atom-key clauses ...)))
+    ((case key
+       (else => result))
+     (result key))
+    ((case key
+       ((atoms ...) => result))
+     (if (memv key '(atoms ...))
+         (result key)))
+    ((case key
+       ((atoms ...) => result)
+       clause clauses ...)
+     (if (memv key '(atoms ...))
+         (result key)
+         (case key clause clauses ...)))
+    ((case key
+       (else result1 result2 ...))
+     (begin result1 result2 ...))
+    ((case key
+       ((atoms ...) result1 result2 ...))
+     (if (memv key '(atoms ...))
+         (begin result1 result2 ...)))
+    ((case key
+       ((atoms ...) result1 result2 ...)
+       clause clauses ...)
+     (if (memv key '(atoms ...))
+         (begin result1 result2 ...)
+         (case key clause clauses ...)))))</CODE></PRE></BLOCKQUOTE>
+<H1>Copyright</H1>Copyright (C) 2006. All Rights Reserved. 
+<P>Permission is hereby granted, free of charge, to any person obtaining a copy 
+of this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of 
+the Software, and to permit persons to whom the Software is furnished to do so, 
+subject to the following conditions: 
+<P>The above copyright notice and this permission notice shall be included in 
+all copies or substantial portions of the Software. 
+<P>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS 
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER 
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
+<HR>
+
+<address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
+
+<!-- Created: Tue Sep 29 19:20:08 EDT 1998 --><!-- hhmts start -->
+Last modified: Mon Apr 10 21:20:25 CEST 2006
+<!-- hhmts end --></BODY></HTML>
