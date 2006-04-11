@@ -1,0 +1,995 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+  <head>
+    <title>SRFI 89: Optional parameters</title>
+  </head>
+
+  <body>
+
+<H1>Title</H1>
+
+Optional parameters
+
+<H1>Author</H1>
+
+Marc Feeley
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status.  To see an explanation of
+each status that a SRFI can hold, see <A
+HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+
+To provide input on this SRFI, please <A
+HREF="mailto:srfi-89@srfi.schemers.org">mail to
+<code>&lt;srfi-89@srfi.schemers.org&gt;</code></A>.  See <A
+HREF="../srfi-list-subscribe.html">instructions here</A> to subscribe to
+the list.  You can access previous messages via <A
+HREF="mail-archive/maillist.html">the archive of the mailing list</A>.
+
+
+<P><UL>
+<LI>Received: 2006/04/01</LI>
+<LI>Draft: 2006/04/11 - 2006/07/10</LI>
+</UL>
+
+<H1>Abstract</H1>
+
+<P>
+This SRFI defines an extension to the R5RS procedure calling
+convention which simplifies the use of optional parameters.  Both
+positional optional parameters and named optional parameters are
+covered by this SRFI.  The syntax and semantics are an extension to
+the DSSSL standard (itself modeled on Common Lisp).  The extension
+allows a rest parameter to capture the actual parameters that follow
+named optional parameters.  Moreover, some cases which are considered
+to be errors in DSSSL are valid in this SRFI.
+</P>
+
+<H1>Rationale</H1>
+
+<P>
+In the software development process it is common to add parameters to
+a procedure to generalize its function.  The new procedure is more
+general because it can do everything the old procedure does and more.
+As the software matures new features and parameters are added at each
+refinement iteration.  This process can quickly lead to procedures
+with a high number of parameters.
+</P>
+
+<P>
+In this iterative software refinement scenario the use of optional
+parameters with default values is an extensible approach.  By making
+the new parameters optional and giving them appropriate default
+values, it is possible to make the procedure's new API a strict
+extension of the previous API.  A caller which uses the previous API
+does not have to be modified for the new API.  It just works.
+</P>
+
+<P>
+A procedure's parameters can be divided into the <I>required</I> and
+the <I>optional</I> parameters.  A caller must always specify
+explicitly all the required parameters.  If a caller does not specify
+an optional parameter then the callee will substitute a default value.
+Required and optional parameters can be passed by position; the
+position of a parameter in the actual parameters is used to match it
+with a parameter in the procedure's formal parameter list.  Positional
+matching works well for required parameters, but not so well for
+optional parameters because to line up an optional parameter to the
+correct position the value of the previous optional parameters must be
+given whether equal to the default value or not.  This greatly reduces
+the usefulness of optional parameters as soon as there is more than
+one optional parameter.
+</P>
+
+<P>
+Let's take the <TT>`number-&gt;string'</TT> procedure as an example and
+fantasize about its evolution.  This procedure takes a required
+parameter, a number, and converts it to a string containing its
+decimal representation:
+</P>
+
+<PRE>
+    (number-&#62;string 1234567)       ==&#62;  "1234567"
+</PRE>
+
+<P>
+To allow converting numbers into a base different from 10, a
+positional optional parameter is added.  This <I>radix</I> parameter,
+which defaults to 10, is the radix for representing the converted
+number:
+</P>
+
+<PRE>
+    (number-&#62;string 1234567)       ==&#62;  "1234567"
+    (number-&#62;string 1234567 16)    ==&#62;  "12D687"
+</PRE>
+
+<P>
+So far so good.  Now we will generalize further by adding 3 parameters, in order:
+<I>min-width</I> is the minimum width of the resulting string (padding
+is added at the beginning of the string to left justify the number),
+<I>pad-char</I> is the padding character, and <I>thousand-sep</I> is a
+string to insert at every third digit.  For backward compatibility
+these parameters default as follows: <I>min-width</I> = <TT>0</TT>,
+<I>pad-char</I> = <TT>#\space</TT>, and <I>thousand-sep</I> = <TT>""</TT>.
+Now we have:
+</P>
+
+<PRE>
+    (number-&#62;string 1234567)                   ==&#62;  "1234567"
+    (number-&#62;string 1234567 16)                ==&#62;  "12D687"
+    (number-&#62;string 1234567 10 0 #\space " ")  ==&#62;  "1 234 567"
+    (number-&#62;string 1234567 10 10 #\0)         ==&#62;  "0001234567"
+</PRE>
+
+<P>
+The last two calls show weaknesses of positional optional parameters.
+In the call <TT>(number-&#62;string 1234567 10 0 #\space " ")</TT> the
+default value of <I>radix</I>, <I>min-width</I> and <I>pad-char</I>
+had to be explicitly passed when only the <I>thousand-sep</I>
+parameter receives a non-default value.  Moreover, optional parameters
+are by definition used less frequently than required parameters and it
+is harder for the programmer to remember their position (e.g. which
+parameter in the call <TT>(number-&#62;string 1234567 10 10 #\0)</TT>
+must be changed to get a hexadecimal number?).
+</P>
+
+<P>
+This SRFI solves these issues by providing named optional parameters
+in addition to positional optional parameters.  Named optional
+parameters are not new; Ada, Common Lisp, Dylan, the DSSSL standard
+and several implementations of Scheme use them as well.  The idea is
+for the caller to identify the parameter that is being passed by its
+name rather than by position.  This is done by prefixing in the actual
+parameter list each named optional parameter by a keyword object with
+the same name.  Keyword objects are specified in <a
+href="http://srfi.schemers.org/srfi-88/">SRFI 88 (Keyword
+objects)</a>, but basically they look like a symbol that ends in a
+colon and are self evaluating. Assuming the API of the
+<TT>`number-&gt;string'</TT> procedure is changed so that <I>radix</I>
+is a positional optional parameter and <I>min-width</I>,
+<I>pad-char</I>, and
+<I>thousand-sep</I> are named optional parameters the following calls
+would achieve the same result as our last example:
+</P>
+
+<PRE>
+    (number-&#62;string 1234567)                                 ==&#62;  "1234567"
+    (number-&#62;string 1234567 16)                              ==&#62;  "12D687"
+    (number-&#62;string 1234567 10 thousand-sep: " ")            ==&#62;  "1 234 567"
+    (number-&#62;string 1234567 10 pad-char: #\0 min-width: 10)  ==&#62;  "0001234567"
+</PRE>
+
+<P>
+The call is often more verbose, but the meaning of the actual
+parameters is much clearer.  Note that the ordering of the named
+parameters in the actual parameter list does not have to match the
+order in the formal parameter list.  Also, in the last two calls,
+because <I>radix</I> is a positional parameter and some named
+parameters are passed, <I>radix</I> must be specified explicitly.  To
+avoid this, <I>radix</I> would have to be turned into a named optional
+parameter.
+</P>
+
+<P>
+There are situations when it is useful to allow other optional
+parameters after the positional and named optional parameters.
+Constructors for documents with attributes, such as HTML code, are a
+compelling example:
+</P>
+
+<PRE>
+    (html-table border: 3
+                cellpadding: 4
+                cellspacing: 10
+                (html-tr bgcolor: #x00ff00
+                         (html-td "hello")
+                         (html-td "world"))
+                (html-tr (html-td "1")
+                         (html-td "2")))
+</PRE>
+
+<P>
+Here, the HTML code constructors' attributes are specified using named
+optional parameters.  The body of an HTML tag consists of the HTML
+code produced by the parameters that follow the last named optional
+parameter.  There is no upper limit on the number of parameters.
+</P>
+
+<P>
+Another example is an n-ary <TT>`print'</TT> procedure which displays
+an arbitrary number of parameters.  The destination port is a named
+optional parameter, defaulting to the current output port, that must
+come first:
+</P>
+
+<PRE>
+    (define x 2)
+
+    (print "I have " x " apples\n")
+
+    (if (pair? x)
+        (set-car! x #f)
+        (print port: error-port "pair expected but got " x "\n"))
+</PRE>
+
+<P>
+DSSSL's handling of optional parameters is very close to Common
+Lisp's.  DSSSL uses special markers (<TT>`#!optional'</TT>,
+<TT>`#!key'</TT>, and <TT>`#!rest'</TT>) in the formal parameter list
+to delimit sections where the required, positional optional, named
+optional, and rest parameters are given.  When a parameter is
+optional, it is usually wrapped with the default value in parentheses,
+i.e. <TT>(<I>param</I> <I>expression</I>)</TT>.  This syntax is used
+by several Scheme implementations: Bigloo, Chicken, EdScheme, Gambit,
+Guile (except it uses the notation <TT>`#:key'</TT> instead of
+<TT>`#!key'</TT>), Kawa, and Jade.
+</P>
+
+<P>
+Because the DSSSL syntax has widespread support among the
+implementations of Scheme with optional parameters we think it is
+worthwhile to be compatible with that standard.  However, DSSSL does
+not provide a way to obtain the list of parameters after the last
+named optional parameter.  For this reason this SRFI specifies an
+extension to the DSSSL syntax and semantics.
+</P>
+
+<P>
+The <TT>`case-lambda'</TT> special form, which is supported by Chez
+Scheme and PLT Scheme, allows the definition of procedures with
+variable arity.  Each possible arity of the procedure is a clause in
+the <TT>`case-lambda'</TT> form.  Although it is possible to express
+positional optional parameters with <TT>`case-lambda'</TT> this can be
+cumbersome when there are more than a few clauses that share a common
+computation.  For N optional parameters it takes O(N^2) code space and
+there is repetition:
+</P>
+
+<PRE>
+    (let ((common-part (lambda (a b c d e) (+ a b c d e))))
+      (case-lambda
+        (() (common-part 1 2 3 4 5))
+        ((a) (common-part a 2 3 4 5))
+        ((a b) (common-part a b 3 4 5))
+        ((a b c) (common-part a b c 4 5))
+        ((a b c d) (common-part a b c d 5))
+        ((a b c d e) (common-part a b c d e))))
+</PRE>
+
+<P>
+is equivalent to
+</P>
+
+<PRE>
+    (lambda (#!optional (a 1) (b 2) (c 3) (d 4) (e 5))
+      (+ a b c d e))
+</PRE>
+
+<P>
+Moreover, <TT>`case-lambda'</TT> does not support named optional
+parameters, which are important for APIs with many optional
+parameters.  The <TT>`case-lambda'</TT> form can be viewed as a
+parameter specification approach that is orthogonal to the one
+specified in this SRFI.  Indeed, an implementation of Scheme could
+conceivably extend the <TT>`case-lambda'</TT> special form so that it
+also supports the parameter list syntax specified in this SRFI:
+</P>
+
+<PRE>
+    (case-lambda
+      ((#!key (foo 1) (bar 2)) ...)
+      ((#!key (red 3) (green 4)) ...))
+</PRE>
+
+<H1>Specification</H1>
+
+<P>
+Scheme's expression syntax must be changed to allow <TT>&#60;extended
+formals&#62;</TT> in the <TT>&#60;formals&#62;</TT> and <TT>&#60;def
+formals&#62;</TT> categories:
+</P>
+
+<PRE>
+    &#60;formals&#62; --&#62; &#60;variable&#62; | ( &#60;extended formals&#62; )
+
+    &#60;def formals&#62; --&#62; &#60;extended formals&#62;
+</PRE>
+
+<P>
+The category <TT>&#60;extended formals&#62;</TT> is compatible with
+the DSSSL parameter list syntax (the category <TT>&#60;DSSSL
+formals&#62;</TT>) and also allows the rest parameter to come after
+the named optional parameters (the category <TT>&#60;rest-after-named
+formals&#62;</TT>):
+</P>
+
+<PRE>
+    &#60;extended formals&#62; --&#62; &#60;DSSSL formals&#62; | &#60;rest-after-named formals&#62;
+
+    &#60;DSSSL formals&#62; --&#62; &#60;reqs&#62; &#60;opts&#62; &#60;rest&#62; &#60;keys&#62;
+
+    &#60;rest-after-named formals&#62; --&#62; &#60;reqs&#62; &#60;opts&#62; &#60;keys&#62; &#60;rest&#62; | &#60;reqs&#62; &#60;opts&#62; &#60;keys&#62; . &#60;rest formal&#62;
+
+    &#60;reqs&#62; --&#62; &#60;required formal&#62;*
+
+    &#60;required formal&#62; --&#62; &#60;variable&#62;
+
+    &#60;opts&#62; --&#62; #!optional &#60;optional formal&#62;* | &#60;empty&#62;
+
+    &#60;optional formal&#62; --&#62; &#60;variable&#62; | ( &#60;variable&#62; &#60;initializer&#62; )
+
+    &#60;rest&#62; --&#62; #!rest &#60;rest formal&#62; | &#60;empty&#62;
+
+    &#60;rest formal&#62; --&#62; &#60;variable&#62;
+
+    &#60;keys&#62; --&#62; #!key &#60;keyword formal&#62;* | &#60;empty&#62;
+
+    &#60;keyword formal&#62; --&#62; &#60;variable&#62; | ( &#60;variable&#62; &#60;initializer&#62; )
+
+    &#60;initializer&#62; --&#62; &#60;expression&#62;
+</PRE>
+
+<P>
+The semantics of the new <TT>&#60;formals&#62;</TT> and <TT>&#60;def
+formals&#62;</TT> categories is an extension of the R5RS semantics,
+i.e.  a formal parameter list that matches the syntax of R5RS has the
+same meaning as in R5RS.  When a formal parameter list does not match
+the syntax of R5RS it is processed as follows:
+</P>
+
+<OL>
+
+<LI>
+<I>Variable</I>s in <TT>&#60;required formal&#62;</TT>s are bound to
+successive actual parameters starting with the first actual parameter.  It
+is an error if there are fewer actual parameters than
+<TT>&#60;required formal&#62;</TT>s.
+
+<LI>
+Next <I>variable</I>s in <TT>&#60;optional formal&#62;</TT>s are bound to the
+remaining actual parameters.  If there are fewer remaining actual
+parameters than <TT>&#60;optional formal&#62;</TT>s, then the variables are
+bound to the result of evaluating <TT>&#60;initializer&#62;</TT>, if one was
+specified, and otherwise to <TT>`#f'</TT>.  The <TT>&#60;initializer&#62;</TT> is
+evaluated in an environment in which all previous formal parameters have
+been bound.
+
+<LI>
+If <TT>`#!key'</TT> does not appear in the <TT>&#60;extended formals&#62;</TT>
+and there is no <TT>&#60;rest formal&#62;</TT> then it is an error
+if there are any remaining actual parameters.
+
+<LI>
+If <TT>`#!key'</TT> does not appear in the <TT>&#60;extended formals&#62;</TT>
+and there is a <TT>&#60;rest formal&#62;</TT> then the
+<TT>&#60;rest formal&#62;</TT> is bound to a list of all remaining actual
+parameters.
+
+<LI>
+If <TT>`#!key'</TT> appears in the <TT>&#60;extended formals&#62;</TT> and there is
+no <TT>&#60;rest formal&#62;</TT> then there must be an even number of
+remaining actual parameters.  These are interpreted as a series of
+pairs, where the first member of each pair is a keyword object specifying the
+parameter name, and the second is the corresponding value.  It is
+an error if the first member of a pair is not a keyword object.  It is
+an error if the parameter name is not the same as a variable in a
+<TT>&#60;keyword formal&#62;</TT>.  If the same parameter name occurs more
+than once in the list of actual parameters, then the first value is
+used.  If there is no actual parameter for a particular
+<TT>&#60;keyword formal&#62;</TT>, then the variable is bound to the
+result of evaluating <TT>&#60;initializer&#62;</TT> if one was specified, and
+otherwise to <TT>`#f'</TT>.  The <TT>&#60;initializer&#62;</TT> is evaluated in an
+environment in which all previous formal parameters have been bound.
+
+<LI>
+If <TT>`#!key'</TT> appears in the <TT>&#60;extended formals&#62;</TT> and there is
+a <TT>&#60;rest formal&#62;</TT> <B>before</B> the <TT>`#!key'</TT> then there
+may be an arbitrary number of remaining actual parameters and the
+<TT>&#60;rest formal&#62;</TT> is bound to a list of all remaining actual
+parameters.  Then, these remaining actual parameters are scanned from
+left to right in pairs, stopping at the first pair whose first element
+is not a keyword object.  Each pair whose first element is a keyword object matching
+the name of a <TT>&#60;keyword formal&#62;</TT> gives the value (i.e. the
+second element of the pair) of the corresponding formal parameter.  If
+the same parameter name occurs more than once in the list of actual
+parameters, then the first value is used.  If there is no actual
+parameter for a particular <TT>&#60;keyword formal&#62;</TT>, then the
+variable is bound to the result of evaluating <TT>&#60;initializer&#62;</TT> if one
+was specified, and otherwise to <TT>`#f'</TT>.  The <TT>&#60;initializer&#62;</TT> is
+evaluated in an environment in which all previous formal parameters
+have been bound.
+
+<LI>
+If <TT>`#!key'</TT> appears in the <TT>&#60;extended formals&#62;</TT> and there is
+a <TT>&#60;rest formal&#62;</TT> <B>after</B> the <TT>`#!key'</TT> then there may
+be an arbitrary number of remaining actual parameters.  The remaining
+actual parameters are scanned from left to right in pairs, stopping at
+the first pair whose first element is not a keyword object.  Each pair must
+have as its first element a keyword object matching the name of a
+<TT>&#60;keyword formal&#62;</TT>; the second element gives the value of
+the corresponding formal parameter.  If the same parameter name occurs
+more than once in the list of actual parameters, then the first value
+is used.  If there is no actual parameter for a particular
+<TT>&#60;keyword formal&#62;</TT>, then the variable is bound to the
+result of evaluating <TT>&#60;initializer&#62;</TT> if one was specified, and
+otherwise to <TT>`#f'</TT>.  The <TT>&#60;initializer&#62;</TT> is evaluated in an
+environment in which all previous formal parameters have been bound.
+Finally, the <TT>&#60;rest formal&#62;</TT> is bound to the list of the
+actual parameters that were not scanned (i.e. after the last
+keyword/value pair).
+
+</OL>
+
+<P>
+In all cases it is an error for a <I>variable</I> to appear more than
+once in a given formal parameter list.
+</P>
+
+<P>
+This processing of parameter lists is compatible with the DSSSL
+language standard.
+</P>
+
+<P>
+It is unspecified whether variables receive their value by binding or
+by assignment.  These two approaches lead to different semantics if
+<TT>`call-with-current-continuation'</TT> is used in an
+<TT>&#60;initializer&#62;</TT>.  The difference is irrelevant for
+DSSSL programs because <TT>`call-with-current-continuation'</TT> does
+not exist in the DSSSL standard.
+</P>
+
+<PRE>
+    (define (f a #!optional b) (list a b))
+
+    (define (g a #!optional (b a) #!key (k (* a b))) (list a b k))
+
+    (define (h1 a #!rest r #!key k) (list a k r))
+
+    (define (h2 a #!key k #!rest r) (list a k r))
+
+    ((lambda (#!rest x) x) 1 2 3)       ==&#62;  (1 2 3)
+
+    (f 1)                               ==&#62;  (1 #f)
+
+    (f 1 2)                             ==&#62;  (1 2)
+
+    (g 3)                               ==&#62;  (3 3 9)
+
+    (g 3 4)                             ==&#62;  (3 4 12)
+
+    (g 3 4 k: 5)                        ==&#62;  (3 4 5)
+
+    (g 3 4 k: 5 k: 6)                   ==&#62;  (3 4 5)
+
+    (h1 7)                              ==&#62;  (7 #f ())
+
+    (h1 7 8 9 10)                       ==&#62;  (7 #f (8 9 10))
+
+    (h1 7 k: 8 9 10)                    ==&#62;  (7 8 (k: 8 9 10))
+
+    (h1 7 k: 8 z: 9)                    ==&#62;  (7 8 (k: 8 z: 9))
+
+    (h2 7)                              ==&#62;  (7 #f ())
+
+    (h2 7 8 9 10)                       ==&#62;  (7 #f (8 9 10))
+
+    (h2 7 k: 8 9 10)                    ==&#62;  (7 8 (9 10))
+
+    (h2 7 k: 8 z: 9)                    ==&#62;  <I>error</I>
+
+    (define absent (list 'absent))
+
+    (define (element tag content . attributes)
+      (list "&#60;" tag attributes "&#62;"
+            content
+            "&#60;/" tag "&#62;"))
+              
+    (define (attribute name value)
+      (if (eq? value absent)
+          '()
+          (list " " name "=" (escape value))))
+
+    (define (escape value) value) ; could be improved!
+              
+    (define (make-html-styler tag)
+      (lambda (#!key
+               (id          absent)
+               (class       absent)
+               (title       absent)
+               (style       absent)
+               (dir         absent)
+               (lang        absent)
+               (onclick     absent)
+               (ondblclick  absent)
+               (onmousedown absent)
+               (onmouseup   absent)
+               (onmouseover absent)
+               (onmousemove absent)
+               (onmouseout  absent)
+               (onkeypress  absent)
+               (onkeydown   absent)
+               (onkeyup     absent)
+               .
+               content)
+        (element tag
+                 content
+                 (attribute "id" id)
+                 (attribute "class" class)
+                 (attribute "title" title)
+                 (attribute "style" style)
+                 (attribute "dir" dir)
+                 (attribute "lang" lang)
+                 (attribute "onclick" onclick)
+                 (attribute "ondblclick" ondblclick)
+                 (attribute "onmousedown" onmousedown)
+                 (attribute "onmouseup" onmouseup)
+                 (attribute "onmouseover" onmouseover)
+                 (attribute "onmousemove" onmousemove)
+                 (attribute "onmouseout" onmouseout)
+                 (attribute "onkeypress" onkeypress)
+                 (attribute "onkeydown" onkeydown)
+                 (attribute "onkeyup" onkeyup))))
+
+    (define html-b      (make-html-styler "b"))
+    (define html-big    (make-html-styler "big"))
+    (define html-cite   (make-html-styler "cite"))
+    (define html-code   (make-html-styler "code"))
+    (define html-dfn    (make-html-styler "dfn"))
+    (define html-em     (make-html-styler "em"))
+    (define html-i      (make-html-styler "i"))
+    (define html-kbd    (make-html-styler "kbd"))
+    (define html-samp   (make-html-styler "samp"))
+    (define html-small  (make-html-styler "small"))
+    (define html-strong (make-html-styler "strong"))
+    (define html-tt     (make-html-styler "tt"))
+    (define html-var    (make-html-styler "var"))
+
+    (define (print #!key (port (current-output-port)) . args)
+      (let pr ((x args))
+        (cond ((null? x))
+              ((pair? x)
+               (pr (car x))
+               (pr (cdr x)))
+              ((vector? x)
+               (pr (vector-&#62;list x)))
+              (else
+               (display x port)))))
+
+    (print (html-i class: 'molecule
+                   id: 'water
+                   (html-big "H")
+                   (html-small "2")
+                   (html-big "O")))
+
+       ==&#62;  displays on the current output port:
+                &#60;i id=water class=molecule&#62;&#60;big&#62;H&#60;/big&#62;&#60;small&#62;2&#60;/small&#62;&#60;big&#62;O&#60;/big&#62;&#60;/i&#62;
+</PRE>
+
+<H1>Implementation</H1>
+
+<P>
+In implementations of Scheme that use the <TT>`read'</TT> procedure to
+parse source code it will be convenient to add the special markers
+<TT>`#!optional'</TT>, <TT>`#!key'</TT>, and <TT>`#!rest'</TT> as
+distinct objects.  In the following implementation we assume the
+reader has been extended with these objects and that <a href="http://srfi.schemers.org/srfi-88/">SRFI 88 (Keyword
+objects)</a> is supported by the Scheme implementation.  The
+<TT>`define-macro'</TT> special form is used to define the
+<TT>`define-opt'</TT> and <TT>`lambda-opt'</TT> special forms which
+are respectively the special forms <TT>`define'</TT> and
+<TT>`lambda'</TT> supporting optional parameters.
+</P>
+
+<P>
+The macros expand into efficient R5RS code.  A source
+lambda-expression whose parameter list matches the R5RS syntax expands
+to the same lambda-expression, so there is no overhead when the
+extended parameter list syntax is not used.
+</P>
+
+<P>
+When the source lambda-expression uses the extended parameter list
+syntax it expands to a R5RS lambda-expression accepting the required
+parameters and a rest parameter.  The rest parameter is then scanned
+to process the optional parameters.  For named optional parameters a
+perfect hash table is used to quickly validate them and locate them in
+the parameter list.  The keyword hashing currently uses the name of
+the keyword but a faster approach, which would require implementation
+dependent changes to the runtime system, is to assign a unique integer
+(serial number) to each keyword and to hash that.
+</P>
+
+<P>
+A Scheme system could do a better job than the ``user level''
+implementation presented here by eliminating the construction of a
+rest parameter list and by stack allocating the vector containing the
+values of the named optional parameters.  To give a rough idea of the
+speed improvement, a trivial procedure with 10 named optional
+parameters and called with 5 named parameters runs 14 times faster and
+generates no garbage when the Gambit compiler's builtin optional
+parameter passing mechanism is used.
+</P>
+
+<PRE>
+;------------------------------------------------------------------------------
+
+; Macro expander for define-opt.
+
+(define-macro (define-opt pattern . body)
+  (if (pair? pattern)
+      `(define ,(car pattern)
+         (lambda-opt ,(cdr pattern) ,@body))
+      `(define ,pattern ,@body)))
+
+; Macro expander for lambda-opt.
+
+(define-macro (lambda-opt formals . body)
+
+;------------------------------------------------------------------------------
+
+; Procedures needed at expansion time.
+
+(define (parse-formals formals)
+
+  (define (optional-obj? obj) (eq? obj '#!optional))
+  (define (key-obj? obj)      (eq? obj '#!key))
+  (define (rest-obj? obj)     (eq? obj '#!rest))
+
+  (define (variable? x) (symbol? x))
+
+  (define (variable-and-initializer? x)
+    (and (pair? x)
+         (pair? (cdr x))
+         (null? (cddr x))
+         (variable? (car x))))
+
+  (define (variable-or-variable-and-initializer? x)
+    (or (variable? x)
+        (variable-and-initializer? x)))
+
+  (define (duplicates? lst)
+    (cond ((null? lst)
+           #f)
+          ((memq (car lst) (cdr lst))
+           #t)
+          (else
+           (duplicates? (cdr lst)))))
+
+  (define (parse-reqs lst)
+    (let loop ((lst lst) (rev-reqs '()))
+      (if (and (pair? lst)
+               (variable? (car lst)))
+          (loop (cdr lst)
+                (cons (car lst) rev-reqs))
+          (parse-opts lst
+                      (reverse rev-reqs)))))
+
+  (define (parse-opts lst reqs)
+    (if (and (pair? lst)
+             (optional-obj? (car lst)))
+        (let loop ((lst (cdr lst)) (rev-opts '()))
+          (if (and (pair? lst)
+                   (variable-or-variable-and-initializer? (car lst)))
+              (loop (cdr lst)
+                    (cons (if (variable? (car lst))
+                              (cons (car lst) '#f)
+                              (cons (caar lst) (cadar lst)))
+                          rev-opts))
+              (parse-rest1 lst
+                           reqs
+                           (reverse rev-opts))))
+        (parse-rest1 lst
+                     reqs
+                     #f)))
+
+  (define (parse-rest1 lst reqs opts)
+    (if (and (pair? lst)
+             (pair? (cdr lst))
+             (rest-obj? (car lst))
+             (variable? (cadr lst)))
+        (parse-keys (cddr lst)
+                    reqs
+                    opts
+                    (cadr lst))
+        (parse-keys lst
+                    reqs
+                    opts
+                    #f)))
+
+  (define (parse-keys lst reqs opts rest1)
+    (if (and (pair? lst)
+             (key-obj? (car lst)))
+        (let loop ((lst (cdr lst)) (rev-keys '()))
+          (if (and (pair? lst)
+                   (variable-or-variable-and-initializer? (car lst)))
+              (loop (cdr lst)
+                    (cons (if (variable? (car lst))
+                              (cons (car lst) '#f)
+                              (cons (caar lst) (cadar lst)))
+                          rev-keys))
+              (parse-rest2 lst
+                           reqs
+                           opts
+                           rest1
+                           (reverse rev-keys))))
+        (parse-rest2 lst
+                     reqs
+                     opts
+                     rest1
+                     #f)))
+
+  (define (parse-rest2 lst reqs opts rest1 keys)
+    (cond ((and (not rest1)
+                (pair? lst)
+                (pair? (cdr lst))
+                (rest-obj? (car lst))
+                (variable? (cadr lst)))
+           (parse-end (cddr lst)
+                      reqs
+                      opts
+                      rest1
+                      keys
+                      (cadr lst)))
+          ((and (not rest1)
+                (variable? lst))
+           (parse-end '()
+                      reqs
+                      opts
+                      rest1
+                      keys
+                      lst))
+          (else
+           (parse-end lst
+                      reqs
+                      opts
+                      rest1
+                      keys
+                      #f))))
+
+  (define (parse-end lst reqs opts rest1 keys rest2)
+    (cond ((not (null? lst))
+           (error "syntax error in formal parameter list"))
+          ((duplicates?
+            (append reqs
+                    (map car (or opts '()))
+                    (if rest1 (list rest1) '())
+                    (map car (or keys '()))
+                    (if rest2 (list rest2) '())))
+           (error "duplicate parameter name in formal parameter list"))
+          (else
+           (list reqs
+                 opts
+                 rest1
+                 keys
+                 rest2))))
+
+  (parse-reqs formals))
+
+(define (expand-lambda formals body)
+
+  (define (range lo hi)
+    (if (&#60; lo hi)
+        (cons lo (range (+ lo 1) hi))
+        '()))
+
+  (define (expand reqs opts rest1 keys rest2)
+    (if (and (or (not opts) (null? opts)) ; simple case
+             (or (not keys) (and (null? keys) (not (or rest1 rest2)))))
+        `(lambda ,(append reqs (or rest1 rest2 '())) ,@body)
+        `(lambda ,(append reqs '$args)
+           (let* (,@(if (not opts)
+                        `()
+                        `(($opt
+                           (lambda (default)
+                             (if (pair? $args)
+                                 (let ((arg (car $args)))
+                                   (set! $args (cdr $args))
+                                   arg)
+                                 (default))))))
+                  ,@(map (lambda (x)
+                           `(,(car x) ($opt (lambda () ,(cdr x)))))
+                         (or opts '()))
+                  ,@(if (and rest1 keys)
+                        `((,rest1 $args))
+                        `())
+                  ,@(if (not keys)
+                        `()
+                        `(($key-values
+                           (vector ,@(map (lambda (x) `$use-default) keys)))
+                          ($args
+                           (,(cond (rest1 '$process-keys-rest1)
+                                   (rest2 '$process-keys-rest2)
+                                   (else  '$process-keys-no-rest))
+                            $args
+                            ',(make-perfect-hash-table
+                               (map (lambda (k i)
+                                      (cons (string-&#62;keyword
+                                             (symbol-&#62;string (car k)))
+                                            i))
+                                    keys
+                                    (range 0 (length keys))))
+                            $key-values))))
+                  ,@(map (lambda (x i)
+                           `(,(car x)
+                             ($key $key-values ,i (lambda () ,(cdr x)))))
+                         (or keys '())
+                         (range 0 (length (or keys '()))))
+                  ,@(if rest2
+                        `((,rest2 $args))
+                        `()))
+             ,@(if (or rest1 rest2)
+                   body
+                   `((if (pair? $args)
+                         (error "too many actual parameters")
+                         (let () ,@body))))))))
+
+  (apply expand (parse-formals formals)))
+
+(define (make-perfect-hash-table alist)
+
+  ; "alist" is a list of pairs of the form "(keyword . value)"
+
+  ; The result is a perfect hash-table represented as a vector of
+  ; length 2*N, where N is the hash modulus.  If the keyword K is in
+  ; the hash-table it is at index
+  ;
+  ;   X = (* 2 ($hash-keyword K N))
+  ;
+  ; and the associated value is at index X+1.
+
+  (let loop1 ((n (length alist)))
+    (let ((v (make-vector (* 2 n) #f)))
+      (let loop2 ((lst alist))
+        (if (pair? lst)
+            (let* ((key-val (car lst))
+                   (key (car key-val)))
+              (let ((x (* 2 ($hash-keyword key n))))
+                (if (vector-ref v x)
+                    (loop1 (+ n 1))
+                    (begin
+                      (vector-set! v x key)
+                      (vector-set! v (+ x 1) (cdr key-val))
+                      (loop2 (cdr lst))))))
+            v)))))
+
+(define ($hash-keyword key n)
+  (let ((str (keyword-&#62;string key)))
+    (let loop ((h 0) (i 0))
+      (if (&#60; i (string-length str))
+          (loop (modulo (+ (* h 65536) (char-&#62;integer (string-ref str i)))
+                        n)
+                (+ i 1))
+          h))))
+
+(expand-lambda formals body))
+
+;------------------------------------------------------------------------------
+
+; Procedures needed at run time (called by the expanded code):
+
+; Perfect hash-tables with keyword keys.
+
+(define ($hash-keyword key n)
+  (let ((str (keyword-&#62;string key)))
+    (let loop ((h 0) (i 0))
+      (if (&#60; i (string-length str))
+          (loop (modulo (+ (* h 65536) (char-&#62;integer (string-ref str i)))
+                        n)
+                (+ i 1))
+          h))))
+
+(define ($perfect-hash-table-lookup table key)
+  (let* ((n (quotient (vector-length table) 2))
+         (x (* 2 ($hash-keyword key n))))
+    (and (eq? (vector-ref table x) key)
+         (vector-ref table (+ x 1)))))
+
+; Handling of named optional parameters.
+
+(define $use-default (list 'use-default))
+
+(define ($key key-values i default)
+  (let ((val (vector-ref key-values i)))
+    (if (eq? val $use-default)
+        (default)
+        val)))
+
+(define ($process-keys-no-rest args key-hash-table key-values)
+
+  ; There must be an even number of remaining actual parameters and
+  ; each pair's keyword must exist in the formal parameter list.
+
+  (let loop ((args args))
+    (if (null? args)
+        args
+        (let ((k (car args)))
+          (if (not (keyword? k))
+              (error "keyword expected but found" k)
+              (let ((i ($perfect-hash-table-lookup key-hash-table k)))
+                (if (not i)
+                    (error "unknown parameter" k)
+                    (if (null? (cdr args))
+                        (error "a value was expected after" k)
+                        (begin
+                          (if (eq? (vector-ref key-values i) $use-default)
+                              (vector-set! key-values i (cadr args)))
+                          (loop (cddr args)))))))))))
+
+(define ($process-keys-rest1 args key-hash-table key-values)
+
+  ; The remaining actual parameters will be considered a pair at a
+  ; time until the first parameter of the pair is not a keyword or
+  ; there are no more pairs.  It is not an error if the keyword does
+  ; not exist in the formal parameter list.
+
+  (let loop ((args args))
+    (if (or (null? args) (null? (cdr args)))
+        args
+        (let ((k (car args)))
+          (if (not (keyword? k))
+              args
+              (let ((i ($perfect-hash-table-lookup key-hash-table k)))
+                (if (not i)
+                    (loop (cddr args))
+                    (begin
+                      (if (eq? (vector-ref key-values i) $use-default)
+                          (vector-set! key-values i (cadr args)))
+                      (loop (cddr args))))))))))
+
+(define ($process-keys-rest2 args key-hash-table key-values)
+
+  ; The remaining actual parameters will be considered a pair at a
+  ; time until the first parameter of the pair is not a keyword or
+  ; there are no more pairs.  It is an error if the keyword does not
+  ; exist in the formal parameter list.
+
+  (let loop ((args args))
+    (if (or (null? args) (null? (cdr args)))
+        args
+        (let ((k (car args)))
+          (if (not (keyword? k))
+              args
+              (let ((i ($perfect-hash-table-lookup key-hash-table k)))
+                (if (not i)
+                    (error "unknown parameter" k)
+                    (begin
+                      (if (eq? (vector-ref key-values i) $use-default)
+                          (vector-set! key-values i (cadr args)))
+                      (loop (cddr args))))))))))
+
+;------------------------------------------------------------------------------
+</PRE>
+
+<h1>Copyright</h1>
+
+Copyright (C) Marc Feeley (2006). All Rights Reserved.
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+<p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+<hr>
+
+<address>
+  Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Donovan Kolbly</a>
+</address>
+
+</body>
+</html>
