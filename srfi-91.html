@@ -1,0 +1,941 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 91: Extended ports</title>
+  </head>
+
+  <body>
+
+<H1>Title</H1>
+
+Extended ports
+
+<H1>Author</H1>
+
+Marc Feeley
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status.  To see an explanation of
+each status that a SRFI can hold, see <A
+HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+
+To provide input on this SRFI, please <A
+HREF="mailto:srfi-91@srfi.schemers.org">mail to
+<code>&lt;srfi-91@srfi.schemers.org&gt;</code></A>.  See <A
+HREF="../srfi-list-subscribe.html">instructions here</A> to subscribe to
+the list.  You can access previous messages via <A
+HREF="mail-archive/maillist.html">the archive of the mailing list</A>.
+
+
+<P><UL>
+<LI>Received: 2006/04/01</LI>
+<LI>Draft: 2006/04/12 - 2006/06/11</LI>
+</UL>
+
+<H1>Abstract</H1>
+
+<P>
+This SRFI specifies an extension to the R5RS ports that supports
+several useful features: binary I/O and text I/O, bulk I/O, file
+opening attributes, and bidirectional ports.  Binary I/O is provided
+through byte ports which are ports whose fundamental I/O unit is an 8
+bit byte.  Because characters can be encoded with bytes using a
+character encoding such as ISO 8859-1, UTF-8, and UTF-16BE,
+any byte port is also a character port (a port that supports the
+character level I/O of R5RS).  A byte port's character encoding and
+various other attributes are specified when the port is opened.
+Because reasonable defaults exist, these attributes are specified
+using a named optional parameter syntax.  All procedures which have
+the same name as in R5RS are compatible with R5RS but may provide
+additional functionality.
+</P>
+
+<H1>Rationale</H1>
+
+<P>
+The R5RS Scheme standard specifies a set of procedures to perform
+input and output operations.  These operations have limited
+functionality.  According to the R5RS:
+</P>
+
+<BLOCKQUOTE>
+To Scheme, an input port is a Scheme object that can deliver
+characters upon command, while an output port is a Scheme object that
+can accept characters.
+</BLOCKQUOTE>
+
+<P>
+The R5RS model of I/O does not provide for the following features
+which are very useful in modern applications:
+</P>
+
+<OL>
+
+<LI>
+<B>External encoding of the characters.</B> In many operating systems
+files are stored as sequences of 8 bit bytes.  Text files are in fact
+binary files where each character is encoded using a sequence of bytes
+according to some character encoding such as ISO 8859-1, UTF-8,
+UTF-16BE, etc.  Normally the application must know in advance the
+character encoding used by a file, but sometimes this information is
+contained in the file.
+
+<LI>
+<B>Binary input and output.</B> Some files represent data using a
+custom encoding.  In order to implement procedures to read and write
+such data the ability to read and write individual bytes is necessary.
+
+<LI>
+<B>Bulk input and output.</B> Reading large amounts of data one byte
+or character at a time is not efficient.  It is more efficient to read
+and write blocks of data.
+
+<LI>
+<B>File opening attributes.</B> Many operating systems allow
+attributes to be specified when a file is opened.  These attributes
+affect the file opening operation and the I/O operations that follow.
+For example a flag to force the creation of the file if it does not
+exist, and a flag to indicate that all write operations should be done
+at the end of the file.
+
+<LI>
+<B>Bidirectional ports.</B> Many operating systems have I/O devices on
+which it is possible to read and to write data, for example UNIX
+terminals, pipes and sockets.  Bidirectional ports are a natural
+extension of the port model to support these devices.
+
+</OL>
+
+<P>
+The Gambit Scheme system currently provides an I/O model and an API
+very similar to the one specified in this SRFI.  Gambit provides many
+additional I/O features that are not specified in this SRFI, such as
+nonblocking I/O, process ports, TCP client and server ports, object
+ports, double-ended string ports (a.k.a. pipes), <TT>`read-line'</TT>,
+etc.  This is an intentional omission.  A more focused port SRFI, like
+this one, has a higher likelihood of achieving widespread consensus in
+the community.  The goal of this SRFI is to specify a core I/O model
+and API that is compatible with R5RS but extensible.  We hope that it
+will foster the development of other I/O SRFIs extending it to other
+I/O requirements.
+</P>
+
+<P>
+This SRFI addresses all the ``binary I/O requirements'' which the
+members of the Scheme Language Editors Committee agreed were needed
+for the R6RS standard.  This SRFI is a concrete proposal for an I/O
+subsystem that addresses all these requirements and that conforms to
+R5RS.
+</P>
+
+<H1>Specification</H1>
+
+<P>
+This SRFI assumes that SRFI 4 (Homogeneous numeric vector datatypes)
+and <a href="http://srfi.schemers.org/srfi-88/">SRFI 88 (Keyword objects)</a> are supported.
+</P>
+
+<H2>Port direction</H2>
+
+<P>
+A byte port can support unidirectional I/O (i.e. input port or output
+port), or bidirectional I/O (i.e. input-output port).  Bidirectional
+ports can be viewed as an input port and an output port combined into
+a single port object.  I/O operations on one side of a bidirectional port do
+not normally affect the other side.  When an operation is said to
+apply to an input port it also applies to a bidirectional port.  When
+an operation is said to apply to an output port it also applies to a
+bidirectional port.
+</P>
+
+<DL>
+<DT><U>procedure:</U> <B>(input-port?</B> <I>obj</I><B>)</B>
+<DT><U>procedure:</U> <B>(output-port?</B> <I>obj</I><B>)</B>
+<DD>
+<P>
+As in R5RS.  Note that when <I>port</I> is a bidirectional port both
+of these procedures return <TT>#t</TT>.
+</P>
+
+</DL>
+
+<DL>
+<DT><U>procedure:</U> <B>(port?</B> <I>obj</I><B>)</B>
+
+<DD>
+<P>
+Returns <TT>#t</TT> if <VAR>obj</VAR> is an input port or an output
+port (or an input-output port), otherwise returns <TT>#f</TT>.
+</P>
+
+<PRE>
+(port? 123)                          ==&#62;  #f
+(port? (current-input-port))         ==&#62;  #t
+(port? (current-output-port))        ==&#62;  #t
+</PRE>
+
+</DL>
+
+<H2>Port class hierarchy</H2>
+
+<P>
+Byte ports support character I/O operations because with each byte
+port is attached a character encoding specifying how characters are
+encoded with bytes.  It is incorrect to believe however that all ports
+are byte ports.  For example the ``string ports'' of SRFI 6 (Basic
+String Ports) have no reason to be aware of the character to byte
+encoding because they only deal with sequences of characters.  So they
+need not be byte ports.  For this reason this SRFI views byte ports as
+a subtype of character ports.  Character ports support character I/O
+operations and byte ports support character I/O operations and byte
+I/O operations.  All I/O operations which are valid on a character
+port are also valid on a byte port. [Although not specified in this
+SRFI a further generalization is ``object ports'' which are ports
+whose fundamental I/O unit is the Scheme object.  Character ports are
+object ports because there is a standard encoding of (most) Scheme
+objects to characters.]
+</P>
+
+<P>
+The following predicates test to which port class an object belongs.
+</P>
+
+<DL>
+<DT><U>procedure:</U> <B>(char-port?</B> <I>obj</I><B>)</B>
+
+<DD>
+<P>
+Returns <TT>#t</TT> if <VAR>obj</VAR> is a character port, otherwise
+returns <TT>#f</TT>.
+</P>
+
+<PRE>
+(char-port? 123)                     ==&#62;  #f
+(char-port? (current-input-port))    ==&#62;  #t (probably)
+</PRE>
+
+</DL>
+
+<DL>
+<DT><U>procedure:</U> <B>(byte-port?</B> <I>obj</I><B>)</B>
+
+<DD>
+<P>
+Returns <TT>#t</TT> if <VAR>obj</VAR> is a byte port, otherwise
+returns <TT>#f</TT>.
+</P>
+
+<PRE>
+(byte-port? 123)                     ==&#62;  #f
+(byte-port? (current-input-port))    ==&#62;  #t (probably)
+</PRE>
+
+</DL>
+
+<H2>Port buffering</H2>
+
+<P>
+I/O systems typically use buffering to enhance performance.  Data to
+be output is accumulated in a local output buffer that is only drained
+when it is full or the application explicitly requests it.  Draining
+the output buffer causes the buffer's content to be passed to the
+operating system which is then responsible for sending it off to the
+target device (note that it is common to have other buffering layers
+on the path to the device so draining an output buffer does not imply
+that the device has received it).  An input buffer allows data to be
+obtained in blocks from the operating system.  When the application
+requests a certain amount of data, the request is served from the
+input buffer if it contains all the data requested, otherwise it is
+necessary to call the operating system to fill the input buffer.
+</P>
+
+<P>
+In many cases buffering can be fully transparent and the application
+need not be aware of its existence.  When an application mixes text
+and binary I/O, or there is a dependence between the output and the
+input (such as in an interactive program), buffering gets in the way
+and must be taken into account by the application.  Alternatively the
+simplicity of a non-buffered model can be regained by disabling the
+buffering.
+</P>
+
+<P>
+Character ports need buffers at the character level.  Byte ports need
+buffers at the character level and at the byte level.  This is because
+there is a performance advantage to encode and decode characters in
+bulk to/from the byte buffer.
+</P>
+
+<DL>
+<DT><U>procedure:</U> <B>(force-output</B> [<I>port</I>]<B>)</B>
+
+<DD>
+<P>
+The <I>port</I>, which defaults to the value returned by
+<TT>`current-output-port'</TT>, must be an output port or
+bidirectional port.  This procedure drains the character output buffer
+of <I>port</I>, and then the byte output buffer of <I>port</I> if it
+is a byte port.  This procedure has no effect if the port is
+closed. The value returned is unspecified.
+</P>
+
+<PRE>
+(define (ask-yes-no)
+  (display "yes or no? ")
+  (force-output)
+  (eqv? (read) 'yes))
+</PRE>
+
+</DL>
+
+<DL>
+<DT><U>procedure:</U> <B>(close-input-port</B> <I>port</I><B>)</B>
+<DT><U>procedure:</U> <B>(close-output-port</B> <I>port</I><B>)</B>
+
+<DD>
+<P>
+As in R5RS.  Note that <TT>`close-output-port'</TT> implicitly calls
+<TT>`force-output'</TT> before the port is closed.
+
+</P>
+
+</DL>
+
+<DL>
+<DT><U>procedure:</U> <B>(close-port</B> <I>port</I><B>)</B>
+
+<DD>
+<P>
+When <I>port</I> is a bidirectional port, both sides of the port are
+closed and the value returned is unspecified.  When <I>port</I> is a
+unidirectional port, <TT>`(close-port <I>port</I>)'</TT> is equivalent
+to <TT>`(close-input-port <I>port</I>)'</TT> when <I>port</I> is an
+input port, and it is equivalent to <TT>`(close-output-port
+<I>port</I>)'</TT> when <I>port</I> is an output port.
+</P>
+
+</DL>
+
+<H2>Port settings</H2>
+
+<P>
+Port settings are attributes of ports which affect the I/O operations.
+Port settings for a given port class are also valid for its
+subclasses.  The settings are specified in a port settings list when
+the port is created; those not specified default to a reasonable
+value.  Keyword objects as specified in <a href="http://srfi.schemers.org/srfi-88/">SRFI 88 (Keyword objects)</a> are
+used to name the settings in the port settings list.  The keyword
+object is followed by the value to assign to that setting.  As a
+simple example, a port can be created for the file ``foo''
+using the call
+</P>
+
+<PRE>
+    (open-input-file "foo")
+</PRE>
+
+<P>
+This will use default settings for the character encoding, buffering,
+etc.  To force the use of the UTF-8 character encoding the port could
+be opened using the call
+</P>
+
+<PRE>
+    (open-input-file
+     (list path: "foo"
+           char-encoding: 'UTF-8))
+</PRE>
+
+<P>
+Here the argument of the procedure <TT>`open-input-file'</TT> has been
+replaced by a port settings list which specifies the value of each
+port setting that should not be set to the default value.  Note that
+some port settings have no useful default and it is therefore required
+to specify a value for them, such as the <TT>`path:'</TT> in the case
+of the file opening procedures.  All port creation procedures take a
+single argument that can either be a port settings list or a value of
+a type that depends on the kind of port being created.
+</P>
+
+<P>
+The reason the settings are specified using a single required
+parameter rather than named optional parameters is so that the R5RS
+<TT>`with-...-file'</TT> and <TT>`call-with-...-file'</TT> family of
+I/O procedures can be extended with port settings while maintaining
+their R5RS API (i.e. their first argument is either a string naming a
+file or a port settings list).  Passing the settings as named optional
+parameters after the second parameter would be awkward and hard to
+read when the second parameter is a long lambda-expression.
+</P>
+
+<H2>Character ports</H2>
+
+<H3>Character port settings</H3>
+
+<P>
+The following port settings are valid for character ports and
+byte ports.
+</P>
+
+<UL>
+
+<LI>
+<TT>direction:</TT> ( <TT>input</TT> | <TT>output</TT> | <TT>input-output</TT> )
+
+<P>
+This setting controls the direction of the port.  The symbol
+<TT>`input'</TT> indicates a unidirectional input port, the symbol
+<TT>`output'</TT> indicates a unidirectional output port, and the
+symbol <TT>`input-output'</TT> indicates a bidirectional port.  The
+default value of this setting depends on the port creation procedure
+(for example for <TT>`open-input-file'</TT> the default is
+<TT>`input'</TT> and for <TT>`open-output-file'</TT> the default is
+<TT>`output'</TT>).
+</P>
+
+<LI>
+<TT>input-char-buffering:</TT> ( <TT>#f</TT> | <TT>#t</TT> )
+
+<P>
+This setting controls the input character buffering of the port.  The
+value <TT>`#f'</TT> disables input buffering and the value
+<TT>`#t'</TT> enables input buffering.  The default value of this
+setting is implementation dependent.
+</P>
+
+<LI>
+<TT>output-char-buffering:</TT> ( <TT>#f</TT> | <TT>#t</TT> | <TT>line</TT> )
+
+<P>
+This setting controls the output character buffering of the port.  The
+value <TT>`#f'</TT> disables output buffering and the values
+<TT>`#t'</TT> and <TT>`line'</TT> enable output buffering.  When the
+setting is <TT>`#f'</TT> an implicit call to <TT>`force-output'</TT>
+occurs after every character output to the port.  When the setting is
+<TT>`line'</TT> an implicit call to <TT>`force-output'</TT> occurs
+after each <TT>`#\newline'</TT> character output to the port.
+The default value of this setting is implementation dependent.
+</P>
+
+<LI>
+<TT>char-buffering:</TT> ( <TT>#f</TT> | <TT>#t</TT> | <TT>line</TT> )
+
+<P>
+The setting <TT>`char-buffering'</TT> can be used to simultaneously
+set the input character buffering and the output character buffering.
+When <TT>`line'</TT> is used, the input character buffering is set to
+<TT>`#t'</TT>.
+</P>
+
+</UL>
+
+<H3>Character port operations</H3>
+
+<DL>
+<DT><U>procedure:</U> <B>(read-char</B> [<I>port</I>]<B>)</B>
+<DT><U>procedure:</U> <B>(peek-char</B> [<I>port</I>]<B>)</B>
+<DT><U>procedure:</U> <B>(eof-object?</B> <I>obj</I><B>)</B>
+<DT><U>procedure:</U> <B>(char-ready?</B> [<I>port</I>]<B>)</B>
+<DT><U>procedure:</U> <B>(write-char</B> <I>char</I> [<I>port</I>]<B>)</B>
+
+<DD>
+<P>
+As in R5RS.
+</P>
+
+</DL>
+
+<DL>
+<DT><U>procedure:</U> <B>(read-substring</B> <I>string</I> <I>start</I> <I>end</I> [<I>port</I>]<B>)</B>
+
+<DD>
+<P>
+The ability to perform bulk input of characters is provided by the
+<TT>`read-substring'</TT> procedure.  The <I>string</I> will receive
+the characters read, and <I>start</I> and <I>end</I> delimit the
+section of the string that is targeted (using the same indexing as the
+<TT>`substring'</TT> procedure).  Characters will be read from the
+character input port <I>port</I>, which defaults to the value returned
+by <TT>`current-input-port'</TT>.  The number of characters read,
+<I>N</I>, will not exceed <I>end</I>-<I>start</I>.  <I>N</I> will be
+less than <I>end</I>-<I>start</I> only when the end of the input
+stream is reached.  [Note that an
+extension to this SRFI may relax this constraint to provide
+nonblocking I/O.]  The procedure returns <I>N</I>.
+</P>
+
+<PRE>
+; This example assumes that this is typed at the REPL and that the
+; current input port is the one used by the REPL.
+
+> (define s (make-string 10 #\x))
+> (read-substring s 2 5)123456789
+3
+> 456789
+> s
+"xx123xxxxx"
+</PRE>
+
+</DL>
+
+<DL>
+<DT><U>procedure:</U> <B>(write-substring</B> <I>string</I> <I>start</I> <I>end</I> [<I>port</I>]<B>)</B>
+
+<DD>
+<P>
+The ability to perform bulk output of characters is provided by the
+<TT>`write-substring'</TT> procedure.  The <I>string</I> is the source of
+the characters to output, and <I>start</I> and <I>end</I> delimit the
+section of the string to output (using the same indexing as the
+<TT>`substring'</TT> procedure).  Characters will be written to the
+character output port <I>port</I>, which defaults to the value returned
+by <TT>`current-output-port'</TT>.  The number of characters written,
+<I>N</I>, will be equal to <I>end</I>-<I>start</I>.  [Note that an
+extension to this SRFI may relax this constraint to provide
+nonblocking I/O.]  The procedure returns <I>N</I>.
+</P>
+
+<PRE>
+; This example assumes that this is typed at the REPL and that the
+; current output port is the one used by the REPL.
+
+> (define n (write-substring "1234567" 2 5))
+345
+> n
+3
+</PRE>
+
+</DL>
+
+<H2>Byte ports</H2>
+
+<H3>Byte port settings</H3>
+
+<P>
+The following port settings are valid for byte ports.
+</P>
+
+<UL>
+
+<LI>
+<TT>input-char-encoding:</TT> ( <TT>ISO8859-1</TT> | <TT>UTF-8</TT> | <TT>UTF-16</TT> | <TT>UTF-16BE</TT> | <TT>UTF-16LE</TT> ) <BR>
+<TT>output-char-encoding:</TT> ( <TT>ISO8859-1</TT> | <TT>UTF-8</TT> | <TT>UTF-16</TT> | <TT>UTF-16BE</TT> | <TT>UTF-16LE</TT> ) <BR>
+<TT>char-encoding:</TT> ( <TT>ISO8859-1</TT> | <TT>UTF-8</TT> | <TT>UTF-16</TT> | <TT>UTF-16BE</TT> | <TT>UTF-16LE</TT> )
+
+<P>
+These settings control the input character encoding and the output
+character encoding of the port.  When <TT>char-encoding:</TT> is used,
+both the input encoding and the output encoding are set.  The encoding
+is selected with a symbol:
+</P>
+
+<UL>
+
+<LI>
+<B><TT>ISO8859-1</TT></B>.
+Each character is encoded using a single byte.  Only Unicode
+characters with a code in the range 0 to 255 are allowed.
+
+<LI>
+<B><TT>UTF-8</TT></B>.
+Each character is encoded using a sequence of 1 to 6 bytes.  The minimum
+length UTF-8 encoding is used.  If a BOM is needed at the beginning of
+the stream then it must be explicitly written.
+
+<LI>
+<B><TT>UTF-16</TT></B>.
+Each character is encoded using 2 or 4 bytes.  The minimum length
+UTF-16 encoding is used.  If the port is an input port and the first
+two bytes read are a BOM (``Byte Order Mark'' character with
+hexadecimal code FEFF) then the BOM will be discarded and the
+endianness will be set accordingly, otherwise the endianness is
+implementation dependent.  If the port is an output port then the
+endianness is set in an implementation dependent way and a BOM is
+automatically output at the beginning of the stream.
+
+<LI>
+<B><TT>UTF-16BE</TT></B>.
+Each character is encoded using 2 or 4 bytes like with <TT>UTF-16</TT>,
+however the endianness is set to big-endian and there is no automatic
+BOM processing.  If a BOM is needed at the beginning of the stream
+then it must be explicitly written.
+
+<LI>
+<B><TT>UTF-16LE</TT></B>.
+Each character is encoded using 2 or 4 bytes like with <TT>UTF-16</TT>,
+however the endianness is set to little-endian and there is no
+automatic BOM processing.  If a BOM is needed at the beginning of the
+stream then it must be explicitly written.
+
+</UL>
+
+<LI>
+<TT>input-eol-encoding:</TT> ( <TT>lf</TT> | <TT>cr</TT> | <TT>cr-lf</TT> ) <BR>
+<TT>output-eol-encoding:</TT> ( <TT>lf</TT> | <TT>cr</TT> | <TT>cr-lf</TT> ) <BR>
+<TT>eol-encoding:</TT> ( <TT>lf</TT> | <TT>cr</TT> | <TT>cr-lf</TT> )
+
+<P>
+These settings control the input end-of-line encoding and the
+output end-of-line encoding of the port.  When <TT>eol-encoding:</TT>
+is used, both the input encoding and the output encoding are set.  The
+end-of-line input encoding specifies which sequence when read from an
+input port will be decoded as a <TT>`#\newline'</TT> character.  The
+output end-of-line encoding is used when the <TT>`#\newline'</TT>
+character is output.  The encoding is selected with a symbol:
+</P>
+
+<UL>
+
+<LI>
+<B><TT>lf</TT></B>.
+The end-of-line is encoded using the linefeed character (U+000A).
+
+<LI>
+<B><TT>cr</TT></B>.
+The end-of-line is encoded using the carriage return character (U+000D).
+
+<LI>
+<B><TT>cr-lf</TT></B>.
+If the port is an output port, the end-of-line is encoded using a
+carriage return character (U+000D) followed by a linefeed character
+(U+000A).  If the port is an input port, all three encoding are
+recognized as an end-of-line, with a carriage returned followed
+by linefeed having precedence.
+
+</UL>
+
+<LI>
+<TT>input-byte-buffering:</TT> ( <TT>#f</TT> | <TT>#t</TT> )
+
+<P>
+This setting controls the input byte buffering of the port.  The value
+<TT>`#f'</TT> disables input buffering and the value <TT>`#t'</TT>
+enables input buffering.  The default value of this setting is
+implementation dependent.
+</P>
+
+<LI>
+<TT>output-byte-buffering:</TT> ( <TT>#f</TT> | <TT>#t</TT> )
+
+<P>
+This setting controls the output byte buffering of the port.  The
+value <TT>`#f'</TT> disables output buffering and the value
+<TT>`#t'</TT> enables output buffering.  The default value of this
+setting is implementation dependent.
+</P>
+
+<LI>
+<TT>byte-buffering:</TT> ( <TT>#f</TT> | <TT>#t</TT> )
+
+<P>
+The setting <TT>`byte-buffering'</TT> can be used to simultaneously
+set the input byte buffering and the output byte buffering.
+</P>
+
+</UL>
+
+<H3>Byte port operations</H3>
+
+<DL>
+<DT><U>procedure:</U> <B>(read-subu8vector</B> <I>u8vector</I> <I>start</I> <I>end</I> [<I>port</I>]<B>)</B>
+
+<DD>
+<P>
+The ability to perform bulk input of bytes is provided by the
+<TT>`read-subu8vector'</TT> procedure.  The <I>u8vector</I> will
+receive the bytes read, and <I>start</I> and <I>end</I> delimit the
+section of the u8vector that is targeted (using the same indexing as
+the <TT>`substring'</TT> procedure).  Bytes will be read from the byte
+input port <I>port</I>, which defaults to the value returned by
+<TT>`current-input-port'</TT>.  It is an error if the port's character
+input buffer is not empty.  The number of bytes read, <I>N</I>, will
+not exceed <I>end</I>-<I>start</I>.  <I>N</I> will be less than
+<I>end</I>-<I>start</I> only when the end of the input stream is
+reached.  [Note that an extension to this
+SRFI may relax this constraint to provide nonblocking I/O.]  The
+procedure returns <I>N</I>.
+</P>
+
+<PRE>
+; This example assumes that this is typed at the REPL and that the
+; current input port is the one used by the REPL, and that it uses
+; the ISO8859-1 character encoding.
+
+> (define v (make-u8vector 10 0))
+> (read-subu8vector v 2 5)123456789
+3
+> 456789
+> v
+#u8(0 0 49 50 51 0 0 0 0 0)
+</PRE>
+
+</DL>
+
+<DL>
+<DT><U>procedure:</U> <B>(write-subu8vector</B> <I>u8vector</I> <I>start</I> <I>end</I> [<I>port</I>]<B>)</B>
+
+<DD>
+<P>
+The ability to perform bulk output of bytes is provided by the
+<TT>`write-subu8vector'</TT> procedure.  The <I>u8vector</I> is the
+source of the bytes to output, and <I>start</I> and <I>end</I> delimit
+the section of the u8vector to output (using the same indexing as the
+<TT>`substring'</TT> procedure).  Bytes will be written to the byte
+output port <I>port</I>, which defaults to the value returned by
+<TT>`current-output-port'</TT>.  The port's character output buffer is
+first emptied by encoding the characters into bytes.  The number of
+bytes written from <I>u8vector</I>, <I>N</I>, will be equal to
+<I>end</I>-<I>start</I>.  [Note that an extension to this SRFI may
+relax this constraint to provide nonblocking I/O.]  The procedure
+returns <I>N</I>.
+</P>
+
+<PRE>
+; This example assumes that this is typed at the REPL and that the
+; current output port is the one used by the REPL, and that it uses
+; the ISO8859-1 character encoding.
+
+> (define n (write-subu8vector '#u8(49 50 51 52 53 54) 2 5))
+345
+> n
+3
+</PRE>
+
+</DL>
+
+<DL>
+<DT><U>procedure:</U> <B>(read-byte</B> [<I>port</I>]<B>)</B>
+<DT><U>procedure:</U> <B>(write-byte</B> <I>byte</I> [<I>port</I>]<B>)</B>
+
+<DD>
+<P>
+These procedures respectively read and write a single byte from
+the port.  The procedure <TT>`write-byte'</TT> returns an unspecified
+value.  These procedures could be defined as follows.
+</P>
+
+<PRE>
+(define (read-byte . opt)
+  (let* ((buf (u8vector 0))
+         (port (if opt (car opt) (current-input-port)))
+         (n (read-subu8vector buf 0 1 port)))
+    (if (= n 0)
+        the-end-of-file-object
+        (u8vector-ref buf 0))))
+
+(define (write-byte byte . opt)
+  (let* ((buf (u8vector byte))
+         (port (if opt (car opt) (current-output-port))))
+    (write-subu8vector buf 0 1 port)))
+</PRE>
+
+</DL>
+
+<H2>File byte ports</H2>
+
+<DL>
+<DT><U>procedure:</U> <B>(open-input-file</B> <I>string-or-settings</I><B>)</B>
+<DT><U>procedure:</U> <B>(open-output-file</B> <I>string-or-settings</I><B>)</B>
+<DT><U>procedure:</U> <B>(open-file</B> <I>string-or-settings</I><B>)</B>
+
+<DD>
+<P>
+These procedures open a file and return a byte port.  In all cases the
+single parameter can be a string naming a file, or a settings list
+that indicates the file name and possibly other attributes.  The
+following port settings are valid for file byte ports.
+</P>
+
+<UL>
+
+<LI>
+<TT>path:</TT> <I>string</I>
+
+<P>
+This setting indicates the location of the file in the filesystem.
+There is no default value for this setting.
+</P>
+
+<LI>
+<TT>append:</TT> ( <TT>#f</TT> | <TT>#t</TT> )
+
+<P>
+This setting controls whether output will be added to the end of the
+file each time the output byte buffer is drained.  This is useful for
+writing to log files that might be open by more than one process.  The
+default value of this setting is <TT>`#f'</TT>.
+</P>
+
+<LI>
+<TT>create:</TT> ( <TT>#f</TT> | <TT>#t</TT> | <TT>maybe</TT> )
+
+<P>
+This setting controls whether the file will be created when it is
+opened.  A setting of <TT>`#f'</TT> requires that the file exist.  A
+setting of <TT>`#t'</TT> requires that the file does not exist.  A
+setting of <TT>`maybe'</TT> will create the file if it does not exist.
+The default value of this setting is <TT>`maybe'</TT> for output ports
+and <TT>`#f'</TT> for input ports and bidirectional ports.
+</P>
+
+<LI>
+<TT>truncate:</TT> ( <TT>#f</TT> | <TT>#t</TT> )
+
+<P>
+This setting controls whether the file will be truncated when it is
+opened.  For input ports, the default value of this setting is
+<TT>`#f'</TT>.  For output ports, the default value of this setting is
+<TT>`#t'</TT> when the <TT>`append:'</TT> setting is <TT>`#f'</TT>,
+and <TT>`#f'</TT> otherwise.
+</P>
+
+</UL>
+
+<P>
+For all three procedures the settings list can specify a
+<TT>`direction:'</TT> setting to select the direction of the port.
+The default direction for <TT>`open-input-file'</TT> is
+<TT>`input'</TT>, for <TT>`open-output-file'</TT> it is
+<TT>`output'</TT>, and for <TT>`open-file'</TT> it is
+<TT>`input-output'</TT>.
+</P>
+
+<P>
+For file byte ports, the default character encoding is
+<TT>`ISO8859-1'</TT> and the default end-of-line encoding is
+<TT>`lf'</TT>.  This combination of settings matches the UNIX
+conventions, and it represents an identity encoding for all characters
+whose code is in the range 0 to 255.
+</P>
+
+<PRE>
+(let ((p (open-file
+          (list direction: 'output
+                path: "mydata"
+                char-encoding: 'UTF-8
+                append: #t))))
+  (display "this is a lambda: \u03BB\n" p)
+  (close-port p))
+</PRE>
+
+</DL>
+
+<DL>
+<DT><U>procedure:</U> <B>(call-with-input-file</B> <I>string-or-settings</I> <I>proc</I><B>)</B>
+<DT><U>procedure:</U> <B>(call-with-output-file</B> <I>string-or-settings</I> <I>proc</I><B>)</B>
+<DT><U>procedure:</U> <B>(with-input-from-file</B> <I>string-or-settings</I> <I>thunk</I><B>)</B>
+<DT><U>procedure:</U> <B>(with-output-to-file</B> <I>string-or-settings</I> <I>thunk</I><B>)</B>
+
+<DD>
+<P>
+These procedures are as in R5RS except the first parameter can be a
+string naming a file, or a settings list which is interpreted as
+above.
+</P>
+
+<PRE>
+(with-output-to-file
+  (list path: "mydata"
+        char-encoding: 'UTF-16)
+  (lambda ()
+    (for-each (lambda (i)
+                (display i)
+                (display " ")
+                (display (* i i))
+                (newline))
+              '(1 2 3 4 5))))
+</PRE>
+</DL>
+
+<H2>Changing port settings</H2>
+
+<DL>
+<DT><U>procedure:</U> <B>(input-port-settings-set!</B> <I>port</I> <I>settings</I><B>)</B>
+<DT><U>procedure:</U> <B>(output-port-settings-set!</B> <I>port</I> <I>settings</I><B>)</B>
+
+<DD>
+<P>
+These procedures change the settings of the <I>port</I> to
+<I>settings</I>.  The settings of the port not mentioned in
+<I>settings</I> keep their current value.  It is an error to mention
+in <I>settings</I> a setting that cannot change, that is:
+<TT>`direction:'</TT>, <TT>`path:'</TT>, <TT>`append:'</TT>,
+<TT>`create:'</TT>, or <TT>`truncate:'</TT>.
+</P>
+
+<P>
+When changing the character encoding or end-of-line encoding of an
+output port the character output buffer is first emptied by encoding
+the characters into bytes.  It is an error to change the character
+encoding or end-of-line encoding of an input port when the character
+input buffer is not empty.
+</P>
+
+<PRE>
+(define (read-data path)
+  (let ((p (open-input-file
+            (list path: path
+                  char-encoding: 'ISO8859-1
+                  eol-encoding: 'lf
+                  char-buffering: #f))))
+    (let ((c (read-char p)))
+      (input-port-settings-set!
+       p
+       (case c ; use first char as a char encoding selector
+         ((#\L) ; Latin 1
+          '(char-buffering: #t))
+         ((#\8) ; UTF-8
+          '(char-encoding: UTF-8 char-buffering: #t))
+         (else
+          (error "unknown character encoding")))))
+    (let* ((s (make-string 10000)) ; read up to 10000 chars
+           (n (read-substring s 0 10000 p)))
+      (close-port p)
+      (substring s 0 n))))
+</PRE>
+
+</DL>
+
+<H1>Implementation</H1>
+
+<P>
+A fairly portable implementation of this SRFI is planned for the near
+future.  The Gambit sources can be used in the meantime as a sample
+implementation of this SRFI (and much more!).
+</P>
+
+<PRE>
+</PRE>
+
+<h1>Copyright</h1>
+
+Copyright (C) Marc Feeley (2006). All Rights Reserved.
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+<p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+<hr>
+
+<address>
+  Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Donovan Kolbly</a>
+</address>
+
+</body>
+</html>
+
