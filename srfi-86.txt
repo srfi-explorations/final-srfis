@@ -155,14 +155,47 @@ explained by simple examples.
    syntactic keywords `opt' and `cat' in the similar way to LET-OPTIONALS in
    Scsh.
 
-   (define z '(1 2))
-   (alet ((opt z (a 10) (b 20 (number? b) (< b 10)) (c 30) . d)
-	  (cat z (e 40 (number? e)) (f 50 (> f 10)) (g 60 (number? g)))
-	  h (mu 70 80))
+   (alet* ((() (define z '(1 2 3 10 20 30 "str")))
+	   (opt z (a 10) (b 20 (number? b) (< b 10)) (c 30) . d)
+	   (cat d (e "s" (string? e)) (f 50 (> f 10)) (g 60 (number? g)) . h))
      (list a b c d e f g h))
-   => (1 2 30 () 1 50 2 (70 80))
+   => (1 2 3 (10 20 30 "str") "str" 20 10 (30))
 
-9. The LETREC and LETREC* are integrated into the ALET and ALET* with a
+9. The LET-KEYWORDS and LET-KEYWORDS* are integrated into the ALET and ALET*
+   with a syntactic keyword `key'.  They use simple symbols as keywords.
+
+   (alet ((key '(a 10 a 30 c 20) (a 1) (b 2))) (list a b))
+   => error: duplicate keysymbol a
+   (alet ((key '(a 10 a 30 c 20) #f (a 1) (b 2))) (list a b))
+   => error: duplicate keysymbol a
+   (alet ((key '(a 10 a 30 c 20) allow-duplicate-keys (a 1) (b 2))) (list a b))
+   => error: unknown keysymbol c
+   (alet ((key '(a 10 a 30 c 20) allow-other-keys (a 1) (b 2))) (list a b))
+   => error: duplicate keysymbol a
+   (alet ((key '(a 10 a 30 c 20) allow-other-keys allow-duplicate-keys
+	       (a 1) (b 2))) (list a b))
+   => (10 2)
+   (alet ((key '(a 10 a 30 c 20) #t (a 1) (b 2))) (list a b))
+   => (10 2)
+
+   (alet ((key '(key 10 c 30) ((a key) 1) (b 2) . c)) (list a b c))
+   => error: unknown keysymbol c
+   (alet ((key '(key 10 c 30) #t ((a key) 1) (b 2) . c)) (list a b c))
+   => (10 20 (c 30))
+
+   ((lambda (m . n)
+      (alet* ((opt n (a 10) (b 20) (c 30) . d)
+	      (key d (x 100) (y 200) (a 300)))
+       (list m a b c x y)))
+    0 1 2 3 'a 30 'y 20 'x 10)		=> (0 30 2 3 10 20)
+   
+   ((lambda (m . n)
+      (alet* ((key n (x 100) (y 200) (a 300) . d)
+	      (opt d (a 10) (b 20) (c 30)))
+       (list m a b c x y)))
+    0 'a 30 'y 20 'x 10 1 2 3)		=> (0 1 2 3 10 20)
+   
+10. The LETREC and LETREC* are integrated into the ALET and ALET* with a
     syntactic keyword `rec'.
 
     (alet* ((a 1)
@@ -171,7 +204,7 @@ explained by simple examples.
       (list a (b) c d))
     => '(2 2 2 50)
 
-10. They have a binding form that use CALL-WITH-VALUES and VALUES to handle
+11. They have a binding form that use CALL-WITH-VALUES and VALUES to handle
     multiple values with a syntactic keyword `values' like SRFI-71 .
 
    (alet ((a b (mu 1 2))
@@ -185,7 +218,7 @@ explained by simple examples.
      (list a b c d e f g h i j k l m n o p))
    => (1 2 3 4 5 6 7 8 9 10 (11 12) 13 14 (15 16) (17 18) (19 20))
 
-11. They have a new binding form that works as an intervening external
+12. They have a new binding form that works as an intervening external
     environment in ALET and as an intervening internal environment in ALET*.
 
    (alet ((a 1)
@@ -216,7 +249,7 @@ the argument procedure.  The argument procedure of MU is called with the
 
 (alet  (<binding spec> ...) body ...)
 (alet* (<binding spec> ...) body ...)
-syntax-rules identifier: opt cat rec and values
+syntax-rules identifier: opt cat key and rec values
 <binding spec>: 1.  (<var> <expr>)
 		2.  (<var1> <var2> <var3> ... <expr>)
 		3.  ((<var>) <expr>)
@@ -237,13 +270,18 @@ syntax-rules identifier: opt cat rec and values
 				     ...
 				     (<varn> <default-exprn> <testn> ...)
 				     . [<rest-var>])
-		15. (rec (<var1> <expr1>) (<var2> <expr2>) ...)
-		16. (values <var1> <var2> ... <expr>)
-		17. ((values <var1> <var2> ...) <expr>)
-		18. ((values <var1> ... . <varn>) <expr>) 
-		19. ((values <var1> <var2> <var3> ...) <expr1> <expr2> <expr3> ...)
-		20. ((values <var1> ... . <varn>) <expr1> ... <exprn> ...) 
-		21. (() <expr1> <expr2> ...)
+		15. (key <rest-list> [<option>]
+				     (<var-spec1> <default-exrp1> <test1> ...)
+				     ...
+				     (<var-specn> <default-exrpn> <testn> ...)
+				     . [<rest-var>])
+		16. (rec (<var1> <expr1>) (<var2> <expr2>) ...)
+		17. (values <var1> <var2> ... <expr>)
+		18. ((values <var1> <var2> ...) <expr>)
+		19. ((values <var1> ... . <varn>) <expr>) 
+		20. ((values <var1> <var2> <var3> ...) <expr1> <expr2> <expr3> ...)
+		21. ((values <var1> ... . <varn>) <expr1> ... <exprn> ...) 
+		22. (() <expr1> <expr2> ...)
 
 The ALET* is to the ALET what the LET* is to the LET.  However, the <binding
 spec>s of ALET are evaluated in sequence from left to right unlike LET of
@@ -317,30 +355,74 @@ element.  If there is no <test>, the first element of the remained <rest-list>
 is regarded as passing.  If any element of the <rest-list> does not pass the
 <test>, the <default> is bound to the <var> instead of signaling an error.
 
-15. (rec (<var1> <expr1>) (<var2> <expr2>) ...)
+15. (key <rest-list> [<option>]
+		     (<var-spec1> <default-expr1> <test1> ...)
+		     ...
+	             (<var-specn> <default-exprn> <testn> ...)
+		     . [<rest-var>])
+    <var-spec> --> <var> | (<var> <keyword>)
+    <keyword>  --> <identifier>
+    <option>   --> #f | #t | <option-identifier>+
+    <option-identifier> --> allow-other-keys | allow-non-keys
+			  | allow-duplicate-keys
+
+This `key' form is the same as the `cat' form in view of the fact that both
+don't use argument position for binding <var>s to elements of <rest-list>.
+However, for extracting values from <rest-list>, the former uses explicitly
+keywords and the latter uses implicitly <test>s.  The keywords in this form
+are not self-evaluating symbols (keyword objects) but simple symbols.  The
+keyword used in <rest-list> for the corresponding variable has the same name
+as the <var> in (<var> <default-expr> <test> ...), but the <var-spec> made of
+(<var> <keyword>) allows the name of the locally bound variable to differ
+from the keyword used in <rest-list>.
+The <rest-list> must be an even number of elements that are sequentially
+interpreted as a series of pairs, where the first member of each pair is a
+keyword specifying the variable name, and the second is the corresponding
+value.  If there is no element for a particular keyword, the <var> is bound to
+the result of evaluating <default-expr>.  When there are <test>s, they are
+evaluated only when <var> is bound to an element of <rest-list>.  If any of
+them returns a false value, an error is signaled.  When there are more
+elements than ones that are specified by <var>s, even though <rest-var> is not
+given, an error is not signaled if any option except #f is given.  Of course,
+if <rest-var> is given, it is bound to the remaining elements.
+The following option/option-identifiers can be used to control binding
+behaviour and error reporting.
+option identifiers:
+ 1. allow-duplicate-keys -- the keyword-value pair at the bind processing site
+    can include duplicate values associated with same keyword, the first one
+    is used.
+ 2. allow-other-keys -- the keyword-value pair at the bind processing site
+    can include keywords that are not listed in <var-spec>s.
+ 3. allow-non-keys -- the keyword-value sequence at the bind processing site
+    can include non-symbols.
+#f -- all of the above are forbidden (default).  An error is signaled in each
+      case.
+#t -- all of the above are allowed.
+
+16. (rec (<var1> <expr1>) (<var2> <expr2>) ...)
 This is the same as (letrec[*] ((<var1> <expr1>) (<var2> <expr2>) ...).
 
-16. (values <var1> <var2> ... <expr>)
+17. (values <var1> <var2> ... <expr>)
 This is the same as 17.
 
-17. ((values <var1> <var2> ...) <expr>)
-18. ((values <var1> ... . <varn>) <expr>) 
+18. ((values <var1> <var2> ...) <expr>)
+19. ((values <var1> ... . <varn>) <expr>) 
 The <expr> should be a VALUES expression or its equivalent.  The matching of
 <var>s to the values of <expr> is as for the matching of <formals> to
 arguments in a LAMBDA expression.
 
-19. ((values <var1> <var2> <var3> ...) <expr1> <expr2> <expr3> ...)
+20. ((values <var1> <var2> <var3> ...) <expr1> <expr2> <expr3> ...)
 This is the same as
 (let[*] ((<var1> <expr1>) (<var2> <expr2>) (<var3> <expr3>) ...).
 
-20. ((values <var1> ... . <varn>) <expr1> ... <exprn> ...) 
+21. ((values <var1> ... . <varn>) <expr1> ... <exprn> ...) 
 This is the same as (let[*] ((<var1> <expr1>) ... (<varn> (list <exprn> ...))).
 
-21. (() <expr1> <expr2> ...)
+22. (() <expr1> <expr2> ...)
 This works as an intervening external environment in ALET, and an intervening
 internal environment in ALET*.
 
-(alet name (<binding spec> ...) body ...)
+(alet  name (<binding spec> ...) body ...)
 (alet* name (<binding spec> ...) body ...)
 These are the same as the named-LET (R5RS, 4.2.4) except binding
 specification.  These allow all sorts of bindings in <binding spec>.
@@ -351,8 +433,8 @@ Examples
        ((b c) 2 (begin (display "2nd") 3))
        (() (define m #f) (define n (list 8)))
        ((d (begin (display "3rd") 4))
-	(e f (mu (begin (display "4th") 5) 6)) . p)
-       g (nu 7 n)
+	(key '(e 5 tmp 6) (e 0) ((f tmp) 55)) . p)
+       g (nu (begin (display "4th") 7) n)
        ((values . h) (apply values 7 (begin (display "5th") n)))
        ((m 11) (n n) . q)
        (rec (i (lambda () (- (j) 1)))
@@ -367,7 +449,7 @@ Examples
 	  (begin (display (list a b c d e f g h (i) (j) k l m n))
 		 (newline))))
   (o (list o p q))
-  (display "This is not showed"))
+  (display "This is not displayed"))
 =>
 1st2nd3rd4th5th6th#f
 
@@ -375,8 +457,8 @@ Examples
 	((b c) 2 (begin (display "2nd") 3))
 	(() (define m #f) (define n (list 8)))
 	((d (begin (display "3rd") 4))
-	 (e f (mu (begin (display "4th") 5) 6)) . p)
-	g (nu 7 n)
+	 (key '(e 5 tmp 6) (e 0) ((f tmp) 55)) . p)
+	g (nu (begin (display "4th") 7) n)
 	((values . h) (apply values 7 (begin (display "5th") n)))
 	((m 11) (n n) . q)
 	(rec (i (lambda () (- (j) 1)))
@@ -391,10 +473,10 @@ Examples
 	  (begin (display (list a b c d e f g h (i) (j) k l m n))
 		 (newline))))
   (o (list o p q))
-  (display "This is not showed"))
+  (display "This is not displayed"))
 =>
 1st2nd3rd4th5th6thend
-5th6thend
+4th5th6thend
 6thend
 (1 2 3 40 50 60 (7 8) (7 8) 9 10 111 12 111 (8))
 (#<continuation> #<procedure:p> #<procedure:q>)
@@ -424,7 +506,7 @@ SRFI-23 (Error reporting mechanism).
      (%alet (var) () (bn ...) bd ...))))
 
 (define-syntax %alet
-  (syntax-rules (opt cat rec and values)
+  (syntax-rules (opt cat key rec and values)
     ((%alet () ((n v) ...) () bd ...)
      ((lambda (n ...) bd ...) v ...))
     ((%alet (var) ((n v) ...) () bd ...)
@@ -526,6 +608,54 @@ SRFI-23 (Error reporting mechanism).
     ((%alet "cat" (p ...) (nv ...) z e (bn ...) bd ...)
      (let ((te z))
        (%alet (p ...) (nv ... (e te)) (bn ...) bd ...)))
+
+    ((%alet (p ...) (nv ...) ((key z a . e) bn ...) bd ...)
+     (let ((y z))
+       (%alet "key" (p ...) (nv ...) y () () () (a . e) () (bn ...) bd ...)))
+    ((%alet "key" (p ...) (nv ...) z (o ...) (f ...) (ndt ...)
+	    (((n k) d t ...) . e) (kk ...) (bn ...) bd ...)
+     (%alet "key" (p ...) (nv ...) z (o ...) (f ...) (ndt ... ((n k) d t ...))
+	    e (kk ... k) (bn ...) bd ...))
+    ((%alet "key" (p ...) (nv ...) z (o ...) (f ...) (ndt ...)
+	    ((n d t ...) . e) (kk ...) (bn ...) bd ...)
+     (%alet "key" (p ...) (nv ...) z (o ...) (f ...) (ndt ... ((n n) d t ...))
+	    e (kk ... n) (bn ...) bd ...))
+    ((%alet "key" (p ...) (nv ...) z () () () (#t . e) () (bn ...) bd ...)
+     (%alet "key" (p ...) (nv ...) z (allow-anything) (#t) () e () (bn ...)
+	    bd ...))
+    ((%alet "key" (p ...) (nv ...) z () () () (#f . e) () (bn ...) bd ...)
+     (%alet "key" (p ...) (nv ...) z () (#f) () e () (bn ...) bd ...))
+    ((%alet "key" (p ...) (nv ...) z (o ...) () () (n . e) () (bn ...) bd ...)
+     (if (memq 'n '(allow-duplicate-keys allow-other-keys allow-non-keys))
+	 (%alet "key" (p ...) (nv ...) z (o ... n) () () e () (bn ...) bd ...)
+	 (error "alet: bad option identifier" 'n)))
+    ((%alet "key" (p ...) (nv ...) z (o ...) (#t)
+	    (((n k) d t ...) ((nn kn) dn tn ...) ...)
+	    e (kk ...) (bn ...) bd ...)
+     (let ((x (if (null? z)
+		  d
+		  (wow-key! z () () () (n k) d t ...))))
+       (%alet "key" (p ...) (nv ... (n x)) z (o ...) (#t)
+	      (((nn kn) dn tn ...) ...) e (kk ...) (bn ...) bd ...)))
+    ((%alet "key" (p ...) (nv ...) z (o ...) (f ...)
+	    (((n k) d t ...) ((nn kn) dn tn ...) ...)
+	    e (kk ...) (bn ...) bd ...)
+     (let ((x (if (null? z)
+		  d
+		  (wow-key! z (o ...) (kk ...) (k kn ...) (n k) d t ...))))
+       (%alet "key" (p ...) (nv ... (n x)) z (o ...) (f ...)
+	      (((nn kn) dn tn ...) ...) e (kk ...) (bn ...) bd ...)))
+    ((%alet "key" (p ...) (nv ...) z () (f ...) () () (kk ...) (bn ...) bd ...)
+     (if (null? z)
+	 (%alet (p ...) (nv ...) (bn ...) bd ...)
+	 (error "alet: too many arguments" z)))
+    ((%alet "key" (p ...) (nv ...) z (o oo ...) (f ...) () () (kk ...) (bn ...)
+	    bd ...)
+     (%alet (p ...) (nv ...) (bn ...) bd ...))
+    ((%alet "key" (p ...) (nv ...) z (o ...) (f ...) () e (kk ...) (bn ...)
+	    bd ...)
+     (let ((te z)) (%alet (p ...) (nv ... (e te)) (bn ...) bd ...)))
+
     ((%alet (p ...) (nv ...) ((rec (n v) (nn vv) ...) bn ...) bd ...)
      (%alet "rec" (p ...) (nv ... (n t)) ((n v t))
 	    ((nn vv) ...) (bn ...) bd ...))
@@ -577,7 +707,7 @@ SRFI-23 (Error reporting mechanism).
 
 ;;; alet*
 (define-syntax alet*
-  (syntax-rules (opt cat rec and values)
+  (syntax-rules (opt cat key rec and values)
     ((alet* () bd ...)
      ((lambda () bd ...)))
     ((alet* ((() a b ...) bn ...) bd ...)
@@ -612,6 +742,9 @@ SRFI-23 (Error reporting mechanism).
     ((alet* ((cat z a . c) bn ...)  bd ...)
      (let ((y z))
        (%alet-cat* y (a . c) (alet* (bn ...) bd ...))))
+    ((alet* ((key z a . e) bn ...)  bd ...)
+     (let ((y z))
+       (%alet-key* y () () () (a . e) () (alet* (bn ...) bd ...))))
     ((alet* ((rec (n1 v1) (n2 v2) ...) bn ...) bd ...)
      (alet-rec* ((n1 v1) (n2 v2) ...) (alet* (bn ...) bd ...)))
 
@@ -644,7 +777,7 @@ SRFI-23 (Error reporting mechanism).
      (%alet* (var) () (bn ...) bd ...))))
 
 (define-syntax %alet*
-  (syntax-rules (opt cat rec and values)
+  (syntax-rules (opt cat key rec and values)
     ((%alet* (var) (n ...) () bd ...)
      ((letrec ((var (lambda* (n ...) bd ...)))
 	var) n ...))
@@ -653,8 +786,8 @@ SRFI-23 (Error reporting mechanism).
 	var) n ...))
     ((%alet* (var (p ...) (nn ...) (bn ...)) (n ...) ()  bd ...)
      ((letrec ((var (lambda* (n ...)
-		      (%alet* (p ...) (nn ... n ... var) (bn ...)
-			      bd ...))))
+			     (%alet* (p ...) (nn ... n ... var) (bn ...)
+				     bd ...))))
 	var) n ...))
     ((%alet* (p ...) (n ...) ((() a b ...) bn ...) bd ...)
      ((lambda () a b ... (%alet* (p ...) (n ...) (bn ...) bd ...))))
@@ -738,6 +871,54 @@ SRFI-23 (Error reporting mechanism).
     ((%alet* "cat" (p ...) (nn ...) z e (bn ...) bd ...)
      (let ((e z))
        (%alet* (p ...) (nn ... e) (bn ...) bd ...)))
+
+    ((%alet* (p ...) (m ...) ((key z a . e) bn ...) bd ...)
+     (let ((y z))
+       (%alet* "key" (p ...) (m ...) y () () () (a . e) () (bn ...) bd ...)))
+    ((%alet* "key" (p ...) (m ...) z (o ...) (f ...) (ndt ...)
+	     (((n k) d t ...) . e) (kk ...) (bn ...) bd ...)
+     (%alet* "key" (p ...) (m ...) z (o ...) (f ...) (ndt ... ((n k) d t ...))
+	     e (kk ... k) (bn ...) bd ...))
+    ((%alet* "key" (p ...) (m ...) z (o ...) (f ...) (ndt ...)
+	     ((n d t ...) . e) (kk ...) (bn ...) bd ...)
+     (%alet* "key" (p ...) (m ...) z (o ...) (f ...) (ndt ... ((n n) d t ...))
+	     e (kk ... n) (bn ...) bd ...))
+    ((%alet* "key" (p ...) (m ...) z () () () (#t . e) () (bn ...) bd ...)
+     (%alet* "key" (p ...) (m ...) z (allow-anything) (#t) () e () (bn ...)
+	     bd ...))
+    ((%alet* "key" (p ...) (m ...) z () () () (#f . e) () (bn ...) bd ...)
+     (%alet* "key" (p ...) (m ...) z () (#f) () e () (bn ...) bd ...))
+    ((%alet* "key" (p ...) (m ...) z (o ...) () () (n . e) () (bn ...) bd ...)
+     (if (memq 'n '(allow-duplicate-keys allow-other-keys allow-non-keys))
+	 (%alet* "key" (p ...) (m ...) z (o ... n) () () e () (bn ...) bd ...)
+	 (error "alet*: bad option identifier" 'n)))
+    ((%alet* "key" (p ...) (m ...) z (o ...) (#t)
+	     (((n k) d t ...) ((nn kn) dn tn ...) ...)
+	     e (kk ...) (bn ...) bd ...)
+     (let ((n (if (null? z)
+		  d
+		  (wow-key! z () () () (n k) d t ...))))
+       (%alet* "key" (p ...) (m ... n) z (o ...) (#t)
+	       (((nn kn) dn tn ...) ...) e (kk ...) (bn ...) bd ...)))
+    ((%alet* "key" (p ...) (m ...) z (o ...) (f ...)
+	     (((n k) d t ...) ((nn kn) dn tn ...) ...)
+	     e (kk ...) (bn ...) bd ...)
+     (let ((n (if (null? z)
+		  d
+		  (wow-key! z (o ...) (kk ...) (k kn ...) (n k) d t ...))))
+       (%alet* "key" (p ...) (m ... n) z (o ...) (f ...)
+	       (((nn kn) dn tn ...) ...) e (kk ...) (bn ...) bd ...)))
+    ((%alet* "key" (p ...) (m ...) z () (f ...) () () (kk ...) (bn ...) bd ...)
+     (if (null? z)
+	 (%alet* (p ...) (m ...) (bn ...) bd ...)
+	 (error "alet*: too many arguments" z)))
+    ((%alet* "key" (p ...) (m ...) z (o oo ...) (f ...) () () (kk ...) (bn ...)
+	     bd ...)
+     (%alet* (p ...) (m ...) (bn ...) bd ...))
+    ((%alet* "key" (p ...) (m ...) z (o ...) (f ...) () e (kk ...) (bn ...)
+	     bd ...)
+     (let ((e z)) (%alet* (p ...) (m ... e) (bn ...) bd ...)))
+
     ((%alet* (p ...) (n ...) ((rec (n1 v1) (n2 v2) ...) bn ...) bd ...)
      (alet-rec* ((n1 v1) (n2 v2) ...)
 		(%alet* (p ...) (n ... n1 n2 ...) (bn ...) bd ...)))
@@ -898,6 +1079,106 @@ SRFI-23 (Error reporting mechanism).
 		       (begin (set! z (append (reverse head) (cdr tail))) n)
 		       (lp (cons n head) (cdr tail)))))))))))
 
+(define-syntax wow-key!
+  (syntax-rules ()
+    ((wow-key! z () () () (n key) d)
+     (let ((x (car z))
+	   (y (cdr z)))
+       (if (or (not (symbol? x)) (null? y))
+	   d
+	   (if (eq? 'key x)
+	       (begin (set! z (cdr y)) (car y))
+	       (let lp ((head (list (car y) x)) (tail (cdr y)))
+		 (if (null? tail)
+		     d
+		     (let ((x (car tail))
+			   (y (cdr tail)))
+		       (if (or (not (symbol? x)) (null? y))
+			   d
+			   (if (eq? 'key x)
+			       (begin (set! z (append (reverse head) (cdr y)))
+				      (car y))
+			       (lp (cons (car y) (cons x head))
+				   (cdr y)))))))))))
+    ((wow-key! z (o ...) (kk ...) (k ...) (n key) d)
+     (let lp ((head '()) (tail z))
+       (if (null? tail)
+	   d
+	   (let ((x (car tail))
+		 (y (cdr tail)))
+	     (if (not (symbol? x))
+		 (if (memq 'allow-non-keys '(o ...))
+		     d
+		     (error "no keysymbol" x))
+		 (if (null? y)
+		     (error "odd keysymbol list" tail)
+		     (if (memq x '(k ...))
+			 (if (eq? 'key x)
+			     (begin (set! z (append (reverse head) (cdr y)))
+				    (car y))
+			     (lp (cons (car y) (cons x head)) (cdr y)))
+			 (if (memq x '(kk ...))
+			     (if (memq 'allow-duplicate-keys '(o ...))
+				 (lp (cons (car y) (cons x head)) (cdr y))
+				 (error "duplicate keysymbol" x))
+			     (if (memq 'allow-other-keys '(o ...))
+				 (lp (cons (car y) (cons x head)) (cdr y))
+				 (error "unknown keysymbol" x))))))))))
+    ((wow-key! z () () () (n key) d t ...)
+     (let ((x (car z))
+	   (y (cdr z)))
+       (if (or (not (symbol? x)) (null? y))
+	   d
+	   (if (eq? 'key x)
+	       (let ((n (car y)))
+		 (if (and t ...)
+		     (begin (set! z (cdr y)) n)
+		     (error "bad argument" n 'n 't ...)))
+	       (let lp ((head (list (car y) x)) (tail (cdr y)))
+		 (if (null? tail)
+		     d
+		     (let ((x (car tail))
+			   (y (cdr tail)))
+		       (if (or (not (symbol? x)) (null? y))
+			   d
+			   (if (eq? 'key x)
+			       (let ((n (car y)))
+				 (if (and t ...)
+				     (begin
+				       (set! z (append (reverse head) (cdr y)))
+				       n)
+				     (error "bad argument" n 'n 't ...)))
+			       (lp (cons (car y) (cons x head))
+				   (cdr y)))))))))))
+    ((wow-key! z (o ...) (kk ...) (k ...) (n key) d t ...)
+     (let lp ((head '()) (tail z))
+       (if (null? tail)
+	   d
+	   (let ((x (car tail))
+		 (y (cdr tail)))
+	     (if (not (symbol? x))
+		 (if (memq 'allow-non-keys '(o ...))
+		     d
+		     (error "no keysymbol" x))
+		 (if (null? y)
+		     (error "odd keysymbol list" tail)
+		     (if (memq x '(k ...))
+			 (if (eq? 'key x)
+			     (let ((n (car y)))
+			       (if (and t ...)
+				   (begin (set! z (append (reverse head)
+							  (cdr y)))
+					  n)
+				   (error "bad argument" n 'n 't ...)))
+			     (lp (cons (car y) (cons x head)) (cdr y)))
+			 (if (memq x '(kk ...))
+			     (if (memq 'allow-duplicate-keys '(o ...))
+				 (lp (cons (car y) (cons x head)) (cdr y))
+				 (error "duplicate keysymbol" x))
+			     (if (memq 'allow-other-keys '(o ...))
+				 (lp (cons (car y) (cons x head)) (cdr y))
+				 (error "unknown keysymbol" x))))))))))))
+
 (define-syntax alet-opt*
   (syntax-rules ()
     ((alet-opt* z (a . e) bd ...)
@@ -1023,6 +1304,53 @@ SRFI-23 (Error reporting mechanism).
 ;;     ((%alet-cat* z () e bd ...)
 ;;      (let ((e z)) bd ...))))
 
+(define-syntax alet-key*
+  (syntax-rules ()
+    ((alet-key* z (a . e) bd ...)
+     (let ((y z))
+       (%alet-key* y () () () (a . e) () bd ...)))))
+(define-syntax %alet-key*
+  (syntax-rules ()
+    ((%alet-key* z (o ...) (f ...) (ndt ...) (((n k) d t ...) . e)
+		 (kk ...) bd ...)
+     (%alet-key* z (o ...) (f ...) (ndt ... ((n k) d t ...)) e
+		 (kk ... k) bd ...))
+    ((%alet-key* z (o ...) (f ...) (ndt ...) ((n d t ...) . e)
+		 (kk ...) bd ...)
+     (%alet-key* z (o ...) (f ...) (ndt ... ((n n) d t ...)) e
+		 (kk ... n) bd ...))
+    ((%alet-key* z () () () (#t . e) () bd ...)
+     (%alet-key* z (allow-anything) (#t) () e () bd ...))
+    ((%alet-key* z () () () (#f . e) () bd ...)
+     (%alet-key* z () (#f) () e () bd ...))
+    ((%alet-key* z (o ...) () () (n . e) () bd ...)
+     (if (memq 'n '(allow-duplicate-keys allow-other-keys allow-non-keys))
+	 (%alet-key* z (o ... n) () () e () bd ...)
+	 (error "alet*: bad option identifier" 'n)))
+
+    ((%alet-key* z (o ...) (#t)
+		 (((n k) d t ...) ((nn kn) dn tn ...) ...) e (kk ...) bd ...)
+     (let ((n (if (null? z)
+		  d
+		  (wow-key! z () () () (n k) d t ...))))
+       (%alet-key* z (o ...) (#t)
+		   (((nn kn) dn tn ...) ...) e (kk ...) bd ...)))
+    ((%alet-key* z (o ...) (f ...)
+		 (((n k) d t ...) ((nn kn) dn tn ...) ...) e (kk ...) bd ...)
+     (let ((n (if (null? z)
+		  d
+		  (wow-key! z (o ...) (kk ...) (k kn ...) (n k) d t ...))))
+       (%alet-key* z (o ...) (f ...)
+		   (((nn kn) dn tn ...) ...) e (kk ...) bd ...)))
+    ((%alet-key* z () (f ...) () () (kk ...) bd ...)
+     (if (null? z)
+	 (let () bd ...)
+	 (error "alet*: to many arguments" z)))
+    ((%alet-key* z (o oo ...) (f ...) () () (kk ...) bd ...)
+     (let () bd ...))
+    ((%alet-key* z (o ...) (f ...) () e (kk ...) bd ...)
+     (let ((e z)) bd ...))))
+
 References
 
 [R5RS]	    Richard Kelsey, William Clinger, and Jonathan Rees: Revised(5)
@@ -1039,7 +1367,10 @@ References
 	    http://srfi.schemers.org/srfi-71/
 Scsh	    Olin Shivers, Brian Carlstrom, Martin Gasbichler, Mike Sperber
 	    http://www.scsh.net
-
+PLT MzLib   Dorai Sitaram, Bruce Hauman, Jens Axel S©ªgaard, Gann Bierner,
+	    and Kurt Howard: PLT MzLib: Libraries Manual
+	    http://download.plt-scheme.org/doc/301/html/mzlib/
+	    
 Copyright
 
 Copyright (c) 2006 Joo ChurlSoo.
