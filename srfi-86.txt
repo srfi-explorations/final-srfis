@@ -1236,23 +1236,24 @@ SRFI-23 (Error reporting mechanism).
 	   d
 	   (if (equal? key x)
 	       (begin (set! z (cdr y)) (car y))
-	       (if (not (member x (list kk ...)))
-		   d
-		   (let lp ((head (list (car y) x)) (tail (cdr y)))
-		     (if (null? tail)
-			 d
-			 (let ((x (car tail))
-			       (y (cdr tail)))
-			   (if (null? y)
-			       d
-			       (if (equal? key x)
-				   (begin (set! z (append (reverse head)
-							  (cdr y)))
-					  (car y))
-				   (if (not (member x (list kk ...)))
-				       d
-				       (lp (cons (car y) (cons x head))
-					   (cdr y)))))))))))))
+	       (let ((lk (list kk ...)))
+		 (if (not (member x lk))
+		     d
+		     (let lp ((head (list (car y) x)) (tail (cdr y)))
+		       (if (null? tail)
+			   d
+			   (let ((x (car tail))
+				 (y (cdr tail)))
+			     (if (null? y)
+				 d
+				 (if (equal? key x)
+				     (begin (set! z (append (reverse head)
+							    (cdr y)))
+					    (car y))
+				     (if (not (member x lk))
+					 d
+					 (lp (cons (car y) (cons x head))
+					     (cdr y))))))))))))))
     ((wow-key! z (#t) (kk ...) (n key) d)
      (let ((x (car z))
 	   (y (cdr z)))
@@ -1260,7 +1261,8 @@ SRFI-23 (Error reporting mechanism).
 	   d
 	   (if (equal? key x)
 	       (begin (set! z (cdr y)) (car y))
-	       (let ((m (member x (list kk ...))))
+	       (let* ((lk (list kk ...))
+		      (m (member x lk)))
 		 (let lp ((head (if m (list (car y) x) (list x)))
 			  (tail (if m (cdr y) y)))
 		   (if (null? tail)
@@ -1273,7 +1275,7 @@ SRFI-23 (Error reporting mechanism).
 				 (begin (set! z (append (reverse head)
 							(cdr y)))
 					(car y))
-				 (let ((m (member x (list kk ...))))
+				 (let ((m (member x lk)))
 				   (lp (if m
 					   (cons (car y) (cons x head))
 					   (cons x head))
@@ -1301,7 +1303,8 @@ SRFI-23 (Error reporting mechanism).
 				     (begin (set! z (append (reverse head)
 							    (cdr y)))
 					    n)
-				     (error "alet[*]: bad argument" n 'n 't)))
+				     (error "alet[*]: bad argument"
+					    n 'n 't)))
 			       (lp (cons (car y) (cons x head))
 				   (cdr y)))))))))))
     ((wow-key! z (#f) (kk ...) (n key) d t)
@@ -1314,28 +1317,29 @@ SRFI-23 (Error reporting mechanism).
 		 (if t
 		     (begin (set! z (cdr y)) n)
 		     (error "alet[*]: bad argument" n 'n 't)))
-	       (if (not (member x (list kk ...)))
-		   d
-		   (let lp ((head (list (car y) x)) (tail (cdr y)))
-		     (if (null? tail)
-			 d
-			 (let ((x (car tail))
-			       (y (cdr tail)))
-			   (if (null? y)
-			       d
-			       (if (equal? key x)
-				   (let ((n (car y)))
-				     (if t
-					 (begin (set! z
-						      (append (reverse head)
-							      (cdr y)))
-						n)
-					 (error "alet[*]: bad argument"
-						n 'n 't)))
-				   (if (not (member x (list kk ...)))
-				       d
-				       (lp (cons (car y) (cons x head))
-					   (cdr y)))))))))))))
+	       (let ((lk (list kk ...)))
+		 (if (not (member x lk))
+		     d
+		     (let lp ((head (list (car y) x)) (tail (cdr y)))
+		       (if (null? tail)
+			   d
+			   (let ((x (car tail))
+				 (y (cdr tail)))
+			     (if (null? y)
+				 d
+				 (if (equal? key x)
+				     (let ((n (car y)))
+				       (if t
+					   (begin
+					     (set! z (append (reverse head)
+							     (cdr y)))
+					     n)
+					   (error "alet[*]: bad argument"
+						  n 'n 't)))
+				     (if (not (member x lk))
+					 d
+					 (lp (cons (car y) (cons x head))
+					     (cdr y))))))))))))))
     ((wow-key! z (#t) (kk ...) (n key) d t)
      (let ((x (car z))
 	   (y (cdr z)))
@@ -1346,7 +1350,8 @@ SRFI-23 (Error reporting mechanism).
 		 (if t
 		     (begin (set! z (cdr y)) n)
 		     (error "alet[*]: bad argument" n 'n 't)))
-	       (let ((m (member x (list kk ...))))
+	       (let* ((lk (list kk ...))
+		      (m (member x lk)))
 		 (let lp ((head (if m (list (car y) x) (list x)))
 			  (tail (if m (cdr y) y)))
 		   (if (null? tail)
@@ -1358,13 +1363,12 @@ SRFI-23 (Error reporting mechanism).
 			     (if (equal? key x)
 				 (let ((n (car y)))
 				   (if t
-				       (begin (set! z
-						    (append (reverse head)
-							    (cdr y)))
+				       (begin (set! z (append (reverse head)
+							      (cdr y)))
 					      n)
 				       (error "alet[*]: bad argument"
 					      n 'n 't)))
-				 (let ((m (member x (list kk ...))))
+				 (let ((m (member x lk)))
 				   (lp (if m
 					   (cons (car y) (cons x head))
 					   (cons x head))
@@ -1392,7 +1396,8 @@ SRFI-23 (Error reporting mechanism).
 				     (begin (set! z (append (reverse head)
 							    (cdr y)))
 					    ts)
-				     (error "alet[*]: bad argument" n 'n 't)))
+				     (error "alet[*]: bad argument"
+					    n 'n 't)))
 			       (lp (cons (car y) (cons x head))
 				   (cdr y)))))))))))
     ((wow-key! z (#f) (kk ...) (n key) d t ts)
@@ -1405,28 +1410,29 @@ SRFI-23 (Error reporting mechanism).
 		 (if t
 		     (begin (set! z (cdr y)) ts)
 		     (error "alet[*]: bad argument" n 'n 't)))
-	       (if (not (member x (list kk ...)))
-		   d
-		   (let lp ((head (list (car y) x)) (tail (cdr y)))
-		     (if (null? tail)
-			 d
-			 (let ((x (car tail))
-			       (y (cdr tail)))
-			   (if (null? y)
-			       d
-			       (if (equal? key x)
-				   (let ((n (car y)))
-				     (if t
-					 (begin (set! z
-						      (append (reverse head)
-							      (cdr y)))
-						ts)
-					 (error "alet[*]: bad argument"
-						n 'n 't)))
-				   (if (not (member x (list kk ...)))
-				       d
-				       (lp (cons (car y) (cons x head))
-					   (cdr y)))))))))))))
+	       (let ((lk (list kk ...)))
+		 (if (not (member x lk))
+		     d
+		     (let lp ((head (list (car y) x)) (tail (cdr y)))
+		       (if (null? tail)
+			   d
+			   (let ((x (car tail))
+				 (y (cdr tail)))
+			     (if (null? y)
+				 d
+				 (if (equal? key x)
+				     (let ((n (car y)))
+				       (if t
+					   (begin
+					     (set! z (append (reverse head)
+							     (cdr y)))
+					     ts)
+					   (error "alet[*]: bad argument"
+						  n 'n 't)))
+				     (if (not (member x lk))
+					 d
+					 (lp (cons (car y) (cons x head))
+					     (cdr y))))))))))))))
     ((wow-key! z (#t) (kk ...) (n key) d t ts)
      (let ((x (car z))
 	   (y (cdr z)))
@@ -1437,7 +1443,8 @@ SRFI-23 (Error reporting mechanism).
 		 (if t
 		     (begin (set! z (cdr y)) ts)
 		     (error "alet[*]: bad argument" n 'n 't)))
-	       (let ((m (member x (list kk ...))))
+	       (let* ((lk (list kk ...))
+		      (m (member x lk)))
 		 (let lp ((head (if m (list (car y) x) (list x)))
 			  (tail (if m (cdr y) y)))
 		   (if (null? tail)
@@ -1449,13 +1456,12 @@ SRFI-23 (Error reporting mechanism).
 			     (if (equal? key x)
 				 (let ((n (car y)))
 				   (if t
-				       (begin (set! z
-						    (append (reverse head)
-							    (cdr y)))
+				       (begin (set! z (append (reverse head)
+							      (cdr y)))
 					      ts)
 				       (error "alet[*]: bad argument"
 					      n 'n 't)))
-				 (let ((m (member x (list kk ...))))
+				 (let ((m (member x lk)))
 				   (lp (if m
 					   (cons (car y) (cons x head))
 					   (cons x head))
@@ -1498,30 +1504,31 @@ SRFI-23 (Error reporting mechanism).
 		 (if t
 		     (begin (set! z (cdr y)) ts)
 		     (begin (set! z (cdr y)) fs)))
-	       (if (not (member x (list kk ...)))
-		   d
-		   (let lp ((head (list (car y) x)) (tail (cdr y)))
-		     (if (null? tail)
-			 d
-			 (let ((x (car tail))
-			       (y (cdr tail)))
-			   (if (null? y)
-			       d
-			       (if (equal? key x)
-				   (let ((n (car y)))
-				     (if t
-					 (begin (set! z
-						      (append (reverse head)
-							      (cdr y)))
-						ts)
-					 (begin (set! z
-						      (append (reverse head)
-							      (cdr y)))
-						fs)))
-				   (if (not (member x (list kk ...)))
-				       d
-				       (lp (cons (car y) (cons x head))
-					   (cdr y)))))))))))))
+	       (let ((lk (list kk ...)))
+		 (if (not (member x lk))
+		     d
+		     (let lp ((head (list (car y) x)) (tail (cdr y)))
+		       (if (null? tail)
+			   d
+			   (let ((x (car tail))
+				 (y (cdr tail)))
+			     (if (null? y)
+				 d
+				 (if (equal? key x)
+				     (let ((n (car y)))
+				       (if t
+					   (begin
+					     (set! z (append (reverse head)
+							     (cdr y)))
+					     ts)
+					   (begin
+					     (set! z (append (reverse head)
+							     (cdr y)))
+					     fs)))
+				     (if (not (member x lk))
+					 d
+					 (lp (cons (car y) (cons x head))
+					     (cdr y))))))))))))))
     ((wow-key! z (#t) (kk ...) (n key) d t ts fs)
      (let ((x (car z))
 	   (y (cdr z)))
@@ -1532,7 +1539,8 @@ SRFI-23 (Error reporting mechanism).
 		 (if t
 		     (begin (set! z (cdr y)) ts)
 		     (begin (set! z (cdr y)) fs)))
-	       (let ((m (member x (list kk ...))))
+	       (let* ((lk (list kk ...))
+		      (m (member x lk)))
 		 (let lp ((head (if m (list (car y) x) (list x)))
 			  (tail (if m (cdr y) y)))
 		   (if (null? tail)
@@ -1544,15 +1552,13 @@ SRFI-23 (Error reporting mechanism).
 			     (if (equal? key x)
 				 (let ((n (car y)))
 				   (if t
-				       (begin (set! z
-						    (append (reverse head)
-							    (cdr y)))
+				       (begin (set! z (append (reverse head)
+							      (cdr y)))
 					      ts)
-				       (begin (set! z
-						    (append (reverse head)
-							    (cdr y)))
+				       (begin (set! z (append (reverse head)
+							      (cdr y)))
 					      fs)))
-				 (let ((m (member x (list kk ...))))
+				 (let ((m (member x lk)))
 				   (lp (if m
 					   (cons (car y) (cons x head))
 					   (cons x head))
