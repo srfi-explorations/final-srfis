@@ -1,0 +1,698 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+  <head>
+    <title>SRFI 94: Type-Restricted Numerical Functions</title>
+  </head>
+
+<body>
+
+<H1>Title</H1>
+
+Type-Restricted Numerical Functions
+
+<H1>Author</H1>
+
+Aubrey Jaffer
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status.  To see an explanation of
+each status that a SRFI can hold, see 
+<A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+
+To provide input on this SRFI, please 
+<A HREF="mailto:srfi-94@srfi.schemers.org">mail to
+<code>&lt;srfi-94@srfi.schemers.org&gt;</code></A>.  See 
+<A HREF="../srfi-list-subscribe.html">instructions here</A> to subscribe to
+the list.  You can access previous messages via 
+<A HREF="mail-archive/maillist.html">the archive of the mailing list</A>.
+
+
+<P><UL>
+<LI>Received: 2006/09/08</LI>
+<LI>Draft: 2006/09/14 - 2006/11/13</LI>
+</UL>
+
+<h1>Abstract</h1>
+
+In the coding of numerial calculations in latent-typed languages it is
+good practice to assure that those calculations are using the intended
+number system.  The most common number systems for programmatic
+calculations are the integers, reals, and complexes.  This SRFI
+introduces 14 real-only and 2 integer-only variants of R5RS procedures
+to facilitate numerical type checking and declaration.
+<p>
+
+<h1>Issues</h1>
+
+With the exception of <samp>`='</samp> and <samp>`zero?'</samp>,
+Scheme's numerical comparison operators are already restricted to real
+numbers.
+<p>
+
+The larger question is whether to make integer-only versions of
+<samp>`='</samp>, <samp>`zero?'</samp>, <samp>`&lt;'</samp>,
+<samp>`&gt;'</samp>, <samp>`&lt;='</samp>, <samp>`&gt;='</samp>,
+<samp>`positive?'</samp>, and <samp>`negative?'</samp>.
+(<samp>`odd?'</samp> and <samp>`even?'</samp> are already
+integer-only).
+<p>
+Because <samp>`quotient'</samp>, <samp>`modulo'</samp>, and
+<samp>`remainder'</samp> constrain both their inputs and outputs, and
+because <samp>`vector-ref'</samp>, <samp>`vector-set!'</samp>,
+<samp>`string-ref'</samp>, <samp>`string-set!'</samp>,
+<samp>`list-ref'</samp>, <samp>`list-tail'</samp>,
+<samp>`odd?'</samp>, and <samp>`even?'</samp> constrain one of their
+inputs as integers, I think that integer-only comparison operators are
+not needed.
+
+<h3>Terminology</h3>
+
+Use of the terms integer, real, and complex follows R5RS and SRFI-70.
+All integers are real; all reals are complex.
+
+<h1>Rationale</h1>
+
+The infinities introduced by SRFI-70 extend the range of Scheme
+numerical calculations.  But with that larger range, the signaling of
+numerical errors resulting from bad inputs or mistakes in program
+logic is delayed, and sometimes missed entirely.
+<p>
+The SRFI-77 shotgun approach creates type-restricted variants of all
+the numerical operations, but does not allow those operations to
+signal errors when they are forced out of bounds!  For instance
+<samp>`flsqrt'</samp> and <samp>`inexact-sqrt'</samp>:
+
+<blockquote>
+    Returns the principal square root of z [sic]. For a negative
+    argument, the result may be a NaN, or may be some meaningless
+    flonum.
+</blockquote>
+
+SRFI-77 here misses an opportunity to increase the declarative power
+of Scheme numerical operations.  By the present SRFI making
+<samp>`real-sqrt'</samp> and <samp>`real-ln'</samp> of negative
+numbers an error, compilers can deduce that the expressions
+calculating the inputs to <samp>`real-sqrt'</samp> and
+<samp>`real-ln'</samp> must return non-negative reals.  Similarly,
+use of the other real-only transcendental functions declares their
+inputs and outputs to be real.
+<p>
+
+<!-- It is desirable to catch type errors as early as possible in a -->
+<!-- computation.  By the time a comparison operator like -->
+<!-- <samp>`&gt;='</samp> sees a non-real number, the stack frames which -->
+<!-- returned it may be long gone.  For that reason this SRFI does not -->
+<!-- introduce new numerical predicates. -->
+<!-- <p> -->
+
+For addition, subtraction, negation, and multiplication, the results
+of the operation will be members of the same number system as the
+operation's inputs when those inputs are all of the same number
+system.  It would be unnecessary tedium to apply run-time tests to
+intermediate or final results of chains of these common operations.
+<p>
+Division of reals yields a real; division of complexes yields a
+complex.  So real and complex division also need not be distinguished.
+<samp>`max'</samp> of integers yields an integer; and
+<samp>`max'</samp> of reals yields a real.  So these are not
+distinguished; neither is <samp>`min'</samp>.
+<p>
+But division of integers can yield a non-integer.  To address this,
+R5RS defines a division operator, <samp>`quotient'</samp>, which is
+specified only for integer arguments.  This SRFI mandates that
+<samp>`quotient'</samp>, <samp>`remainder'</samp>, and
+<samp>`modulo'</samp> signal an error when passed an argument which is
+not an exact-integer.
+<p>
+The criterion is exact-integer instead of just integer so that the
+results of integer calculations are guaranteed to be of the correct
+type to pass as index arguments.
+<p>
+Arithmetic operations on mixtures of integer, real, and complex
+numbers are well defined and very common in use.  This SRFI does not
+alter R5RS behavior of arithmetic operations with mixed type inputs.
+<p>
+<!-- But this SRFI also mandates that the procedure /, when passed integer -->
+<!-- arguments, return the closest real number to the mathematical -->
+<!-- quotient.  This is so that common operations like the division of -->
+<!-- integer loop indexes do not need explicit type conversion. -->
+<p>
+This SRFI introduces some integer-only and real-only variants of the
+transcendental functions of R5RS.  Those type-restricted functions are
+mandated to signal an error if called with arguments or producing
+results which are not in the designated number system.  Thus
+<code>(real-sqrt&nbsp;-1)</code> must signal an error even though -1
+is an exact real.  Following SRFI-70, #+inf.0 and #-inf.0 are real;
+NaNs are not.  None of these infinities is an integer.
+<p>
+The complex transcendental functions from R5RS are unchanged by this
+SRFI.  They accept complex (hence also integer and real) arguments.
+The functions <samp>`abs'</samp>, <samp>`make-rectangular'</samp>, and
+<samp>`make-polar'</samp>; and <samp>`atan'</samp> when called with
+two arguments are changed to require them to signal an error when
+passed a non-real number.  Note that integers are real numbers.
+<p>
+Although the language of this SRFI calls for error signaling, that
+signaling is not limited to run-time.  An error can be reported during
+compilation.  Run-time type testing can be skipped if the compiler can
+prove that arguments are of the correct type and within the correct
+range.  It would be reasonable for SRFI-77's
+"<em>unsafe&nbsp;mode</em>" to disable run-time checking.
+<p>
+<a name="chart"></a>
+
+<table border=1 align=left>
+<tr><td colspan=3 align=center><i>single argument</i>
+<tr><th>Exact-integer	<th>Real	<th>Complex
+<tr><td>	<td><tt>real-exp</tt>	<td><tt>exp</tt>
+<tr><td>	<td><tt>real-ln</tt>	<td><tt>ln</tt>
+<tr><td>	<td><tt>real-atan</tt>	<td><tt>atan</tt>
+<tr><td>	<td><tt>real-acos</tt>	<td><tt>acos</tt>
+<tr><td>	<td><tt>real-asin</tt>	<td><tt>asin</tt>
+<tr><td>	<td><tt>real-tan</tt>	<td><tt>tan</tt>
+<tr><td>	<td><tt>real-cos</tt>	<td><tt>cos</tt>
+<tr><td>	<td><tt>real-sin</tt>	<td><tt>sin</tt>
+<tr><td><tt>abs</tt>	<td><tt>abs</tt>	<td><tt>magnitude</tt>
+<tr><td><tt>integer-sqrt</tt>	<td><tt>real-sqrt</tt>	<td><tt>sqrt</tt>
+</table>
+
+<table border=1>
+<tr><td colspan=3 align=center><i>multi-argument</i>
+<tr><th>Exact-integer	<th>Real	<th>Complex
+<tr><td><tt>integer-expt</tt>	<td><tt>real-expt</tt>	<td><tt>expt</tt>
+<tr><td><tt>integer-log</tt>	<td><tt>real-log</tt>
+<tr><td>	<td><tt>atan</tt>
+<tr><td><tt>+</tt>	<td><tt>+</tt>	<td><tt>+</tt>
+<tr><td><tt>-</tt>	<td><tt>-</tt>	<td><tt>-</tt>
+<tr><td><tt>*</tt>	<td><tt>*</tt>	<td><tt>*</tt>
+<tr><td>	<td><tt>/</tt>	<td><tt>/</tt>
+<tr><td><tt>quotient</tt>	<td><tt>quo</tt>
+<tr><td><tt>modulo</tt>	<td><tt>mod</tt>
+<tr><td><tt>remainder</tt>	<td><tt>rem</tt>
+<tr><td><tt>max</tt>	<td><tt>max</tt>
+<tr><td><tt>min</tt>	<td><tt>min</tt>
+</table>
+
+<br clear=all>
+
+<p>
+The <samp>`arithmetic-shift'</samp> and <samp>`integer-length'</samp>
+procedures of SRFI-60 are related to the base-2 exponential and
+logarithm respectively, but are not included in the table.
+<p>
+<samp>`mod'</samp> and <samp>`rem'</samp> are the real functions from
+Common-Lisp.  <samp>`quo'</samp> is the analogous division
+<tt>(truncate&nbsp;(/&nbsp;x1&nbsp;x2))</tt>.
+<p>
+Although not a type-restricted function, <samp>`ln'</samp> is added as
+a synonym for <samp>`log'</samp> because <samp>`log'</samp> is not
+used consistently to denote the natural logarithm.
+<p>
+<samp>`Real-log'</samp> returns the logarithm of its second argument
+using its first argument as the base.  <samp>`integer-log'</samp> is
+the analogous two-argument logarithm function for integers.
+
+<!-- The <A HREF="http://en.wikipedia.org/wiki/Discrete_logarithm">discreet -->
+<!-- logarithm</A> is defined for finite cyclic groups, but would make -->
+<!-- sense only in the context of finite cyclic groups; not the integers. -->
+
+<!-- Added is <samp>`log'</samp> with two arguments, which computes the -->
+<!-- logarithm of its second argument base its first argument. -->
+<!-- Two-argument -->
+<!-- <samp>`log'</samp> complements <samp>`expt'</samp> as -->
+<!-- <samp>`ln'</samp> complements <samp>`exp'</samp>. -->
+<!-- <p> -->
+<!-- Use of single-argument <samp>`log'</samp> should be deprecated. -->
+<p>
+
+<h1>Specification</h1>
+
+<!-- Here is the text proposed to replace section "6.2 Numbers" of R5RS. -->
+<!-- Deleted text is <strike>marked with a line through it</strike>. -->
+<!-- Additions and changes are <font color="red">marked in red</font>. -->
+
+
+<!-- <A NAME="6.2.5"></A> -->
+<!-- <H3>6.2.5 Numerical operations</H3> -->
+
+<!-- <P> -->
+<!-- The reader is referred to section <A HREF="http://swiss.csail.mit.edu/~jaffer/r5rs_3.html#SEC11">1.3.3 Entry -->
+<!-- format</A> for a summary of the naming conventions used to specify -->
+<!-- restrictions on the types of arguments to numerical routines. -->
+
+<P>
+<DL>
+<DT><U>procedure:</U> <B>real-exp</B> <I><VAR>x</VAR></I>
+<DD>
+<DT><U>procedure:</U> <B>real-ln</B> <I><VAR>x</VAR></I>
+<DD>
+<DT><U>procedure:</U> <B>real-log</B> <I><VAR>y</VAR> <VAR>x</VAR></I>
+<DD>
+<DT><U>procedure:</U> <B>real-sin</B> <I><VAR>x</VAR></I>
+<DD>
+<DT><U>procedure:</U> <B>real-cos</B> <I><VAR>x</VAR></I>
+<DD>
+<DT><U>procedure:</U> <B>real-tan</B> <I><VAR>x</VAR></I>
+<DD>
+<DT><U>procedure:</U> <B>real-asin</B> <I><VAR>x</VAR></I>
+<DD>
+<DT><U>procedure:</U> <B>real-acos</B> <I><VAR>x</VAR></I>
+<DD>
+<DT><U>procedure:</U> <B>real-atan</B> <I><VAR>x</VAR></I>
+<DD>
+<DT><U>procedure:</U> <B>atan</B> <I><VAR>y</VAR> <VAR>x</VAR></I>
+<DD>
+
+
+<P>
+These procedures are part of every implementation that supports
+general real numbers; they compute the usual transcendental functions.
+<SAMP>`Real-ln'</SAMP> computes the natural logarithm of <VAR>x</VAR>
+(not the base ten logarithm); <SAMP>`real-log'</SAMP> computes the
+logarithm of <VAR>x</VAR> base <var>y</var>, which is
+<code>(/&nbsp;(real-ln&nbsp;<var>x</var>)&nbsp;(real-ln&nbsp;<var>y</var>))</code>
+If arguments <VAR>x</VAR> and <VAR>y</VAR> are not both real; or if
+the correct result would not be real, then these procedures signal an
+error.
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <B>real-sqrt</B> <I><VAR>x</VAR></I>
+<DD>
+
+
+<P>
+For non-negative real <VAR>x</VAR> the result will be its positive
+square root; otherwise an error will be signaled.
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <B>integer-sqrt</B> <I><VAR>n</VAR></I>
+<DD>
+
+
+<P>
+For non-negative integer <VAR>n</VAR> returns the largest integer
+whose square is less than or equal to <VAR>n</VAR>; otherwise signals
+an error.
+
+</DL>
+
+
+<P>
+<DL>
+<DT><U>procedure:</U> <B>integer-log</B> <I>k1 k2</I>
+<DD>
+
+<P>
+Returns the largest exact integer whose power of <VAR>k1</VAR> is less
+than or equal to <VAR>k2</VAR>.  If <VAR>k1</VAR> or <VAR>k2</VAR> is
+not a positive exact integer, then <code>integer-log</code> signals an
+error.
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <B>integer-expt</B> <I>n1 n2</I>
+<DD>
+
+<P>
+Returns <VAR>n1</VAR> raised to the power <VAR>n2</VAR> if that result
+is an exact integer; otherwise signals an error.
+<P>
+
+<CODE>(integer-expt 0 <VAR>n2</VAR>)</CODE><BR>
+returns 1 for <VAR>n2</VAR> equal to 0;<BR>
+returns 0 for positive integer <VAR>n2</VAR>;<BR>
+signals an error otherwise.
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <B>real-expt</B> <I>x1 x2</I>
+<DD>
+
+
+<P>
+Returns <VAR>x1</VAR> raised to the power <VAR>x2</VAR> if that result
+is a real number; otherwise signals an error.
+<P>
+
+<CODE>(real-expt 0.0 <VAR>x2</VAR>)</CODE><BR>
+returns 1.0 for <VAR>x2</VAR> equal to 0.0;<BR>
+returns 0.0 for positive real <VAR>x2</VAR>;<BR>
+signals an error otherwise.
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <B>quo</B> <I>x1 x2</I>
+<DT><U>procedure:</U> <B>rem</B> <I>x1 x2</I>
+<DT><U>procedure:</U> <B>mod</B> <I>x1 x2</I>
+<DD>
+
+<P>
+<VAR>x2</VAR> should be non-zero.
+
+<PRE>
+    (quo <VAR>x1</VAR> <VAR>x2</VAR>)                     ==&#62; <VAR>n_q</VAR>
+    (rem <VAR>x1</VAR> <VAR>x2</VAR>)                     ==&#62; <VAR>x_r</VAR>
+    (mod <VAR>x1</VAR> <VAR>x2</VAR>)                     ==&#62; <VAR>x_m</VAR>
+</PRE>
+
+<P>
+where <VAR>n_q</VAR> is <VAR>x1</VAR>/<VAR>x2</VAR> rounded towards zero,
+0 &#60; |<VAR>x_r</VAR>| &#60; |<VAR>x2</VAR>|, 0 &#60; |<VAR>x_m</VAR>| &#60; |<VAR>x2</VAR>|,
+<VAR>x_r</VAR> and <VAR>x_m</VAR> differ from <VAR>x1</VAR> by a multiple of <VAR>x2</VAR>,
+<VAR>x_r</VAR> has the same sign as <VAR>x1</VAR>, and
+<VAR>x_m</VAR> has the same sign as <VAR>x2</VAR>.
+
+
+<P>
+From this we can conclude that for <VAR>x2</VAR> not equal to 0,
+
+
+
+<PRE>
+     (= <VAR>x1</VAR> (+ (* <VAR>x2</VAR> (quo <VAR>x1</VAR> <VAR>x2</VAR>))
+           (rem <VAR>x1</VAR> <VAR>x2</VAR>)))
+                                       ==&#62;  #t
+</PRE>
+
+<P>
+provided all numbers involved in that computation are exact.
+
+
+
+<PRE>
+
+(quo 2/3 1/5)                          ==>  3
+(mod 2/3 1/5)			       ==>  1/15
+
+(quo .666 1/5)			       ==>  3.0
+(mod .666 1/5)			       ==>  65.99999999999995e-3
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <B>ln</B> <I><VAR>z</VAR></I>
+<DD>
+<!-- <DT><U>procedure:</U> <B>log</B> <I><VAR>z1</VAR> <VAR>z2</VAR></I> -->
+<!-- <DD> -->
+<p>
+These procedures are part of every implementation that supports
+general real numbers.  <SAMP>`Ln'</SAMP> computes the natural
+logarithm of <VAR>z</VAR>.
+<P>
+In general, the mathematical function ln is multiply defined.
+The value of ln <VAR>z</VAR> is defined to be the one whose imaginary
+part lies in the range from -pi (exclusive) to pi (inclusive).
+<!-- <P> -->
+<!-- <SAMP>`Log'</SAMP> computes the logarithm of <VAR>z2</VAR> base -->
+<!-- <VAR>z1</VAR>, which is -->
+<!-- <code>(/&nbsp;(ln&nbsp;<var>z2</var>)&nbsp;(ln&nbsp;<var>z1</var>))</code> -->
+</DL>
+<p>
+
+<hr>
+
+The specification of two-argument <samp>`atan'</samp> above and the
+following six procedures are changed from R5RS.
+Deleted text is <strike>marked with a line through it</strike>.
+Additions and changes are <font color="red">marked in red</font>.
+
+<P>
+<DL>
+<DT><U>procedure:</U> <B>make-rectangular</B> <I>x1 x2</I>
+<DD>
+<DT><U>procedure:</U> <B>make-polar</B> <I>x3 x4</I>
+<DD>
+
+<P>
+These procedures are part of every implementation that supports
+general complex numbers.  Suppose <VAR>x1</VAR>, <VAR>x2</VAR>,
+<VAR>x3</VAR>, and <VAR>x4</VAR> are real numbers and <VAR>z</VAR> is
+a complex number such that
+
+<P>
+<VAR>z</VAR> = <VAR>x1</VAR> + i <VAR>x2</VAR> = <VAR>x3</VAR> e<FONT SIZE="-1"><SUP>i <VAR>x4</VAR></SUP></FONT>
+
+<P>
+Then
+
+<PRE>
+(make-rectangular <VAR>x1</VAR> <VAR>x2</VAR>)               ==&#62; <VAR>z</VAR>
+(make-polar <VAR>x3</VAR> <VAR>x4</VAR>)                     ==&#62; <VAR>z</VAR>
+</PRE>
+
+<P>
+where -pi &#60; x_angle &#60;= pi with x_angle = <VAR>x4</VAR> + 2pi n
+for some integer n.
+<P>
+<font color="red">If an argument is not real, then these procedures signal an error.</font>
+
+</DL>
+
+<P>
+<DL>
+<DT><U><strike>library</strike> procedure:</U> <B>abs</B> <I>x</I>
+<DD>
+
+<P>
+<font color="red">For real argument <i>x</i>,</font> <samp>`abs'</samp> returns the absolute
+value of <var>x</var><font color="red">; otherwise it signals an error</font>.
+
+<PRE>
+(abs -7)                               ==&#62;  7
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <B>quotient</B> <I>n1 n2</I>
+<DT><U>procedure:</U> <B>remainder</B> <I>n1 n2</I>
+<DT><U>procedure:</U> <B>modulo</B> <I>n1 n2</I>
+<DD>
+
+<P>
+These procedures implement number-theoretic (integer) division.
+<strike><VAR>n2</VAR> should be non-zero.</strike>
+<FONT COLOR=red>If <VAR>n1</VAR> is not an exact integer, or if
+<VAR>n2</VAR> is not an exact non-zero integer, an error is
+signaled.</FONT>
+All three procedures return exact integers.  If
+<VAR>n1</VAR>/<VAR>n2</VAR> is an integer:
+
+
+<PRE>
+    (quotient <VAR>n1</VAR> <VAR>n2</VAR>)                   ==&#62; <VAR>n1</VAR>/<VAR>n2</VAR>
+    (remainder <VAR>n1</VAR> <VAR>n2</VAR>)                  ==&#62; 0
+    (modulo <VAR>n1</VAR> <VAR>n2</VAR>)                     ==&#62; 0
+</PRE>
+
+<P>
+If <VAR>n1</VAR>/<VAR>n2</VAR> is not an integer:
+
+
+
+<PRE>
+    (quotient <VAR>n1</VAR> <VAR>n2</VAR>)                   ==&#62; <VAR>n_q</VAR>
+    (remainder <VAR>n1</VAR> <VAR>n2</VAR>)                  ==&#62; <VAR>x_r</VAR>
+    (modulo <VAR>n1</VAR> <VAR>n2</VAR>)                     ==&#62; <VAR>x_m</VAR>
+</PRE>
+
+<P>
+where <VAR>n_q</VAR> is <VAR>n1</VAR>/<VAR>n2</VAR> rounded towards zero,
+0 &#60; |<VAR>x_r</VAR>| &#60; |<VAR>n2</VAR>|, 0 &#60; |<VAR>x_m</VAR>| &#60; |<VAR>n2</VAR>|,
+<VAR>x_r</VAR> and <VAR>x_m</VAR> differ from <VAR>n1</VAR> by a multiple of <VAR>n2</VAR>,
+<VAR>x_r</VAR> has the same sign as <VAR>n1</VAR>, and
+<VAR>x_m</VAR> has the same sign as <VAR>n2</VAR>.
+
+
+<P>
+From this we can conclude that for integers <VAR>n1</VAR> and <VAR>n2</VAR> with
+<VAR>n2</VAR> not equal to 0,
+
+
+
+<PRE>
+     (= <VAR>n1</VAR> (+ (* <VAR>n2</VAR> (quotient <VAR>n1</VAR> <VAR>n2</VAR>))
+           (remainder <VAR>n1</VAR> <VAR>n2</VAR>)))
+                                       ==&#62;  #t
+</PRE>
+
+<strike>provided all numbers involved in that computation are exact.</strike>
+
+<P>
+
+<PRE>
+(modulo 13 4)                          ==&#62;  1
+(remainder 13 4)                       ==&#62;  1
+
+(modulo -13 4)                         ==&#62;  3
+(remainder -13 4)                      ==&#62;  -1
+
+(modulo 13 -4)                         ==&#62;  -3
+(remainder 13 -4)                      ==&#62;  1
+
+(modulo -13 -4)                        ==&#62;  -1
+(remainder -13 -4)                     ==&#62;  -1
+
+<strike>(remainder -13 -4.0)                   ==&#62;  -1.0  ; inexact</strike>
+</PRE>
+
+</DL>
+
+<P>
+
+<h1>Implementation</h1>
+
+The <tt>error</tt> procedure is from SRFI-23.  The <tt>ash</tt> and
+<tt>integer-length</tt> procedures are from SRFI-60.
+
+<pre>
+(require 'srfi-60)			;ash, integer-length
+(require 'srfi-23)			;error
+
+(define (type-error procedure . args) (apply error procedure args))
+;@
+(define (integer-expt x1 x2)
+  (cond ((and (exact? x1) (integer? x1)
+	      (exact? x2) (integer? x2)
+	      (not (and (not (&lt;= -1 x1 1)) (negative? x2))))
+	 (expt x1 x2))
+	(else (type-error 'integer-expt x1 x2))))
+;@
+(define (real-expt x1 x2)
+  (cond ((and (exact? x2) (not (and (zero? x1) (negative? x2))))
+	 (integer-expt x1 x2))
+	((zero? x2) (+ 1 (* x1 x2)))
+	((and (real? x1) (real? x2)) (expt x1 x2))
+	(else (type-error 'real-expt x1 x2))))
+;@
+(define (quo x1 x2) (truncate (/ x1 x2)))
+(define (rem x1 x2) (- x1 (* x2 (quo x1 x2))))
+(define (mod x1 x2) (- x1 (* x2 (floor (/ x1 x2)))))
+
+;@
+(define (integer-log base k)
+  (define (ilog m b k)
+    (cond ((&lt; k b) k)
+	  (else
+	   (set! n (+ n m))
+	   (let ((q (ilog (+ m m) (* b b) (quotient k b))))
+	     (cond ((&lt; q b) q)
+		   (else (set! n (+ m n))
+			 (quotient q b)))))))
+  (define n 1)
+  (define (eigt? k j) (and (exact? k) (integer? k) (&gt; k j)))
+  (cond ((not (and (eigt? base 1) (eigt? k 0)))
+	 (type-error 'integer-log base k))
+	((&lt; k base) 0)
+	(else (ilog 1 base (quotient k base)) n)))
+
+;;;; http://www.cs.cmu.edu/afs/cs/project/ai-repository/ai/lang/lisp/code/math/isqrt/isqrt.txt
+;;; Akira Kurihara
+;;; School of Mathematics
+;;; Japan Women's University
+;@
+(define integer-sqrt
+  (let ((table '#(0
+		  1 1 1
+		  2 2 2 2 2
+		  3 3 3 3 3 3 3
+		  4 4 4 4 4 4 4 4 4))
+	(square (lambda (x) (* x x))))
+    (lambda (n)
+      (define (isqrt n)
+	(if (&gt; n 24)
+	    (let* ((len/4 (quotient (- (integer-length n) 1) 4))
+		   (top (isqrt (ash n (* -2 len/4))))
+		   (init (ash top len/4))
+		   (q (quotient n init))
+		   (iter (quotient (+ init q) 2)))
+	      (cond ((odd? q) iter)
+		    ((&lt; (remainder n init) (square (- iter init))) (- iter 1))
+		    (else iter)))
+	    (vector-ref table n)))
+      (if (and (exact? n) (integer? n) (not (negative? n)))
+	  (isqrt n)
+	  (type-error 'integer-sqrt n)))))
+
+(define (must-be-real name proc)
+  (lambda (x1)
+    (if (real? x1) (proc x1) (type-error name x1))))
+(define (must-be-real2 name proc)
+  (lambda (x1 x2)
+    (if (and (real? x1) (real? x2)) (proc x1 x2) (type-error name x1 x2))))
+(define (must-be-real+ name proc)
+  (lambda (x1)
+    (if (and (real? x1) (&gt;= x1 0))
+	(proc x1)
+	(type-error name x1))))
+(define (must-be-real-1+1 name proc)
+  (lambda (x1)
+    (if (and (real? x1) (&lt;= -1 x1 1))
+	(proc x1)
+	(type-error name x1))))
+(define (must-be-exact-integer2 name proc)
+  (lambda (n1 n2)
+    (if (and (integer? n1) (integer? n2) (exact? n1) (exact? n2))
+	(proc n1 n2)
+	(type-error name n1 n2))))
+(define original:abs abs)
+;@
+(define ln log)
+(define abs       (must-be-real 'abs original:abs))
+(define real-sin  (must-be-real 'real-sin sin))
+(define real-cos  (must-be-real 'real-cos cos))
+(define real-tan  (must-be-real 'real-tan tan))
+(define real-atan (must-be-real 'real-atan atan))
+(define real-exp  (must-be-real 'real-exp exp))
+(define real-ln   (must-be-real+ 'ln ln))
+(define real-sqrt (must-be-real+ 'real-sqrt sqrt))
+(define real-asin (must-be-real-1+1 'real-asin asin))
+(define real-acos (must-be-real-1+1 'real-acos acos))
+(define make-rectangular (must-be-real2 'make-rectangular make-rectangular))
+(define make-polar       (must-be-real2 'make-polar make-polar))
+(define real-log         (must-be-real2 'real-log log))
+(define quotient  (must-be-exact-integer2 'quotient quotient))
+(define remainder (must-be-exact-integer2 'remainder remainder))
+(define modulo    (must-be-exact-integer2 'modulo modulo))
+</pre>
+
+<h1>Copyright</h1>
+Copyright (C) Aubrey Jaffer 2006. All Rights Reserved.
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+</p><p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+</p><p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+    </p><hr>
+    <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Donovan Kolbly</a></address>
+  </body></html>
