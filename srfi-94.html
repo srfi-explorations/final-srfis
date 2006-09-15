@@ -31,6 +31,7 @@ the list.  You can access previous messages via
 <P><UL>
 <LI>Received: 2006/09/08</LI>
 <LI>Draft: 2006/09/14 - 2006/11/13</LI>
+<LI>Updated Implementation: 2006/09/15</LI>
 </UL>
 
 <h1>Abstract</h1>
@@ -465,7 +466,7 @@ for some integer n.
 
 <P>
 <DL>
-<DT><U><strike>library</strike> procedure:</U> <B>abs</B> <I>x</I>
+<DT><U>library procedure:</U> <B>abs</B> <I>x</I>
 <DD>
 
 <P>
@@ -574,18 +575,6 @@ The <tt>error</tt> procedure is from SRFI-23.  The <tt>ash</tt> and
 	 (expt x1 x2))
 	(else (type-error 'integer-expt x1 x2))))
 ;@
-(define (real-expt x1 x2)
-  (cond ((and (exact? x2) (not (and (zero? x1) (negative? x2))))
-	 (integer-expt x1 x2))
-	((zero? x2) (+ 1 (* x1 x2)))
-	((and (real? x1) (real? x2)) (expt x1 x2))
-	(else (type-error 'real-expt x1 x2))))
-;@
-(define (quo x1 x2) (truncate (/ x1 x2)))
-(define (rem x1 x2) (- x1 (* x2 (quo x1 x2))))
-(define (mod x1 x2) (- x1 (* x2 (floor (/ x1 x2)))))
-
-;@
 (define (integer-log base k)
   (define (ilog m b k)
     (cond ((&lt; k b) k)
@@ -630,12 +619,25 @@ The <tt>error</tt> procedure is from SRFI-23.  The <tt>ash</tt> and
 	  (isqrt n)
 	  (type-error 'integer-sqrt n)))))
 
+(define (must-be-exact-integer2 name proc)
+  (lambda (n1 n2)
+    (if (and (integer? n1) (integer? n2) (exact? n1) (exact? n2))
+	(proc n1 n2)
+	(type-error name n1 n2))))
+;@
+(define quotient  (must-be-exact-integer2 'quotient quotient))
+(define remainder (must-be-exact-integer2 'remainder remainder))
+(define modulo    (must-be-exact-integer2 'modulo modulo))
+
+;;;; real-only functions
+;@
+(define (quo x1 x2) (truncate (/ x1 x2)))
+(define (rem x1 x2) (- x1 (* x2 (quo x1 x2))))
+(define (mod x1 x2) (- x1 (* x2 (floor (/ x1 x2)))))
+
 (define (must-be-real name proc)
   (lambda (x1)
     (if (real? x1) (proc x1) (type-error name x1))))
-(define (must-be-real2 name proc)
-  (lambda (x1 x2)
-    (if (and (real? x1) (real? x2)) (proc x1 x2) (type-error name x1 x2))))
 (define (must-be-real+ name proc)
   (lambda (x1)
     (if (and (real? x1) (&gt;= x1 0))
@@ -646,30 +648,49 @@ The <tt>error</tt> procedure is from SRFI-23.  The <tt>ash</tt> and
     (if (and (real? x1) (&lt;= -1 x1 1))
 	(proc x1)
 	(type-error name x1))))
-(define (must-be-exact-integer2 name proc)
-  (lambda (n1 n2)
-    (if (and (integer? n1) (integer? n2) (exact? n1) (exact? n2))
-	(proc n1 n2)
-	(type-error name n1 n2))))
-(define original:abs abs)
 ;@
 (define ln log)
-(define abs       (must-be-real 'abs original:abs))
+(define abs       (must-be-real 'abs abs))
 (define real-sin  (must-be-real 'real-sin sin))
 (define real-cos  (must-be-real 'real-cos cos))
 (define real-tan  (must-be-real 'real-tan tan))
-(define real-atan (must-be-real 'real-atan atan))
 (define real-exp  (must-be-real 'real-exp exp))
 (define real-ln   (must-be-real+ 'ln ln))
 (define real-sqrt (must-be-real+ 'real-sqrt sqrt))
 (define real-asin (must-be-real-1+1 'real-asin asin))
 (define real-acos (must-be-real-1+1 'real-acos acos))
+
+(define (must-be-real2 name proc)
+  (lambda (x1 x2)
+    (if (and (real? x1) (real? x2)) (proc x1 x2) (type-error name x1 x2))))
+;@
 (define make-rectangular (must-be-real2 'make-rectangular make-rectangular))
 (define make-polar       (must-be-real2 'make-polar make-polar))
-(define real-log         (must-be-real2 'real-log log))
-(define quotient  (must-be-exact-integer2 'quotient quotient))
-(define remainder (must-be-exact-integer2 'remainder remainder))
-(define modulo    (must-be-exact-integer2 'modulo modulo))
+
+;@
+(define real-log
+  (lambda (base x)
+    (if (and (real? x) (positive? x)
+	     (real? base) (positive? base))
+	(/ (ln x) (ln base))
+	(type-error 'real-log base x))))
+;@
+(define (real-expt x1 x2)
+  (cond ((and (real? x1)
+	      (real? x2)
+	      (or (not (negative? x1)) (integer? x2)))
+	 (expt x1 x2))
+	(else (type-error 'real-expt x1 x2))))
+
+;@
+(define real-atan
+  (lambda (y . x)
+    (if (and (real? y)
+	     (or (null? x)
+		 (and (= 1 (length x))
+		      (real? (car x)))))
+	(apply atan y x)
+	(apply type-error 'real-atan y x))))
 </pre>
 
 <h1>Copyright</h1>
