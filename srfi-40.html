@@ -1038,11 +1038,13 @@ defined in <a href="http://srfi.schemers.org/srfi-23/">SRFI 23</a>.
         ((not (stream? strm)) (stream-error "attempt to apply stream-filter to non-stream"))
         (else (stream-unfoldn
                 (lambda (s)
-                  (values
-                    (stream-cdr s)
-                    (cond ((stream-null? s) '())
-                          ((pred? (stream-car s)) (list (stream-car s)))
-                          (else #f))))
+		  (cond
+		   ((stream-null? s)
+		    (values stream-null '()))
+		   ((pred? (stream-car s))
+		    (values (stream-cdr s) (list (stream-car s))))
+		   (else
+		    (values (stream-cdr s) #f))))
                 strm
                 1))))</pre>
 
