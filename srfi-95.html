@@ -31,6 +31,7 @@ the list.  You can access previous messages via
 <LI>Received: 2006/10/11</LI>
 <LI>Draft: 2006/10/17 - 2006/12/16</LI>
 <LI>Revised: <A href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-95/srfi-95.html?rev=1.1">2006/11/06</A></LI>
+<LI>Revised: <A href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-95/srfi-95.html?rev=1.2">2006/11/23</A></LI>
 </UL>
 
 <h1>Abstract</h1>
@@ -61,26 +62,44 @@ Sorting and Merging are useful operations deserving a common API.
 
 <h1>Rationale</h1>
 
+General purpose software libraries are about simplicity and ease of
+use, not theoretical perfection in algorithm design.
+A sorting library should be specified so that its routines will
+perform moderately well for moderately sized inputs in the vast
+majority of applications.
+<p>
 When <a href="http://srfi.schemers.org/srfi-32/srfi-32.html">SRFI 32 Sort Libraries</a>
-was withdrawn, it had 28 procedures for what should have been a
-clean, simple interface.  These 28 arose for several reasons:
+was withdrawn, it had 28 procedures.
+Having many variants in a general-purpose sorting library has
+disadvantages:
 
 <ul>
-
-<li> List and Vector versions were separated, even though Scheme has
-     manifest types which eliminate ambiguity as to the caller's
-     intentions.
-
-<li> Four varieties of algorithms were provided (quick, heap, insert,
-     merge) even though quick, heap, and insert sorts have no
-     significant advantage over merge-sort.
-
-<li> Sort and stable-sort varieties were included, even though an
-     unstable sort has no performance advantage.
-
-<li> Four delete-neighbor-dups procedures were included.
-
+<li> When there are only a few paths through the code, the code gets
+     thoroughly tested and its behavior well understood.  When there
+     are many paths, most of the code is not well tested and not well
+     understood.
+<p>
+<li> To choose optimal sort algorithms requires nearly as much
+     understanding as to write them.  Most users don't.
+<p>
+<li> A module with too many functions and voluminous documentation
+     scares off the typical user looking to just sort a 50-element
+     list; who then goes searching for any old sort algorithm to
+     reinvent the wheel.
+<p>
+<li> If some of the default sorts are unstable, then users will be
+     surprised that sorting their data twice results in different
+     orders; or that vector and list sorts return different orders.
+<p>
 </ul>
+
+The table in Wikipedia
+<a href="http://en.wikipedia.org/wiki/Sorting_algorithm"><cite>Sorting algorithm</cite></a>,
+shows that the <dfn>merge-sort</dfn> class of algorithms is optimal in
+terms of space and time asymptotic behavior except for the best case
+time, which is obtained at the expense of making the sort
+<dfn>unstable</dfn>.
+<p>
 
 This SRFI's sort procedures operate on lists and arrays, which
 includes vectors; the merge procedures operate on lists.
@@ -328,17 +347,18 @@ implementations with arrays as implemented by
   (sort:merge! a b less? (if (null? opt-key) identity (car opt-key))))
 
 (define (sort:sort-list! seq less? key)
+  (define keyer (if key car identity))
   (define (step n)
     (cond ((&gt; n 2) (let* ((j (quotient n 2))
 			  (a (step j))
 			  (k (- n j))
 			  (b (step k)))
-		     (sort:merge! a b less? car)))
+		     (sort:merge! a b less? keyer)))
 	  ((= n 2) (let ((x (car seq))
 			 (y (cadr seq))
 			 (p seq))
 		     (set! seq (cddr seq))
-		     (cond ((less? (car y) (car x))
+		     (cond ((less? (keyer y) (keyer x))
 			    (set-car! p y)
 			    (set-car! (cdr p) x)))
 		     (set-cdr! (cdr p) '())
@@ -356,10 +376,13 @@ implementations with arrays as implemented by
     (cond ((null? lst))
 	  (else (set-car! lst (cdar lst))
 		(key-unwrap! (cdr lst)))))
-  (key-wrap! seq)
-  (set! seq (step (length seq)))
-  (key-unwrap! seq)
-  seq)
+  (cond (key
+	 (key-wrap! seq)
+	 (set! seq (step (length seq)))
+	 (key-unwrap! seq)
+	 seq)
+	(else
+	 (step (length seq)))))
 
 (define (rank-1-array-&gt;list array)
   (define dimensions (array-dimensions array))
@@ -372,10 +395,10 @@ implementations with arrays as implemented by
 ;;; a version of merge-sort invented, to the best of my knowledge, by
 ;;; David H. D.  Warren, and first used in the DEC-10 Prolog system.
 ;;; R. A. O'Keefe adapted it to work destructively in Scheme.
-;;; A. Jaffer modified to always return the original pair.
+;;; A. Jaffer modified to always return the original list.
 ;@
 (define (sort! seq less? . opt-key)
-  (define key (if (null? opt-key) identity (car opt-key)))
+  (define key (if (null? opt-key) #f (car opt-key)))
   (cond ((array? seq)
 	 (let ((dims (array-dimensions seq)))
 	   (do ((sorted (sort:sort-list! (rank-1-array-&gt;list seq) less? key)
@@ -402,7 +425,7 @@ implementations with arrays as implemented by
 ;;; so (append x '()) ought to be a standard way of copying a list x.
 ;@
 (define (sort seq less? . opt-key)
-  (define key (if (null? opt-key) identity (car opt-key)))
+  (define key (if (null? opt-key) #f (car opt-key)))
   (cond ((array? seq)
 	 (let ((dims (array-dimensions seq)))
 	   (define newra (apply make-array seq dims))
