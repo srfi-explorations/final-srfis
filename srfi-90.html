@@ -31,19 +31,22 @@ HREF="mail-archive/maillist.html">the archive of the mailing list</A>.
 <P><UL>
 <LI>Received: 2006/04/01</LI>
 <LI>Draft: 2006/04/12 - 2006/06/11</LI>
+<LI>Revised: 2007/03/28</LI>
 </UL>
 
 <H1>Abstract</H1>
 
 <P>
-This SRFI specifies a hash table constructor compatible with <a href="http://srfi.schemers.org/srfi-69/">SRFI 69
-(Basic hash tables)</a> which allows various parameters of the hash
-table to be specified with named optional parameters when it is
+This SRFI specifies the procedure <TT>make-table</TT>, a hash table
+constructor compatible with <a href="http://srfi.schemers.org/srfi-69/">SRFI 69
+(Basic hash tables)</a>.  The procedure <TT>make-table</TT>
+allows various parameters of the hash
+table to be specified with optional named parameters when it is
 constructed.  These parameters are: the initial size, the minimum and
 maximum load factor, the key equivalence function, the key hashing
 function, whether the references to the keys are weak, and similarly
-for the values.  By using named optional parameters, as specified in
-<a href="http://srfi.schemers.org/srfi-89/">SRFI 89 (Optional parameters)</a>, the constructor's API can be easily
+for the values.  By using optional named parameters, as specified in
+<a href="http://srfi.schemers.org/srfi-89/">SRFI 89 (Optional positional and named parameters)</a>, the constructor's API can be easily
 extended in a backward compatible way by other SRFIs and Scheme
 implementations.
 <P>
@@ -52,12 +55,12 @@ implementations.
 
 <P>
 SRFI 69 specifies ``basic hash tables''.  It provides the procedure
-<TT>`make-hash-table'</TT> to construct hash tables, and a set of
+<TT>make-hash-table</TT> to construct hash tables, and a set of
 procedures to operate on hash tables.
 </P>
 
 <P>
-SRFI 69's <TT>`make-hash-table'</TT> accepts two positional optional
+SRFI 69's <TT>make-hash-table</TT> accepts two optional positional
 parameters: a procedure to test whether two keys are equal and a
 procedure to hash keys.  There are several other hash table
 implementations (in Scheme and other languages) which allow other
@@ -72,7 +75,7 @@ constructed, mainly to improve performance.  For instance:
 is useful to reduce the cost of resizing the hash table when it is
 known that the hash table will contain many keys.  Even though
 SRFI 69 does not provide a <I>size</I> parameter, the implementation
-in SRFI 69 handles the third positional optional parameter as a
+in SRFI 69 handles the third optional positional parameter as a
 <I>size</I> parameter.
 
 <LI>
@@ -99,7 +102,7 @@ are weak, it can reclaim that object.  In the case of hash tables, if
 the keys are considered to be weak references then the garbage
 collector can reclaim the key and that entry of the hash table if the
 key is only referred to with weak references.  This feature is
-particularly useful with <TT>`eq?'</TT> hash tables to attach
+particularly useful with <TT>eq?</TT> hash tables to attach
 auxiliary information to objects without affecting the liveness of
 these objects (for example serial numbers and access mutexes).
 Similarly, if the values are considered to be weak references then the
@@ -125,16 +128,16 @@ dependent default values:
 <STRONG>Maximum load:</STRONG> 0.8
 
 <LI>
-<STRONG>Key weakness:</STRONG> false
+<STRONG>Key reference weakness:</STRONG> false
 
 <LI>
-<STRONG>Value weakness:</STRONG> false
+<STRONG>Value reference weakness:</STRONG> false
 
 </OL>
 
 <P>
 Given that there are several parameters and that they all have
-reasonable default values, it is appropriate to use named optional
+reasonable default values, it is appropriate to use optional named
 parameters to pass them to the constructor.  This makes it possible
 for other SRFIs and Scheme implementations to extended the API in a
 backward compatible way.
@@ -143,20 +146,22 @@ backward compatible way.
 <H1>Specification</H1>
 
 <P>
-The <TT>`make-hash-table'</TT> procedure accepts named optional
-parameters as though it was defined like this:
+The <TT>make-table</TT> procedure accepts optional named
+parameters as though it was defined using the
+<a href="http://srfi.schemers.org/srfi-89/">SRFI 89
+(Optional positional and named parameters)</a> <TT>define*</TT> form
+like this:
 </P>
 
 <PRE>
-    (define (make-hash-table
-             #!key
-             (test        equal?)
-             (hash        <I>H</I>)
-             (size        <I>S</I>)
-             (min-load    <I>MINL</I>)
-             (max-load    <I>MAXL</I>)
-             (weak-keys   #f)
-             (weak-values #f))
+    (define* (make-table
+              (test:        test        equal?)
+              (hash:        hash        <I>H</I>)
+              (size:        size        <I>S</I>)
+              (min-load:    min-load    <I>MINL</I>)
+              (max-load:    max-load    <I>MAXL</I>)
+              (weak-keys:   weak-keys   #f)
+              (weak-values: weak-values #f))
       ...)
 </PRE>
 
@@ -184,16 +189,16 @@ purely advisory parameters.
 </P>
 
 <PRE>
-    (define t1 (make-hash-table))
+    (define t1 (make-table))
 
-    (define t2 (make-hash-table size: 1000))
+    (define t2 (make-table size: 1000))
 
-    (define t3 (make-hash-table hash: string-length))
+    (define t3 (make-table hash: string-length))
 
-    (define t4 (make-hash-table test: eq? weak-keys: #t))
+    (define t4 (make-table test: eq? weak-keys: #t))
 
-    (define obj2sn (make-hash-table test: eq? weak-keys: #t))
-    (define sn2obj (make-hash-table test: equal? weak-values: #t))
+    (define obj2sn (make-table test: eq? weak-keys: #t))
+    (define sn2obj (make-table test: equal? weak-values: #t))
     (define last-sn 0)
 
     (define (object-&#62;serial-number obj)
@@ -228,31 +233,29 @@ purely advisory parameters.
 The following implementation requires <a
 href="http://srfi.schemers.org/srfi-69/">SRFI 69 (Basic hash
 tables)</a> and <a href="http://srfi.schemers.org/srfi-89/">SRFI 89
-(Optional parameters)</a>.  It redefines the
-<TT>`make-hash-table'</TT> procedure to accept its parameters using
-named optional parameters:
+(Optional positional and named parameters)</a>.  It defines the
+<TT>make-table</TT> procedure to accept its parameters using
+optional named parameters and passes them to <TT>make-hash-table</TT>:
 </P>
 
 <PRE>
-(define make-hash-table
-  (let ((srfi-69-make-hash-table make-hash-table)
-        (absent (list 'absent)))
-    (lambda (#!key
-             (test        absent)
-             (hash        absent)
-             (size        0)
-             (min-load    0)
-             (max-load    1)
-             (weak-keys   #f)
-             (weak-values #f))
+(define make-table
+  (let ((absent (list 'absent)))
+    (lambda* ((test:        test        absent)
+              (hash:        hash        absent)
+              (size:        size        0)
+              (min-load:    min-load    0)
+              (max-load:    max-load    1)
+              (weak-keys:   weak-keys   #f)
+              (weak-values: weak-values #f))
       (cond ((eq? test absent)
              (if (eq? hash absent)
-                 (srfi-69-make-hash-table)
-                 (srfi-69-make-hash-table equal? hash)))
+                 (make-hash-table)
+                 (make-hash-table equal? hash)))
             ((eq? hash absent)
-             (srfi-69-make-hash-table test))
+             (make-hash-table test))
             (else
-             (srfi-69-make-hash-table test hash))))))
+             (make-hash-table test hash))))))
 </PRE>
 
 <P>
