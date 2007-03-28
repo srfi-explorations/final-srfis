@@ -1,14 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
 <html>
   <head>
-    <title>SRFI 89: Optional and named parameters</title>
+    <title>SRFI 89: Optional positional and named parameters</title>
   </head>
 
   <body>
 
 <H1>Title</H1>
 
-Optional and named parameters
+Optional positional and named parameters
 
 <H1>Author</H1>
 
@@ -32,15 +32,17 @@ HREF="mail-archive/maillist.html">the archive of the mailing list</A>.
 <LI>Received: 2006/04/01</LI>
 <LI>Draft: 2006/04/11 - 2006/07/10</LI>
 <LI>Revised: 2006/05/05</LI>
+<LI>Revised: 2007/03/28</LI>
 </UL>
 
 <H1>Abstract</H1>
 
 <P>
-This SRFI defines an extension to the R5RS procedure calling
-convention which simplifies the use of optional parameters and named
-parameters and their expression in programs.  Positional optional
-parameters, named optional parameters and named required parameters
+This SRFI specifies the <TT>define*</TT> and <TT>lambda*</TT> special forms.
+These forms extend the R5RS <TT>define</TT> and <TT>lambda</TT> special forms
+to simplify the use of optional positional and named
+parameters.  Optional positional
+parameters, optional named parameters and required named parameters
 are covered by this SRFI.  The formal parameter list syntax specified
 in this SRFI is different from the syntax used by Common Lisp and the
 DSSSL languages but nevertheless offers similar functionality and a
@@ -85,7 +87,7 @@ one optional parameter.
 </P>
 
 <P>
-Let's take the <TT>`number-&gt;string'</TT> procedure as an example and
+Let's take the <TT>number-&gt;string</TT> procedure as an example and
 fantasize about its evolution.  This procedure takes a required
 parameter, a number, and converts it to a string containing its
 decimal representation:
@@ -96,8 +98,8 @@ decimal representation:
 </PRE>
 
 <P>
-To allow converting numbers into a base different from 10, a
-positional optional parameter is added.  This <I>radix</I> parameter,
+To allow converting numbers into a base different from 10, an
+optional positional parameter is added.  This <I>radix</I> parameter,
 which defaults to 10, is the radix for representing the converted
 number:
 </P>
@@ -126,7 +128,7 @@ Now we have:
 </PRE>
 
 <P>
-The last two calls show weaknesses of positional optional parameters.
+The last two calls show weaknesses of optional positional parameters.
 In the call <TT>(number-&#62;string 1234567 10 0 #\space " ")</TT> the
 default value of <I>radix</I>, <I>min-width</I> and <I>pad-char</I>
 had to be explicitly passed when only the <I>thousand-sep</I>
@@ -138,21 +140,21 @@ must be changed to get a hexadecimal number?).
 </P>
 
 <P>
-This SRFI solves these issues by providing named optional parameters
-in addition to positional optional parameters.  Named optional
+This SRFI solves these issues by providing optional named parameters
+in addition to optional positional parameters.  Optional named
 parameters are not new; Ada, Common Lisp, Dylan, the DSSSL standard
 and several implementations of Scheme use them as well.  The idea is
 for the caller to identify the parameter that is being passed by its
 name rather than by position.  This is done by prefixing in the actual
-parameter list each named optional parameter by a keyword object with
+parameter list each optional named parameter by a keyword object with
 the same name.  Keyword objects are specified in <a
 href="http://srfi.schemers.org/srfi-88/">SRFI 88 (Keyword
 objects)</a>, but basically they look like a symbol that ends in a
 colon and are self evaluating. Assuming the API of the
-<TT>`number-&gt;string'</TT> procedure is changed so that <I>radix</I>
-is a positional optional parameter and <I>min-width</I>,
+<TT>number-&gt;string</TT> procedure is changed so that <I>radix</I>
+is an optional positional parameter and <I>min-width</I>,
 <I>pad-char</I>, and
-<I>thousand-sep</I> are named optional parameters the following calls
+<I>thousand-sep</I> are optional named parameters the following calls
 would achieve the same result as our last example:
 </P>
 
@@ -171,13 +173,13 @@ parameters in the actual parameter list does not have to match the
 order in the formal parameter list.  Also, in the last two calls,
 because <I>radix</I> is a positional parameter and some named
 parameters are passed, <I>radix</I> must be specified explicitly.  To
-avoid this, <I>radix</I> would have to be turned into a named optional
+avoid this, <I>radix</I> would have to be turned into an optional named
 parameter.
 </P>
 
 <P>
-There are situations when it is useful to allow named optional
-parameters before positional required parameters or other optional
+There are situations when it is useful to allow optional named
+parameters before required positional parameters or other optional
 parameters.  Constructors for documents with attributes, such as HTML
 code, are a compelling example:
 </P>
@@ -194,16 +196,16 @@ code, are a compelling example:
 </PRE>
 
 <P>
-Here, the HTML code constructors' attributes are specified using named
-optional parameters.  The body of an HTML tag consists of the HTML
-code produced by the parameters that follow the last named optional
+Here, the HTML code constructors' attributes are specified using
+optional named parameters.  The body of an HTML tag consists of the HTML
+code produced by the parameters that follow the last optional named
 parameter.  There is no upper limit on the number of parameters.
 </P>
 
 <P>
-Another example is an n-ary <TT>`print'</TT> procedure which displays
-an arbitrary number of parameters.  The destination port is a named
-optional parameter, defaulting to the current output port, that must
+Another example is an n-ary <TT>print</TT> procedure which displays
+an arbitrary number of parameters.  The destination port is an
+optional named parameter, defaulting to the current output port, that must
 come first:
 </P>
 
@@ -219,15 +221,15 @@ come first:
 
 <P>
 DSSSL's handling of optional parameters is very close to Common
-Lisp's.  DSSSL uses special markers (<TT>`#!optional'</TT>,
-<TT>`#!key'</TT>, and <TT>`#!rest'</TT>) in the formal parameter list
-to delimit sections where the required, positional optional, named
-optional, and rest parameters are given.  When a parameter is
+Lisp's.  DSSSL uses special markers (<TT>#!optional</TT>,
+<TT>#!key</TT>, and <TT>#!rest</TT>) in the formal parameter list
+to delimit sections where the required, optional positional, optional
+named, and rest parameters are given.  When a parameter is
 optional, it is usually wrapped with the default value in parentheses,
 i.e. <TT>(<I>param</I> <I>expression</I>)</TT>.  This syntax is used
 by several Scheme implementations: Bigloo, Chicken, EdScheme, Gambit,
-Guile (except it uses the notation <TT>`#:key'</TT> instead of
-<TT>`#!key'</TT>), Kawa, and Jade.
+Guile (except it uses the notation <TT>#:key</TT> instead of
+<TT>#!key</TT>), Kawa, and Jade.
 </P>
 
 <P>
@@ -244,13 +246,13 @@ formal parameter list syntax.
 </P>
 
 <P>
-The <TT>`case-lambda'</TT> special form,
+The <TT>case-lambda</TT> special form,
 <a href="http://srfi.schemers.org/srfi-16/">SRFI 16 (Syntax for
-procedures of variable arity)</a>, which is supported by Chez Scheme
-and PLT Scheme, allows the definition of procedures with variable
+procedures of variable arity)</a>, which is proposed for R6RS,
+allows the definition of procedures with variable
 arity.  Each possible arity of the procedure is a clause in
-the <TT>`case-lambda'</TT> form.  Although it is possible to express
-positional optional parameters with <TT>`case-lambda'</TT> this can be
+the <TT>case-lambda</TT> form.  Although it is possible to express
+optional positional parameters with <TT>case-lambda</TT> this can be
 cumbersome when there are more than a few clauses that share a common
 computation.  For N optional parameters it takes O(N^2) code space and
 there is repetition:
@@ -272,62 +274,42 @@ is equivalent to this SRFI's:
 </P>
 
 <PRE>
-    (lambda ([a 1] [b 2] [c 3] [d 4] [e 5])
+    (lambda* ((a 1) (b 2) (c 3) (d 4) (e 5))
       (+ a b c d e))
 </PRE>
 
 <P>
-Moreover, <TT>`case-lambda'</TT> does not support named optional
+Moreover, <TT>case-lambda</TT> does not support optional named
 parameters, which are important for APIs with many optional
-parameters.  The <TT>`case-lambda'</TT> form can be viewed as a
+parameters.  The <TT>case-lambda</TT> form can be viewed as a
 parameter specification approach that is orthogonal to the one
 specified in this SRFI.  Indeed, an implementation of Scheme could
-conceivably extend the <TT>`case-lambda'</TT> special form so that it
+conceivably extend the <TT>case-lambda</TT> special form so that it
 also supports the parameter list syntax specified in this SRFI:
 </P>
 
 <PRE>
     (case-lambda
-      (([foo: foo 1] [bar: bar 2]) ...)
-      (([red: red 3] [green: green 4]) ...))
+      (((foo: foo 1) (bar: bar 2)) ...)
+      (((red: red 3) (green: green 4)) ...))
 </PRE>
 
 <H1>Specification</H1>
 
 <P>
-This SRFI requires that pairs of opening/closing square brackets are
-equivalent to pairs of opening/closing parentheses in the datum
-syntax, i.e. <TT>[a b]</TT> is equivalent to <TT>(a b)</TT>.  Note
-that this equivalence is one of the changes to Scheme proposed for the
-R6RS standard and several Scheme implementations already support it.
-Because the standard notation for an optional part in an EBNF grammar
-consists in enclosing the optional part in square brackets, this is a
-good mnemonic for optional parameters.
-</P>
-
-<P>
 In the grammar rules given below we use the following syntactic
-postfix operator on non-terminals: ? (optional), + (one or more), and
-* (zero or more).  The parentheses and square brackets are terminal
-symbols (they <STRONG>do not mean</STRONG> grouping and optional parts
+superscript postfix operators on non-terminals: ? (optional), + (one or more),
+and * (zero or more).  The parentheses are terminal
+symbols (they <STRONG>do not mean</STRONG> grouping
 like in EBNF grammar notation).
 </P>
 
 <P>
-Scheme's expression syntax must be changed to allow <TT>&#60;extended
-formals&#62;</TT> in the <TT>&#60;formals&#62;</TT> and <TT>&#60;def
-formals&#62;</TT> non-terminals:
-</P>
-
-<PRE>
-    &#60;formals&#62; --&#62; &#60;variable&#62; | ( &#60;extended formals&#62; )
-
-    &#60;def formals&#62; --&#62; &#60;extended formals&#62;
-</PRE>
-
-<P>
-The non-terminal <TT>&#60;extended formals&#62;</TT> covers the R5RS
-parameter list syntax for <TT>define</TT> and the extension.  A formal
+Scheme's syntax for <TT>&#60;definition&#62;</TT>
+and <TT>&#60;lambda expression&#62;</TT> must be extended to
+support <TT>define*</TT> and <TT>lambda*</TT>.
+The non-terminal <TT>&#60;extended def formals&#62;</TT> covers the
+syntax of the R5RS non-terminal <TT>&#60;def formals&#62;</TT>.  A formal
 parameter list is composed of a sequence of 3 sections:
 a <TT>&#60;positional section&#62;</TT>, an optional <TT>&#60;named
 section&#62;</TT>, and a <TT>&#60;rest section&#62;</TT>.
@@ -337,26 +319,37 @@ section&#62;</TT> must come last.  The grammar rules are:
 </P>
 
 <PRE>
-    &#60;extended formals&#62; --&#62; &#60;positional section&#62; &#60;named section&#62;? &#60;rest section&#62;
-                         | &#60;named section&#62;? &#60;positional section&#62; &#60;rest section&#62;
+    &#60;definition&#62; --&#62; ( define &#60;variable&#62; &#60;expression&#62; )
+                  |  ( define ( &#60;variable&#62; &#60;def formals&#62; ) &#60;body&#62; )
+                  |  ( begin &#60;definition&#62;<SUP>*</SUP> )
+                  |  ( define* &#60;variable&#62; &#60;expression&#62; )
+                  |  ( define* ( &#60;variable&#62; &#60;extended def formals&#62; ) &#60;body&#62; )
 
-    &#60;positional section&#62; --&#62; &#60;required positional&#62;* &#60;optional positional&#62;*
+    &#60;lambda expression&#62; --&#62; ( lambda &#60;formals&#62; &#60;body&#62; )
+                         |  ( lambda* &#60;extended formals&#62; &#60;body&#62; )
+
+    &#60;extended formals&#62; --&#62; &#60;variable&#62; | ( &#60;extended def formals&#62; )
+
+    &#60;extended def formals&#62; --&#62; &#60;positional section&#62; &#60;named section&#62;<SUP>?</SUP> &#60;rest section&#62;
+                            |  &#60;named section&#62;<SUP>?</SUP> &#60;positional section&#62; &#60;rest section&#62;
+
+    &#60;positional section&#62; --&#62; &#60;required positional&#62;<SUP>*</SUP> &#60;optional positional&#62;<SUP>*</SUP>
 
     &#60;required positional&#62; --&#62; &#60;variable&#62;
 
-    &#60;optional positional&#62; --&#62; [ &#60;variable&#62; &#60;expression&#62; ]
+    &#60;optional positional&#62; --&#62; ( &#60;variable&#62; &#60;expression&#62; )
 
-    &#60;named section&#62; --&#62; &#60;named&#62;+
+    &#60;named section&#62; --&#62; &#60;named&#62;<SUP>+</SUP>
 
     &#60;named&#62; --&#62; &#60;required named&#62;
-              | &#60;optional named&#62;
+             |  &#60;optional named&#62;
 
     &#60;required named&#62; --&#62; ( &#60;keyword&#62; &#60;variable&#62; )
 
-    &#60;optional named&#62; --&#62; [ &#60;keyword&#62; &#60;variable&#62; &#60;expression&#62; ]
+    &#60;optional named&#62; --&#62; ( &#60;keyword&#62; &#60;variable&#62; &#60;expression&#62; )
 
     &#60;rest section&#62; --&#62; . &#60;variable&#62;
-                     | &#60;empty&#62;
+                    |  &#60;empty&#62;
 </PRE>
 
 <P>
@@ -364,8 +357,9 @@ All the variables and keywords in a formal parameter list must be distinct.
 </P>
 
 <P>
-The semantics of the new <TT>&#60;formals&#62;</TT> and <TT>&#60;def
-formals&#62;</TT> non-terminals is an extension of R5RS.  When a
+The semantics of the <TT>&#60;extended formals&#62;</TT> and <TT>&#60;extended
+def formals&#62;</TT> non-terminals is an extension of the respective
+R5RS non-terminals.  When a
 procedure is called with the actual arguments <I>a1</I>, <I>a2</I>,
 ... the following steps are performed:
 </P>
@@ -378,7 +372,7 @@ arguments in order, i.e. (<I>a1</I> <I>a2</I> ...).
 
 <LI>
 Process the <TT>&#60;positional section&#62;</TT> and <TT>&#60;named
-section&#62;</TT> in the order they occur in the formal parameter list:
+section&#62;</TT> <STRONG>in the order they occur in the formal parameter list</STRONG>:
 
 <DL>
 <DT><TT>&#60;positional section&#62;</TT>
@@ -429,7 +423,7 @@ While <I>A</I>=(<I>k</I> ...) and <I>k</I> is a keyword object:
 <UL>
 
 <LI>
-It is an error if <I>A</I> is not of the form (<I>k</I> <I>x</I>...), that is
+It is an error if <I>A</I> is not of the form (<I>k</I> <I>x</I> ...), that is
 it contains less than two arguments,
 
 <LI>
@@ -475,13 +469,13 @@ Here are some examples:
 </P>
 
 <PRE>
-    (define (f a [b #f]) (list a b))
+    (define* (f a (b #f)) (list a b))
 
     (f 1)                  ==&#62;  (1 #f)
     (f 1 2)                ==&#62;  (1 2)
     (f 1 2 3)              ==&#62;  <I>error</I>
 
-    (define (g a [b a] [key: k (* a b)]) (list a b k))
+    (define* (g a (b a) (key: k (* a b))) (list a b k))
 
     (g 3)                  ==&#62;  (3 3 9)
     (g 3 4)                ==&#62;  (3 4 12)
@@ -490,14 +484,14 @@ Here are some examples:
     (g 3 4 zoo: 5)         ==&#62;  <I>error</I>
     (g 3 4 key: 5 key: 6)  ==&#62;  <I>error</I>
 
-    (define (h1 a [key: k #f] . r) (list a k r))
+    (define* (h1 a (key: k #f) . r) (list a k r))
 
     (h1 7)                 ==&#62;  (7 #f ())
     (h1 7 8 9 10)          ==&#62;  (7 #f (8 9 10))
     (h1 7 key: 8 9 10)     ==&#62;  (7 8 (9 10))
     (h1 7 key: 8 zoo: 9)   ==&#62;  <I>error</I>
 
-    (define (h2 [key: k #f] a . r) (list a k r))
+    (define* (h2 (key: k #f) a . r) (list a k r))
 
     (h2 7)                 ==&#62;  (7 #f ())
     (h2 7 8 9 10)          ==&#62;  (7 #f (8 9 10))
@@ -519,24 +513,24 @@ Here are some examples:
     (define (escape value) value) ; could be improved!
               
     (define (make-html-styler tag)
-      (lambda ([id:          id          absent]
-               [class:       class       absent]
-               [title:       title       absent]
-               [style:       style       absent]
-               [dir:         dir         absent]
-               [lang:        lang        absent]
-               [onclick:     onclick     absent]
-               [ondblclick:  ondblclick  absent]
-               [onmousedown: onmousedown absent]
-               [onmouseup:   onmouseup   absent]
-               [onmouseover: onmouseover absent]
-               [onmousemove: onmousemove absent]
-               [onmouseout:  onmouseout  absent]
-               [onkeypress:  onkeypress  absent]
-               [onkeydown:   onkeydown   absent]
-               [onkeyup:     onkeyup     absent]
-               .
-               content)
+      (lambda* ((id:          id          absent)
+                (class:       class       absent)
+                (title:       title       absent)
+                (style:       style       absent)
+                (dir:         dir         absent)
+                (lang:        lang        absent)
+                (onclick:     onclick     absent)
+                (ondblclick:  ondblclick  absent)
+                (onmousedown: onmousedown absent)
+                (onmouseup:   onmouseup   absent)
+                (onmouseover: onmouseover absent)
+                (onmousemove: onmousemove absent)
+                (onmouseout:  onmouseout  absent)
+                (onkeypress:  onkeypress  absent)
+                (onkeydown:   onkeydown   absent)
+                (onkeyup:     onkeyup     absent)
+                .
+                content)
         (element tag
                  content
                  (attribute "id" id)
@@ -570,7 +564,7 @@ Here are some examples:
     (define html-tt     (make-html-styler "tt"))
     (define html-var    (make-html-styler "var"))
 
-    (define (print [port: port (current-output-port)] . args)
+    (define* (print (port: port (current-output-port)) . args)
       (let pr ((x args))
         (cond ((null? x))
               ((pair? x)
@@ -596,26 +590,24 @@ Here are some examples:
 <P>
 In the following implementation we assume that
 <a href="http://srfi.schemers.org/srfi-88/">SRFI 88 (Keyword
-objects)</a> and square brackets are supported by the Scheme implementation.
-The <TT>`define-macro'</TT> special form is used to define the
-<TT>`define-opt'</TT> and <TT>`lambda-opt'</TT> special forms which
-are respectively the special forms <TT>`define'</TT> and
-<TT>`lambda'</TT> supporting optional and named parameters.
+objects)</a> is supported by the Scheme implementation.
+The <TT>define-macro</TT> special form is used to define the
+<TT>define*</TT> and <TT>lambda*</TT> special forms.
 </P>
 
 <P>
 The macros expand into efficient R5RS code.  A source
-lambda-expression whose parameter list matches the R5RS syntax expands
-to the same lambda-expression, so there is no overhead when the
-extended parameter list syntax is not used.
+<TT>lambda*</TT> form whose parameter list matches the R5RS syntax expands
+to a lambda-expression with the same parameter list.  In this case there
+is no overhead when the extended parameter list syntax is not used.
 </P>
 
 <P>
-When the source lambda-expression uses the extended parameter list
+When the source <TT>lambda*</TT> form uses the extended parameter list
 syntax with the named parameters after the positional parameters, it
 expands to a R5RS lambda-expression accepting the required parameters
 and a rest parameter.  The rest parameter is then scanned to process
-the positional optional parameters.  For named optional parameters a
+the optional positional parameters.  For optional named parameters a
 perfect hash table is used to quickly validate them and locate them in
 the parameter list.  The keyword hashing currently uses the name of
 the keyword but a faster approach, which would require implementation
@@ -628,7 +620,7 @@ A Scheme system could do a better job than the ``user level''
 implementation presented here by eliminating the construction of a
 rest parameter list and by stack allocating the vector containing the
 values of the named parameters.  To give a rough idea of the speed
-improvement, a trivial procedure with 10 named optional parameters and
+improvement, a trivial procedure with 10 optional named parameters and
 called with 5 named parameters runs 14 times faster and generates no
 garbage when the Gambit compiler's builtin optional parameter passing
 mechanism is used.
@@ -637,17 +629,17 @@ mechanism is used.
 <PRE>
 ;------------------------------------------------------------------------------
 
-; Macro expander for define-opt.
+; Macro expander for define*.
 
-(define-macro (define-opt pattern . body)
+(define-macro (define* pattern . body)
   (if (pair? pattern)
       `(define ,(car pattern)
-         (lambda-opt ,(cdr pattern) ,@body))
+         (lambda* ,(cdr pattern) ,@body))
       `(define ,pattern ,@body)))
 
-; Macro expander for lambda-opt.
+; Macro expander for lambda*.
 
-(define-macro (lambda-opt formals . body)
+(define-macro (lambda* formals . body)
 
 ;------------------------------------------------------------------------------
 
@@ -777,7 +769,7 @@ mechanism is used.
 
   (parse formals))
 
-(define (expand-lambda formals body)
+(define (expand-lambda* formals body)
 
   (define (range lo hi)
     (if (&#60; lo hi)
@@ -910,7 +902,7 @@ mechanism is used.
                 (+ i 1))
           h))))
 
-(expand-lambda formals body))
+(expand-lambda* formals body))
 
 ;------------------------------------------------------------------------------
 
