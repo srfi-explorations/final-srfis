@@ -1,0 +1,1116 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+  <head>
+    <title>SRFI 96: SLIB Prerequisites</title>
+  </head>
+<body>
+
+<H1>Title</H1>
+
+SLIB Prerequisites
+
+<H1>Author</H1>
+
+Aubrey Jaffer
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status.  To see an explanation of
+each status that a SRFI can hold, see <A
+HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+
+To provide input on this SRFI, please <code><A
+HREF="mailto:srfi minus 96 at srfi dot schemers dot org">mail to
+&lt;srfi minus 96 at srfi dot schemers dot org&gt;</A></code>.  See <A
+HREF="../srfi-list-subscribe.html">instructions here</A> to subscribe to
+the list.  You can access previous messages via <A
+HREF="mail-archive/maillist.html">the archive of the mailing list</A>.
+
+<P><UL>
+<LI>Received: 2007/10/11</LI>
+<LI>Draft: 2007/11/19 - 2008/02/17</LI>
+</UL>
+
+<h1>Abstract</h1>
+
+This SRFI specifies a set of procedures and macros presenting a
+uniform interface sufficient to host the
+<A HREF="http://swiss.csail.mit.edu/~jaffer/SLIB">SLIB
+Scheme Library</A> system.
+<p>
+
+<h1>Issues</h1>
+
+What should the <code>software-type</code> of Vista be?
+
+<h1>Rationale</h1>
+
+SLIB is a portable library for the programming language Scheme.  It
+provides a platform independent framework for using packages of Scheme
+procedures and syntax.  As distributed, SLIB contains useful packages
+for all Scheme implementations.  Its catalog can be transparently
+extended to accomodate packages specific to a site, implementation,
+user, or directory.
+<p>
+This SRFI provides the uniform interface which SLIB code calls in
+order to execute its library system.  Parameters and capabilities of
+the hosting implementation are also captured.
+<p>
+Procedures for certain operations beyond the capabilities of R5RS are
+defined by this SRFI.  Those procedures simply return
+<samp>`#f'</samp> if they are not supported by the hosting
+implementation, allowing the calling program to detect and take
+appropriate action.
+<p>
+SLIB was first released in 1992.  Common-Lisp, then as now,
+incorporates many practical facilities in a straightforward and
+consistent fashion, which the Scheme reports do not.  Given that
+ANSI-X3.226 Common-Lisp is widely adopted and in the same family of
+languages as Scheme, it makes sense to incorporate many of
+Common-Lisp's constructs for these facilities.
+<p>
+
+<H2>Configuration</H2>
+
+<code>software-type</code> is inherited from Common-Lisp.  In SLIB it
+is used primarily for dealing with the file system and commands
+executed by the <code>system</code> call.
+<p>
+<code>scheme-implementation-home-page</code> is informational; it is
+useful for finding documentation and filing bug reports.
+<p>
+<code>scheme-file-suffix</code> was added because <samp>`.'</samp> is
+not the suffix separator on some file-systems (eg. NOSVE).
+<code>scheme-file-suffix</code> is used for loading some SLIB files.
+<p>
+<code>slib:features</code> was originally <code>*features*</code> (a
+la Common-Lisp); it was changed to avoid conflict with Guile, probably
+a bad decision.
+<p>
+If a Scheme implementation has a feature close to SLIB's, perhaps
+differing only in names or argument order, it is good practice to put
+wrapper functions making them compatible in the SRFI-96 file and add
+the feature to <code>slib:features</code>.
+<p>
+<code>most-positive-fixnum</code> is a hybrid of
+<code>most-positive-fixnum</code> and
+<code>array-dimension-limit</code> from Common-Lisp.
+<code>char-code-limit</code> is also from Common-Lisp.
+<p>
+<H2>File-System</H2>
+
+The procedure <code>with-load-pathname</code> is an extension to
+<A HREF="http://srfi.schemers.org/srfi-59/srfi-59.html">SRFI 59: Vicinity</A>
+affecting <CODE>program-vicinity</CODE>.
+<p>
+<CODE>program-vicinity</CODE>, in combination with the
+"<code>slib:</code>" loaders, enables code within a file to load or
+access other files in the same directory irrespective of the current
+working directory, and without needing absolute pathnames.  Thus the
+code for a module can be split among several files as exemplified by
+<samp>slib/macwork.scm</samp>, which contains:
+
+<pre>
+(slib:load (in-vicinity (program-vicinity) "mwexpand"))
+...
+(slib:load (in-vicinity (program-vicinity) "mwdenote"))
+(slib:load (in-vicinity (program-vicinity) "mwsynrul"))
+</pre>
+<p>
+A file's vicinity can also be captured during loading for use while
+running:
+
+<pre>
+(define jacal-vicinity (program-vicinity))
+...
+(define (terms) (paginate-file (in-vicinity jacal-vicinity "COPYING")))
+(define (help) (paginate-file (in-vicinity jacal-vicinity "HELP")))
+</pre>
+<p>
+<CODE>tmpnam</CODE> is similar to the POSIX function of the same name.
+It is essential in some scripting situations (calling other programs
+using the <code>system</code> procedure) on a multi-user file-system.
+The Linux manual page for <CODE>tmpnam</CODE> deprecates its use; but
+its recommendation to instead use <code>mkstemp</code> belies the
+author's understanding of scripting.
+<p>
+<code>file-exists?</code> and <code>delete-file</code> are the obvious
+procedures designated by their names.  Although they can always return
+<samp>`#f'</samp>, there are modules in SLIB which will not work
+correctly in that case.  Full implementation of
+<code>file-exists?</code> and <code>delete-file</code> are strongly
+encouraged.
+<p>
+<H2>Input/Output</H2>
+
+<code>open-file</code>, <code>close-port</code>, <code>port?</code>,
+and <code>call-with-open-ports</code> support both binary and
+non-binary files without doubling the number of file-related
+procedures (open-binary-input-file, open-binary-output-file, ...).
+<!-- Implementations are free to add other file modes employing characters -->
+<!-- other than <samp>`r'</samp> and <samp>`w'</samp>. -->
+<p>
+<code>call-with-open-ports</code> gives the functionality of
+<code>call-with-input-file</code> and
+<code>call-with-output-file</code> for arbitray numbers of mixed input
+and output files by passing in open ports rather than filenames.
+<p>
+<code>current-error-port</code> is the diagnostic output port called
+<code>stderr</code> in C parlance.  If the system doesn't support it,
+then <code>current-error-port</code> can just be set to
+<code>current-output-port</code>.
+<p>
+<code>force-output</code> is inherited from Common-Lisp.  If the
+system doesn't support it, then it can just do nothing.
+<p>
+<code>file-position</code> is inherited from Common-Lisp.  It is
+active (versus stubbed to return #f) for 7 of SLIB's 20
+implementations.
+<p>
+<code>output-port-width</code> and <code>output-port-height</code> are
+metrics for <dfn>glass-teletype</dfn> style output.
+
+<p>
+<H2>Defmacro</H2>
+
+<code>defmacro</code>, <code>gentemp</code>,
+<code>macroexpand-1</code>, and <code>macroexpand</code> are inherited
+from Common-Lisp.
+<p>
+SLIB uses <code>defmacro:load</code> to load module source files which
+use <code>defmacro</code>.  <code>defmacro:eval</code> can be passed
+as the argument to <code>repl:top-level</code> to create a
+read-eval-print loop which understands <code>defmacro</code>, even
+when the underlying implementation does not.
+<p>
+<H2>System</H2>
+
+Primarily because of <code>with-load-pathname</code>, SLIB-specific
+varieties of <code>load</code> are required:
+<code>slib:load-source</code>, <code>slib:load-compiled</code>, and
+<code>slib:load</code>.
+<p>
+<code>slib:eval</code> is the single-argument <code>eval</code> from
+Common-Lisp.  <code>slib:eval-load</code> is used to create loaders
+with a given <var>eval</var> argument.
+<p>
+<code>slib:warn</code> and <code>slib:error</code> print out their
+arguments, preferably to <code>current-output-port</code>.
+<p>
+<code>slib:exit</code> returns if it doesn't work.
+<p>
+Web browsers have become so ubiquitous that programming languagues
+should support a simple uniform interface to them.&nbsp;
+If an implementation can't invoke a browser, then
+<code>browse-url</code> returns <samp>`#f'</samp>.
+
+<p>
+<H2>Miscellany</H2>
+
+R4RS and R5RS mention #\newline and #\space, but not other specific
+whitespace characters.  <code>slib:tab</code> and
+<code>slib:form-feed</code> are needed for formatted output.
+<p>
+When passing functions for mapping, the identity function,
+<code>(lambda&nbsp;(obj)&nbsp;obj)</code>, often arises.
+<code>identity</code> is defined to be that function.
+<p>
+<!-- <H3>Mutual Exclusion</H3> -->
+
+Mutual exclusion primitives such as the
+<a href="http://en.wikipedia.org/wiki/Semaphore_%28programming%29">
+Dijkstra semaphore</a>
+and the mutex of
+<a href="http://srfi.schemers.org/srfi-18/srfi-18.html">SRFI-18</a> and 
+<a href="http://srfi.schemers.org/srfi-21/srfi-21.html">SRFI-21</a>
+combine an atomic operation with a wait mechanism.
+Wait mechanisms such as calling a scheduler continuation can be
+expressed in Scheme; only the atomic operation is novel.  So this SRFI
+introduces <code>make-exchanger</code>, returning a procedure which
+performs an atomic swap between its argument and an internal location.
+
+<p>
+<!-- <H3>Legacy</H3> -->
+
+<code>t</code>, <code>nil</code>, and <code>last-pair</code> are from
+older Scheme-Reports.  Too few for their own module, SLIB's defining
+them could provoke redefinition warnings; so they are part of SRFI-96.
+
+<p>
+<h1>Specification</h1>
+
+<H2>Configuration</H2>
+
+<P>
+These constants and procedures describe characteristics of the Scheme
+and host operating system.
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>software-type</B>
+<DD>
+Returns a symbol denoting the generic operating system type.  For
+instance, <CODE>unix</CODE>, <CODE>vms</CODE>, <CODE>macos</CODE>,
+<CODE>amiga</CODE>, or <CODE>ms-dos</CODE>.  The
+<code>software-type</code> of Linux is <code>unix</code>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>scheme-implementation-type</B>
+<DD>
+Returns a symbol denoting the name of the Scheme implementation.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>scheme-implementation-version</B>
+<DD>
+Returns a string describing the version of the running Scheme
+implementation.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>scheme-implementation-home-page</B>
+<DD>
+Returns <code>#f</code> or a string containing the URI of the Scheme
+implementation's home page.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>scheme-file-suffix</B>
+<DD>
+Returns a string with the suffix of Scheme source files on this
+system, typially <samp>".scm"</samp>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Variable:</U> <B>slib:features</B>
+
+<DD>
+<var>slib:features</var> is a list of symbols naming the (SLIB)
+features supported by this implementation.  <samp>`vicinity'</samp>
+must be an element of <var>slib:features</var>.
+<p>
+If the <samp>`srfi'</samp> feature is provided, then
+<samp>slib/require.scm</samp> will add any SRFIs from 0 to 150
+discovered using <code>`cond-expand'</code>.
+<samp>slib/require.scm</samp> will also test for and provide (if
+appropriate) the features <samp>`inexact'</samp>,
+<samp>`rational'</samp>, <samp>`real'</samp>, <samp>`complex'</samp>,
+and <samp>`bignum'</samp>.
+<p>
+There are features which can't be provided by portable Scheme source
+code.  They can be made members of <samp>`slib:features'</samp>
+initially or supplied after initialization using
+<code>(provide&nbsp;'<var>feature</var>)</code>.
+
+<table border=1>
+
+<tr><th>feature<th>description
+
+<tr><td>source<td>can load Scheme source files
+  <code>(slib:load-source <var>filebase</var>)</code>
+
+<tr><td>compiled<td>can load compiled files
+  <code>(slib:load-compiled <var>filebase</var>)</code>
+
+<!-- <tr><td>vicinity<td>required -->
+
+<tr><td>char-ready?<td>has R4RS, R5RS <code>char-ready?</code>
+
+<tr><td>object-hash<td>has R2RS <code>object-hash</code> and <code>object-unhash</code>
+
+<tr><td>full-continuation<td>can return multiple times
+
+<tr><td>ieee-floating-point<td>inexact numbers conform to
+  <cite>IEEE Standard 754-1985 IEEE Standard for Binary Floating-Point Arithmetic</cite>
+
+<tr><td>sicp<td>this implementation runs code from
+  <cite>Structure and Interpretation of Computer Programs</cite> by Abelson and Sussman.
+
+<tr><td>ed<td>text editor is invoked by
+  <code>(ed)</code> or <code>(ed <var>filename</var>)</code>
+
+<tr><td>system<td>posix <code>(system <var>string</var>)</code>
+
+<tr><td>getenv<td>posix <code>(getenv <var>string</var>)</code>
+
+<tr><td>program-arguments<td><code>(program-arguments)</code>
+  returns the list of command-line argument strings
+
+<tr><td>current-time<td><code>(current-time)</code>
+  returns the time in seconds since 1/1/1970
+
+</table>
+<p>
+If the feature <samp>`r5rs'</samp> is provided, then the following
+features should also be provided:
+<table border=1>
+<tr><td>eval			<td>R5RS two-argument <code>eval</code>
+<tr><td>values			<td>R5RS <code>values</code> and <code>call-with-values</code>
+<tr><td>dynamic-wind		<td>R5RS <code>dynamic-wind</code>
+<tr><td>macro			<td>R5RS syntax-rules macros
+<tr><td>delay			<td>has <code>delay</code> and <code>force</code>
+<tr><td>multiarg-apply		<td><code>apply</code> can take more than 2 args
+<tr><td>char-ready?		<td>has <code>char-ready?</code> procedure
+<tr><td>rev4-optional-procedures<td>has <code>list-tail</code>, <code>string-copy</code>, <code>string-fill!</code>, and <code>vector-fill!</code>
+</table>
+
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Constant:</U> <B>most-positive-fixnum</B>
+<DD>
+In implementations which support integers of practically unlimited size,
+<VAR>most-positive-fixnum</VAR> is a large exact integer within the range of
+exact integers that may result from computing the length of a list,
+vector, or string.
+
+
+<P>
+In implementations which do not support integers of practically
+unlimited size, <VAR>most-positive-fixnum</VAR> is the largest exact integer
+that may result from computing the length of a list, vector, or string.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Constant:</U> <B>char-code-limit</B>
+<DD>
+An integer 1 larger that the largest value which can be returned by
+<CODE>char-&#62;integer</CODE>.
+</DL>
+
+
+
+<H2>File-System</H2>
+
+<A HREF="http://srfi.schemers.org/srfi-59/srfi-59.html">SRFI 59: Vicinity</A>
+as extended by <CODE>with-load-pathname</CODE> must be supported.
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>with-load-pathname</B> <I>path thunk</I>
+<DD>
+<VAR>path</VAR> should be a string naming a file being read or loaded.
+<CODE>with-load-pathname</CODE> evaluates <VAR>thunk</VAR> in a dynamic scope
+where an internal variable is bound to <VAR>path</VAR>; the internal
+variable is used for messages and <CODE>program-vicinity</CODE>.
+<CODE>with-load-pathname</CODE> returns the value returned by <VAR>thunk</VAR>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>tmpnam</B>
+<DD>
+Returns a pathname for a file which will not be used by any other
+process.  Successive calls to <CODE>(tmpnam)</CODE> will return
+distinct pathnames.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>file-exists?</B> <I>filename</I>
+<DD>
+Returns <CODE>#t</CODE> if the specified file exists.  Otherwise, returns
+<CODE>#f</CODE>.  If the underlying implementation does not support this
+feature then <CODE>#f</CODE> is always returned.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>delete-file</B> <I>filename</I>
+<DD>
+Deletes the file specified by <VAR>filename</VAR>.  If <VAR>filename</VAR> can not
+be deleted, <CODE>#f</CODE> is returned.  Otherwise, <CODE>#t</CODE> is
+returned.
+</DL>
+
+<P>
+<H2>Input/Output</H2>
+
+<DL>
+<DT><U>Function:</U> <B>open-file</B> <I>filename modes</I>
+<DD>
+<VAR>filename</VAR> should be a string naming a file.  <CODE>open-file</CODE>
+returns a port depending on the symbol <VAR>modes</VAR>:
+
+
+<DL COMPACT>
+
+<DT>r
+<DD>
+an input port capable of delivering characters from the file.
+<DT>rb
+<DD>
+a <EM>binary</EM> input port capable of delivering characters from the file.
+<DT>w
+<DD>
+an output port capable of writing characters to a new file by that name.
+<DT>wb
+<DD>
+a <EM>binary</EM> output port capable of writing characters to a new file
+by that name.
+</DL>
+
+<P>
+If an implementation does not distinguish between binary and non-binary
+files, then it must treat rb as r and wb as w.
+
+
+<P>
+If the file cannot be opened, either #f is returned or an error is
+signalled.  For output, if a file with the given name already exists,
+the effect is unspecified.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>port?</B> <I>obj</I>
+<DD>
+Returns <TT>#t</TT> if <VAR>obj</VAR> is an input or output port, otherwise
+returns <TT>#f</TT>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Procedure:</U> <B>close-port</B> <I>port</I>
+<DD>
+Closes the file associated with <VAR>port</VAR>, rendering the <VAR>port</VAR>
+incapable of delivering or accepting characters.
+<P>
+<CODE>close-file</CODE> has no effect if the file has already been closed.
+The value returned is unspecified.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>call-with-open-ports</B> <I>proc ports ...</I>
+<DD>
+<DT><U>Function:</U> <B>call-with-open-ports</B> <I>ports ... proc</I>
+<DD>
+<VAR>Proc</VAR> should be a procedure that accepts as many arguments as there
+are <VAR>ports</VAR> passed to <CODE>call-with-open-ports</CODE>.
+<CODE>call-with-open-ports</CODE> calls <VAR>proc</VAR> with <VAR>ports</VAR> ....
+If <VAR>proc</VAR> returns, then the ports are closed automatically and the
+value yielded by the <VAR>proc</VAR> is returned.  If <VAR>proc</VAR> does not
+return, then the ports will not be closed automatically unless it is
+possible to prove that the ports will never again be used for a read or
+write operation.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>current-error-port</B>
+<DD>
+Returns the current port to which diagnostic and error output is
+directed.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Procedure:</U> <B>force-output</B>
+<DD>
+<DT><U>Procedure:</U> <B>force-output</B> <I>port</I>
+<DD>
+
+Forces any pending output on <VAR>port</VAR> to be delivered to the
+output device and returns an unspecified value.  The <VAR>port</VAR>
+argument may be omitted, in which case it defaults to the value
+returned by <CODE>(current-output-port)</CODE>.  If the implementation
+does not support it, then <code>force-output</code> has no effect.
+
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>file-position</B> <I>port</I>
+<DD>
+<!-- <DT><U>Function:</U> <B>file-position</B> <I>port #f</I> -->
+<!-- <DD> -->
+<VAR>port</VAR> must be open to a file.  <CODE>file-position</CODE> returns the
+current position of the character in <VAR>port</VAR> which will next be
+read or written.  If the implementation does not support
+file-position, then <CODE>#f</CODE> is returned.
+
+
+<P>
+<DT><U>Function:</U> <B>file-position</B> <I>port k</I>
+<DD>
+<VAR>port</VAR> must be open to a file.  <CODE>file-position</CODE> sets the
+current position in <VAR>port</VAR> which will next be read or written.  If
+successful, <CODE>#f</CODE> is returned; otherwise <CODE>file-position</CODE>
+returns <CODE>#f</CODE>.
+<p>
+An implementation not supporting <CODE>file-position</CODE> can define
+it thus:
+<PRE>
+(define (file-position port . k) #f)
+</PRE>
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>output-port-width</B>
+<DD>
+<DT><U>Function:</U> <B>output-port-width</B> <I>port</I>
+<DD>
+
+
+<P>
+Returns the width of <VAR>port</VAR>, which defaults to
+<CODE>(current-output-port)</CODE> if absent.  If the width cannot be
+determined 79 is returned.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>output-port-height</B>
+<DD>
+<DT><U>Function:</U> <B>output-port-height</B> <I>port</I>
+<DD>
+
+
+<P>
+Returns the height of <VAR>port</VAR>, which defaults to
+<CODE>(current-output-port)</CODE> if absent.  If the height cannot be
+determined 24 is returned.
+</DL>
+
+
+
+<H2>Defmacro</H2>
+
+<P>
+<DL>
+<DT><U>Macro:</U> <B>defmacro</B> <I>name lambda-list form ...</I>
+<DD>
+When encountered by <CODE>defmacro:eval</CODE>, <CODE>defmacro:macroexpand*</CODE>,
+or <CODE>defmacro:load</CODE> defines a new macro which will henceforth be
+expanded when encountered by <CODE>defmacro:eval</CODE>,
+<CODE>defmacro:macroexpand*</CODE>, or <CODE>defmacro:load</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>gentemp</B>
+<DD>
+Returns a new (interned) symbol each time it is called.  The symbol
+names are implementation-dependent
+
+<PRE>
+(gentemp) => scm:G0
+(gentemp) => scm:G1
+</PRE>
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>defmacro?</B> <I>sym</I>
+<DD>
+Returns <CODE>#t</CODE> if <VAR>sym</VAR> has been defined by <CODE>defmacro</CODE>,
+<CODE>#f</CODE> otherwise.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>defmacro:eval</B> <I>e</I>
+<DD>
+Returns the <CODE>slib:eval</CODE> of expanding all defmacros in scheme
+expression <VAR>e</VAR>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>defmacro:load</B> <I>filename</I>
+<DD>
+<VAR>filename</VAR> should be a string.  If filename names an existing file,
+the <CODE>defmacro:load</CODE> procedure reads Scheme source code expressions
+and definitions from the file and evaluates them sequentially.  These
+source code expressions and definitions may contain defmacro
+definitions.  The <CODE>macro:load</CODE> procedure does not affect the values
+returned by <CODE>current-input-port</CODE> and
+<CODE>current-output-port</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>macroexpand-1</B> <I>form</I>
+<DD>
+<DT><U>Function:</U> <B>macroexpand</B> <I>form</I>
+<DD>
+If <VAR>form</VAR> is a macro call, <CODE>macroexpand-1</CODE> will expand the
+macro call once and return it.  A <VAR>form</VAR> is considered to be a macro
+call only if it is a cons whose <CODE>car</CODE> is a symbol for which a
+<CODE>defmacro</CODE> has been defined.
+
+
+<P>
+<CODE>macroexpand</CODE> is similar to <CODE>macroexpand-1</CODE>, but repeatedly
+expands <VAR>form</VAR> until it is no longer a macro call.
+</DL>
+
+
+<!-- <H3>Defmacroexpand</H3> -->
+<!-- <P> -->
+<!-- <CODE>(require 'defmacroexpand)</CODE> -->
+
+<!-- <P> -->
+<!-- <DL> -->
+<!-- <DT><U>Function:</U> <B>defmacro:expand*</B> <I>e</I> -->
+<!-- <DD> -->
+<!-- Returns the result of expanding all defmacros in scheme expression -->
+<!-- <VAR>e</VAR>. -->
+<!-- </DL> -->
+
+
+
+<H2>System</H2>
+
+
+<P>
+<DL>
+<DT><U>Procedure:</U> <B>slib:load-source</B> <I>name</I>
+<DD>
+Loads a file of Scheme source code from <VAR>name</VAR> with the default
+filename extension used in SLIB.  For instance if the filename extension
+used in SLIB is <TT>`.scm'</TT> then <CODE>(slib:load-source "foo")</CODE> will
+load from file <TT>`foo.scm'</TT>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Procedure:</U> <B>slib:load-compiled</B> <I>name</I>
+<DD>
+On implementations which support separtely loadable compiled modules,
+loads a file of compiled code from <VAR>name</VAR> with the implementation's
+filename extension for compiled code appended.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Procedure:</U> <B>slib:load</B> <I>name</I>
+<DD>
+Loads a file of Scheme source or compiled code from <VAR>name</VAR> with the
+appropriate suffixes appended.  If both source and compiled code are
+present with the appropriate names then the implementation will load
+just one.  It is up to the implementation to choose which one will be
+loaded.
+
+
+<P>
+If an implementation does not support compiled code then
+<CODE>slib:load</CODE> will be identical to <CODE>slib:load-source</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Procedure:</U> <B>slib:eval</B> <I>obj</I>
+<DD>
+<CODE>slib:eval</CODE> returns the value of <VAR>obj</VAR> evaluated in the current top
+level environment.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Procedure:</U> <B>slib:eval-load</B> <I>filename eval</I>
+<DD>
+<VAR>filename</VAR> should be a string.  If filename names an existing file,
+the Scheme source code expressions and definitions are read from the
+file and <VAR>eval</VAR> called with them sequentially.  The
+<CODE>slib:eval-load</CODE> procedure does not affect the values returned by
+<CODE>current-input-port</CODE> and <CODE>current-output-port</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Procedure:</U> <B>slib:warn</B> <I>arg1 arg2 ...</I>
+<DD>
+Outputs a warning message containing its arguments.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Procedure:</U> <B>slib:error</B> <I>arg1 arg2 ...</I>
+<DD>
+Outputs an error message containing its arguments, aborts evaluation of
+the current form and responds in a system dependent way to the error.
+Typical responses are to abort the program or to enter a read-eval-print
+loop.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Procedure:</U> <B>slib:exit</B> <I>n</I>
+<DD>
+<DT><U>Procedure:</U> <B>slib:exit</B>
+<DD>
+Exits from the Scheme session returning status <VAR>n</VAR> to the
+system.  If <VAR>n</VAR> is omitted or <CODE>#t</CODE>, a success
+status is returned to the system (if possible).  If <VAR>n</VAR> is
+<CODE>#f</CODE> a failure is returned to the system (if possible).  If
+<VAR>n</VAR> is an integer, then <VAR>n</VAR> is returned to the
+system (if possible).  If the Scheme session cannot exit, then an
+unspecified value is returned from <CODE>slib:exit</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>browse-url</B> <I>url</I>
+<DD>
+
+If a browser is running, <CODE>browse-url</CODE> causes the browser to
+display the page specified by string <VAR>url</VAR> and returns
+<samp>`#t'</samp>.
+<P>
+If the browser is not running, <CODE>browse-url</CODE> starts a
+browser displaying the argument <VAR>url</VAR>.  If the browser starts
+as a background job, <CODE>browse-url</CODE> returns <samp>`#t'</samp>
+immediately; if the browser starts as a foreground job, then
+<CODE>browse-url</CODE> returns <samp>`#t'</samp> when the browser
+exits; otherwise (if no browser) it returns <samp>`#f'</samp>.
+
+</DL>
+
+
+
+
+<H2>Miscellany</H2>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>identity</B> <I>x</I>
+<DD>
+<VAR>identity</VAR> returns its argument.
+
+
+<P>
+Example:
+
+<PRE>
+(identity 3)
+   => 3
+(identity '(foo bar))
+   => (foo bar)
+(map identity <VAR>lst</VAR>)
+   == (copy-list <VAR>lst</VAR>)
+</PRE>
+
+</DL>
+
+<!-- <P> -->
+<!-- <DL> -->
+<!-- <DT><U>Function:</U> <B>expt</B> <I>n k</I> -->
+<!-- <DD> -->
+<!-- Returns <VAR>n</VAR> raised to the non-negative integer exponent <VAR>k</VAR>. -->
+
+<!-- <P> -->
+<!-- Example: -->
+
+<!-- <PRE> -->
+<!-- (expt 2 5) -->
+<!--    => 32 -->
+<!-- (expt -3 3) -->
+<!--    => -27 -->
+<!-- </PRE> -->
+
+<!-- </DL> -->
+
+
+<P>
+<DL>
+<DT><U>Constant:</U> <B>slib:tab</B>
+<DD>
+The tab character.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Constant:</U> <B>slib:form-feed</B>
+<DD>
+The form-feed character.
+</DL>
+
+
+
+<H3>Mutual Exclusion</H3>
+
+<P>
+An <EM>exchanger</EM> is a procedure of one argument regulating mutually
+exclusive access to a resource.  When a exchanger is called, its current
+content is returned, while being replaced by its argument in an atomic
+operation.
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>make-exchanger</B> <I>obj</I>
+<DD>
+
+
+<P>
+Returns a new exchanger with the argument <VAR>obj</VAR> as its initial
+content.
+
+<P>
+The following code implements Dijkstra semaphores in terms of
+<code>make-exchanger</code>.  If <code>run-other-process</code> does
+nothing, then <code>P!</code> and <code>V!</code> implement
+<EM>spin-locks</EM>.  Normally, <code>run-other-process</code> would
+be a scheduler which would capture its continuation using
+<code>call-with-current-continuation</code> and run pending process
+continuations, eventually running this captured continuation.
+
+<PRE>
+;;; Init(Semaphore s, Integer v)
+;;; {
+;;;   s := v;
+;;; }
+(define (make-semaphore v) (make-exchanger v))
+
+;;; P(Semaphore s)
+;;; {
+;;;   wait until s > 0, then s := s-1;
+;;;   /* must be atomic once s > 0 is detected */
+;;; }
+(define (P! s)
+  (let loop ()
+    (define val (s #f))
+    (cond ((and val (positive? val))
+	   (s (- val 1)))
+	  (else
+	   (and val (s val))
+	   (run-other-process)
+	   (loop)))))
+
+;;; V(Semaphore s)
+;;; {
+;;;   s := s+1;   /* must be atomic */
+;;; }
+(define (V! s)
+  (let loop ()
+    (define val (s #f))
+    (cond (val
+	   (s (+ val 1)))
+	  (else
+	   (run-other-process)
+	   (loop)))))
+</PRE>
+
+</DL>
+
+
+
+<H3>Legacy</H3>
+
+<P>
+The following defines were present in Scheme until R4RS
+(see section `Language changes' in <CITE>Revised(4) Scheme</CITE>).
+
+
+<P>
+<DL>
+<DT><U>Constant:</U> <B>t</B>
+<DD>
+Defined as <CODE>#t</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Constant:</U> <B>nil</B>
+<DD>
+Defined as <CODE>#f</CODE>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>last-pair</B> <I>l</I>
+<DD>
+Returns the last pair in the list <VAR>l</VAR>.  Example:
+
+<PRE>
+(last-pair (cons 1 2))
+   => (1 . 2)
+(last-pair '(1 2))
+   => (2)
+    == (cons 2 '())
+</PRE>
+</DL>
+
+<P>
+<h2>Deployment</h2>
+
+The <A HREF="http://swiss.csail.mit.edu/~jaffer/SLIB">SLIB</A>
+distribution unpacks into library files (ending with
+<samp>.scm</samp>) and SRFI-96 files (ending with <samp>.init</samp>)
+in a directory named <samp>slib</samp>.
+
+<P>
+<h2>Initialization</h2>
+
+The SLIB <code>`require'</code> module implements the procedure-based
+library system whose modules are contained within these files.  At the
+end of the SRFI-96 files this <code>`require'</code> module is loaded,
+initializing SLIB:
+
+<PRE>
+(slib:load (in-vicinity (library-vicinity) "require"))
+</PRE>
+
+<!-- When <code>(require&nbsp;'new-catalog)</code> is done, a catalog file -->
+<!-- of available modules is created in the -->
+<!-- <code>(implementation-vicinity)</code>.  A new catalog is also made if -->
+<!-- the catalog file is missing the first time a module is requested which -->
+<!-- is not already provided in <code>slib:features</code>. -->
+
+<P>
+<h1>Implementation</h1>
+
+Here are the implementations of SRFI-96, including SRFI-59, for many
+R4RS and R5RS Scheme implementations:
+
+<table border=1>
+<tr><th>Scheme implementation
+    <th><code>scheme-implementation-type</code>
+    <th>SRFI-96 implementation
+<tr><td><A HREF="http://www-sop.inria.fr/mimosa/fp/Bigloo/">Bigloo</A>
+    <td><code>Bigloo</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/bigloo.init?view=markup">slib/bigloo.init</a>
+<tr><td><A HREF="http://www.scheme.com/">Chez</A>
+    <td><code>chez</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/chez.init?view=markup">slib/chez.init</a>
+<tr><td><A HREF="http://www.informatik.uni-bremen.de/~net/elk/">ELK&nbsp;3.0</A>
+    <td><code>Elk</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/elk.init?view=markup">slib/elk.init</a>
+<tr><td><A HREF="http://www.iro.umontreal.ca/~gambit">GAMBIT&nbsp;3.0</A>
+    <td><code>gambit</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/gambit.init?view=markup">slib/gambit.init</a>
+<tr><td><A HREF="http://www.gnu.org/software/guile/guile.html">Guile</A>
+    <td><code>guile</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/guile.init?view=markup">slib/guile.init</a>
+<tr><td><A HREF="http://jscheme.sourceforge.net/jscheme/main.html">JScheme</A>
+    <td><code>JScheme</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/jscheme.init?view=markup">slib/jscheme.init</a>
+<tr><td><A HREF="http://www.gnu.org/software/kawa/">Kawa</A>
+    <td><code>kawa</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/kawa.init?view=markup">slib/kawa.init</a>
+<tr><td>MacScheme
+    <td><code>MacScheme</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/macscheme.init?view=markup">slib/macscheme.init</a>
+<tr><td><A HREF="http://www.gnu.org/software/mit-scheme">MIT/GNU Scheme</A>
+    <td><code>MITScheme</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/mitscheme.init?view=markup">slib/mitscheme.init</a>
+<tr><td><A HREF="http://www.plt-scheme.org/software/">PLT&nbsp;Scheme</A>
+    <td><code>|MzScheme|</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/DrScheme.init?view=markup">slib/DrScheme.init</a>
+<tr><td><A HREF="http://www.mazama.net/scheme/pscheme.htm">Pocket&nbsp;Scheme</A>
+    <td><code>Pocket-Scheme</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/pscheme.init?view=markup">slib/pscheme.init</a>
+<tr><td><A HREF="http://www.rscheme.org/">RScheme</A>
+    <td><code>RScheme</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/RScheme.init?view=markup">slib/RScheme.init</a>
+<tr><td><A HREF="http://www-2.cs.cmu.edu/afs/cs/project/ai-repository/ai/lang/scheme/impl/scheme2c/0.html">Scheme->C</A>
+    <td><code>Scheme->C</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/scheme2c.init?view=markup">slib/scheme2c.init</a>
+<tr><td><A HREF="http://s48.org/">Scheme48</A>
+    <td><code>Scheme48</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/scheme48.init?view=markup">slib/scheme48.init</a>
+<tr><td><A HREF="http://swiss.csail.mit.edu/~jaffer/SCM">SCM</A>
+    <td><code>scm</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/scm.init?view=markup">slib/scm.init</a>
+       (<a href="http://cvs.savannah.gnu.org/viewvc/scm/scm/Init5e3.scm?view=markup">scm/Init5e3.scm</a>)
+<tr><td><A HREF="http://swiss.csail.mit.edu/~jaffer/scmmac">SCM&nbsp;Mac</A>
+    <td><code>scm</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/scm.init?view=markup">slib/scm.init</a>
+<tr><td><A HREF="http://www.scsh.net">scsh</A>
+    <td><code>Scsh</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/scsh.init?view=markup">slib/scsh.init</a>
+<tr><td><A HREF="http://sisc-scheme.org/">sisc</A>
+    <td><code>sisc</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/sisc.init?view=markup">slib/sisc.init</a>
+<tr><td><A HREF="http://kaolin.unice.fr/STk/STk.html">STk</A>
+    <td><code>|STk|</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/STk.init?view=markup">slib/STk.init</a>
+<tr><td><A HREF="ftp://ftp.cs.indiana.edu:21/pub/scheme-repository/imp/t">T3.1</A>
+    <td><code>T</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/t3.init?view=markup">slib/t3.init</a>
+<tr><td>umb-scheme
+    <td><code>umb-scheme</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/umbscheme.init?view=markup">slib/umbscheme.init</a>
+<tr><td><A HREF="http://www.cs.princeton.edu/~blume/vscm/vscm.html">VSCM</A>
+    <td><code>Vscm</code>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/vscm.init?view=markup">slib/vscm.init</a>
+</table>
+<p>
+
+
+<h1>Copyright</h1>
+Copyright (C) Aubrey Jaffer 2007. All Rights Reserved.
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+<p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+    <hr>
+    <address>Editor: <a href="mailto:srfi-editors at srfi dot schemers dot org">Donovan Kolbly</a></address>
+<!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
+<!-- hhmts start -->
+Last modified: Sat Nov 17 01:48:25 GMT 2007
+<!-- hhmts end -->
+  </body>
+</html>
