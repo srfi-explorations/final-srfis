@@ -29,6 +29,7 @@ HREF="mail-archive/maillist.html">the archive of the mailing list</A>.
 <P><UL>
 <LI>Received: 2007/10/11</LI>
 <LI>Draft: 2007/11/19 - 2008/02/17</LI>
+<LI>Revised: 2007/12/03</LI>
 </UL>
 
 <h1>Abstract</h1>
@@ -182,6 +183,27 @@ use <code>defmacro</code>.  <code>defmacro:eval</code> can be passed
 as the argument to <code>repl:top-level</code> to create a
 read-eval-print loop which understands <code>defmacro</code>, even
 when the underlying implementation does not.
+
+<p>
+<h2>R5RS Macros</h2>
+
+If the <code>macro</code> feature is provided, then the procedures
+<CODE>macro:expand</CODE>, <CODE>macro:eval</CODE>, and
+<CODE>macro:load</CODE> must be defined.
+<p>
+Of these, only <CODE>macro:load</CODE> is used (for loading packages)
+by SLIB code.
+<p>
+<CODE>macro:eval</CODE> would typically be used with the
+<code>repl:top-level</code> procedure in the
+<A HREF="http://swiss.csail.mit.edu/~jaffer/slib_7.html#SEC262"><code>repl</code></A>
+package to create a macro-enabled read-eval-print loop.
+<p>
+<CODE>macro:expand</CODE> is indispensable for debugging R5RS Macros;
+but implementations are not required to make it functional, in which
+case <CODE>macro:expand</CODE> will always return <CODE>#f</CODE>.
+
+
 <p>
 <H2>System</H2>
 
@@ -344,13 +366,20 @@ initially or supplied after initialization using
 
 <tr><td>getenv<td>posix <code>(getenv <var>string</var>)</code>
 
-<tr><td>program-arguments<td><code>(program-arguments)</code>
-  returns the list of command-line argument strings
+<tr><td>program-arguments<td><code>(program-arguments)</code> returns
+  a list of the program name followed by the command-line argument
+  strings
 
 <tr><td>current-time<td><code>(current-time)</code>
   returns the time in seconds since 1/1/1970
 
 </table>
+<p>
+If a feature is provided whose name is the same as an SLIB module,
+then it will provide the procedures and syntax as
+<a href="http://swiss.csail.mit.edu/~jaffer/slib_toc.html">documented</a>
+for that SLIB module.
+
 <p>
 If the feature <samp>`r5rs'</samp> is provided, then the following
 features should also be provided:
@@ -358,7 +387,14 @@ features should also be provided:
 <tr><td>eval			<td>R5RS two-argument <code>eval</code>
 <tr><td>values			<td>R5RS <code>values</code> and <code>call-with-values</code>
 <tr><td>dynamic-wind		<td>R5RS <code>dynamic-wind</code>
-<tr><td>macro			<td>R5RS syntax-rules macros
+<tr><td>macro			<td>(R5RS syntax-rules macros) has
+                                <CODE>define-syntax</CODE>,
+                                <CODE>let-syntax</CODE>,
+                                <CODE>letrec-syntax</CODE>,
+                                <CODE>syntax-rules</CODE>,
+				<CODE>macro:expand</CODE>,
+                                <CODE>macro:eval</CODE>, and
+                                <CODE>macro:load</CODE>
 <tr><td>delay			<td>has <code>delay</code> and <code>force</code>
 <tr><td>multiarg-apply		<td><code>apply</code> can take more than 2 args
 <tr><td>char-ready?		<td>has <code>char-ready?</code> procedure
@@ -656,7 +692,8 @@ expression <VAR>e</VAR>.
 the <CODE>defmacro:load</CODE> procedure reads Scheme source code expressions
 and definitions from the file and evaluates them sequentially.  These
 source code expressions and definitions may contain defmacro
-definitions.  The <CODE>macro:load</CODE> procedure does not affect the values
+definitions.
+The <CODE>defmacro:load</CODE> procedure does not affect the values
 returned by <CODE>current-input-port</CODE> and
 <CODE>current-output-port</CODE>.
 </DL>
@@ -692,7 +729,43 @@ expands <VAR>form</VAR> until it is no longer a macro call.
 <!-- <VAR>e</VAR>. -->
 <!-- </DL> -->
 
+<H2>R5RS Macros</H2>
 
+If the <code>macro</code> feature is provided, then the procedures
+<CODE>macro:expand</CODE>, <CODE>macro:eval</CODE>, and
+<CODE>macro:load</CODE> will be defined.
+<P>
+
+<DL>
+<DT><U>Function:</U> <B>macro:expand</B> <I>sexpression</I>
+<DD><A NAME="IDX128"></A>
+Takes an expression, macro-expands it, and returns the result of
+the macro expansion.  If an implementation does not support
+<CODE>macro:expand</CODE>, then <CODE>#f</CODE> is returned.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>macro:eval</B> <I>sexpression</I>
+<DD><A NAME="IDX129"></A>
+Takes an expression, macro-expands it, evals the result of the
+macro expansion, and returns the result of the evaluation.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Procedure:</U> <B>macro:load</B> <I>filename</I>
+<DD><A NAME="IDX130"></A>
+<VAR>filename</VAR> should be a string.  If filename names an existing file,
+the <CODE>macro:load</CODE> procedure reads Scheme source code expressions and
+definitions from the file and evaluates them sequentially.  These source
+code expressions and definitions may contain macro definitions.  The
+<CODE>macro:load</CODE> procedure does not affect the values returned by
+<CODE>current-input-port</CODE> and <CODE>current-output-port</CODE>.
+</DL>
+<P>
 
 <H2>System</H2>
 
@@ -807,6 +880,46 @@ immediately; if the browser starts as a foreground job, then
 <CODE>browse-url</CODE> returns <samp>`#t'</samp> when the browser
 exits; otherwise (if no browser) it returns <samp>`#f'</samp>.
 
+</DL>
+
+
+
+<P>
+If <CODE>(provided? 'getenv)</CODE>:
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>getenv</B> <I>name</I>
+<DD>
+Looks up <VAR>name</VAR>, a string, in the program environment.  If <VAR>name</VAR> is
+found a string of its value is returned.  Otherwise, <CODE>#f</CODE> is returned.
+</DL>
+
+
+<P>
+If <CODE>(provided? 'system)</CODE>:
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>system</B> <I>command-string</I>
+<DD>
+Executes the <VAR>command-string</VAR> on the computer and returns the
+integer status code.
+</DL>
+
+
+<P>
+If <CODE>(provided? 'program-arguments)</CODE>:
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>program-arguments</B>
+<DD>
+Returns a list of strings, the first of which is the program name
+followed by the command-line arguments.
 </DL>
 
 
@@ -1008,12 +1121,18 @@ initializing SLIB:
 <h1>Implementation</h1>
 
 Here are the implementations of SRFI-96, including SRFI-59, for many
-R4RS and R5RS Scheme implementations:
+R4RS and R5RS Scheme implementations.  
+<a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/Template.scm?view=markup">slib/Template.scm</a>
+is to use as a starting point for a new .init file.
 
 <table border=1>
 <tr><th>Scheme implementation
     <th><code>scheme-implementation-type</code>
     <th>SRFI-96 implementation
+
+<tr><td COLSPAN=2 ALIGN=CENTER><I>Implementation Template</I>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/Template.scm?view=markup">slib/Template.scm</a>
+
 <tr><td><A HREF="http://www-sop.inria.fr/mimosa/fp/Bigloo/">Bigloo</A>
     <td><code>Bigloo</code>
     <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/bigloo.init?view=markup">slib/bigloo.init</a>
@@ -1043,7 +1162,7 @@ R4RS and R5RS Scheme implementations:
     <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/mitscheme.init?view=markup">slib/mitscheme.init</a>
 <tr><td><A HREF="http://www.plt-scheme.org/software/">PLT&nbsp;Scheme</A>
     <td><code>|MzScheme|</code>
-    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/DrScheme.init?view=markup">slib/DrScheme.init</a>
+    <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/mzscheme.init?view=markup">slib/mzscheme.init</a>
 <tr><td><A HREF="http://www.mazama.net/scheme/pscheme.htm">Pocket&nbsp;Scheme</A>
     <td><code>Pocket-Scheme</code>
     <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/pscheme.init?view=markup">slib/pscheme.init</a>
