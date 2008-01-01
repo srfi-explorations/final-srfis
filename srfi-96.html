@@ -30,6 +30,7 @@ HREF="mail-archive/maillist.html">the archive of the mailing list</A>.
 <LI>Received: 2007/10/11</LI>
 <LI>Draft: 2007/11/19 - 2008/02/17</LI>
 <LI>Revised: 2007/12/03</LI>
+<LI>Revised: 2007/12/25</LI>
 </UL>
 
 <h1>Abstract</h1>
@@ -174,9 +175,11 @@ metrics for <dfn>glass-teletype</dfn> style output.
 <p>
 <H2>Defmacro</H2>
 
-<code>defmacro</code>, <code>gentemp</code>,
-<code>macroexpand-1</code>, and <code>macroexpand</code> are inherited
-from Common-Lisp.
+<code>defmacro</code>, <code>gentemp</code>, and
+<code>macroexpand</code> are inherited from Common-Lisp.
+<p>
+<code>macroexpand</code> as specified by this SRFI is free to expand
+macros or other syntax which was not defined by <code>defmacro</code>.
 <p>
 SLIB uses <code>defmacro:load</code> to load module source files which
 use <code>defmacro</code>.  <code>defmacro:eval</code> can be passed
@@ -322,7 +325,7 @@ system, typially <samp>".scm"</samp>.
 features supported by this implementation.  <samp>`vicinity'</samp>
 must be an element of <var>slib:features</var>.
 <p>
-If the <samp>`srfi'</samp> feature is provided, then
+If the <samp>`srfi-0'</samp> feature is provided, then
 <samp>slib/require.scm</samp> will add any SRFIs from 0 to 150
 discovered using <code>`cond-expand'</code>.
 <samp>slib/require.scm</samp> will also test for and provide (if
@@ -668,19 +671,10 @@ names are implementation-dependent
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>defmacro?</B> <I>sym</I>
-<DD>
-Returns <CODE>#t</CODE> if <VAR>sym</VAR> has been defined by <CODE>defmacro</CODE>,
-<CODE>#f</CODE> otherwise.
-</DL>
-
-
-<P>
-<DL>
 <DT><U>Function:</U> <B>defmacro:eval</B> <I>e</I>
 <DD>
-Returns the <CODE>slib:eval</CODE> of expanding all defmacros in scheme
-expression <VAR>e</VAR>.
+Returns the value of evaluating scheme expression <VAR>e</VAR> where
+all its defmacros have been expanded.
 </DL>
 
 
@@ -701,33 +695,30 @@ returned by <CODE>current-input-port</CODE> and
 
 <P>
 <DL>
-<DT><U>Function:</U> <B>macroexpand-1</B> <I>form</I>
-<DD>
 <DT><U>Function:</U> <B>macroexpand</B> <I>form</I>
 <DD>
-If <VAR>form</VAR> is a macro call, <CODE>macroexpand-1</CODE> will expand the
-macro call once and return it.  A <VAR>form</VAR> is considered to be a macro
-call only if it is a cons whose <CODE>car</CODE> is a symbol for which a
+If <VAR>form</VAR> is a defmacro call, <CODE>macroexpand</CODE> will
+repeatedly expand the <VAR>form</VAR> until it is no longer a defmacro
+call.  A <VAR>form</VAR> is considered to be a defmacro call if it is
+a cons whose <CODE>car</CODE> is a symbol for which a
 <CODE>defmacro</CODE> has been defined.
-
-
-<P>
-<CODE>macroexpand</CODE> is similar to <CODE>macroexpand-1</CODE>, but repeatedly
-expands <VAR>form</VAR> until it is no longer a macro call.
 </DL>
 
+If <CODE>macroexpand</CODE> expands all defmacros, not just the one at
+top-level, then the implementation should provide the feature:
+<CODE>defmacroexpand</CODE> and:
+<PRE>
+(define defmacro:expand* defmacroexpand)
+</PRE>
+<P>
+<code>defmacro:expand*</code> is specified thus:
 
-<!-- <H3>Defmacroexpand</H3> -->
-<!-- <P> -->
-<!-- <CODE>(require 'defmacroexpand)</CODE> -->
-
-<!-- <P> -->
-<!-- <DL> -->
-<!-- <DT><U>Function:</U> <B>defmacro:expand*</B> <I>e</I> -->
-<!-- <DD> -->
-<!-- Returns the result of expanding all defmacros in scheme expression -->
-<!-- <VAR>e</VAR>. -->
-<!-- </DL> -->
+<DL>
+<DT><U>Function:</U> <B>defmacro:expand*</B> <I>e</I>
+<DD>
+Returns the result of expanding all defmacros in scheme expression
+<VAR>e</VAR>.
+</DL>
 
 <H2>R5RS Macros</H2>
 
@@ -1128,7 +1119,7 @@ is to use as a starting point for a new .init file.
 <table border=1>
 <tr><th>Scheme implementation
     <th><code>scheme-implementation-type</code>
-    <th>SRFI-96 implementation
+    <th>SRFI-59 &amp; SRFI-96 implementation
 
 <tr><td COLSPAN=2 ALIGN=CENTER><I>Implementation Template</I>
     <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/Template.scm?view=markup">slib/Template.scm</a>
@@ -1154,6 +1145,10 @@ is to use as a starting point for a new .init file.
 <tr><td><A HREF="http://www.gnu.org/software/kawa/">Kawa</A>
     <td><code>kawa</code>
     <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/kawa.init?view=markup">slib/kawa.init</a>
+<tr><td><A HREF="http://larceny.ccs.neu.edu">Larceny</A>
+    <td><code>larceny</code>
+    <td><a href="http://larceny.ccs.neu.edu/larceny-trac/browser/trunk/larceny_src/lib/SRFI/srfi-59.sch">larceny/lib/SRFI/srfi-59.sch</a> &amp;
+        <a href="http://larceny.ccs.neu.edu/larceny-trac/browser/trunk/larceny_src/lib/SRFI/srfi-96.sch">larceny/lib/SRFI/srfi-96.sch</a>
 <tr><td>MacScheme
     <td><code>MacScheme</code>
     <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/macscheme.init?view=markup">slib/macscheme.init</a>
