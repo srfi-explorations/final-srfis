@@ -43,7 +43,38 @@ Scheme Library</A> system.
 
 <h1>Issues</h1>
 
-What should the <code>software-type</code> of Vista be?
+It would be good to have a definitive set of operating-system names
+for <code>software-type</code>.  RFC-3232 says that the
+operating-system list which originated in RFC-952 and ended with
+RFC-1700 is no longer defined by a RFC:
+
+<blockquote>
+   Since 1994, this sequence of RFCs have been replaced by an online
+   database accessible through a web page (currently, www.iana.org).
+   The purpose of the present RFC is to note this fact and to officially
+   obsolete RFC 1700, whose status changes to Historic.  RFC 1700 is
+   obsolete, and its values are incomplete and in some cases may be
+   wrong.
+   <p>
+   We expect this series to be revived in the future by the new IANA
+   organization.
+</blockquote>
+
+That was in January 2002.  The revival has not occurred.  The web page
+seems to be
+
+<a href="http://www.iana.org/assignments/operating-system-names">
+http://www.iana.org/assignments/operating-system-names</a>.
+
+Last updated 2002-04-29, it is six years out-of-date.  Even for the
+operating-systems it does address, it isn't consistent.  Some
+operating-systems appear without version; some appear only with
+versions; some appear both ways.  <code>MSDOS</code> appears without a
+hyphen or version while the entries for SunOS are
+<code>SUN-OS-3.5</code>, <code>SUN-OS-4.0</code>, and
+<code>SUN</code>.  For MicroSoft Windows there are 12 varieties (none
+with MS or Microsoft), all with versions separated by hypens and a
+lone <code>WIN32</code>.
 
 <h1>Rationale</h1>
 
@@ -81,9 +112,11 @@ executed by the <code>system</code> call.
 <code>scheme-implementation-home-page</code> is informational; it is
 useful for finding documentation and filing bug reports.
 <p>
-<code>scheme-file-suffix</code> was added because <samp>`.'</samp> is
+<code>scheme-file-suffix</code> is needed because <samp>`.'</samp> is
 not the suffix separator on some file-systems (eg. NOSVE).
-<code>scheme-file-suffix</code> is used for loading some SLIB files.
+<code>scheme-file-suffix</code> would have been more appropriately
+named <code>slib-source-file-suffix</code>.  It is not advertised to
+SLIB users and used only for loading SLIB files.
 <p>
 <code>slib:features</code> was originally <code>*features*</code> (a
 la Common-Lisp); it was changed to avoid conflict with Guile, probably
@@ -134,7 +167,7 @@ It is essential in some scripting situations (calling other programs
 using the <code>system</code> procedure) on a multi-user file-system.
 The Linux manual page for <CODE>tmpnam</CODE> deprecates its use; but
 its recommendation to instead use <code>mkstemp</code> belies the
-author's understanding of scripting.
+manual-page author's understanding of scripting.
 <p>
 <code>file-exists?</code> and <code>delete-file</code> are the obvious
 procedures designated by their names.  Although they can always return
@@ -183,9 +216,11 @@ macros or other syntax which was not defined by <code>defmacro</code>.
 <p>
 SLIB uses <code>defmacro:load</code> to load module source files which
 use <code>defmacro</code>.  <code>defmacro:eval</code> can be passed
-as the argument to <code>repl:top-level</code> to create a
-read-eval-print loop which understands <code>defmacro</code>, even
-when the underlying implementation does not.
+as the argument to the <code>repl:top-level</code>  procedure in the
+<A HREF="http://swiss.csail.mit.edu/~jaffer/slib_7.html#SEC262"><code>repl</code></A>
+package to create a read-eval-print loop which understands
+<code>defmacro</code>, even when the underlying implementation does
+not.
 
 <p>
 <h2>R5RS Macros</h2>
@@ -220,7 +255,7 @@ Common-Lisp.  <code>slib:eval-load</code> is used to create loaders
 with a given <var>eval</var> argument.
 <p>
 <code>slib:warn</code> and <code>slib:error</code> print out their
-arguments, preferably to <code>current-output-port</code>.
+arguments, preferably to <code>current-error-port</code>.
 <p>
 <code>slib:exit</code> returns if it doesn't work.
 <p>
@@ -311,8 +346,9 @@ implementation's home page.
 <DL>
 <DT><U>Function:</U> <B>scheme-file-suffix</B>
 <DD>
-Returns a string with the suffix of Scheme source files on this
-system, typially <samp>".scm"</samp>.
+Returns a string with the suffix of SLIB Scheme files in the
+<code>library-vicinity</code> on this system; typially it is
+<samp>".scm"</samp>.
 </DL>
 
 
@@ -688,8 +724,8 @@ and definitions from the file and evaluates them sequentially.  These
 source code expressions and definitions may contain defmacro
 definitions.
 The <CODE>defmacro:load</CODE> procedure does not affect the values
-returned by <CODE>current-input-port</CODE> and
-<CODE>current-output-port</CODE>.
+returned by <CODE>current-input-port</CODE>,
+<CODE>current-error-port</CODE>, and <CODE>current-output-port</CODE>.
 </DL>
 
 
@@ -754,7 +790,8 @@ the <CODE>macro:load</CODE> procedure reads Scheme source code expressions and
 definitions from the file and evaluates them sequentially.  These source
 code expressions and definitions may contain macro definitions.  The
 <CODE>macro:load</CODE> procedure does not affect the values returned by
-<CODE>current-input-port</CODE> and <CODE>current-output-port</CODE>.
+<CODE>current-input-port</CODE>, <CODE>current-error-port</CODE>, and
+<CODE>current-output-port</CODE>.
 </DL>
 <P>
 
@@ -765,10 +802,11 @@ code expressions and definitions may contain macro definitions.  The
 <DL>
 <DT><U>Procedure:</U> <B>slib:load-source</B> <I>name</I>
 <DD>
-Loads a file of Scheme source code from <VAR>name</VAR> with the default
-filename extension used in SLIB.  For instance if the filename extension
-used in SLIB is <TT>`.scm'</TT> then <CODE>(slib:load-source "foo")</CODE> will
-load from file <TT>`foo.scm'</TT>.
+Loads a file of Scheme source code from <VAR>name</VAR> with the
+default filename extension used in SLIB.  For instance if the filename
+extension used in SLIB is <TT>`.scm'</TT> then
+<CODE>(slib:load-source&nbsp;"foo")</CODE> will load from file
+<TT>`foo.scm'</TT>.
 </DL>
 
 
@@ -816,7 +854,8 @@ level environment.
 the Scheme source code expressions and definitions are read from the
 file and <VAR>eval</VAR> called with them sequentially.  The
 <CODE>slib:eval-load</CODE> procedure does not affect the values returned by
-<CODE>current-input-port</CODE> and <CODE>current-output-port</CODE>.
+<CODE>current-input-port</CODE>, <CODE>current-error-port</CODE>, and
+<CODE>current-output-port</CODE>.
 </DL>
 
 
@@ -824,7 +863,8 @@ file and <VAR>eval</VAR> called with them sequentially.  The
 <DL>
 <DT><U>Procedure:</U> <B>slib:warn</B> <I>arg1 arg2 ...</I>
 <DD>
-Outputs a warning message containing its arguments.
+Outputs (preferably to <code>current-error-port</code>) a warning
+message containing its arguments.
 </DL>
 
 
@@ -832,10 +872,10 @@ Outputs a warning message containing its arguments.
 <DL>
 <DT><U>Procedure:</U> <B>slib:error</B> <I>arg1 arg2 ...</I>
 <DD>
-Outputs an error message containing its arguments, aborts evaluation of
-the current form and responds in a system dependent way to the error.
-Typical responses are to abort the program or to enter a read-eval-print
-loop.
+Outputs (preferably to <code>current-error-port</code>) an error
+message containing its arguments, aborts evaluation of the current
+form, and responds in a system dependent way to the error.  Typical
+responses are to abort the program or to enter a read-eval-print loop.
 </DL>
 
 
@@ -1048,7 +1088,10 @@ continuations, eventually running this captured continuation.
 
 <P>
 The following defines were present in Scheme until R4RS
-(see section `Language changes' in <CITE>Revised(4) Scheme</CITE>).
+(see section
+`<A HREF="http://swiss.csail.mit.edu/~jaffer/r4rs_10.html#SEC75">Language changes</A>'
+in
+<A HREF="http://swiss.csail.mit.edu/~jaffer/Scheme#R4RS"><CITE>Revised(4) Scheme</CITE></A>).
 
 
 <P>
@@ -1133,7 +1176,7 @@ is to use as a starting point for a new .init file.
 <tr><td><A HREF="http://www.informatik.uni-bremen.de/~net/elk/">ELK&nbsp;3.0</A>
     <td><code>Elk</code>
     <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/elk.init?view=markup">slib/elk.init</a>
-<tr><td><A HREF="http://www.iro.umontreal.ca/~gambit">GAMBIT&nbsp;3.0</A>
+<tr><td><A HREF="http://www.iro.umontreal.ca/~gambit">Gambit</A>
     <td><code>gambit</code>
     <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/gambit.init?view=markup">slib/gambit.init</a>
 <tr><td><A HREF="http://www.gnu.org/software/guile/guile.html">Guile</A>
@@ -1173,10 +1216,11 @@ is to use as a starting point for a new .init file.
 <tr><td><A HREF="http://swiss.csail.mit.edu/~jaffer/SCM">SCM</A>
     <td><code>scm</code>
     <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/scm.init?view=markup">slib/scm.init</a>
-       (<a href="http://cvs.savannah.gnu.org/viewvc/scm/scm/Init5e3.scm?view=markup">scm/Init5e3.scm</a>)
+       (<a href="http://cvs.savannah.gnu.org/viewvc/scm/scm/">scm/</a>Init***.scm)
 <tr><td><A HREF="http://swiss.csail.mit.edu/~jaffer/scmmac">SCM&nbsp;Mac</A>
     <td><code>scm</code>
     <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/scm.init?view=markup">slib/scm.init</a>
+       (<a href="http://cvs.savannah.gnu.org/viewvc/scm/scm/">scm/</a>Init***.scm)
 <tr><td><A HREF="http://www.scsh.net">scsh</A>
     <td><code>Scsh</code>
     <td><a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/scsh.init?view=markup">slib/scsh.init</a>
@@ -1200,7 +1244,7 @@ is to use as a starting point for a new .init file.
 
 
 <h1>Copyright</h1>
-Copyright (C) Aubrey Jaffer 2007. All Rights Reserved.
+Copyright (C) Aubrey Jaffer 2007, 2008. All Rights Reserved.
 <p>
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
