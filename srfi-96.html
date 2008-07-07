@@ -15,7 +15,7 @@ Aubrey Jaffer
 
 <H1>Status</H1>
 
-This SRFI is currently in ``draft'' status.  To see an explanation of
+This SRFI is currently in ``final'' status.  To see an explanation of
 each status that a SRFI can hold, see <A
 HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
 
@@ -28,10 +28,11 @@ HREF="mail-archive/maillist.html">the archive of the mailing list</A>.
 
 <P><UL>
 <LI>Received: 2007/10/11</LI>
-<LI>Draft: 2007/11/19 - 2008/02/17</LI>
+<LI>Draft: 2007/11/19 - 2008/06/06</LI>
 <LI>Revised: 2007/12/03</LI>
 <LI>Revised: 2007/12/25</LI>
 <LI>Revised: 2007/02/11</LI>
+<LI>Revised: 2007/06/06</LI>
 </UL>
 
 <h1>Abstract</h1>
@@ -41,41 +42,6 @@ uniform interface sufficient to host the
 <A HREF="http://swiss.csail.mit.edu/~jaffer/SLIB">SLIB
 Scheme Library</A> system.
 <p>
-
-<h1>Issues</h1>
-
-It would be good to have a definitive set of operating-system names
-for <code>software-type</code>.  RFC-3232 says that the
-operating-system list which originated in RFC-952 and ended with
-RFC-1700 is no longer defined by a RFC:
-
-<blockquote>
-   Since 1994, this sequence of RFCs have been replaced by an online
-   database accessible through a web page (currently, www.iana.org).
-   The purpose of the present RFC is to note this fact and to officially
-   obsolete RFC 1700, whose status changes to Historic.  RFC 1700 is
-   obsolete, and its values are incomplete and in some cases may be
-   wrong.
-   <p>
-   We expect this series to be revived in the future by the new IANA
-   organization.
-</blockquote>
-
-That was in January 2002.  The revival has not occurred.  The web page
-seems to be
-
-<a href="http://www.iana.org/assignments/operating-system-names">
-http://www.iana.org/assignments/operating-system-names</a>.
-
-Last updated 2002-04-29, it is six years out-of-date.  Even for the
-operating-systems it does address, it isn't consistent.  Some
-operating-systems appear without version; some appear only with
-versions; some appear both ways.  <code>MSDOS</code> appears without a
-hyphen or version while the entries for SunOS are
-<code>SUN-OS-3.5</code>, <code>SUN-OS-4.0</code>, and
-<code>SUN</code>.  For MicroSoft Windows there are 12 varieties (none
-with MS or Microsoft), all with versions separated by hypens and a
-lone <code>WIN32</code>.
 
 <h1>Rationale</h1>
 
@@ -109,6 +75,47 @@ Common-Lisp's constructs for these facilities.
 <code>software-type</code> is inherited from Common-Lisp.  In SLIB it
 is used primarily for dealing with the file system and commands
 executed by the <code>system</code> call.
+
+<blockquote>
+  <HR>
+  <H3>Operating-System Names</H3>
+
+  It would be good to have a definitive set of operating-system names
+  for <code>software-type</code>.  RFC-3232 says that the
+  operating-system list which originated in RFC-952 and ended with
+  RFC-1700 is no longer defined by a RFC:
+
+  <blockquote>
+     Since 1994, this sequence of RFCs have been replaced by an online
+     database accessible through a web page (currently, www.iana.org).
+     The purpose of the present RFC is to note this fact and to
+     officially obsolete RFC 1700, whose status changes to Historic.
+     RFC 1700 is obsolete, and its values are incomplete and in some
+     cases may be wrong.
+     <p>
+     We expect this series to be revived in the future by the new IANA
+     organization.
+  </blockquote>
+
+  That was in January 2002.  The revival has not occurred.  The web
+  page seems to be
+
+  <a href="http://www.iana.org/assignments/operating-system-names">
+  http://www.iana.org/assignments/operating-system-names</a>.
+
+  Last updated 2002-04-29, it is six years out-of-date at this
+  writing.  Even for the operating-systems it does address, it isn't
+  consistent.  Some operating-systems appear without version; some
+  appear only with versions; some appear both
+  ways.  <code>MSDOS</code> appears without a hyphen or version while
+  the entries for SunOS are
+  <code>SUN-OS-3.5</code>, <code>SUN-OS-4.0</code>, and
+  <code>SUN</code>.  For MicroSoft Windows there are 12 varieties
+  (none with MS or Microsoft), all with versions separated by hypens
+  and a lone version-less <code>WIN32</code>.
+  <HR>
+</blockquote>
+
 <p>
 <code>scheme-implementation-home-page</code> is informational; it is
 useful for finding documentation and filing bug reports.
@@ -282,7 +289,7 @@ Mutual exclusion primitives such as the
 <a href="http://en.wikipedia.org/wiki/Semaphore_%28programming%29">
 Dijkstra semaphore</a>
 and the mutex of
-<a href="http://srfi.schemers.org/srfi-18/srfi-18.html">SRFI-18</a> and 
+<a href="http://srfi.schemers.org/srfi-18/srfi-18.html">SRFI-18</a> and
 <a href="http://srfi.schemers.org/srfi-21/srfi-21.html">SRFI-21</a>
 combine an atomic operation with a wait mechanism.
 Wait mechanisms such as calling a scheduler continuation can be
@@ -314,6 +321,9 @@ Returns a symbol denoting the generic operating system type.  For
 instance, <CODE>unix</CODE>, <CODE>vms</CODE>, <CODE>macos</CODE>,
 <CODE>amiga</CODE>, or <CODE>ms-dos</CODE>.  The
 <code>software-type</code> of Linux is <code>unix</code>.
+The <code>software-type</code> of MS-Windows and Vista is 
+<code>ms-dos</code>.
+
 </DL>
 
 
@@ -1156,7 +1166,7 @@ initializing SLIB:
 <h1>Implementation</h1>
 
 Here are the implementations of SRFI-96, including SRFI-59, for many
-R4RS and R5RS Scheme implementations.  
+R4RS and R5RS Scheme implementations.
 <a href="http://cvs.savannah.gnu.org/viewvc/slib/slib/Template.scm?view=markup">slib/Template.scm</a>
 is to use as a starting point for a new .init file.
 
@@ -1269,7 +1279,7 @@ DEALINGS IN THE SOFTWARE.
     <address>Editor: <a href="mailto:srfi-editors at srfi dot schemers dot org">Donovan Kolbly</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Thu Mar 20 06:25:56 CDT 2008
+Last modified: Fri Jun  6 07:40:21 CDT 2008
 <!-- hhmts end -->
   </body>
 </html>
