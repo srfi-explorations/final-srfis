@@ -35,68 +35,101 @@ the list.  You can access previous messages via
 <LI>Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-98/srfi-98.html?rev=1.2">2008/07/06</a></LI>
 <LI>Draft: 2008/07/06 - 2008/09/06</LI>
 <LI>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-98/srfi-98.html?rev=1.3">2008/07/18</a></LI>
+<LI>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-98/srfi-98.html?rev=1.4">2008/07/18</a></LI>
 </UL>
 
 <h1>Abstract</h1>
-
-This SRFI specifies the procedure get-environment-variable which gets the value of the specified environment variable.
+This SRFI specifies the procedure get-environment-variable, which gets
+the value of the specified environment variable, and the procedure
+get-environment-variables, which gets an association list of all
+environment variables.
 
 <h1>Issues</h1>
 
 <h1>Rationale</h1>
-<p>Most operating systems provide the mechanism of passing auxiliary
-parameters implicitly to child processes, namely called enviornment
-variables.
-Some applications rely on environment variables to modify their
-behavior according to the local settings.</p>
-<p>Most implementations of common gateway interface (CGI) uses
-environment variables to pass Meta-Variables from the server to the
-script<a href="#cgi">[1]</a>.
-Providing the means to access to the environment variables is indispensable to write practical programs in Scheme.</p>
-<p>In fact, most widely-used Scheme implementations provide the means
-of getting the value of the specified environment variable, usually
-called getenv.</p>
-<p>Additionally, some implementations provide the means to get all environment variables.</p>
-<p>For obtaining the value of the environment value, getenv may use
-locale-setting information to encode the name, and decode the value of
+<p>Most operating systems provide a mechanism for passing auxiliary
+parameters implicitly to child processes.  Usually, this mechanism is
+called "the environment", and is conceptually a map from string names
+to string values.  The string names are called enviornment
+variables.</p>
+
+<p>Some applications rely on environment variables to modify their
+behavior according to local settings.  Also, various established
+protocols rely on environment variables as a form of interprocess
+communication.  For example, most implementations of the common
+gateway interface (CGI) use environment variables to pass
+Meta-Variables from the server to the script <a href="#0.1_cgi">[1]</a>.
+Providing a means to access environment variables is therefore
+indispensable for writing practical programs in Scheme.
+</p>
+<p>Most widely-used Scheme implementations provide a function for
+getting the value of a specified environment variable.  The name for
+this function is usually getenv, but varies (<a href="#0.1_appendix">see
+below</a>).  Some implementations also provide a way to get all the
+environment variables, but others do not.</p>
+<p>For obtaining the value of the environment variable, getenv may use
+locale-setting information to encode the name and decode the value of
 the environment variable.</p>
-<p>Conceptually, environment variables are mappings from string names to values.</p>
-<p>For example, CGI programs may obtain the values of the
-Meta-Variables such as "QUERY_STRING", "CONTENT_LENGTH" and
-"REQUEST_METHOD", as the following examples:</p>
+<p>If getenv can't decode the value, getenv may raise an exception.</p>
+<p>This SRFI specifies a uniform interface for accessing environment
+variables.  That should make it easier to write portable programs
+that need access to their environment.
+For example, a CGI program may portably obtain the values of the
+Meta-Variables "QUERY_STRING", "CONTENT_LENGTH" and
+"REQUEST_METHOD" as in the following examples:</p>
 <pre>(get-environment-variable "QUERY_STRING") =&gt; "foo=bar&amp;huga=hige"
 (get-environment-variable "CONTENT_LENGTH") =&gt; "512"
 (get-environment-variable "REQUEST_METHOD") =&gt; "post"
 </pre>
+
+<p>And environment variables are also required by<a href="http://srfi.schemers.org/srfi-96/srfi-96.html" title="SRFI 96: SLIB Prerequisites">SRFI 96: SLIB Prerequisites</a>.
 <p>Therefore, it is quite useful to define the environment-independent way to get environment variables.</p>
-<p><a name="cgi">[1]</a> The Common Gateway Interface (CGI) Version 1.1, RFC3875, <a href="http://www.ietf.org/rfc/rfc3875">http://www.ietf.org/rfc/rfc3875</a>.</p>
+<p><a name="0.1_cgi">[1]</a> The Common Gateway Interface (CGI) Version 1.1, RFC3875, <a href="http://www.ietf.org/rfc/rfc3875" target="_blank">http://www.ietf.org/rfc/<wbr>rfc3875</a>.</p>
 <h1>Specification</h1>
 <pre>R6RS library name</pre>
-Following two procedures belong to the R6RS library named (system).
-This is a provisional library name until naming rules for SRFI library on R6RS are specified.
-<pre>Function: get-environment-variable name</pre>
-Returns the value of the named environment variable as a string, or #f if the named environment variable is not found.
-<pre>(get-environment-variable "PATH") =&gt; "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+The following two procedures belong to the R6RS library named (system).
+This is a provisional library name until the naming rules for R6RS SRFI libraries are specified.
+<pre>Function: get-environment-variable name</pre>Returns the value of
+the named environment variable as a string, or #f if the named
+environment variable is not found. The name argument is expected to be
+a string.
+<pre>(get-environment-variable "PATH") =&gt; "/usr/local/sbin:/usr/local/<wbr>bin:/usr/sbin:/usr/bin"
 </pre>
 <pre>Function: get-environment-variables</pre>
 Returns names and values of all the environment variables as an a-list.
-<pre>(get-environment-variables) =&gt; (("PATH" . "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin") ("USERNAME" . "taro"))
+<pre>(get-environment-variables) =&gt; (("PATH" . "/usr/local/sbin:/usr/local/<wbr>bin:/usr/sbin:/usr/bin") ("USERNAME" . "taro"))
 </pre>
 
 <h1>Implementation</h1>
 <h2>Gauche</h2>
-<pre>(define (get-environment-variable . args)
-  (if (null? args)
-      (sys-environ-&gt;alist)
-      (apply sys-get-env args))))
+<pre>
+(define get-environment-variable sys-get-env)
+(define get-environment-variables sys-environ-&gt;alist)
 </pre>
-<h2>Scheme48 and Scsh</h2>
-<pre>(define (get-environment-variable . args)
-  (if (null? args)
-      (environment-alist)
-      (apply lookup-environment-variable args))))
+<h2>Scheme48</h2>
+<pre>
+(define (get-environment-variable name)
+  (cond
+    ((lookup-environment-variable name) => os-string->string)
+    (else #f)))
+(define (get-environment-variables)
+  (map (lambda (p)
+        (cons (os-string->string (car p)) (os-string->string (cdr p))))
+       (environment-alist)))
+</pre>
+<h2>scsh</h2>
+<pre>
+(define get-environment-variable getenv)
+(define get-environment-variables env-&gt;alist)
 </pre>
 
+<h2>SCM</h2>
+<pre>
+(define get-environment-variable getenv)
+(define get-environment-variables getenv)
+<pre>
+
+<a name="0.1_appendix"></a>
 <h1>Appendix: Existing implementations</h1>
 <table border="1">
   <tbody><tr><th>Scheme implementation</th><th>get environment variable</th><th>get all the environment variables as an a-list</th></tr>
@@ -112,9 +145,10 @@ Returns names and values of all the environment variables as an a-list.
   <tr><td>SLIB</td><td>(getenv name) =&gt; (or string? false) name:string?</td><td>&nbsp;</td></tr>
   <tr><td>STk</td><td>(getenv name) =&gt; (or string? false) name:string?</td><td>&nbsp;</td></tr>
   <tr><td>STklos</td><td>(getenv name) =&gt; (or string? false) name:string?</td><td>(getenv)</td></tr>
+    <tr><td>SCM</td><td>(getenv name) =&gt; (or string? false) name:string?</td><td>(getenv)</td></tr>
   </tbody></table>
 <h1>Acknowledgements</h1>
-Thanks to Shiro Kawai, jmuk, Kokosabu, leque and all the members of the #Lisp_Scheme IRC channel on Freenode.
+Thanks to Shiro Kawai, Alexey Radul, jmuk, Kokosabu, leque and all the members of the #Lisp_Scheme IRC channel on Freenode.
 <h1>Copyright</h1>
 Copyright (C) Taro Minowa(Higepon) (2008). All Rights Reserved.
 <p>
@@ -138,6 +172,6 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 </p>
     <hr>
-    <address>Editor: <a href="mailto:srfi-editors at srfi dot schemers dot org">Mike Sperber</a></address>
+    <address>Editor: <a href="mailto:srfi-editors%20at%20srfi%20dot%20schemers%20dot%20org">Mike Sperber</a></address>
 <!-- Last modified: Sun Jan 28 14:21:14 MET 2007 -->
   </body></html>
