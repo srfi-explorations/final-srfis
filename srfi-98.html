@@ -36,6 +36,7 @@ the list.  You can access previous messages via
 <LI>Draft: 2008/07/06 - 2008/09/06</LI>
 <LI>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-98/srfi-98.html?rev=1.3">2008/07/18</a></LI>
 <LI>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-98/srfi-98.html?rev=1.4">2008/07/18</a></LI>
+<LI>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-98/srfi-98.html?rev=1.5">2008/08/14</a></LI>
 </UL>
 
 <h1>Abstract</h1>
@@ -43,8 +44,6 @@ This SRFI specifies the procedure get-environment-variable, which gets
 the value of the specified environment variable, and the procedure
 get-environment-variables, which gets an association list of all
 environment variables.
-
-<h1>Issues</h1>
 
 <h1>Rationale</h1>
 <p>Most operating systems provide a mechanism for passing auxiliary
@@ -59,6 +58,9 @@ protocols rely on environment variables as a form of interprocess
 communication.  For example, most implementations of the common
 gateway interface (CGI) use environment variables to pass
 Meta-Variables from the server to the script <a href="#0.1_cgi">[1]</a>.
+Environment variables are also required
+by <a href="http://srfi.schemers.org/srfi-96/srfi-96.html" title="SRFI
+96: SLIB Prerequisites">SRFI 96: SLIB Prerequisites</a>.
 Providing a means to access environment variables is therefore
 indispensable for writing practical programs in Scheme.
 </p>
@@ -67,10 +69,6 @@ getting the value of a specified environment variable.  The name for
 this function is usually getenv, but varies (<a href="#0.1_appendix">see
 below</a>).  Some implementations also provide a way to get all the
 environment variables, but others do not.</p>
-<p>For obtaining the value of the environment variable, getenv may use
-locale-setting information to encode the name and decode the value of
-the environment variable.</p>
-<p>If getenv can't decode the value, getenv may raise an exception.</p>
 <p>This SRFI specifies a uniform interface for accessing environment
 variables.  That should make it easier to write portable programs
 that need access to their environment.
@@ -82,9 +80,7 @@ Meta-Variables "QUERY_STRING", "CONTENT_LENGTH" and
 (get-environment-variable "REQUEST_METHOD") =&gt; "post"
 </pre>
 
-<p>And environment variables are also required by<a href="http://srfi.schemers.org/srfi-96/srfi-96.html" title="SRFI 96: SLIB Prerequisites">SRFI 96: SLIB Prerequisites</a>.
-<p>Therefore, it is quite useful to define the environment-independent way to get environment variables.</p>
-<p><a name="0.1_cgi">[1]</a> The Common Gateway Interface (CGI) Version 1.1, RFC3875, <a href="http://www.ietf.org/rfc/rfc3875" target="_blank">http://www.ietf.org/rfc/<wbr>rfc3875</a>.</p>
+<p><a name="0.1_cgi">[1]</a> The Common Gateway Interface (CGI) Version 1.1, RFC3875, <a href="http://www.ietf.org/rfc/rfc3875" target="_blank">http://www.ietf.org/rfc/rfc3875</a>.</p>
 <h1>Specification</h1>
 <pre>R6RS library name</pre>
 The following two procedures belong to the R6RS library named (system).
@@ -93,11 +89,16 @@ This is a provisional library name until the naming rules for R6RS SRFI librarie
 the named environment variable as a string, or #f if the named
 environment variable is not found. The name argument is expected to be
 a string.
-<pre>(get-environment-variable "PATH") =&gt; "/usr/local/sbin:/usr/local/<wbr>bin:/usr/sbin:/usr/bin"
+get-environment-variable may use
+locale-setting information to encode the name and decode the value of
+the environment variable.
+If get-environment-variable can't decode the value, get-environment-variable may raise an exception.</p>
+<pre>(get-environment-variable "PATH") =&gt; "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
 </pre>
 <pre>Function: get-environment-variables</pre>
 Returns names and values of all the environment variables as an a-list.
-<pre>(get-environment-variables) =&gt; (("PATH" . "/usr/local/sbin:/usr/local/<wbr>bin:/usr/sbin:/usr/bin") ("USERNAME" . "taro"))
+The same decoding considerations as for get-environment-variable apply.
+<pre>(get-environment-variables) =&gt; (("PATH" . "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin") ("USERNAME" . "taro"))
 </pre>
 
 <h1>Implementation</h1>
@@ -127,7 +128,22 @@ Returns names and values of all the environment variables as an a-list.
 <pre>
 (define get-environment-variable getenv)
 (define get-environment-variables getenv)
-<pre>
+</pre>
+
+<h1>Issues</h1>
+<p>get-environment-variable is expected to return a "Scheme string".
+Unfortunately, many current platforms, including POSIX-like ones, do
+not require environment variables to be interpretable as sequences of
+characters.  In particular, environment variables can be used to name
+files, and filenames on the system can amount to NULL-terminated byte
+vectors, which, if the Scheme program were to collect uninterpreted
+and pass to, say, the open call, would work just fine, but which might
+not represent a string in the particular encoding the program expects.
+While in principle it may be desirable to provide a mechanism for
+accessing environment variables raw, this SRFI specifies a "string"
+return type because that best represents the consensus of existing
+implementations, and captures the semantically desirable behavior in
+the common case that the byte sequence is interpretable as a string.</p>
 
 <a name="0.1_appendix"></a>
 <h1>Appendix: Existing implementations</h1>
@@ -135,17 +151,18 @@ Returns names and values of all the environment variables as an a-list.
   <tbody><tr><th>Scheme implementation</th><th>get environment variable</th><th>get all the environment variables as an a-list</th></tr>
   <tr><td>Bigloo</td><td>(getenv name) =&gt; (or string? false) name:string?</td><td>&nbsp;</td></tr>
   <tr><td>CHICKEN</td><td>(getenv name) =&gt; (or string? false) name:string?</td><td>&nbsp;</td></tr>
-  <tr><td>Gambit</td><td>(getenv name . &lt;default&gt;) -&gt;(or string? &lt;default&gt; &lt;Unbound OS environment variable error&gt;) name:string?</td><td>&nbsp;</td></tr>
+  <tr><td>Gambit</td><td>(getenv name . &lt;default&gt;) =&gt;(or string? &lt;default&gt; &lt;Unbound OS environment variable error&gt;) name:string?</td><td>&nbsp;</td></tr>
 
   <tr><td>Gauche</td><td>(sys-getenv name) =&gt; (or string? false) name:string?</td><td>(sys-environ)</td></tr>
   <tr><td>Guile</td><td>(getenv name) =&gt; (or string? false) name:string?</td><td>&nbsp;</td></tr>
   <tr><td>PLT</td><td>(getenv name) =&gt; (or string? false) name:string?</td><td>&nbsp;</td></tr>
+  <tr><td>MIT/GNU Scheme</td><td>(get-environment-variable name) =&gt; (or string? false) name:string?</td><td>&nbsp;</td></tr>
   <tr><td>Scheme48</td><td>(lookup-environment-variable name) =&gt; (or string? false) name:string?</td><td>(environment-alist)</td></tr>
 
   <tr><td>SLIB</td><td>(getenv name) =&gt; (or string? false) name:string?</td><td>&nbsp;</td></tr>
   <tr><td>STk</td><td>(getenv name) =&gt; (or string? false) name:string?</td><td>&nbsp;</td></tr>
   <tr><td>STklos</td><td>(getenv name) =&gt; (or string? false) name:string?</td><td>(getenv)</td></tr>
-    <tr><td>SCM</td><td>(getenv name) =&gt; (or string? false) name:string?</td><td>(getenv)</td></tr>
+  <tr><td>SCM</td><td>(getenv name) =&gt; (or string? false) name:string?</td><td>(getenv)</td></tr>
   </tbody></table>
 <h1>Acknowledgements</h1>
 Thanks to Shiro Kawai, Alexey Radul, jmuk, Kokosabu, leque and all the members of the #Lisp_Scheme IRC channel on Freenode.
