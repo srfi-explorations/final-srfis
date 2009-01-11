@@ -30,7 +30,7 @@ David Van Horn
 
 <H1>Status</H1>
 
-This SRFI is currently in ``draft'' status.  To see an explanation of
+This SRFI is currently in ``final'' status.  To see an explanation of
 each status that a SRFI can hold, see <A
 HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
 
@@ -48,9 +48,32 @@ the list.  You can access previous messages via
 <LI>Draft: 2008/03/25 - 2008/05/24</LI>
 <LI>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-97/srfi-97.html?rev=1.2">2008/07/22</a></LI>
 <LI>Draft extended: 2008/07/22 - 2008/08/22</LI>
+<LI>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-97/srfi-97.html?rev=1.3">2008/12/22</a></LI>
 </UL>
 
-<H1>Abstract</H1>
+<h1>Table of contents</h1>
+
+<ul>
+<li><a href="#abstract">Abstract</a></li>
+<li><a href="#rationale">Rationale</a></li>
+<li><a href="#specification">Specification</a></li>
+<ul>
+    <li><a href="#referencing">Referencing SRFI Libraries</a></li>
+    <li><a href="#naming">Naming convention</a></li>
+    <li><a href="#included">Included SRFIs</a></li>
+    <li><a href="#omitted">Omitted SRFIs</a></li>
+    <li><a href="#withdrawn">Withdrawn SRFIs</a></li>
+    <li><a href="#future">Future SRFIs</a></li>
+    <li><a href="#existing">Existing SRFIs and R<sup>6</sup>RS</a></li>
+    <li><a href="#relation">Relation to SRFIs 0 and 7</a></li>
+</ul>
+<li><a href="#implementation">Implementation</a></li>
+<li><a href="#acknowledgements">Acknowledgments</a></li>
+<li><a href="#references">References</a></li>
+<li><a href="#copyright">Copyright</a></li>
+</ul>
+    
+<H1><A name="abstract">Abstract</A></H1>
 
 <p>Over the past ten years, numerous libraries have been specified via
 the Scheme Requests for Implementation process.  Yet until the recent
@@ -74,68 +97,7 @@ implementors.
 
 </p>
 
-<h1>Issues</h1>
-
-<ul>
-<li>Some authors have already specified the names that should be used
-(e.g., list-lib for SRFI 1 and vector-lib for SRFI 43) for Schemes with
-a library system, however these names are not used here.  SRFI 41
-Streams is the only SRFI to specify an R<sup>6</sup>RS library and therefore it
-specifies its library names.  These names are not used here.  In both
-cases, a consistent naming scheme is used which happens to differ from
-the author's originally chosen names.  (Note that most
-implementations, which do have some kind of library system, do not
-follow the author recommendations for names in existing SRFIs.)</li>
-
-<li>Some SRFIs are omitted on the grounds that they alter the
-semantics of standard Scheme bindings (e.g., SRFI 70, Numbers).  It is
-possible that these SRFIs could be provided as libraries that
-effectively supersede <code>(rnrs base)</code> by exporting the same
-bindings as <code>(rnrs base)</code>, but with the altered semantics.
-Combining several such SRFIs would not work as intended, but it may be
-a sensible alternative to omission.  On the other hand, this might be
-seen as a perversion of the original author's intent that these
-semantics really be the semantics of the standard bindings.</li>
-
-<li>Some SRFIs are omitted on the grounds that they alter or extend
-the lexical syntax of Scheme programs, which cannot be provided by an
-R<sup>6</sup>RS library (see next issue).  However, extensions to
-lexical syntax could be part of a SRFI library so long as that library
-(or some other library) also exports procedures that implement the
-extended syntax.  In other words, extensions to the lexical syntax of
-the standard read and write procedures cannot be part of a SRFI
-library, but nonstandard read and write procedures are okay.  SRFI 38
-does this.  Should this approach be adopted in general?</li>
-
-<li>R6RS allows for lexical extension via <code>#!&lt;identifier&gt;</code>
-lexemes.  Should this SRFI incorporate those SRFIs that are excluded
-for extending the lexical syntax and define the appropriate
-<code>#!srfi-N</code> lexeme?</li>
-
-<li>Some omitted SRFIs may be implemented as libraries
-(eg. Conditions), but have been omitted because they are subsumed by
-R<sup>6</sup>RS, or are don't make much sense without other SRFIs which cannot be
-implemented as libraries (such as Exception Handling for Programs).
-Should these SRFIs be included?</li>
-
-<li>Is SRFI 44, Collections, really a SRFI Library?  It's more of a
-meta-SRFI than a library.</li>
-
-<li>SRFI 4, Homogeneous numeric vector datatypes, has a substantial
-library component but also modifies the lexical syntax of the
-language.  Should it be considered a SRFI Library?</li>
-
-<li>Versioning information is not included in the library naming
-scheme.  This SRFI does not specify the meaning of importing SRFI
-libraries declared with versioning information.</li>
-
-<li>SRFI 74, Octet-Addressed Binary Blocks, blobs and R<sup>6</sup>RS
-bytevectors are conceptually the same.  Should <code>(bytevector?
-b)</code> imply <code>(blob?  b)</code> and vice versa?</li>
-
-</ul>
-
-<h1>Rationale</h1>
+<h1><a name="rationale">Rationale</a></h1>
 
 <p>With the advent of R<sup>6</sup>RS, it has become possible to write and
 distribute portable Scheme code as libraries.  However, there is no
@@ -148,7 +110,8 @@ standardized SRFI library names.</p>
 following properties:</p>
 
 <ol>
-<li>it is fully conformant with R<sup>6</sup>RS library reference syntax,</li>
+<li>it fully conforms with the R<sup>6</sup>RS library reference
+syntax,</li>
 
 <li>it is consistent with the naming convention employed by
 R<sup>6</sup>RS Standard Libraries,</li>
@@ -165,21 +128,23 @@ chosen simply and without conflict,</li>
 <li>and it represents a consensus among several Scheme implementors at the time.</li>
 </ol>
 
-<h1>Specification</h1>
+<h1><a name="specification">Specification</a></h1>
 
-<p>This specification includes a list of library names for existing
-SRFIs that specify libraries.  These names are assigned according to a
-naming convention given below. 
-</p>
+<p>This specification includes the following: a library referencing
+scheme for all past and future SRFI libraries, a naming convention for
+selecting library names, and enumeration of library names selected for
+all currently finalized SRFIs that specify libraries.</p>
 
 <p>Although R<sup>6</sup>RS's notion of a library is the one used
 here, this SRFI attempts to minimize assumptions made about a Scheme
-systems conformance to R<sup>6</sup>RS so that systems may support
-SRFI Libraries without necessarily supporting all of
-R<sup>6</sup>RS.</p>
+system's conformance to R<sup>6</sup>RS so that systems may support
+SRFI Libraries without needing to support all of the R<sup>6</sup>RS
+library system.  In particular, the <code>for</code> clause is not
+needed for any existing SRFI Library, and versioning information is
+not used.  This is important for systems such as ERR<sup>5</sup>RS,
+which do not support these features.</p>
 
-
-<h2>Referencing SRFI Libraries</h2>
+<h2><a name="referencing">Referencing SRFI Libraries</a></h2>
 
 <p>The purpose of this SRFI is to name SRFI libraries in a consistent
 and uniform manner, both in the case of existing SRFIs and in the case
@@ -225,19 +190,20 @@ A SRFI library reference has the following form,
 
 where <code><em>&lt;identifier&gt;</em></code> is one of the included
 SRFI library names defined below, and <code><em>&lt;uinteger
-10&gt;</em></code> is one of the included SRFI numerals given below.
-The non-terminals <code>&lt;uinteger 10&gt;</code> and
-<code>&lt;identifier&gt;</code> are defined as given in R<sup>6</sup>RS <a
+10&gt;</em></code> is a SRFI number.  The non-terminals
+<code>&lt;uinteger 10&gt;</code> and <code>&lt;identifier&gt;</code>
+are defined as given in R<sup>6</sup>RS <a
 href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-7.html#node_chap_4">Chapter
 4, Lexical syntax</a>.</p>
 
 <p class="discussionnote">
-<em>Discussion:</em> The "<tt>:</tt>" prefix is used in order to make
-the SRFI number component an identifier, as required by
+<em>Discussion:</em> The colon (<tt>:</tt>) prefix is used in order to
+make the SRFI number component an identifier, as required by
 R<sup>6</sup>RS.  Several Scheme implementors expressed the importance
 of R<sup>6</sup>RS conformance and supported the colon prefix as a
 reasonable, if somewhat arbitrary, way to render the number as an
-identifier.</p>
+identifier.  The issue of mapping library references to file paths is
+left completely unspecified by this SRFI and R<sup>6</sup>RS.</p>
 
 A SRFI Library can be referenced by number, as in
 <blockquote>
@@ -279,7 +245,7 @@ within a SRFI Library.  For example, SRFI 41, Streams, defines
 
 
 
-<h2>Naming convention</h2>
+<h2><a name="naming">Naming convention</a></h2>
 
 <p>Mnemonic library names are chosen according to the following
 conventions: Libraries that define datatypes are typically pluralized
@@ -295,6 +261,11 @@ derived from their title (e.g., <code>lightweight-testing</code>,
 consistent with the names chosen in the R<sup>6</sup>RS Standard
 Libraries.</p>
 
+<p class="discussionnote"><em>Discussion:</em> Some authors specified
+names that should be used for libraries. These names are not used
+here.  Instead, a consistent naming scheme is used that happens to
+differ from the authors' originally chosen names.</p>
+
 <p class="discussionnote"> <em>Discussion:</em> There is opportunity
 for grouping related SRFIs together.  For example, SRFI 28, Basic
 Format Strings, and SRFI 48, Intermediate Format Strings, could be
@@ -308,7 +279,7 @@ authority which decides what shall and shall not be grouped together.
 Instead, grouping must be achieved by the SRFI process, as it should.
 </p>
 
-<h2>Included SRFIs</h2>
+<h2><a name="included">Included SRFIs</a></h2>
 
 <p>The criterion for inclusion in the set of SRFI Libraries is that
 the finalized SRFI only specify a set of bindings which can be
@@ -406,7 +377,15 @@ replace the standard <code>equal?</code> binding.</p>
 </table>
 
 
-<h2>Omitted SRFIs</h2>
+For the purposes of R<sup>6</sup>RS conforming systems, export levels
+are assumed to be 0 for all exported bindings of all SRFIs,
+<em>except</em> SRFI-46: Basic syntax-rules extensions, which should
+export <tt>syntax-rules</tt> for level&nbsp;1.  This allows all
+existing SRFI Libraries to be portably imported and used without use
+of the R<sup>6</sup>RS <tt>for</tt> clause.
+
+
+<h2><a name="omitted">Omitted SRFIs</a></h2>
 
 <p>
 SRFIs are not libraries, they are requests for <em>features</em>.
@@ -446,52 +425,12 @@ cannot be provided by a library.  Dependent on lexical syntax modification (SRFI
 <tr><td>94</td><td>Type-Restricted Numerical Functions</td><td>Dependent on number system modification (SRFI 70).</td></tr>
 </table>
 
-<h2>Withdrawn SRFIs</h2>
+<h2><a name="withdrawn">Withdrawn SRFIs</a></h2>
 
 Withdrawn SRFIs are considered outside the scope of this proposal, so
 their names are not considered.
 
-<h2>R<sup>6</sup>RS export levels</h2>
-
-For the purposes of R<sup>6</sup>RS conforming systems, export levels
-are assumed to be 0 for all exported bindings of all SRFIs,
-<em>except</em> SRFI-46: Basic syntax-rules extensions, which should
-export <tt>syntax-rules</tt> for level&nbsp;1.  This allows all SRFI
-Libraries to be portably imported and used without use of
-the R<sup>6</sup>RS <tt>for</tt> clause.
-
-<h2>Existing SRFIs and R<sup>6</sup>RS</h2>
-
-<p>This section addresses any issues relevant to each existing SRFI's
-use and implementation in an R<sup>6</sup>RS Scheme system.</p>
-
-<p>SRFI 42, Eager Comprehensions, defines <em>qualifiers</em>, which
-are used as macro keyword literals, and some of these conflict with
-names provided by <code>(rnrs base)</code>.  This SRFI does not
-specify whether these qualifier names are provided as bindings.</p>
-
-<p class="discussionnote"><em>Discussion:</em> It is not clear
-whether these keywords should or should not be provided as bindings by
-this library based on the original text of the SRFI.  And if provided
-as bindings, it remains unclear to which values they should be bound.
-During the discussion period, no clear agreement could be made on what
-should be specified.  Therefore the issue is simply left to resolution
-in a later SRFI devoted to eager comprehensions in R6RS-compatible
-Schemes.
-</p>
-
-<p>The relation between SRFI 9, Defining Record Types and
-R<sup>6</sup>RS Records is left unspecified.  For example, it is not
-specified whether <code>record?</code> holds of SRFI 9 record values,
-or whether SRFI 9 records are opaque, or if the type name is bound to
-a <tt>rtd</tt>.
-
-<p class="discussionnote"><em>Discussion:</em> It is not clear what
-the proper relationship should be and no clear consesus came about as
-a result of the discussion period.</p>
-
-
-<h2>Future SRFIs</h2>
+<h2><a name="future">Future SRFIs</a></h2>
 
 <p>Authors of future SRFIs that specify libraries may choose names as
 they please, but they are encouraged to use library names following
@@ -505,9 +444,16 @@ named by <code>(streams)</code>, <code>(streams primitive)</code>, and
 <code>(streams derived)</code>, but according to this SRFI, they must
 also be named with the prefix <code>(srfi :41 *)</code>.
 
+<h2><a name="existing">Issues with existing SRFIs and R<sup>6</sup>RS</a></h2>
 
+<p>There are many issues involved in the use and implementation of
+some of the existing SRFIs in an R<sup>6</sup>RS or related system.
+This SRFI resolves none of them.</p>
 
-<h2>Relation to SRFIs 0 and 7</h2>
+<p>See the discussion archive and previous revisions of this document
+for a list of some of these issues.</p>
+
+<h2><a name="relation">Relation to SRFIs 0 and 7</a></h2>
 
 <p>Both SRFI 0, Feature-based conditional expansion construct, and
 SRFI 7, Feature-based program configuration language, use <em>feature
@@ -520,8 +466,8 @@ when using <code>srfi-N</code> feature identifiers."</p>
 use the SRFI names defined here as aliases.  SRFI feature identifiers
 are constructed by
 <ol>
-<li>interpolating library references with
-"<code>-</code>",</li>
+<li>interpolating library references with a hyphen
+(<code>-</code>),</li>
 <li>interpreting the SRFI number component of a library reference "<code>:<em>n</em></code>" as "<code><em>n</em></code>".</li>
 </ol>
 
@@ -548,19 +494,19 @@ R<sup>6</sup>RS-compatible systems.  Among them:</p>
 </ul>
 -->
 
-<h1>Implementation</h1>
+<h1><a name="implementation">Implementation</a></h1>
 
 There is no reference implementation as this SRFI only specifies a
 naming convention.
 
-<h1>Acknowledgments</h1>
+<h1><a name="acknowledgements">Acknowledgments</a></h1>
 
 <p>For discussions, I thank Will Clinger, Aziz Ghuloum, Dave Herman,
 Olin Shivers, Andre van Tonder, and my fellow SRFI editors.  I also
 thank all those who participated during the draft period of this SRFI.
 </p>
 
-<h1>References</h1>
+<h1><a name="references">References</a></h1>
 
 <dl>
      <dt class="ref">Revised<sup>6</sup> Report on the Algorithmic Language Scheme</dt>
@@ -601,7 +547,7 @@ https://code.launchpad.net/~ikarus-srfi-team/ikarus-libraries/srfi
 
 
 
-<h1>Copyright</h1>
+<h1><a name="copyright">Copyright</a></h1>
 Copyright (C) David Van Horn 2008. All Rights Reserved.
 <p>
 Permission is hereby granted, free of charge, to any person obtaining a
@@ -624,5 +570,8 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
 THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
     </p><hr>
-    <address>Editor: <a href="mailto:srfi minus editors at srfi dot schemers dot org">Donovan Kolby</a></address>
+    <address>Editor: <a href="mailto:srfi minus editors at srfi dot schemers dot org">Donovan Kolbly</a></address>
   </body></html>
+
+
+
