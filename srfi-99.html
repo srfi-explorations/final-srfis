@@ -59,7 +59,9 @@ the list.  You can access previous messages via
 
 <ul>
 <li>Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-99/srfi-99.html?rev=1.6">2008/06/03</a></li>
-<li>Draft: 2008/07/22-2008/09/22</li>
+<li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-99/srfi-99.html?rev=1.8">2009/08/28</a></li>
+<li>Draft extended: 2009/08/28-2009/09/28</li>
+
 </ul>
 
 <h1>Table of contents</h1>
@@ -177,7 +179,10 @@ This draft has not yet been submitted to the SRFI editors.
 In most programming languages, records (aka structures
 or classes) are important because they can package
 component values of different types into a single object.
-</p><p>Scheme's vectors and procedures provided that capability
+</p>
+
+<p>
+Scheme's vectors and procedures provided that capability
 already, but records remained important for two reasons:
 </p>
 
@@ -199,40 +204,97 @@ new feature of the R6RS, but the specific record systems
 that were proposed by the R6RS have been widely criticized.
 Over 30% of those who voted against ratification mentioned
 the record systems as one of their reasons.
-<sup><a href="#note-0">[1]</a></sup>
+<sup><a href="#note-1">[1]</a></sup>
 </p>
 
 <p>
+The ERR5RS record system described by this SRFI provides
+a simpler and fully portable alternative to the R6RS record
+system.
+The ERR5RS record system consists of
+</p>
+
+<div>
+<ul>
+<li>a syntactic layer, which is fully compatible with SRFI 9
+    but extends SRFI 9 with inheritance and with more succinct
+    syntax for common use cases</li>
+<li>a procedural layer, which is simpler and easier to use
+    than the procedural layer of R6RS records but remains
+    fully compatible with the R6RS procedural layer</li>
+<li>an inspection layer, which is simpler and easier to use
+    than the inspection layer of R6RS records but remains
+    fully compatible with the R6RS inspection layer</li>
+</ul>
+</div>
+
+<p>
+The ERR5RS record system does not mandate support for the
+non-generative, sealed, and/or opaque features of the R6RS
+record system.
+Implementations of this SRFI may extend the ERR5RS record
+system to support those features, however, and this SRFI
+recommends an API to implementations that support those
+features.
+With those extensions, the ERR5RS record system has the
+same expressive power as the R6RS record system.  Hence
+the record system described by this SRFI can serve as
+either or both of the following:
+</p>
+
+<div>
+<ul>
+<li>an efficient and relatively simple foundation for
+    implementing the R6RS record system</li>
+<li>a simpler and fully portable alternative to the R6RS
+    record system</li>
+</ul>
+</div>
+
+<p>
+<!--
 To improve upon this unsatisfactory outcome, we should
 first understand how it happened.
+-->
+The following subsections develop the rationale for this
+SRFI by considering
 </p>
+<div>
+<ul>
+<li>the history of records in Scheme before the R6RS</li>
+<li>R6RS records</li>
+<li>the design rationale for ERR5RS records</li>
+</ul>
+</div>
+
+<h2><a name="History">Records Before R6RS</a></h2>
 
 <p>
 The importance of adding records to Scheme has been
 recognized for more than twenty years.
-<sup><a href="#note-1">[2]</a></sup>
+<sup><a href="#note-2">[2]</a></sup>
 The basic idea behind the SRFI 9 and R6RS record systems
 was outlined by Norman Adams on 8 July 1987, following
 similar ideas that had been implemented in T and MIT CScheme.
-<sup><a href="#note-2">[3]</a></sup>
+<sup><a href="#note-3">[3]</a></sup>
 Jonathan Rees posted a revision of Adams's proposal on
 26 May 1988.
-<sup><a href="#note-3">[4]</a></sup>
+<sup><a href="#note-4">[4]</a></sup>
 Pavel Curtis proposed an extension of Rees's proposal
 on 18 August 1989, noting that it had been approved by
 consensus at the first meeting of BASH (Bay Area Scheme
 Hackers?).
-<sup><a href="#note-4">[5]</a></sup>
+<sup><a href="#note-5">[5]</a></sup>
 The <code>rrrs-authors</code> archive includes several responses to
 these proposals that are worth reading.
 </p>
 
 <p>
 The Rees/Curtis proposal was revived in 1992.
-<sup><a href="#note-5">[6]</a></sup>
+<sup><a href="#note-6">[6]</a></sup>
 When the RnRS authors met on 25 June 1992 in Palo Alto,
 they felt that this proposal needed more discussion.
-<sup><a href="#note-6">[7]</a></sup>
+<sup><a href="#note-7">[7]</a></sup>
 Kent Dybvig objected to the proposal on several grounds,
 including the provision of inspection facilities, the
 inability to define immutable records, and the use of
@@ -243,57 +305,93 @@ favored adoption of the records proposal, 11 opposed it.
 <p>
 The topic of records was revived again on 23 April 1996 by Bruce
 Duba, Matthew Flatt, and Shriram Krishnamurthi.
-<sup><a href="#note-7">[8]</a></sup>
+<sup><a href="#note-8">[8]</a></sup>
 Alan Bawden
 and Richard Kelsey observed that the Duba/Flatt/Krishnamurthi
 proposal was essentially the same as Pavel Curtis's, which
 Kelsey reposted.  Kent Dybvig objected once again, on the
-same three grounds, arguing (incorrectly) that procedural
+same three grounds.  He also argued that procedural
 interfaces are difficult to compile efficiently, and
-concluding (incorrectly) that this alleged inefficiency
-would create portability problems.
-<sup><a href="#note-8">[9]</a></sup>
+that this inefficiency would create portability problems.
+<sup><a href="#note-9">[9]</a></sup>
+</p>
+
+<p>
+In reality, however, procedural interfaces add no inefficiency.
+It is now agreed that syntactic interfaces offer no
+advantages for generative records.
+<sup><a href="#note-10">[10]</a></sup>
+Even for non-generative records, the claimed inefficiency
+consists of a single load instruction, which optimizing
+compilers can eliminate---along with the entire runtime check
+that includes the load instruction---for all but the first of
+a sequence of operations that access the same record.  (That
+optimization is a straightforward extension of the optimization
+that eliminates the pair check when computing the <code>cdr</code>
+of a list whose <code>car</code> has already been computed.)
+Furthermore, it turns out that
+even the occasional load instruction is no harder to remove
+using a procedural interface than when using a syntactic
+interface.
+<sup><a href="#note-11">[11]</a></sup>
+In R6RS library chapter 6, therefore, both of the statements that
+claim an advantage in efficiency for the syntactic layer have no
+basis in fact.  (These two statements appear in the next-to-last
+paragraph before section 6.1, and in the note that follows
+the specification of <code>parent-rtd</code>.)
+
 </p>
 
 <p>
 On 24 April 1996, Bill Rozas suggested the idea of having
 two separate APIs, one procedural and one syntactic, for
 the same record facility.
-<sup><a href="#note-9">[10]</a></sup>
+<sup><a href="#note-12">[12]</a></sup>
 Two days later, Dybvig proposed
-a "compromise" along those lines
-<sup><a href="#note-10">[11]</a></sup>
+a compromise along those lines
+<sup><a href="#note-13">[13]</a></sup>
 that incorporated several artificial restrictions,
-apparently because Dybvig feared his compiler
-would be unable to generate efficient code for the general
-case.
-<sup><a href="#note-11">[12]</a></sup>
+which were apparently motivated by concerns about
+the alleged extra load instruction.
+<sup><a href="#note-14">[14]</a></sup>
+Dybvig and Rozas continued to develop this proposal, and
+presented a summary of it following the 1998 Scheme Workshop.
+<sup><a href="#note-15">[15]</a></sup>
+I have been unable to locate a written or online copy of
+this proposal.
 </p>
 
 <p>
 SRFI 9, submitted by Richard Kelsey in July 1999, is a
 syntactic API in the tradition of the Rees, Curtis, and
 Duba/Flatt/Krishnamurthi proposals.
-<sup><a href="#note-12">[13]</a></sup>
+<sup><a href="#note-16">[16]</a></sup>
 </p>
 
 <p>
 Single inheritance was added by Larceny in 1998, and by
 Chez Scheme in 1999.
-<sup><a href="#note-13">[14]</a></sup>
+<sup><a href="#note-17">[17]</a></sup>
 </p>
 
 <p>
 SRFI 57, submitted by Andre van Tonder in September 2004,
 features label polymorphism, which can be considered a
 form of structural subtyping and multiple inheritance.
-<sup><a href="#note-14">[15]</a></sup>
+<sup><a href="#note-18">[18]</a></sup>
 </p>
+
+<h2><a name="R6RSrecords">R6RS Records</a></h2>
 
 <p>
 The R6RS proposes a three-layer single inheritance system,
 with syntactic, procedural, and inspection layers.
-<sup><a href="#note-15">[16]</a></sup>
+<sup><a href="#note-19">[19]</a></sup>
+</p>
+
+<h3><a name="R6RSprocedural">R6RS Records: procedural layer</a></h3>
+
+<p>
 The R6RS procedural layer generally requires at least three
 separate definitions for each level of inheritance: the
 record-type descriptor, at least one record-constructor
@@ -302,47 +400,202 @@ the record-type are to be created).
 </p>
 
 <p>
-Some attempts have been made to justify the complexity of
-the R6RS procedural layer by claiming that hardly anyone
-would actually use it;
-programmers who try to use the procedural layer would
-presumably give up in frustration and use the syntactic
-interface instead.
-Meanwhile, gratuitous design errors
-impede interoperation between procedural and syntactic
-layers, and several bogus claims about the inefficiency
-of higher order procedures were inserted into the very
-last public draft and were then ratified as part of the R6RS.
-<sup><a href="#note-16">[17]</a></sup>
+The (unratified) R6RS rationale
+<sup><a href="#note-20">[20]</a></sup>
+describes the
+constructor-descriptor mechanism as "an infrastructure
+for creating specialized constructors, rather than just
+creating default constructors that accept the initial
+values of all the fields as arguments.
+This infrastructure achieves full generality while
+leaving each level of an inheritance hierarchy in
+control over its own fields and allowing child record
+definitions to be abstracted away from the actual
+number and contents of parent fields."
+Neither the (ratified) R6RS library document nor the
+(unratified) R6RS rationale consider the fact that the
+constructor-descriptor mechanism adds unnecessary
+complexity to what is by far the most common case:
+record definitions that do not require specialized
+constructors.  Neither document considers the fact
+that the benefits of the constructor-descriptor
+mechanism are small even when specialized constructors
+are needed, as in the
+<a href="#Example1">first example below</a>.
 </p>
 
 <p>
-When it comes to records, there is no good reason for
-ERR5RS records or other SRFIs to strive for full
-bug-compatibility with the R6RS.  Fortunately, it
-is possible to design good APIs for records that
-interoperate well with the R6RS's procedural and
-inspection layers, even though the better APIs may differ
-from the R6RS APIs in several important respects.
+The R6RS library specification of records says that
+a record type is "specified by a record-type descriptor,
+which is an object that specifies the fields of the record
+and various other properties that all records of that type
+share."
+<sup><a href="#note-21">[21]</a></sup>
+Since the record-type descriptor is an object, it can be
+the value of a variable that is exported by a library.
+As discussed below, however, the R6RS syntactic layer uses
+a different notion of record type that libraries may not
+be able to export.
+</p>
+
+<h3><a name="R6RSsyntactic">R6RS Records: syntactic layer</a></h3>
+
+<p>
+The R6RS syntactic layer consists of a
+<code>define-record-type</code> syntax
+that is incompatible with the syntaxes of the same name
+defined by SRFI 9 and SRFI 99 (this SRFI).
 </p>
 
 <p>
-It is not possible to design APIs that interoperate
-well with both the R6RS syntactic and procedural layers,
-because the R6RS syntactic layer uses a fundamentally
-different notion of record type than the R6RS procedural
-layer.
-On the other hand, it is not hard to design a syntactic
-API that interoperates with the R6RS APIs at least as well
-as the R6RS APIs interoperate with each other.
+According to R6RS library section 6.2, an R6RS
+<code>define-record-type</code> form binds the record name
+"to an expand-time or run-time representation of the record
+type [that] can be used as parent name in syntactic
+record-type definitions that extend this definition.
+It can also be used as a handle to gain access to the
+underlying record-type descriptor and constructor
+descriptor".
 </p>
 
 <p>
-The ERR5RS syntactic layer is therefore based upon the
+Note that portable code cannot assume the record name is
+bound to a record-type descriptor.  Portable code can only
+assume that the record name is bound to "an expand-time
+or run-time representation", whose semantics is not otherwise explained
+by the R6RS and R6RS library documents.  In particular,
+portable code cannot assume that the record name can be
+exported by a library; libraries can export names that
+are bound to objects or to syntax, but the R6RS does not
+require the thing to which a record name is bound to be
+either of those things.
+</p>
+
+<p>
+The mysterious entity to which a record name is bound can
+be used as a handle to recover a record-type descriptor or
+constructor descriptor by using the
+<code>record-type-descriptor</code> or
+<code>record-constructor-descriptor</code> syntaxes,
+respectively.  The recovered record-type descriptor and
+constructor descriptor may be exported from a library,
+and that is apparently the only portable way for a library
+to export an R6RS record type that was defined using the
+R6RS syntactic layer.
+</p>
+
+<p>
+The recovered record-type descriptor and constructor
+descriptor also provide a way for the procedural layer
+to define new record types that inherit from record
+types defined by the syntactic layer.
+Similarly, it is possible for the syntactic layer to
+use a <code>parent-rtd</code> clause to define new
+record types that inherit from record types defined
+by the procedural layer.
+</p>
+
+<p>
+The two notions of record type that are used by the
+procedural and syntactic layers are not interchangeable,
+however.  In either direction, defining a new record type
+that inherits from some previously defined record type
+requires the programmer to know whether the previously
+defined record type was defined using the procedural or
+the syntactic layer.
+If the procedural and syntactic layers of the R6RS
+were fully compatible, then changing a record type
+definition from procedural to syntactic (or vice versa)
+would be transparent to clients.  As the R6RS record
+facility is defined, however, that minor change will
+break all code that inherits from the record type.
+</p>
+
+<p>
+R6RS library chapter 6 attempts to excuse that incompatibility,
+and the interoperability and maintenance problems that
+result from it, on the basis of efficiency.
+Recall, however, that the claimed efficiency of the R6RS
+syntactic layer is illusory.  In reality, the R6RS design
+offers no advantages over a simpler and more orthogonal
+design (such as the one specified by this SRFI) in which
+the syntactic and procedural layers both use the same
+notion of record type.
+</p>
+
+<p>
+The problems described above were known and had been
+documented before the R6RS documents were put to a vote,
+but the R6RS documents were ratified anyway.
+<sup><a href="#note-22">[22]</a></sup>
+At this point, the best that can be done is to use the
+SRFI process to specify a better record facility, and
+to warn programmers of the problems they will encounter
+if they use the record facilities described within the
+R6RS library document.
+</p>
+
+<h2><a name="DesignRationale">Design Rationale for ERR5RS Records</a></h2>
+
+<p>
+The ERR5RS syntactic layer described by this SRFI
+is based upon the
 Rees/Curtis/Duba/Flatt/Krishnamurthi/Kelsey/SRFI-9
 tradition, changing only a few details to improve
 interoperability with records defined by the ERR5RS
 and R6RS procedural layers.
+</p>
+
+<p>
+The <code>define-record-type</code> syntax specified by
+this SRFI is compatible with and extends SRFI 9, which
+is one of the more widely accepted SRFIs.
+The extensions include single inheritance and (optional)
+implicit naming, along with succinct abbreviations for
+specifying whether a field is immutable or mutable.
+</p>
+
+<p>
+The procedural layer specified by this SRFI is fully
+compatible with its <code>define-record-type</code> syntax.
+Both the procedural and syntactic layers can define new
+record types that inherit from previously defined record
+types without requiring programmers to know which layer
+was used to define the parent type.
+</p>
+
+<p>
+In implementations of the R6RS, a SRFI 99 record type
+coincides with the R6RS notion of a record-type descriptor.
+Portable libraries can safely export SRFI 99 record types
+even if they were defined using the syntactic layer of
+SRFI 99.
+</p>
+
+<p>
+In procedure names, SRFI 99 uses <code>rtd</code> as
+an abbreviation for record-type descriptor.  This naming
+convention prevents name clashes between SRFI 99 and the
+R6RS procedural and inspection layers, which makes it
+easier for R6RS programs to import SRFI 99 libraries.
+R6RS programs must take care when importing the R6RS
+syntactic layer, however, because that library's exports
+conflict with both SRFI 9 and with SRFI 99.
+</p>
+
+<p>
+When implemented properly, SRFI 99 records will be just
+as efficient as R6RS records.  SRFI 99 is simpler than
+R6RS records, both in specification and in implementation.
+SRFI 99 is strictly less powerful than the R6RS records
+facility because SRFI 99 does not require implementations
+to provide sealed, opaque, or non-generative records.
+On the other hand, SRFI 99 describes three optional
+extensions (the <code>sealed</code>, <code>opaque</code>,
+and <code>uid</code> arguments to <code>make-rtd</code>)
+that would give SRFI 99 the same power as R6RS records.
+With those three extensions, SRFI 99 becomes a simple
+and efficient foundation for implementing R6RS records.
 </p>
 
 <p>
@@ -356,25 +609,41 @@ between SRFI 9, ERR5RS, and the procedural and
 inspection layers of R6RS records.
 </p>
 
+<!--
+<h2><a name="ERR5RSgeneral">Relationship to ERR5RS</a></h2>
 
-
+<p>
+FIXME
+</p>
+-->
 
 
 <h1><a name="Specification">Specification</a></h1>
 
 <p>
-The specification is divided into three layers,
-which correspond to the following standard libraries
-of ERR5RS:
+All implementations of SRFI 99 must provide the
+following libraries:
 </p>
 
-<div>
-<ul>
-<li><code>(err5rs records procedural)</code></li>
-<li><code>(err5rs records inspection)</code></li>
-<li><code>(err5rs records syntactic)</code></li>
-</ul>
-</div>
+<pre>
+    (srfi :99)                       ; alias for (srfi :99 records)
+    (srfi :99 records)               ; composite of the next three
+    (srfi :99 records procedural)
+    (srfi :99 records inspection)
+    (srfi :99 records syntactic)
+</pre>
+
+<p>
+Implementations of ERR5RS should provide the following aliases
+as well:
+</p>
+
+<pre>
+    (err5rs records)                 ; alias for (srfi :99 records)
+    (err5rs records procedural)      ; alias for (srfi :99 records procedural)
+    (err5rs records inspection)      ; alias for (srfi :99 records inspection)
+    (err5rs records syntactic)       ; alias for (srfi :99 records syntactic)
+</pre>
 
 <p>
 The specification also describes how Scheme's standard
@@ -388,7 +657,7 @@ When the following specification says that a procedure
 is said to be equivalent to some R6RS procedure, the
 equivalence holds only when all arguments have the
 properties required of them by the R6RS specification.
-ERR5RS does not mandate the R6RS exception semantics
+Neither ERR5RS nor this SRFI mandate the R6RS exception semantics
 for programs that violate the specification.
 </p>
 
@@ -397,6 +666,11 @@ for programs that violate the specification.
 <h2>
 <a name="ProceduralLayer">Procedural Layer</a>
 </h2>
+
+<p>
+The <code>(srfi :99 records procedural)</code> library
+exports the following procedures.
+</p>
 
 <p><code>(make-rtd <i>name</i> <i>fieldspecs</i>)</code></p>
 <p><code>(make-rtd <i>name</i> <i>fieldspecs</i> <i>parent</i>)</code></p>
@@ -518,7 +792,7 @@ ERR5RS inspection layer by:
 <div>
 <pre>
     (define (rtd-constructor rtd . rest)
-
+    
      &nbsp;; Computes permutation and allocates permutation buffer
      &nbsp;; when the constructor is created, not when the constructor
      &nbsp;; is called.  More error checking is recommended.
@@ -526,16 +800,16 @@ ERR5RS inspection layer by:
       (define (make-constructor fieldspecs allnames maker)
         (let* ((k (length fieldspecs))
                (n (length allnames))
-               (buffer (make-vector n 'some-unspecified-value))
+               (buffer (make-vector n (unspecified)))
                (reverse-all-names (reverse allnames)))
-
+    
           (define (position fieldname)
             (let ((names (memq fieldname reverse-all-names)))
               (assert names)
               (- (length names) 1)))
-
+    
           (let ((indexes (map position fieldspecs)))
-
+    
            &nbsp;; The following can be made quite efficient by
            &nbsp;; hand-coding it in some lower-level language,
            &nbsp;; e.g. Larceny's mal.  Even case-lambda would
@@ -547,14 +821,14 @@ ERR5RS inspection layer by:
                           (vector-set! buffer posn arg))
                         args indexes)
               (apply maker (vector-&gt;list buffer))))))
-
+    
       (if (null? rest)
           (record-constructor
            (make-record-constructor-descriptor rtd #f #f))
           (begin (assert (null? (cdr rest)))
                  (make-constructor
                   (vector-&gt;list (car rest))
-                  (vector-&gt;list (record-type-all-field-names rtd))
+                  (vector-&gt;list (rtd-all-field-names rtd))
                   (record-constructor
                    (make-record-constructor-descriptor rtd #f #f))))))
 </pre>
@@ -606,12 +880,8 @@ name in a parent record-type.
 </h2>
 
 <p>
-When a procedure is said to be equivalent to an
-R6RS procedure, the equivalence holds only when all
-arguments have the properties required of them by
-the R6RS specification.  ERR5RS does not mandate
-the R6RS exception semantics for programs that
-violate the specification.
+The <code>(srfi :99 records inspection)</code> library
+exports the following procedures.
 </p>
 
 <p>
@@ -717,6 +987,11 @@ All ERR5RS record-type definitions are generative,
 but ERR5RS drops the SRFI 9 restriction to top level,
 mainly because the R6RS allows generative definitions
 wherever a definition may appear.
+</p>
+
+<p>
+The <code>(srfi :99 records syntactic)</code> library
+exports the <code>define-record-type</code> syntax specified below.
 </p>
 
 <p>
@@ -845,9 +1120,20 @@ added by this record-type definition.
 if and only if they were created by the same (dynamic)
 call to some record constructor.  Two ERR5RS records
 are <code>eq?</code> if and only if they are
-<code>eqv?</code>.  Two ERR5RS records
-are <code>equal?</code> if and only if they are
 <code>eqv?</code>.  
+</p>
+
+<p>
+Two ERR5RS records for which the <code>record?</code>
+predicate returns true
+are <code>equal?</code> if and only if they are
+<code>eqv?</code>.
+This SRFI does not specify the semantics of <code>equal?</code>
+on opaque records, which are not required by this SRFI.
+(The R6RS requires <code>equal?</code> and <code>eqv?</code>
+to behave the same on all records, unless the records happen
+to be opaque records that represent pairs, vectors, strings,
+or bytevectors.)
 </p>
 
 <dl><dd>(Historical note:  Pavel Curtis proposed that
@@ -877,6 +1163,10 @@ the R6RS and ERR5RS record systems, especially since these two
 examples were designed to highlight the use of R6RS
 record-constructor descriptors in combination with inheritance.
 </p>
+
+<h2>
+<a name="Example1">Example 1</a>
+</h2>
 
 <p>
 Using ERR5RS records, the first example becomes:
@@ -945,6 +1235,10 @@ to procedural abstraction when eliminating the duplication of
 code seen in <code>make-point/abs</code> and
 <code>make-cpoint/abs</code> below.
 </p>
+
+<h2>
+<a name="Example2">Example 2</a>
+</h2>
 
 <p>
 The second example illustrates the shadowing of fields in a
@@ -1026,355 +1320,11 @@ ERR5RS records, the second example becomes:
 <a name="ReferenceImplementation">Reference Implementation</a>
 </h1>
 
-<pre>
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;
-; ERR5RS Records.
-;
-; This is a quick-and-dirty reference implementation that favors
-; simplicity over quality error messages and performance.  It is
-; implemented using the R6RS procedural and inspection layers,
-; with which it interoperates nicely.
-;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; This library breaks a circular interdependence between the
-; procedural and inspection layers.
-
-(library (err5rs-helpers records rtd?)
-  (export rtd?)
-  (import (rnrs base) (rnrs records procedural))
-
-  (define rtd? record-type-descriptor?)
-
-  )
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;
-; (err5rs records inspection)
-;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  
-(library (err5rs records inspection)
-
-  (export record? record-rtd
-          rtd-name rtd-parent
-          rtd-field-names rtd-all-field-names rtd-field-mutable?)
-
-  (import (rnrs base)
-          (rnrs lists)
-          (rnrs records inspection)
-          (err5rs-helpers records rtd?))
-
-  ; The record? predicate is already defined by (rnrs records inspection).
-  
-  ; The record-rtd procedure is already defined by (rnrs records inspection).
-  
-  (define rtd-name record-type-name)
-  
-  (define rtd-parent record-type-parent)
-  
-  (define rtd-field-names record-type-field-names)
-  
-  (define (rtd-all-field-names rtd)
-    (define (loop rtd othernames)
-      (let ((parent (rtd-parent rtd))
-            (names (append (vector->list
-                            (rtd-field-names rtd))
-                           othernames)))
-        (if parent
-            (loop parent names)
-            (list->vector names))))
-    (loop rtd '()))
-  
-  (define (rtd-field-mutable? rtd0 fieldname)
-    (define (loop rtd)
-      (if (rtd? rtd)
-          (let* ((names (vector->list (rtd-field-names rtd)))
-                 (probe (memq fieldname names)))
-            (if probe
-                (record-field-mutable? rtd (- (length names) (length probe)))
-                (loop (rtd-parent rtd))))
-          (assertion-violation 'rtd-field-mutable?
-                               "illegal argument" rtd0 fieldname)))
-    (loop rtd0))
-
-  )
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;
-; (err5rs records procedural)
-;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(library (err5rs records procedural)
-
-  (export make-rtd rtd? rtd-constructor
-          rtd-predicate rtd-accessor rtd-mutator)
-
-  (import (rnrs base)
-          (rnrs lists)
-          (rnrs records procedural)
-          (err5rs records inspection))
-
-  ; Note: the options are permitted by ERR5RS,
-  ; but are not part of ERR5RS.
-
-  (define (make-rtd name fieldspecs . rest)
-    (let* ((parent (if (null? rest) #f (car rest)))
-           (options (if (null? rest) '() (cdr rest)))
-           (sealed? (and (memq 'sealed options) #t))
-           (opaque? (and (memq 'opaque options) #t))
-           (uid (let ((probe (memq 'uid options)))
-                  (if (and probe (not (null? (cdr probe))))
-                      (cadr probe)
-                      #f))))
-      (make-record-type-descriptor
-       name
-       parent
-       uid
-       sealed?
-       opaque?
-       (vector-map (lambda (fieldspec)
-                     (if (symbol? fieldspec)
-                         (list 'mutable fieldspec)
-                         fieldspec))
-                   fieldspecs))))
-  
-  (define rtd? record-type-descriptor?)
-  
-  (define (rtd-constructor rtd . rest)
-  
-    ; Computes permutation and allocates permutation buffer
-    ; when the constructor is created, not when the constructor
-    ; is called.  More error checking is recommended.
-  
-    (define (make-constructor fieldspecs allnames maker)
-      (let* ((k (length fieldspecs))
-             (n (length allnames))
-             (buffer (make-vector n))
-             (reverse-all-names (reverse allnames)))
-  
-        (define (position fieldname)
-          (let ((names (memq fieldname reverse-all-names)))
-            (assert names)
-            (- (length names) 1)))
-  
-        (let ((indexes (map position fieldspecs)))
-  
-          ; The following can be made quite efficient by
-          ; hand-coding it in some lower-level language,
-          ; e.g. Larceny's mal.  Even case-lambda would
-          ; be good enough in most systems.
-  
-          (lambda args
-            (assert (= (length args) k))
-            (for-each (lambda (arg posn)
-                        (vector-set! buffer posn arg))
-                      args indexes)
-            (apply maker (vector->list buffer))))))
-  
-    (if (null? rest)
-        (record-constructor
-         (make-record-constructor-descriptor rtd #f #f))
-        (begin (assert (null? (cdr rest)))
-               (make-constructor
-                (vector->list (car rest))
-                (vector->list (rtd-all-field-names rtd))
-                (record-constructor
-                 (make-record-constructor-descriptor rtd #f #f))))))
-  
-  (define rtd-predicate record-predicate)
-  
-  (define (rtd-accessor rtd0 fieldname)
-    (define (loop rtd)
-      (if (rtd? rtd)
-          (let* ((names (vector->list (rtd-field-names rtd)))
-                 (probe (memq fieldname names)))
-            (if probe
-                (record-accessor rtd (- (length names) (length probe)))
-                (loop (rtd-parent rtd))))
-          (assertion-violation 'rtd-accessor
-                               "illegal argument" rtd0 fieldname)))
-    (loop rtd0))
-  
-  (define (rtd-mutator rtd0 fieldname)
-    (define (loop rtd)
-      (if (rtd? rtd)
-          (let* ((names (vector->list (rtd-field-names rtd)))
-                 (probe (memq fieldname names)))
-            (if probe
-                (record-mutator rtd (- (length names) (length probe)))
-                (loop (rtd-parent rtd))))
-          (assertion-violation 'rtd-mutator
-                               "illegal argument" rtd0 fieldname)))
-    (loop rtd0))
-
-  )
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;
-; ERR5RS records, syntactic layer.
-;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(library (err5rs records syntactic)
-
-  (export define-record-type)
-
-  (import (for (rnrs base) run expand)
-          (for (rnrs lists) run expand)
-          (for (rnrs syntax-case) run expand)
-          (err5rs records procedural))
-
-  (define-syntax define-record-type
-    (syntax-rules ()
-     ((_ (type-name parent) constructor-spec predicate-spec . field-specs)
-      (define-record-type-helper0
-       type-name parent constructor-spec predicate-spec . field-specs))
-     ((_ type-name constructor-spec predicate-spec . field-specs)
-      (define-record-type-helper0
-       type-name #f constructor-spec predicate-spec . field-specs))))
-
-  (define-syntax define-record-type-helper0
-    (lambda (x)
-      (define (complain)
-        (syntax-violation 'define-record-type "illegal syntax" x))
-      (syntax-case x ()
-       ((_ tname pname constructor-spec predicate-spec . field-specs)
-        (let* ((type-name (syntax->datum #'tname))
-               (parent (syntax->datum #'pname))
-               (cspec (syntax->datum #'constructor-spec))
-               (pspec (syntax->datum #'predicate-spec))
-               (fspecs (syntax->datum #'field-specs))
-               (type-name-string
-                (begin (if (not (symbol? type-name))
-                           (complain))
-                       (symbol->string type-name)))
-               (constructor-name
-                (cond ((eq? cspec #f)
-                       #f)
-                      ((eq? cspec #t)
-                       (string->symbol
-                        (string-append "make-" type-name-string)))
-                      ((symbol? cspec)
-                       cspec)
-                      ((pair? cspec)
-                       (car cspec))
-                      (else (complain))))
-               (constructor-args
-                (cond ((pair? cspec)
-                       (if (not (for-all symbol? cspec))
-                           (complain)
-                           (list->vector (cdr cspec))))
-                      (else #f)))
-               (predicate-name
-                (cond ((eq? pspec #f)
-                       #f)
-                      ((eq? pspec #t)
-                       (string->symbol
-                        (string-append type-name-string "?")))
-                      ((symbol? pspec)
-                       pspec)
-                      (else (complain))))
-               (field-specs
-                (map (lambda (fspec)
-                       (cond ((symbol? fspec)
-                              (list 'immutable
-                                    fspec
-                                    (string->symbol
-                                     (string-append
-                                      type-name-string
-                                      "-"
-                                      (symbol->string fspec)))))
-                             ((not (pair? fspec))
-                              (complain))
-                             ((not (list? fspec))
-                              (complain))
-                             ((not (for-all symbol? fspec))
-                              (complain))
-                             ((null? (cdr fspec))
-                              (list 'mutable
-                                    (car fspec)
-                                    (string->symbol
-                                     (string-append
-                                      type-name-string
-                                      "-"
-                                      (symbol->string (car fspec))))
-                                    (string->symbol
-                                     (string-append
-                                      type-name-string
-                                      "-"
-                                      (symbol->string (car fspec))
-                                      "-set!"))))
-                             ((null? (cddr fspec))
-                              (list 'immutable
-                                    (car fspec)
-                                    (cadr fspec)))
-                             ((null? (cdddr fspec))
-                              (cons 'mutable fspec))
-                             (else (complain))))
-                     fspecs))
-  
-               (fields (list->vector (map cadr field-specs)))
-  
-               (accessor-fields
-                (map (lambda (x) (list (caddr x) (cadr x)))
-                     (filter (lambda (x) (>= (length x) 3))
-                             field-specs)))
-  
-               (mutator-fields
-                (map (lambda (x) (list (cadddr x) (cadr x)))
-                     (filter (lambda (x) (= (length x) 4))
-                             field-specs))))
-  
-          (datum->syntax
-           #'tname
-           `(,#'define-record-type-helper
-             ,type-name ,fields ,parent
-             ,(if constructor-args
-                  (list constructor-name constructor-args)
-                  constructor-name)
-             ,predicate-name
-             ,accessor-fields ,mutator-fields)))))))
-  
-  (define-syntax define-record-type-helper
-    (syntax-rules ()
-  
-     ((_ type-name fields parent #f predicate
-         ((accessor field) ...) ((mutator mutable-field) ...))
-      (define-record-type-helper
-       type-name fields parent ignored predicate
-       ((accessor field) ...) ((mutator mutable-field) ...)))
-  
-     ((_ type-name fields parent constructor #f
-         ((accessor field) ...) ((mutator mutable-field) ...))
-      (define-record-type-helper
-       type-name fields parent constructor ignored
-       ((accessor field) ...) ((mutator mutable-field) ...)))
-  
-     ((_ type-name fields parent (constructor args) predicate
-         ((accessor field) ...) ((mutator mutable-field) ...))
-      (begin (define type-name (make-rtd 'type-name 'fields parent))
-             (define constructor (rtd-constructor type-name 'args))
-             (define predicate (rtd-predicate type-name))
-             (define accessor (rtd-accessor type-name 'field))
-             ...
-             (define mutator (rtd-mutator type-name 'mutable-field))
-             ...))
-  
-     ((_ type-name fields parent constructor predicate
-         ((accessor field) ...) ((mutator mutable-field) ...))
-      (begin (define type-name (make-rtd 'type-name 'fields parent))
-             (define constructor (rtd-constructor type-name))
-             (define predicate (rtd-predicate type-name))
-             (define accessor (rtd-accessor type-name 'field))
-             ...
-             (define mutator (rtd-mutator type-name 'mutable-field))
-             ...))))
-
-  ) ; err5rs records syntactic
-</pre>
+<p>
+To simplify maintenance, the
+<a href="srfi-99.sls">reference implementation</a>
+is provided separately.
+</p>
 
 <hr />
 
@@ -1384,39 +1334,50 @@ ERR5RS records, the second example becomes:
 </h1>
 
 <ol>
-<li><a name="note-0"></a>
-    <a href="http://www.r6rs.org/ratification/results.html">http://www.r6rs.org/ratification/results.html</a></li>
 <li><a name="note-1"></a>
-    <a href="http://swiss.csail.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1987/msg00135.html">http://swiss.csail.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1987/msg00135.html</a></li>
+    <a href="http://www.r6rs.org/ratification/results.html">http://www.r6rs.org/ratification/results.html</a></li>
 <li><a name="note-2"></a>
-    <a href="http://swiss.csail.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1987/msg00131.html">http://swiss.csail.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1987/msg00131.html</a></li>
+    <a href="http://swiss.csail.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1987/msg00135.html">http://swiss.csail.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1987/msg00135.html</a></li>
 <li><a name="note-3"></a>
-    <a href="http://swiss.csail.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1988/msg00155.html">http://swiss.csail.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1988/msg00155.html</a></li>
+    <a href="http://swiss.csail.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1987/msg00131.html">http://swiss.csail.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1987/msg00131.html</a></li>
 <li><a name="note-4"></a>
-    <a href="http://www-swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1989/msg00147.html">http://www-swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1989/msg00147.html</a></li>
+    <a href="http://swiss.csail.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1988/msg00155.html">http://swiss.csail.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1988/msg00155.html</a></li>
 <li><a name="note-5"></a>
-    <a href="http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1992/msg00036.html">http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1992/msg00036.html</a></li>
+    <a href="http://www-swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1989/msg00147.html">http://www-swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1989/msg00147.html</a></li>
 <li><a name="note-6"></a>
-    <a href="http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1992/msg00199.html">http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1992/msg00199.html</a></li>
+    <a href="http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1992/msg00036.html">http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1992/msg00036.html</a></li>
 <li><a name="note-7"></a>
-    <a href="http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00086.html">http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00086.html</a></li>
+    <a href="http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1992/msg00199.html">http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1992/msg00199.html</a></li>
 <li><a name="note-8"></a>
-    <a href="http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00101.html">http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00101.html</a></li>
+    <a href="http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00086.html">http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00086.html</a></li>
 <li><a name="note-9"></a>
-    <a href="http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00103.html">http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00103.html</a></li>
+    <a href="http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00101.html">http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00101.html</a></li>
 <li><a name="note-10"></a>
-    <a href="http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00115.html">http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00115.html</a></li>
+    <a href="http://lists.r6rs.org/pipermail/r6rs-discuss/2007-July/003093.html">http://lists.r6rs.org/pipermail/r6rs-discuss/2007-July/003093.html</a></li>
 <li><a name="note-11"></a>
-    <a href="http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00124.html">http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00124.html</a></li>
+    <a href="http://lists.r6rs.org/pipermail/r6rs-discuss/2007-July/003092.html
+">http://lists.r6rs.org/pipermail/r6rs-discuss/2007-July/003092.html</a></li>
 <li><a name="note-12"></a>
-    <a href="http://srfi.schemers.org/srfi-9/srfi-9.html">http://srfi.schemers.org/srfi-9/srfi-9.html</a></li>
+    <a href="http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00103.html">http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00103.html</a></li>
 <li><a name="note-13"></a>
-    <a href="http://srfi.schemers.org/srfi-76/srfi-76.html">http://srfi.schemers.org/srfi-76/srfi-76.html</a></li>
+    <a href="http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00115.html">http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00115.html</a></li>
 <li><a name="note-14"></a>
-    <a href="http://srfi.schemers.org/srfi-57/srfi-57.html">http://srfi.schemers.org/srfi-57/srfi-57.html</a></li>
+    <a href="http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00124.html">http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1996/msg00124.html</a></li>
 <li><a name="note-15"></a>
-    <a href="http://www.r6rs.org/">http://www.r6rs.org/</a></li>
+    <a href="http://schemers.org/Events/Workshops/Sep1998/minutes">http://schemers.org/Events/Workshops/Sep1998/minutes</a></li>
 <li><a name="note-16"></a>
+    <a href="http://srfi.schemers.org/srfi-9/srfi-9.html">http://srfi.schemers.org/srfi-9/srfi-9.html</a></li>
+<li><a name="note-17"></a>
+    <a href="http://srfi.schemers.org/srfi-76/srfi-76.html">http://srfi.schemers.org/srfi-76/srfi-76.html</a></li>
+<li><a name="note-18"></a>
+    <a href="http://srfi.schemers.org/srfi-57/srfi-57.html">http://srfi.schemers.org/srfi-57/srfi-57.html</a></li>
+<li><a name="note-19"></a>
+    <a href="http://www.r6rs.org/">http://www.r6rs.org/</a></li>
+<li><a name="note-20"></a>
+    <a href="http:http://www.r6rs.org/final/html/r6rs-rationale/r6rs-rationale.html">http://www.r6rs.org/final/html/r6rs-rationale/r6rs-rationale.html</a></li>
+<li><a name="note-21"></a>
+    <a href="http://www.r6rs.org/final/html/r6rs-lib/r6rs-lib.html">http://www.r6rs.org/final/html/r6rs-lib/r6rs-lib.html</a></li>
+<li><a name="note-22"></a>
     <a href="http://www.r6rs.org/ratification/results.html">http://www.r6rs.org/ratification/results.html</a></li></ol>
 
 <hr />
@@ -1430,8 +1391,8 @@ ERR5RS records, the second example becomes:
 I am grateful to David Rush and Andre van Tonder for their
 comments and criticisms, as well as to all those mentioned
 by name in the <a href="#Rationale">Rationale</a>.
-The <a href="#ReferenceImplementation">reference implementation</a>
-is from Larceny v0.96.
+The <a href="srfi-99.sls">reference implementation</a>
+is adapted from Larceny v0.97.
 </p>
 
 <hr />
