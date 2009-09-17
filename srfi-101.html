@@ -1,0 +1,746 @@
+<!DOCTYPE html PUBLIC
+    "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<!-- !DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html40/loose.dtd" -->
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+<title>SRFI 101: Purely Functional Random-Access Pairs and Lists</title>
+<style type="text/css">
+body { 
+   width: 7in;
+   margin: 30pt;
+}
+</style>
+</head>
+<body>
+
+<!-- This commented out text is for the brittle SRFI tools -->
+<!--
+<H1>Title</H1>
+
+Purely Functional Random-Access Pairs and Lists
+
+<H1>Author</H1>
+
+David Van Horn
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status.
+-->
+
+<!-- This is the real, valid XHTML text -->
+<h1>Title</h1>
+
+<p>Purely Functional Random-Access Pairs and Lists</p>
+
+<h1>Author</h1>
+
+<p>David Van Horn</p>
+
+<h1>Status</h1>
+
+<p>
+This SRFI is currently in ``draft'' status.  To see an explanation of
+each status that a SRFI can hold, see <a
+href="http://srfi.schemers.org/srfi-process.html">here</a>.
+
+To provide input on this SRFI, please 
+<a href="mailto:srfi-101 at srfi dot schemers dot org">mail to
+<code>&lt;srfi minus 101 at srfi dot schemers dot org&gt;</code></a>.  See 
+<a href="../srfi-list-subscribe.html">instructions here</a> to
+subscribe to the list.  You can access previous messages via
+<a href="mail-archive/maillist.html">the archive of the mailing list</a>.
+</p>
+
+<ul>
+<li>Received: 2009/09/09</li>
+<li>Draft: 2009/09/16-2009/11/16</li>
+</ul>
+
+<h1>Table of contents</h1>
+
+<ul>
+  <li><a href="#Abstract">Abstract</a></li>
+  <li><a href="#Issues">Issues</a></li>
+  <li><a href="#Rationale">Rationale</a></li>
+  <li><a href="#Specification">Specification</a></li>
+  <li><a href="#ReferenceImplementation">Reference Implementation</a></li>
+  <li><a href="#References">References</a></li>
+  <li><a href="#Acknowledgements">Acknowledgements</a></li>
+  <li><a href="#Copyright">Copyright</a></li>
+</ul>
+
+
+
+<h1><a name="Abstract">Abstract</a></h1>
+
+<p>
+Random-access lists [<a href="#note-1">1</a>] are a purely functional
+data structure for representing lists of values. A random-access list
+may act as a drop in replacement for the usual sequential pair and
+list data structures
+(<code>pair?</code>, <code>cons</code>, <code>car</code>, <code>cdr</code>),
+which additionally supports fast index-based addressing and updating
+(<code>list-ref</code>, <code>list-set</code>).  The impact is a whole
+class of purely-functional algorithms expressed in terms of
+index-based list addressing become feasible compared with their
+sequential list counterparts.
+</p>
+
+
+<p>
+This document proposes a library API for purely functional
+random-access lists consistent with the R<sup>6</sup>RS
+[<a href="#note-2">2</a>] base library and list utility standard
+library [<a href="#note-3">3</a>].
+</p>
+
+<h1><a name="Issues">Issues</a></h1>
+
+<div>
+<ul>
+  <li>
+    Should the algorithmic characterizations be tightened as in
+    Okasaki, i.e., should <code>list-ref</code>, <code>list-set</code>
+    operations be required to be <em>O(min(i,log n))</em> or <em>O(log
+      n)</em>?  The latter allows for many of the implementation
+    requirements on argument checking mandated by R6RS to be done
+    naively.
+  </li>
+  <li>
+    Procedure names have been chosen to be consistent with R6RS, even
+    though in some cases such as <code>list-ref</code>
+    and <code>list-tail</code> the choice seems poor since they
+    include the prefix <code>list-</code> even though they do not
+    operate on lists, but chains of pairs, i.e. lists and improper
+    lists, and arbitrary objects, respectively.  Although the names
+    have remained the same, the descriptions have been corrected
+    (e.g. using <em>pair</em> or <em>obj</em> instead of <em>list</em>
+    for parameter names).  Should the names be changed as well?
+  </li>
+</ul>
+</div>
+
+<h1><a name="Rationale">Rationale</a></h1>
+
+<p>
+Functional programming and list hacking go together like peanut butter
+and jelly, eval and apply, syntax and semantics, or cursing and
+recursing. But the traditional approach to implementing pairs and
+lists results in index-based access (<code>list-ref</code>) requiring
+time proportional the index being accessed.  Moreover, indexed-based
+functional update (<code>list-set</code>) becomes so inefficient as to
+be nearly unspeakable.  Instead, programmers revert the imperatives of
+the state; they use a stateful data structure and imperative
+algorithms.
+</p>
+
+<p>
+This SRFI intends to improve the situation by offering an alternative
+implementation strategy based on Okasaki's purely functional
+random-access lists [<a href="#note-1">1</a>].  Random-access pairs
+and lists can be used as a replacement for traditional, sequential
+pairs and lists with no asymptotic loss of efficiency.  In other
+words, the typical list and pair operations such
+as <code>cons</code>, <code>car</code>, and <code>cdr</code>, all
+operate in <em>O(1)</em> time as usual.  However, random-access lists
+additionally support index-based access and functional update
+operations that are asymptotically cheaper; <em>O(log n)</em> for
+random-access lists versus <em>O(n)</em> for sequential-access lists,
+where <em>n</em> is the length of the list being access or updated.
+As such, many purely functional index-based list algorithms become
+feasible by using a random-access list representation for pairs and
+lists.
+</p>
+
+<p>
+The requirements of this SRFI have been designed in such a way as to
+admit portable library implementations of this feature, such as the
+reference implementation, while at the same time admit more radical
+implementations that embrace random-access pairs as the fundamental
+pair representation.
+</p>
+
+<h1><a name="Specification">Specification</a></h1>
+
+<p>
+A <em>random-access pair</em> (or just <em>pair</em>) is a compound
+structure with two fields called the car and the cdr fields
+(consistent with the historical naming of pair fields in Scheme).
+Pairs are created by the procedure <code>cons</code>.  The car and cdr
+fields are accessed by the procedures <code>car</code>
+and <code>cdr</code>.
+</p>
+
+<p>
+Pairs are used primarily to represents lists.  A list can be defined
+recursively as either the empty list or a pair whose cdr is a list.
+More precisely, the set of lists is defined as the smallest
+set <em>X</em> such that</p>
+<ul>
+  <li>The empty list is in <em>X</em>.</li>
+  <li>If <em>list</em> is in <em>X</em>, then any pair whose cdr field
+  contains <em>list</em> is also in <em>X</em>.</li>
+</ul>
+
+
+<p>
+The objects in the car fields of successive pairs of a list are the
+elements of the list. For example, a two-element list is a pair whose
+car is the first element and whose cdr is a pair whose car is the
+second element and whose cdr is the empty list. The length of a list
+is the number of elements, which is the same as the number of pairs.
+</p>
+
+<p>
+The empty list is a special object of its own type. It is not a
+pair. It has no elements and its length is zero.
+</p>
+
+<blockquote>
+  <p>
+    <em>Note:</em> The above definitions imply that all lists have
+    finite length and are terminated by the empty list.
+  </p>
+</blockquote>
+
+<p>
+A chain of pairs is defined recursively as either a non-pair object or
+a pair whose cdr is a chain of pairs (Note: <em>every value</em> is a
+chain of pairs).  A chain of pairs ending in the empty list is a list.
+A chain of pairs not ending in the empty list is called an improper
+list.  Note that an improper list is not a list.  Whether a given pair
+is a list depends upon what is stored in the cdr field.
+</p>
+
+<p>
+The external representation of pairs is not specified by this SRFI and
+the examples below are carefully written to avoid constructing pairs
+as syntactic data.  However the examples below do use the typical
+notation for writing pair and list values.
+</p>
+
+<p>
+<code>(pair? <em>obj</em>)</code> procedure
+</p>
+
+<p>
+Returns <code>#t</code> if <em>obj</em> is a pair, and otherwise
+returns <code>#f</code>.  This operation must take <em>O(1)</em> time.
+</p>
+
+<pre>
+(pair? (cons 'a 'b))                           =&gt; #t
+(pair? (list 'a 'b 'c))                        =&gt; #t
+(pair? '())                                    =&gt; #f
+(pair? '#(a b))                                =&gt; #f
+</pre>
+
+<p>
+<code>(cons <em>obj<sub>1</sub></em> <em>obj<sub>2</sub></em>)</code> procedure
+</p>
+
+<p>
+Returns a newly allocated pair whose car is <em>obj<sub>1</sub></em>
+and whose cdr is <em>obj<sub>2</sub></em>. The pair is guaranteed to
+be different (in the sense of <code>eqv?</code>) from every existing
+object.  This operation must take <em>O(1)</em> time.
+</p>
+
+<pre>
+(cons 'a '())                                  =&gt;  (a)
+(cons (list 'a) (list 'b 'c 'd))               =&gt;  ((a) b c d)
+(cons "a" (list 'b 'c))                        =&gt;  ("a" b c)
+(cons 'a 3)                                    =&gt;  (a . 3)
+(cons (list 'a 'b) 'c)                         =&gt;  ((a b) . c)
+</pre>
+
+<p>
+<code>(car <em>pair</em>)</code> procedure
+</p>
+
+<p>
+Returns the contents of the car field of <em>pair</em>.  This
+operation must take <em>O(1)</em> time.
+</p>
+
+<pre>
+(car (list 'a 'b 'c))                          =&gt;  a
+(car (list (list 'a) 'b 'c 'd))                =&gt;  (a)
+(car (cons 1 2))                               =&gt;  1
+(car '())                               &amp;assertion exception
+</pre>
+
+<p>
+<code>(cdr <em>pair</em>)</code> procedure 
+</p>
+
+<p>
+Returns the contents of the cdr field of <em>pair</em>.  This
+operation must take <em>O(1)</em> time.
+</p>
+
+<pre>
+(cdr (list (list 'a) 'b 'c 'd))                =&gt;  (b c d)
+(cdr (cons 1 2))                               =&gt;  2
+(cdr '())                               &amp;assertion exception
+</pre>
+
+<p>
+<code>(caar <em>pair</em>)</code> procedure<br/> 
+<code>(cadr <em>pair</em>)</code> procedure<br/>
+...<br/>
+<code>(cdddar <em>pair</em>)</code> procedure<br/> 
+<code>(cddddr <em>pair</em>)</code> procedure<br/>
+</p>
+
+<p>
+These procedures are compositions of <code>car</code>
+and <code>cdr</code>, where for example caddr could be defined by<br/>
+<code>(define caddr (lambda (x) (car (cdr (cdr x)))))</code>.
+</p>
+
+<p>
+Arbitrary compositions, up to four deep, are provided. There are
+twenty-eight of these procedures in all.  These operations must
+take <em>O(1)</em> time.
+</p>
+
+<p>
+<code>(null? <em>obj</em>)</code> procedure
+</p>
+
+<p>
+Returns <code>#t</code> if <em>obj</em> is the empty
+list, <code>#f</code> otherwise.  This procedure is equivalent
+to the <code>null?</code> procedure of the R6RS base library.
+</p>
+
+<p>
+<code>(list? <em>obj</em>)</code> procedure
+</p>
+
+<p>
+Return <code>#t</code> if <em>obj</em> is a list, <code>#f</code>
+otherwise.  By definition, all lists are chains of pairs that have
+finite length and are terminated by the empty list.  This operation
+must take time bounded by <em>O(log n)</em>, where <em>n</em> is the
+number of pairs in the chain forming the potential list.
+</p>
+
+<pre>
+(list? (list 'a 'b 'c))                        =&gt;  #t
+(list? '())                                    =&gt;  #t
+(list? (cons 'a 'b))                           =&gt;  #f
+</pre>
+
+<p>
+<code>(list <em>obj</em> ...)</code> procedure
+</p>
+
+<p>
+Returns a newly allocated list of its arguments.  This operation must
+take time bounded by <em>O(n)</em>, where <em>n</em> is the number of
+arguments to <code>list</code>.
+</p>
+
+<pre>
+(list 'a (+ 3 4) 'c)                           =&gt;  (a 7 c)
+(list)                                         =&gt;  ()
+</pre>
+
+<p>
+<code>(length <em>list</em>)</code> procedure
+</p>
+
+<p>
+Returns the length of <em>list</em>.  This operation must take time
+bounded by <em>O(log n)</em>, where <em>n</em> is the length of the
+list.
+</p>
+
+<pre>
+(length (list 'a 'b 'c))                       =&gt;  3
+(length (list 'a (list 'b) (list 'c)))         =&gt;  3
+(length '())                                   =&gt;  0
+</pre>
+
+<p>
+<code>(append <em>list</em> ... <em>obj</em>)</code> procedure
+</p>
+
+<p>
+Returns a chain of pairs consisting of the elements of the
+first <em>list</em> followed by the elements of the other lists, with
+<em>obj</em> as the cdr of the final pair. An improper list results if
+<em>obj</em> is not a list.  This operation must take time bounded
+by <em>O(log n)</em>, where <em>n</em> is the total number of elements
+in the given lists.
+</p>
+
+<pre>
+(append (list 'x) (list 'y))                   =&gt;  (x y)
+(append (list 'a) (list 'b 'c 'd))             =&gt;  (a b c d)
+(append (list 'a (list 'b)) (list (list 'c)))  =&gt;  (a (b) (c))
+(append (list 'a 'b) (cons 'c 'd))             =&gt;  (a b c . d)
+(append '() 'a)                                =&gt;  a
+</pre>
+
+<p>
+<code>(reverse <em>list</em>)</code> procedure
+</p>
+
+<p>
+Returns a newly allocated list consisting of the element
+of <em>list</em> in reverse order.  This operation must take time
+bounded by <em>O(n)</em> where <em>n</em> is the length of the list.
+</p>
+
+<pre>
+(reverse (list 'a 'b 'c))                      =&gt;  (c b a)
+(reverse (list 'a (list 'b 'c) 'd (list 'e (list 'f))))  
+            =&gt;  ((e (f)) d (b c) a)
+</pre>
+
+<p>
+<code>(list-tail <em>obj</em> <em>k</em>)</code> procedure
+</p>
+
+<p>
+<em>Obj</em> should be a chain of pairs with a count of at
+least <em>k</em>.  The <code>list-tail</code> procedure returns the
+object obtained by omitting the first <em>k</em> elements
+in <em>obj</em>.  This operation must take time bounded by <em>O(log
+k)</em>.
+</p>
+
+<pre>
+(list-tail (list 'a 'b 'c 'd) 2)               =&gt;  (c d)
+</pre>
+
+<p>
+<em>Implementation responsibilities:</em> The implementation must
+check that <em>obj</em> is a chain of pairs whose count is at
+least <em>k</em>. It should not check that it is a chain of pairs
+beyond this count.
+</p>
+
+<p>
+<code>(list-ref <em>pair</em> <em>k</em>)</code> procedure
+</p>
+
+<p>
+<em>Pair</em> must be a chain of pairs whose count is at least <em>k +
+1</em>.  The <code>list-ref</code> procedure returns the <em>k</em>th
+element of <em>pair</em>. This operation must take time bounded
+by <em>O(log k)</em>.
+</p>
+
+<pre>
+(list-ref (list 'a 'b 'c 'd) 2)                =&gt;  c
+</pre>
+
+<p>
+<em>Implementation responsibilities:</em> The implementation must
+check that <em>list</em> is a chain of pairs whose count is at
+least <em>k + 1</em>. It should not check that it is a chain of pairs
+beyond this count.
+</p>
+
+<p>
+<code>(list-set <em>pair</em> <em>k</em> <em>obj</em>)</code> procedure
+</p>
+
+<p>
+<em>Pair</em> must be a chain of pairs whose count is at least <em>k +
+1</em>.  The <code>list-set</code> procedure returns the chain of pairs
+obtained by replacing the <em>k</em>th element with <em>obj</em>.
+This operation must take time bounded by <em>O(log k)</em>.
+</p>
+
+<pre>
+(list-set (list 'a 'b 'c 'd) 2 'x)             =&gt;  (a b x d)
+</pre>
+
+<p>
+<em>Implementation responsibilities:</em> The implementation must
+check that <em>pair</em> is a chain of pairs whose count is at
+least <em>k + 1</em>. It should not check that it is a chain of pairs
+beyond this count.
+</p>
+
+<p>
+<code>(list-ref/update <em>pair</em> <em>k</em> <em>proc</em>)</code> procedure
+</p>
+
+<p>
+Returns the same results as: 
+</p>
+<pre>
+(values (list-ref pair k) 
+        (list-set pair k (proc (list-ref pair k))))
+</pre>
+but it may be implemented more efficiently.
+
+<pre>
+(list-ref/update (list 7 8 9 10) 2 -)          =&gt;  9 (7 8 -9 10)
+</pre>
+
+
+<p>
+<code>(map <em>proc</em> <em>list<sub>1</sub></em> <em>list<sub>2</sub></em>
+...)</code> procedure
+</p>
+
+<p>
+The <em>list</em>s should all have the same length. <em>Proc</em>
+should accept as many arguments as there are <em>list</em>s and return
+a single value.
+</p>
+
+<p>
+The <code>map</code> procedure applies <em>proc</em> element-wise to
+the elements of the <em>list</em>s and returns a list of the results,
+in order. <em>Proc</em> is always called in the same dynamic
+environment as <code>map</code> itself. The order in
+which <em>proc</em> is applied to the elements of the <em>list</em>s
+is unspecified. 
+</p>
+
+<pre>
+(map cadr (list (list 'a 'b) (list 'd 'e) (list 'g 'h)))
+                =&gt;  (b e h)
+
+(map (lambda (n) (expt n n))
+     (list 1 2 3 4 5))
+                =&gt;  (1 4 27 256 3125)
+
+(map + (list 1 2 3) (list 4 5 6))              =&gt;  (5 7 9)
+
+(let ((count 0))
+  (map (lambda (ignored)
+         (set! count (+ count 1))
+         count)
+       (list 'a 'b)))                          =&gt;  (1 2) or (2 1)
+</pre>
+
+<p>
+<em>Implementation responsibilities:</em> The implementation should
+check that the <em>list</em>s all have the same length. The
+implementation must check the restrictions on <em>proc</em> to the
+extent performed by applying it as described. An implementation may
+check whether <em>proc</em> is an appropriate argument before applying
+it.
+</p>
+
+<p>
+<code>(for-each <em>proc</em> <em>list<sub>1</sub></em> <em>list<sub>2</sub></em>
+...)</code> procedure
+</p>
+
+<p>
+The lists should all have the same length. Proc should accept as many
+arguments as there are lists.
+</p>
+
+<p>
+The <code>for-each</code> procedure applies <em>proc</em> element-wise
+to the elements of the <em>list</em>s for its side effects, in order
+from the first element to the last. <em>Proc</em> is always called in
+the same dynamic environment as <code>for-each</code> itself. The
+return values of <code>for-each</code> are unspecified.
+</p>
+
+<pre>
+(let ((v (make-vector 5)))
+  (for-each (lambda (i)
+              (vector-set! v i (* i i)))
+            (list 0 1 2 3 4))
+  v)                                           =&gt;  #(0 1 4 9 16)
+
+(for-each (lambda (x) x) (list 1 2 3 4))       =&gt;  unspecified
+(for-each even? '())                           =&gt;  unspecified
+</pre>
+
+<p>
+<em>Implementation responsibilities:</em> The implementation should
+check that the <em>list</em>s all have the same length. The
+implementation must check the restrictions on <em>proc</em> to the
+extent performed by applying it as described. An implementation may
+check whether <em>proc</em> is an appropriate argument before applying
+it.
+</p>
+
+<blockquote>
+  <p>
+    <em>Note:</em> Implementations of <code>for-each</code> may or may
+    not tail-call <em>proc</em> on the last element.
+  </p>
+</blockquote>
+
+
+<h2>Implementation requirements</h2>
+
+<p>
+The external representation of random-access pairs is unspecified.
+The behavior of <code>equal?</code> on random-access pairs is
+unspecified.  The behavior of <code>eq?</code> and <code>eqv?</code>
+on random-access pairs must be the same as that for pairs, vectors, or
+records.  Namely, two random-access pair objects are <code>eq?</code>
+if and only if they are <code>eqv?</code>, and they
+are <code>eqv?</code> if and only if they refer to the same location
+in the store.  Random-access pairs must be disjoint from all other
+base types with the possible exception of pairs.
+</p>
+
+<p>
+All argument checking for each operation must be done within the time
+bounds given for that operation.
+</p>
+
+<p>
+Implementations are encouraged, but not required, to support
+random-access pairs and lists as their primary pair and list
+representation.  In such an implementation, the external
+representation of random-access pairs and list should be as described
+in
+section <a href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-7.html#node_sec_4.3.2">4.3.2
+(Pairs and lists)</a> of R<sup>6</sup>RS, the behavior of equivalence
+predicates on random-access pairs should be as described in section
+<a href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-14.html#node_idx_436">11.5
+(Equivalence predicates)</a> of R<sup>6</sup>RS, and so on.  In short,
+all pairs should be random-access pairs.
+</p>
+
+<p>
+Implementations supporting SRFI Libraries [<a href="#note-4">4</a>]
+and SRFI 101 must provide the following libraries, which are
+equivalent and provide all of the bindings described above:
+</p>
+
+<pre>
+    (srfi :101)
+    (srfi :101 random-access-lists) 
+</pre>
+
+<h1>
+<a name="ReferenceImplementation">Reference Implementation</a>
+</h1>
+
+<p>
+A portable R6RS library
+<a href="srfi-101.sls">reference implementation</a>
+and <a href="srfi-101-tests.sls">test suite</a> are provided
+separately.  The library has been tested successfully using Ikarus
+(0.0.3), Larceny (0.97), and PLT Scheme (4.2.1.7).
+</p>
+
+<p>
+A PLT specific library that implements purely functional random-access
+lists, but with an API designed to be consistent with PLT's list
+libraries rather than R6RS, is available as the RaList package on
+Planet [<a href="#note-5">5</a>].
+</p>
+
+<h1>
+<a name="References">References</a>
+</h1>
+
+<dl>
+     <dt class="ref"><a name="note-1">[1]</a> Purely Functional
+     Random-Access Lists</dt>
+     <dd>Chris Okasaki, <em>Functional Programming Languages and
+     Computer Architecture</em>, June 1995, pages 86-95.<br/>
+         <a href="http://www.eecs.usma.edu/webs/people/okasaki/pubs.html#fpca95">http://www.eecs.usma.edu/webs/people/okasaki/pubs.html#fpca95</a>
+     </dd>
+
+     <dt class="ref"><a name="note-2">[2]</a> Revised<sup>6</sup>
+Report on the Algorithmic Language Scheme</dt>
+     <dd>Michael Sperber, <em>et al.</em> (Editors)<br/>
+         <a href="http://www.r6rs.org/">http://www.r6rs.org/</a>
+     </dd>
+
+     <dt class="ref"><a name="note-3">[3]</a> Revised<sup>6</sup>
+Report on the Algorithmic Language Scheme, Standard Libraries</dt>
+     <dd>Michael Sperber, <em>et al.</em> (Editors)<br/>
+         <a href="http://www.r6rs.org/">http://www.r6rs.org/</a>
+     </dd>
+
+     <dt class="ref"><a name="note-4">[4]</a> SRFI 97: SRFI Libraries</dt>
+     <dd>David Van Horn<br/>
+       <a href="http://srfi.schemers.org/srfi-97/">http://srfi.schemers.org/srfi-97/</a></dd>
+     <dt class="ref"><a name="note-5">[5]</a> PLaneT: Purely Functional Random-Access Lists</dt>
+     <dd>David Van Horn<br/>
+       <a href="http://planet.plt-scheme.org/display.ss?package=ralist.plt&amp;owner=dvanhorn">http://planet.plt-scheme.org/display.ss?package=ralist.plt&amp;owner=dvanhorn</a></dd>
+     
+</dl>
+
+<h1>
+<a name="Acknowledgements">Acknowledgments</a>
+</h1>
+
+<p>
+I am grateful to the members of the 
+<a href="http://www.ccs.neu.edu/research/prl/">Northeastern University
+Programming Research Laboratory</a>
+and <a href="http://plt-scheme.org/">PLT</a> (and their intersection)
+for discussions during the development of this SRFI and the library
+that preceded it.  We are all indebted to Okasaki for his elegant
+solution to this problem.  Much of the specification is adapted from
+text intended to belong to the Scheme community; I thank the editors
+and authors of the RnRS series collectively for their efforts.
+Support was provided by the National Science Foundation under Grant
+#0937060 to the Computing Research Association for the CIFellow
+Project.
+</p>
+
+
+<h1>
+<a name="Copyright">Copyright</a>
+</h1>
+
+<p>
+Copyright (C) David Van Horn 2009. All Rights Reserved.
+</p>
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+</p>
+<p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+</p>
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. REMEMBER, THERE IS NO SCHEME UNDERGROUND.  IN NO
+EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
+THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+</p>
+
+<hr />
+
+<address>Editor: <a href="mailto:srfi minus editors at srfi dot schemers dot org">Donovan Kolbly</a></address>
+
+<p>
+    <a href="http://validator.w3.org/check/referer"><img
+       style="border:0;width:88px;height:31px"
+       src="http://www.w3.org/Icons/valid-xhtml10-blue"
+       alt="Valid XHTML 1.0!" height="31" width="88" /></a>
+</p>
+
+</body></html>
+
