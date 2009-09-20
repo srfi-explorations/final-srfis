@@ -15,6 +15,9 @@ body {
    width: 7in;
    margin: 30pt;
 }
+.proto {
+   font-weight: bold;
+}
 </style>
 </head>
 <body>
@@ -59,8 +62,9 @@ subscribe to the list.  You can access previous messages via
 </p>
 
 <ul>
-<li>Received: 2009/09/09</li>
-<li>Draft: 2009/09/16-2009/11/16</li>
+  <li>Received: 2009/09/09</li>
+  <li>Draft: 2009/09/16-2009/11/16</li>
+  <li>Revised: 2009/09/20</li>
 </ul>
 
 <h1>Table of contents</h1>
@@ -69,7 +73,22 @@ subscribe to the list.  You can access previous messages via
   <li><a href="#Abstract">Abstract</a></li>
   <li><a href="#Issues">Issues</a></li>
   <li><a href="#Rationale">Rationale</a></li>
-  <li><a href="#Specification">Specification</a></li>
+  <li><a href="#Specification">Specification</a>
+    <ul>
+      <li>
+        <a href="#RandomAccessLists">Random-access pairs and
+          lists</a>
+      </li>
+      <li>
+        <a href="#RepresentationConversion">Representation
+          conversion</a>
+      </li>
+      <li>
+        <a href="#ImplementationRequirements">Implementation
+          requirements</a>
+      </li>
+    </ul>
+  </li>
   <li><a href="#ReferenceImplementation">Reference Implementation</a></li>
   <li><a href="#References">References</a></li>
   <li><a href="#Acknowledgements">Acknowledgements</a></li>
@@ -83,14 +102,14 @@ subscribe to the list.  You can access previous messages via
 <p>
 Random-access lists [<a href="#note-1">1</a>] are a purely functional
 data structure for representing lists of values. A random-access list
-may act as a drop in replacement for the usual sequential pair and
+may act as a drop in replacement for the usual linear-access pair and
 list data structures
 (<code>pair?</code>, <code>cons</code>, <code>car</code>, <code>cdr</code>),
 which additionally supports fast index-based addressing and updating
 (<code>list-ref</code>, <code>list-set</code>).  The impact is a whole
 class of purely-functional algorithms expressed in terms of
 index-based list addressing become feasible compared with their
-sequential list counterparts.
+linear-access list counterparts.
 </p>
 
 
@@ -124,6 +143,21 @@ library [<a href="#note-3">3</a>].
     (e.g. using <em>pair</em> or <em>obj</em> instead of <em>list</em>
     for parameter names).  Should the names be changed as well?
   </li>
+  <li>
+    To what extent should standard Scheme procedures and syntax that
+    consume or construct lists be included in this proposal?  For
+    example, should all of the <code>(rnrs base)</code> library that
+    deals with lists be included?  By my count this would mean adding:
+    <code>equal?</code>, <code>lambda</code>, <code>apply</code>, 
+    <code>vector-&gt;list</code>, <code>list-&gt;vector</code>, 
+    <code>string-&gt;list</code>, and <code>list->string</code>.  I am
+    inclined to add these.  Should all of the <code>(rnrs
+    lists)</code> library be included?  These procedures are easily
+    defined in terms of what's given here, and no perfomance advantage
+    is gained by implementig them "under the hood" using the data
+    structures in the reference implementation.  I am
+    inclined <em>not</em> to include them.
+  </li>
 </ul>
 </div>
 
@@ -145,14 +179,14 @@ algorithms.
 This SRFI intends to improve the situation by offering an alternative
 implementation strategy based on Okasaki's purely functional
 random-access lists [<a href="#note-1">1</a>].  Random-access pairs
-and lists can be used as a replacement for traditional, sequential
+and lists can be used as a replacement for traditional, linear-access
 pairs and lists with no asymptotic loss of efficiency.  In other
 words, the typical list and pair operations such
 as <code>cons</code>, <code>car</code>, and <code>cdr</code>, all
 operate in <em>O(1)</em> time as usual.  However, random-access lists
 additionally support index-based access and functional update
 operations that are asymptotically cheaper; <em>O(log n)</em> for
-random-access lists versus <em>O(n)</em> for sequential-access lists,
+random-access lists versus <em>O(n)</em> for linear-access lists,
 where <em>n</em> is the length of the list being access or updated.
 As such, many purely functional index-based list algorithms become
 feasible by using a random-access list representation for pairs and
@@ -168,6 +202,8 @@ pair representation.
 </p>
 
 <h1><a name="Specification">Specification</a></h1>
+
+<h2><a name="RandomAccessLists">Random-access pairs and lists</a></h2>
 
 <p>
 A <em>random-access pair</em> (or just <em>pair</em>) is a compound
@@ -220,14 +256,94 @@ is a list depends upon what is stored in the cdr field.
 </p>
 
 <p>
-The external representation of pairs is not specified by this SRFI and
-the examples below are carefully written to avoid constructing pairs
-as syntactic data.  However the examples below do use the typical
-notation for writing pair and list values.
+The external representation of pairs is not specified by this SRFI,
+however the examples below do use the typical notation for writing
+pair and list values.
 </p>
 
 <p>
-<code>(pair? <em>obj</em>)</code> procedure
+Random-access pairs and lists are specified to be fully functional,
+or, to use the term from the academic literature, <em>fully
+persistent</em> [<a href="#note-1">1</a>].  Full persistence means
+that all operations on random-access lists, notably
+including <code>cons</code>, <code>list-ref</code>, <code>list-set</code>,
+and <code>list-ref/update</code>, are specified
+<ol>
+  <li>
+    not to mutate any of their arguments; perforce
+  </li>
+  <li>
+    to be safe to execute concurrently on shared arguments; and
+  </li>
+  <li>
+    to suffer no degradation of performance as a consequence of the
+    history of operations carried out to produce their arguments
+    (except as it is reflected in the lengths of those arguments); but
+    permitted
+  </li>
+  <li>
+    to produce results that share structure with their arguments.
+  </li>
+</ol>
+It is usually taken for granted that standard Scheme lists have these
+properties.  This SRFI explicitly specifies that random-access lists
+share them.
+</p>
+
+<p class="proto">
+syntax: <code>(quote <em>datum</em>)</code>
+</p>
+
+<p>
+<em>Syntax:</em> &lt;Datum&gt; should be a syntactic datum.
+</p>
+
+<p>
+<em>Semantics:</em> <code>(quote &lt;datum&gt;)</code> evaluates to
+the datum value represented by &lt;datum&gt; (see
+section <a href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-7.html#node_sec_4.3">4.3</a>
+of R6RS).  This notation is used to include constants.
+</p>
+
+<pre>
+(quote a)                                      &rArr; a
+(quote #(a b c))                               &rArr; (a b c)
+(quote (+ 1 2))                                &rArr; (+ 1 2)
+</pre>
+
+<p>
+As noted in
+section <a href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-7.html#node_sec_4.3.5">4.3.5</a>
+of R6RS, <code>(quote &lt;datum&gt;)</code> may be abbreviated
+as <code>'&lt;datum&gt;</code>:
+</p>
+
+<pre>
+'"abc"                                         &rArr; "abc"
+'145932                                        &rArr; 145932
+'a                                             &rArr; a
+'#(a b c)                                      &rArr; #(a b c)
+'()                                            &rArr; ()
+'(+ 1 2)                                       &rArr; (+ 1 2)
+'(quote a)                                     &rArr; (quote a)
+''a                                            &rArr; (quote a)
+</pre>
+
+<p>
+As noted in
+section <a href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-8.html#node_sec_5.10">5.10</a>
+of R6RS, constants are immutable.
+</p>
+
+<blockquote>
+  <p>
+    <em>Note:</em> Different constants that are the value
+    of <code>quote</code> expression may share the same locations.
+  </p>
+</blockquote>
+
+<p class="proto">
+procedure: <code>(pair? <em>obj</em>) &rarr; <em>bool</em></code> 
 </p>
 
 <p>
@@ -236,14 +352,15 @@ returns <code>#f</code>.  This operation must take <em>O(1)</em> time.
 </p>
 
 <pre>
-(pair? (cons 'a 'b))                           =&gt; #t
-(pair? (list 'a 'b 'c))                        =&gt; #t
-(pair? '())                                    =&gt; #f
-(pair? '#(a b))                                =&gt; #f
+(pair? '(a . b))                               &rArr; #t
+(pair? '(a b c))                               &rArr; #t
+(pair? '())                                    &rArr; #f
+(pair? '#(a b))                                &rArr; #f
 </pre>
 
-<p>
-<code>(cons <em>obj<sub>1</sub></em> <em>obj<sub>2</sub></em>)</code> procedure
+<p class="proto">
+procedure: <code>(cons <em>obj<sub>1</sub></em> <em>obj<sub>2</sub></em>)
+&rarr; <em>pair</em></code>
 </p>
 
 <p>
@@ -254,15 +371,15 @@ object.  This operation must take <em>O(1)</em> time.
 </p>
 
 <pre>
-(cons 'a '())                                  =&gt;  (a)
-(cons (list 'a) (list 'b 'c 'd))               =&gt;  ((a) b c d)
-(cons "a" (list 'b 'c))                        =&gt;  ("a" b c)
-(cons 'a 3)                                    =&gt;  (a . 3)
-(cons (list 'a 'b) 'c)                         =&gt;  ((a b) . c)
+(cons 'a '())                                  &rArr;  (a)
+(cons '(a) '(b c d))                           &rArr;  ((a) b c d)
+(cons "a" '(b c))                              &rArr;  ("a" b c)
+(cons 'a 3)                                    &rArr;  (a . 3)
+(cons '(a b) 'c)                               &rArr;  ((a b) . c)
 </pre>
 
-<p>
-<code>(car <em>pair</em>)</code> procedure
+<p class="proto">
+procedure: <code>(car <em>pair</em>) &rarr; <em>obj</em></code>
 </p>
 
 <p>
@@ -271,14 +388,14 @@ operation must take <em>O(1)</em> time.
 </p>
 
 <pre>
-(car (list 'a 'b 'c))                          =&gt;  a
-(car (list (list 'a) 'b 'c 'd))                =&gt;  (a)
-(car (cons 1 2))                               =&gt;  1
+(car '(a b c))                                 &rArr;  a
+(car '((a) b c d))                             &rArr;  (a)
+(car '(1 . 2))                                 &rArr;  1
 (car '())                               &amp;assertion exception
 </pre>
 
-<p>
-<code>(cdr <em>pair</em>)</code> procedure 
+<p class="proto">
+procedure: <code>(cdr <em>pair</em>) &rarr; <em>obj</em></code>
 </p>
 
 <p>
@@ -287,22 +404,23 @@ operation must take <em>O(1)</em> time.
 </p>
 
 <pre>
-(cdr (list (list 'a) 'b 'c 'd))                =&gt;  (b c d)
-(cdr (cons 1 2))                               =&gt;  2
+(cdr '((a) b c d))                             &rArr;  (b c d)
+(cdr '(1 . 2))                                 &rArr;  2
 (cdr '())                               &amp;assertion exception
 </pre>
 
-<p>
-<code>(caar <em>pair</em>)</code> procedure<br/> 
-<code>(cadr <em>pair</em>)</code> procedure<br/>
+<p class="proto">
+procedure: <code>(caar <em>pair</em>) &rarr; <em>obj</em></code><br/> 
+procedure: <code>(cadr <em>pair</em>) &rarr; <em>obj</em></code><br/>
 ...<br/>
-<code>(cdddar <em>pair</em>)</code> procedure<br/> 
-<code>(cddddr <em>pair</em>)</code> procedure<br/>
+procedure: <code>(cdddar <em>pair</em>) &rarr; <em>obj</em></code><br/> 
+procedure: <code>(cddddr <em>pair</em>) &rarr; <em>obj</em></code><br/>
 </p>
 
 <p>
 These procedures are compositions of <code>car</code>
-and <code>cdr</code>, where for example caddr could be defined by<br/>
+and <code>cdr</code>, where for example <code>caddr</code> could be
+defined by<br/>
 <code>(define caddr (lambda (x) (car (cdr (cdr x)))))</code>.
 </p>
 
@@ -312,8 +430,8 @@ twenty-eight of these procedures in all.  These operations must
 take <em>O(1)</em> time.
 </p>
 
-<p>
-<code>(null? <em>obj</em>)</code> procedure
+<p class="proto">
+procedure: <code>(null? <em>obj</em>) &rarr; <em>bool</em></code>
 </p>
 
 <p>
@@ -322,12 +440,12 @@ list, <code>#f</code> otherwise.  This procedure is equivalent
 to the <code>null?</code> procedure of the R6RS base library.
 </p>
 
-<p>
-<code>(list? <em>obj</em>)</code> procedure
+<p class="proto">
+procedure: <code>(list? <em>obj</em>) &rarr; <em>bool</em></code>
 </p>
 
 <p>
-Return <code>#t</code> if <em>obj</em> is a list, <code>#f</code>
+Returns <code>#t</code> if <em>obj</em> is a list, <code>#f</code>
 otherwise.  By definition, all lists are chains of pairs that have
 finite length and are terminated by the empty list.  This operation
 must take time bounded by <em>O(log n)</em>, where <em>n</em> is the
@@ -335,13 +453,13 @@ number of pairs in the chain forming the potential list.
 </p>
 
 <pre>
-(list? (list 'a 'b 'c))                        =&gt;  #t
-(list? '())                                    =&gt;  #t
-(list? (cons 'a 'b))                           =&gt;  #f
+(list? '(a b c))                               &rArr;  #t
+(list? '())                                    &rArr;  #t
+(list? '(a . b))                               &rArr;  #f
 </pre>
 
-<p>
-<code>(list <em>obj</em> ...)</code> procedure
+<p class="proto">
+procedure: <code>(list <em>obj</em> ...) &rarr; <em>list</em></code>
 </p>
 
 <p>
@@ -351,12 +469,30 @@ arguments to <code>list</code>.
 </p>
 
 <pre>
-(list 'a (+ 3 4) 'c)                           =&gt;  (a 7 c)
-(list)                                         =&gt;  ()
+(list 'a (+ 3 4) 'c)                           &rArr;  (a 7 c)
+(list)                                         &rArr;  ()
 </pre>
 
+<p class="proto">
+procedure: <code>(make-list <em>k</em>)
+&rarr; <em>list</em></code><br />
+procedure: <code>(make-list <em>k</em> <em>obj</em>)
+&rarr; <em>list</em></code>
+</p>
+
 <p>
-<code>(length <em>list</em>)</code> procedure
+Returns a newly allocated list of <em>k</em> elements. If a second
+argument is given, then each element is initialized
+to <em>obj</em>. Otherwise the initial contents of each element is
+unspecified.
+</p>
+
+<pre>
+(make-list 5 0)                                &rArr;  (0 0 0 0 0)
+</pre>
+
+<p class="proto">
+procedure: <code>(length <em>list</em>) &rarr; <em>k</em></code>
 </p>
 
 <p>
@@ -366,13 +502,14 @@ list.
 </p>
 
 <pre>
-(length (list 'a 'b 'c))                       =&gt;  3
-(length (list 'a (list 'b) (list 'c)))         =&gt;  3
-(length '())                                   =&gt;  0
+(length '(a b c))                              &rArr;  3
+(length '(a (b) (c)))                          &rArr;  3
+(length '())                                   &rArr;  0
 </pre>
 
-<p>
-<code>(append <em>list</em> ... <em>obj</em>)</code> procedure
+<p class="proto">
+procedure: <code>(append <em>list</em> ... <em>obj</em>)
+&rarr; <em>obj</em></code>
 </p>
 
 <p>
@@ -385,15 +522,15 @@ in the given lists.
 </p>
 
 <pre>
-(append (list 'x) (list 'y))                   =&gt;  (x y)
-(append (list 'a) (list 'b 'c 'd))             =&gt;  (a b c d)
-(append (list 'a (list 'b)) (list (list 'c)))  =&gt;  (a (b) (c))
-(append (list 'a 'b) (cons 'c 'd))             =&gt;  (a b c . d)
-(append '() 'a)                                =&gt;  a
+(append '(x) '(y))                             &rArr;  (x y)
+(append '(a) '(b c d))                         &rArr;  (a b c d)
+(append '(a (b)) ((c)))                        &rArr;  (a (b) (c))
+(append '(a b) (c . d))                        &rArr;  (a b c . d)
+(append '() 'a)                                &rArr;  a
 </pre>
 
-<p>
-<code>(reverse <em>list</em>)</code> procedure
+<p class="proto">
+procedure: <code>(reverse <em>list</em>) &rarr; <em>list</em></code>
 </p>
 
 <p>
@@ -403,13 +540,13 @@ bounded by <em>O(n)</em> where <em>n</em> is the length of the list.
 </p>
 
 <pre>
-(reverse (list 'a 'b 'c))                      =&gt;  (c b a)
-(reverse (list 'a (list 'b 'c) 'd (list 'e (list 'f))))  
-            =&gt;  ((e (f)) d (b c) a)
+(reverse '(a b c))                             &rArr;  (c b a)
+(reverse '(a (b c) d (e (f))))                 &rArr;  ((e (f)) d (b c) a)
 </pre>
 
-<p>
-<code>(list-tail <em>obj</em> <em>k</em>)</code> procedure
+<p class="proto">
+procedure: <code>(list-tail <em>obj</em> <em>k</em>)
+&rarr; <em>obj</em></code>
 </p>
 
 <p>
@@ -421,18 +558,18 @@ k)</em>.
 </p>
 
 <pre>
-(list-tail (list 'a 'b 'c 'd) 2)               =&gt;  (c d)
+(list-tail '(a b c d) 2)                       &rArr;  (c d)
 </pre>
 
 <p>
 <em>Implementation responsibilities:</em> The implementation must
 check that <em>obj</em> is a chain of pairs whose count is at
-least <em>k</em>. It should not check that it is a chain of pairs
-beyond this count.
+least <em>k</em>. 
 </p>
 
-<p>
-<code>(list-ref <em>pair</em> <em>k</em>)</code> procedure
+<p class="proto">
+procedure: <code>(list-ref <em>pair</em> <em>k</em>)
+&rarr; <em>obj</em></code>
 </p>
 
 <p>
@@ -443,18 +580,18 @@ by <em>O(log k)</em>.
 </p>
 
 <pre>
-(list-ref (list 'a 'b 'c 'd) 2)                =&gt;  c
+(list-ref '(a b c d) 2)                        &rArr;  c
 </pre>
 
 <p>
 <em>Implementation responsibilities:</em> The implementation must
-check that <em>list</em> is a chain of pairs whose count is at
-least <em>k + 1</em>. It should not check that it is a chain of pairs
-beyond this count.
+check that <em>pair</em> is a chain of pairs whose count is at
+least <em>k + 1</em>.
 </p>
 
-<p>
-<code>(list-set <em>pair</em> <em>k</em> <em>obj</em>)</code> procedure
+<p class="proto">
+procedure: <code>(list-set <em>pair</em> <em>k</em> <em>obj</em>)
+&rarr; <em>obj</em></code>
 </p>
 
 <p>
@@ -465,37 +602,37 @@ This operation must take time bounded by <em>O(log k)</em>.
 </p>
 
 <pre>
-(list-set (list 'a 'b 'c 'd) 2 'x)             =&gt;  (a b x d)
+(list-set '(a b c d) 2 'x)                     &rArr;  (a b x d)
 </pre>
 
 <p>
 <em>Implementation responsibilities:</em> The implementation must
 check that <em>pair</em> is a chain of pairs whose count is at
-least <em>k + 1</em>. It should not check that it is a chain of pairs
-beyond this count.
+least <em>k + 1</em>.
 </p>
 
-<p>
-<code>(list-ref/update <em>pair</em> <em>k</em> <em>proc</em>)</code> procedure
+<p class="proto">
+procedure: <code>(list-ref/update <em>pair</em> <em>k</em> <em>proc</em>)
+&rarr; <em>obj<sub>1</sub></em> <em>obj</em><sub>2</sub></code>
 </p>
 
 <p>
 Returns the same results as: 
-</p>
 <pre>
 (values (list-ref pair k) 
         (list-set pair k (proc (list-ref pair k))))
 </pre>
 but it may be implemented more efficiently.
+</code>
 
 <pre>
-(list-ref/update (list 7 8 9 10) 2 -)          =&gt;  9 (7 8 -9 10)
+(list-ref/update '(7 8 9 10) 2 -)              &rArr;  9 (7 8 -9 10)
 </pre>
 
 
-<p>
-<code>(map <em>proc</em> <em>list<sub>1</sub></em> <em>list<sub>2</sub></em>
-...)</code> procedure
+<p class="proto">
+procedure: <code>(map <em>proc</em> <em>list<sub>1</sub></em> <em>list<sub>2</sub></em>
+...) &rarr; <em>list</em></code>
 </p>
 
 <p>
@@ -514,20 +651,19 @@ is unspecified.
 </p>
 
 <pre>
-(map cadr (list (list 'a 'b) (list 'd 'e) (list 'g 'h)))
-                =&gt;  (b e h)
+(map cadr '((a b) (d e) (g h)))                &rArr;  (b e h)
 
 (map (lambda (n) (expt n n))
-     (list 1 2 3 4 5))
-                =&gt;  (1 4 27 256 3125)
+     '(1 2 3 4 5))
+                &rArr;  (1 4 27 256 3125)
 
-(map + (list 1 2 3) (list 4 5 6))              =&gt;  (5 7 9)
+(map + '(1 2 3) (4 5 6))                       &rArr;  (5 7 9)
 
 (let ((count 0))
   (map (lambda (ignored)
          (set! count (+ count 1))
          count)
-       (list 'a 'b)))                          =&gt;  (1 2) or (2 1)
+       '(a b)))                                &rArr;  (1 2) or (2 1)
 </pre>
 
 <p>
@@ -539,14 +675,14 @@ check whether <em>proc</em> is an appropriate argument before applying
 it.
 </p>
 
-<p>
-<code>(for-each <em>proc</em> <em>list<sub>1</sub></em> <em>list<sub>2</sub></em>
-...)</code> procedure
+<p class="proto">
+procedure: <code>(for-each <em>proc</em> <em>list<sub>1</sub></em> <em>list<sub>2</sub></em>
+...) &rarr; <em>unspecified</em></code></code>
 </p>
 
 <p>
-The lists should all have the same length. Proc should accept as many
-arguments as there are lists.
+The lists should all have the same length. <em>Proc</em> should accept
+as many arguments as there are lists.
 </p>
 
 <p>
@@ -561,11 +697,11 @@ return values of <code>for-each</code> are unspecified.
 (let ((v (make-vector 5)))
   (for-each (lambda (i)
               (vector-set! v i (* i i)))
-            (list 0 1 2 3 4))
-  v)                                           =&gt;  #(0 1 4 9 16)
+            '(0 1 2 3 4))
+  v)                                           &rArr;  #(0 1 4 9 16)
 
-(for-each (lambda (x) x) (list 1 2 3 4))       =&gt;  unspecified
-(for-each even? '())                           =&gt;  unspecified
+(for-each (lambda (x) x) '(1 2 3 4))           &rArr;  unspecified
+(for-each even? '())                           &rArr;  unspecified
 </pre>
 
 <p>
@@ -584,8 +720,31 @@ it.
   </p>
 </blockquote>
 
+<h2><a name="RepresentationConversion">Representation
+conversion</a></h2>
 
-<h2>Implementation requirements</h2>
+<p class="proto">
+procedure: <code>(random-access-list-&gt;linear-access-list <em>ra-list</em>)
+&rarr; <em>la-list</em></code><br />
+
+procedure: <code>(linear-access-list-&gt;random-access-list <em>la-list</em>)
+&rarr; <em>ra-list</em></code>
+</p>
+
+<p>
+These procedures convert between (potentially) distinct
+representations of lists.  To avoid confusion, parameters
+named <em>ra-list</em> range over lists represented with random-access
+lists, i.e. objects satisfying the <code>list?</code> predicate
+described above, while parameters named <em>la-list</em> range over
+lists represented with the more traditional linear-access lists,
+i.e. objects satisfying the <code>list?</code> predicate of R6RS.  In
+systems that represent all lists as random-access lists, these
+conversions may simply be list identity procedures.
+</p>
+
+<h2><a name="ImplementationRequirements">Implementation
+requirements</a></h2>
 
 <p>
 The external representation of random-access pairs is unspecified.
@@ -620,32 +779,43 @@ all pairs should be random-access pairs.
 
 <p>
 Implementations supporting SRFI Libraries [<a href="#note-4">4</a>]
-and SRFI 101 must provide the following libraries, which are
-equivalent and provide all of the bindings described above:
+and SRFI 101 must provide the following libraries:
 </p>
 
 <pre>
-    (srfi :101)
-    (srfi :101 random-access-lists) 
+    (srfi :101)                                 ; Composite libraries
+    (srfi :101 random-access-lists)
+
+    (srfi :101 random-access-lists procedures)  ; Procedures only
+    (srfi :101 random-access-lists syntax)      ; Syntax only
 </pre>
+
+</p>
 
 <h1>
 <a name="ReferenceImplementation">Reference Implementation</a>
 </h1>
 
 <p>
-A portable R6RS library
-<a href="srfi-101.sls">reference implementation</a>
-and <a href="srfi-101-tests.sls">test suite</a> are provided
-separately.  The library has been tested successfully using Ikarus
-(0.0.3), Larceny (0.97), and PLT Scheme (4.2.1.7).
+A mostly portable R6RS library
+<a href="srfi/">reference implementation</a> and test suite are
+provided separately.  The library has been tested successfully using
+Ikarus (0.0.3), Larceny (0.97), and PLT Scheme (4.2.1.7).
 </p>
 
 <p>
-A PLT specific library that implements purely functional random-access
-lists, but with an API designed to be consistent with PLT's list
-libraries rather than R6RS, is available as the RaList package on
-Planet [<a href="#note-5">5</a>].
+The reference implementation of <code>(srfi :101 random-access-lists
+procedures)</code> is completely portable R6RS Scheme.  The
+implementation of <code>(srfi :101 random-access-lists syntax)</code>
+is provided in implementation-specific variants for Ikarus, Larceny,
+and PLT Scheme.
+</p>
+
+<p>
+A PLT Scheme specific library that implements purely functional
+random-access lists, but with an API designed to be consistent with
+PLT's list libraries rather than R6RS, is available as the RaList
+package on Planet [<a href="#note-5">5</a>].
 </p>
 
 <h1>
@@ -690,14 +860,19 @@ I am grateful to the members of the
 <a href="http://www.ccs.neu.edu/research/prl/">Northeastern University
 Programming Research Laboratory</a>
 and <a href="http://plt-scheme.org/">PLT</a> (and their intersection)
-for discussions during the development of this SRFI and the library
-that preceded it.  We are all indebted to Okasaki for his elegant
-solution to this problem.  Much of the specification is adapted from
-text intended to belong to the Scheme community; I thank the editors
-and authors of the RnRS series collectively for their efforts.
-Support was provided by the National Science Foundation under Grant
-#0937060 to the Computing Research Association for the CIFellow
-Project.
+for discussions during the pre-draft development of this SRFI and the
+library that preceded it.  We are all indebted to Okasaki for his
+elegant solution to this problem.  Much of the specification is
+adapted from text intended to belong to the Scheme community; I thank
+the editors and authors of the RnRS series collectively for their
+efforts.  I am grateful to Donovan Kolbly for serving as SRFI editor
+and to Taylor R Campbell, Robert Bruce Findler, Aubrey Jaffer, Shiro
+Kawai, and Alexey Radul for discussion during the draft period.  I
+thank William D Clinger, Robert Bruce Findler, and Abdulaziz Ghuloum
+for help writing the implementations of <code>quote</code> specific to
+Larceny, Ikarus, and PLT, respectively.  Support was provided by the
+National Science Foundation under Grant #0937060 to the Computing
+Research Association for the CIFellow Project.
 </p>
 
 
@@ -743,4 +918,3 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 </p>
 
 </body></html>
-

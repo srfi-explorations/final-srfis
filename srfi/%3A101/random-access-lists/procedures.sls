@@ -2,27 +2,7 @@
 ;; SRFI 101: Purely Functional Random-Access Pairs and Lists
 ;; Copyright (c) David Van Horn 2009.  All Rights Reserved.
 
-;; Permission is hereby granted, free of charge, to any person
-;; obtaining a copy of this software and associated documentation
-;; files (the "Software"), to deal in the Software without
-;; restriction, including without limitation the rights to use, copy,
-;; modify, merge, publish, distribute, sublicense, and/or sell copies
-;; of the Software, and to permit persons to whom the Software is
-;; furnished to do so, subject to the following conditions:
-
-;; The above copyright notice and this permission notice shall be
-;; included in all copies or substantial portions of the Software.
-
-;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-;; EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-;; MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-;; NONINFRINGEMENT. REMEMBER, THERE IS NO SCHEME UNDERGROUND. IN NO
-;; EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-;; CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
-;; CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-(library (srfi :101)
+(library (srfi :101 random-access-lists procedures)
   (export (rename (ra:pair? pair?) 
 		  (ra:cons cons)
                   (ra:car car) 
@@ -55,10 +35,10 @@
                   (ra:cddadr cddadr)
                   (ra:cddddr cddddr)
                   (ra:cdddar cdddar)
-                  ;(ra:null null)
                   (ra:null? null?)
                   (ra:list? list?)
                   (ra:list list)
+                  (ra:make-list make-list)
                   (ra:length length)
                   (ra:append append)
                   (ra:reverse reverse)
@@ -67,16 +47,24 @@
                   (ra:list-set list-set)
                   (ra:list-ref/update list-ref/update)
                   (ra:map map)
-                  (ra:for-each for-each)))
-          
+                  (ra:for-each for-each)
+                  (ra:random-access-list->linear-access-list
+                   random-access-list->linear-access-list)
+                  (ra:linear-access-list->random-access-list
+                   linear-access-list->random-access-list)))
+  
   (import (rnrs base)
           (rnrs lists)
           (rnrs control)
           (rnrs records syntactic)
           (rnrs arithmetic bitwise))          
   
-  (define-record-type kons (fields size tree rest))
-  (define-record-type node (fields val left right)) 
+  ;; the nongenerative clause causes problems for PLT
+  ;; http://bugs.plt-scheme.org/query/?cmd=view&pr=10471
+  (define-record-type kons #;(nongenerative) 
+    (fields size tree rest))
+  (define-record-type node #;(nongenerative) 
+    (fields val left right)) 
 
   ;; Nat -> Nat
   (define (sub1 n) (- n 1))
@@ -85,24 +73,24 @@
   ;; [Tree X] -> X
   (define (tree-val t)
     (if (node? t) 
-	(node-val t)
-	t))
+        (node-val t)
+        t))
   
   ;; [X -> Y] [Tree X] -> [Tree Y]
   (define (tree-map f t)
     (if (node? t)
-	(make-node (f (node-val t))
-		   (tree-map f (node-left t))
-		   (tree-map f (node-right t)))
-	(f t)))
+        (make-node (f (node-val t))
+                   (tree-map f (node-left t))
+                   (tree-map f (node-right t)))
+        (f t)))
 
   ;; [X -> Y] [Tree X] -> unspecified
   (define (tree-for-each f t)
     (if (node? t)
-	(begin (f (node-val t))
-	       (tree-for-each f (node-left t))
-	       (tree-for-each f (node-right t)))
-	(f t)))
+        (begin (f (node-val t))
+               (tree-for-each f (node-left t))
+               (tree-for-each f (node-right t)))
+        (f t)))
 
   ;; [X Y Z ... -> R] [List [Tree X] [Tree Y] [Tree Z] ...] -> [Tree R]
   (define (tree-map/n f ts)
@@ -129,11 +117,11 @@
   (define (build-tree i f) ;; i = 2^j-1
     (let rec ((i i) (o 0))
       (if (= 1 i) 
-	  (f o)
-	  (let ((i/2 (half i)))
-	    (make-node (f o)
-		       (rec i/2 (add1 o))
-		       (rec i/2 (+ 1 o i/2)))))))
+          (f o)
+          (let ((i/2 (half i)))
+            (make-node (f o)
+                       (rec i/2 (add1 o))
+                       (rec i/2 (+ 1 o i/2)))))))
   
   ;; Consumes n = 2^i-1 and produces 2^(i-1)-1.
   ;; Nat -> Nat
@@ -152,18 +140,18 @@
   (define (tree-ref/update mid t i f)
     (cond ((zero? i)
            (if (node? t) 
-	       (values (node-val t)
-		       (make-node (f (node-val t))
-				  (node-left t)
-				  (node-right t)))
-	       (values t (f t))))
+               (values (node-val t)
+                       (make-node (f (node-val t))
+                                  (node-left t)
+                                  (node-right t)))
+               (values t (f t))))
           ((<= i mid)
            (let-values (((v* t*) (tree-ref/update (half (sub1 mid)) 
                                                   (node-left t) 
                                                   (sub1 i) 
                                                   f)))
              (values v* (make-node (node-val t) t* (node-right t)))))
-	  (else           
+          (else           
            (let-values (((v* t*) (tree-ref/update (half (sub1 mid)) 
                                                   (node-right t) 
                                                   (sub1 (- i mid)) 
@@ -301,13 +289,39 @@
   ;; X ... -> [RaListof X]
   (define (ra:list . xs)
     (fold-right ra:cons ra:null xs))
+
+  ;; Nat X -> [RaListof X]
+  (define ra:make-list
+    (case-lambda
+     ((k) (ra:make-list k 0))
+     ((k obj)
+      (let loop ((n k) (a ra:null))
+        (cond ((zero? n) a)
+              (else 
+               (let ((t (largest-skew-binary n)))
+                 (loop (- n t)
+                       (make-kons t (tr:make-tree t obj) a)))))))))
+
+  ;; A Skew is a Nat 2^k-1 with k > 0.
   
+  ;; Skew -> Skew
+  (define (skew-succ t) (add1 (bitwise-arithmetic-shift t 1)))
+  
+  ;; Computes the largest skew binary term t <= n.
+  ;; Nat -> Skew
+  (define (largest-skew-binary n)
+    (if (= 1 n) 
+        1
+        (let* ((t (largest-skew-binary (half n)))
+               (s (skew-succ t)))
+          (if (> s n) t s))))  
+
   ;; [Any -> Boolean]
   ;; Is x a PROPER list?
   (define (ra:list? x)
     (or (ra:null? x)
-        (and (ra:pair? x)
-             (ra:list? (ra:cdr x)))))  
+        (and (kons? x)
+             (ra:list? (kons-rest x)))))
   
   (define ra:caar (lambda (ls) (ra:car (ra:car ls))))
   (define ra:cadr (lambda (ls) (ra:car (ra:cdr ls))))
@@ -351,18 +365,18 @@
   (define (make-foldl empty? first rest)
     (letrec ((f (lambda (cons empty ls)
                   (if (empty? ls) 
-		      empty
+                      empty
                       (f cons
-			 (cons (first ls) empty) 
-			 (rest ls))))))
+                         (cons (first ls) empty) 
+                         (rest ls))))))
       f))
   
   (define (make-foldr empty? first rest)
     (letrec ((f (lambda (cons empty ls)
                   (if (empty? ls) 
-		      empty
-		      (cons (first ls)
-			    (f cons empty (rest ls)))))))
+                      empty
+                      (cons (first ls)
+                            (f cons empty (rest ls)))))))
       f))
 
   ;; [X Y -> Y] Y [RaListof X] -> Y
@@ -371,12 +385,12 @@
 
   ;; [RaListof X] ... -> [RaListof X]
   (define (ra:append . lss)
-    (cond [(null? lss) ra:null]
-          [else (let recr ((lss lss))
-                  (cond [(null? (cdr lss)) (car lss)]
-                        [else (ra:foldr/1 ra:cons
+    (cond ((null? lss) ra:null)
+          (else (let recr ((lss lss))
+                  (cond ((null? (cdr lss)) (car lss))
+                        (else (ra:foldr/1 ra:cons
                                           (recr (cdr lss))
-                                          (car lss))]))]))
+                                          (car lss))))))))
   
   ;; [RaListof X] -> [RaListof X]
   (define (ra:reverse ls)
@@ -385,8 +399,8 @@
   ;; [RaListof X] Nat -> [RaListof X]
   (define (ra:list-tail ls i)
     (let loop ((xs ls) (j i))
-      (cond [(zero? j) xs]
-            [else (loop (ra:cdr xs) (sub1 j))])))
+      (cond ((zero? j) xs)
+            (else (loop (ra:cdr xs) (sub1 j))))))
   
   ;; [RaListof X] Nat -> X
   ;; Special-cased above to avoid logarathmic amount of cons'ing
@@ -400,42 +414,50 @@
   
   ;; [RaListof X] Nat X -> [RaListof X]
   (define (ra:list-set ls i v)
-    (let-values ([(_ l*) (ra:list-ref/set ls i v)]) l*))
+    (let-values (((_ l*) (ra:list-ref/set ls i v))) l*))
   
   ;; [X ... -> y] [RaListof X] ... -> [RaListof Y]
   ;; Takes advantage of the fact that map produces a list of equal size.
   (define ra:map
     (case-lambda 
-      [(f ls)
+      ((f ls)
        (let recr ((ls ls))
          (if (kons? ls)
              (make-kons (kons-size ls) 
                         (tree-map f (kons-tree ls)) 
                         (recr (kons-rest ls)))
-             ra:null))]
-      [(f . lss)
+             ra:null)))
+      ((f . lss)
        ;(check-nary-loop-args 'ra:map (lambda (x) x) f lss)
        (let recr ((lss lss))
-         (cond [(ra:null? (car lss)) ra:null]
-               [else
+         (cond ((ra:null? (car lss)) ra:null)
+               (else
                 ;; IMPROVE ME: make one pass over lss.
                 (make-kons (kons-size (car lss))
                            (tree-map/n f (map kons-tree lss))
-                           (recr (map kons-rest lss)))]))]))
+                           (recr (map kons-rest lss)))))))))
 
 
   ;; [X ... -> Y] [RaListof X] ... -> unspecified
   (define ra:for-each
     (case-lambda 
-      [(f ls)
+      ((f ls)
        (when (kons? ls)
          (tree-for-each f (kons-tree ls))
-         (ra:for-each f (kons-rest ls)))]
-      [(f . lss)
+         (ra:for-each f (kons-rest ls))))
+      ((f . lss)
        ;(check-nary-loop-args 'ra:map (lambda (x) x) f lss)
        (let recr ((lss lss))
          (when (ra:pair? (car lss))
            (tree-map/n f (map kons-tree lss))
-           (recr (map kons-rest lss))))]))
+           (recr (map kons-rest lss)))))))
+
+  ;; [RaListof X] -> [Listof X]
+  (define (ra:random-access-list->linear-access-list x)
+    (ra:foldr/1 cons '() x))
+
+  ;; [Listof X] -> [RaListof X]
+  (define (ra:linear-access-list->random-access-list x)
+    (fold-right ra:cons '() x))
       
-  ) ; (srfi :101)
+  ) ; (srfi :101 random-access-lists procedures)
