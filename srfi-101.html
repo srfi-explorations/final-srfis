@@ -268,6 +268,8 @@ persistent</em> [<a href="#note-1">1</a>].  Full persistence means
 that all operations on random-access lists, notably
 including <code>cons</code>, <code>list-ref</code>, <code>list-set</code>,
 and <code>list-ref/update</code>, are specified
+</p>
+
 <ol>
   <li>
     not to mutate any of their arguments; perforce
@@ -285,6 +287,8 @@ and <code>list-ref/update</code>, are specified
     to produce results that share structure with their arguments.
   </li>
 </ol>
+
+<p>
 It is usually taken for granted that standard Scheme lists have these
 properties.  This SRFI explicitly specifies that random-access lists
 share them.
@@ -618,12 +622,16 @@ procedure: <code>(list-ref/update <em>pair</em> <em>k</em> <em>proc</em>)
 
 <p>
 Returns the same results as: 
+</p>
+
 <pre>
 (values (list-ref pair k) 
         (list-set pair k (proc (list-ref pair k))))
 </pre>
+
+<p>
 but it may be implemented more efficiently.
-</code>
+</p>
 
 <pre>
 (list-ref/update '(7 8 9 10) 2 -)              &rArr;  9 (7 8 -9 10)
@@ -677,7 +685,7 @@ it.
 
 <p class="proto">
 procedure: <code>(for-each <em>proc</em> <em>list<sub>1</sub></em> <em>list<sub>2</sub></em>
-...) &rarr; <em>unspecified</em></code></code>
+...) &rarr; <em>unspecified</em></code>
 </p>
 
 <p>
@@ -790,17 +798,15 @@ and SRFI 101 must provide the following libraries:
     (srfi :101 random-access-lists syntax)      ; Syntax only
 </pre>
 
-</p>
-
 <h1>
 <a name="ReferenceImplementation">Reference Implementation</a>
 </h1>
 
 <p>
-A mostly portable R6RS library
-<a href="srfi/">reference implementation</a> and test suite are
-provided separately.  The library has been tested successfully using
-Ikarus (0.0.3), Larceny (0.97), and PLT Scheme (4.2.1.7).
+A mostly portable R6RS library <a href="srfi.tar">reference
+implementation</a> and test suite are provided.  The library has been
+tested successfully using Ikarus (0.0.3), Larceny (0.97), and PLT
+Scheme (4.2.1.7).
 </p>
 
 <p>
