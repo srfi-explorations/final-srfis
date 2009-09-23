@@ -1,0 +1,681 @@
+<!DOCTYPE html PUBLIC
+    "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>SRFI 104: Library Files Utilities</title>
+<style type="text/css">
+.type {
+   margin-right: 20px;
+}
+</style>
+</head>
+<body>
+
+<!-- This commented out text is for the brittle SRFI tools -->
+<!--
+<H1>Title</H1>
+
+Library Files Utilities
+
+<H1>Author</H1>
+
+Derick Eddington
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status.
+-->
+
+<h1>Title</h1>
+
+<p>Library Files Utilities</p>
+
+<h1>Author</h1>
+
+<p>Derick Eddington</p>
+
+<!-- ======================================================================= -->
+
+<h1>Status</h1>
+
+<p>
+This SRFI is currently in ``draft'' status.  To see an explanation of
+each status that a SRFI can hold, see <a
+href="http://srfi.schemers.org/srfi-process.html">here</a>.
+
+To provide input on this SRFI, please 
+<a href="mailto:srfi minus 104 at srfi dot schemers dot org">mail to
+<code>&lt;srfi minus 104 at srfi dot schemers dot org&gt;</code></a>.  See 
+<a href="../srfi-list-subscribe.html">instructions here</a> to
+subscribe to the list.  You can access previous messages via
+<a href="mail-archive/maillist.html">the archive of the mailing list</a>.
+</p>
+
+<ul>
+  <li>
+    Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-104/srfi-104.html?rev=1.1">2009/09/22</a></li>
+  
+  <li>Draft: 2009/09/22-2009/11/22</li>
+</ul>
+
+<!-- ======================================================================= -->
+
+<h1>Table of contents</h1>
+
+<ul>
+<li><a href="#abstract">Abstract</a></li>
+<li><a href="#rationale">Rationale</a></li>
+<li><a href="#specification">Specification</a>
+<ul>
+  <li><a href="#requirements">Requirements</a></li>
+  <li><a href="#bindings">Provided Bindings</a>
+  <ul>
+    <li><a href="#implementation-name-def">implementation-name</a></li>
+    <li><a href="#path-separator-def">path-separator</a></li>
+    <li><a href="#environment-variable-separator-def">environment-variable-separator</a></li>
+    <li><a href="#search-paths-def">search-paths</a></li>
+    <li><a href="#directory-list-def">directory-list</a></li>
+    <li><a href="#encode-charp-def">encode-char?</a></li>
+    <li><a href="#search-paths-from-environment-variable-def">search-paths-from-environment-variable</a></li>
+    <li><a href="#library-name-to-path-def">library-name-&gt;path</a></li>
+    <li><a href="#library-file-path-info-def">library-file-path-info</a></li>
+    <li><a href="#find-library-file-paths-def">find-library-file-paths</a></li>
+    <li><a href="#join-and-flatten-def">join-and-flatten</a></li>
+  </ul></li>
+</ul></li>
+<li><a href="#reference-implementation">Reference Implementation</a></li>
+<li><a href="#issues">Issues</a></li>
+<li><a href="#acknowledgements">Acknowledgments</a></li>
+<li><a href="#references">References</a></li>
+<li><a href="#copyright">Copyright</a></li>
+</ul>
+
+<!-- ======================================================================= -->
+
+<h1><a name="abstract">Abstract</a></h1>
+
+<p>This SRFI implements <a href="http://srfi.schemers.org/srfi-103/srfi-103.html">
+SRFI 103: Library Files</a> as a library.  It may be used as the means for Scheme
+implementations to support SRFI 103; in which case, the dynamically configurable
+aspects of this SRFI are the configuration of SRFI 103; which makes the
+configuration of SRFI 103 dynamically reconfigurable and inspectable by users.  If
+this SRFI is not used by Scheme implementations as the means to support SRFI 103,
+it is still useful for building upon to create software for managing library
+files and for users working with library files.  A reference implementation is
+provided.</p>
+
+<!-- ======================================================================= -->
+
+<h1><a name="rationale">Rationale</a></h1>
+
+<p><a href="http://srfi.schemers.org/srfi-103/srfi-103.html">SRFI 103: Library
+Files</a> only defines a standard for naming and finding library files.  To
+assist in working with library files as defined by SRFI 103, and to assist Scheme
+implementations in supporting SRFI 103, this SRFI provides a library API of
+procedures and parameters for working with and configuring all the aspects of
+SRFI 103.  E.g., a Scheme implementation can use this SRFI as its primary means of
+importing external libraries.  Or, e.g., a library manager application can use
+this SRFI to do transcoding of path names when exchanging library files between
+different file systems, or to work with library files in other ways.</p>
+
+<!-- ======================================================================= -->
+
+<h1><a name="specification">Specification</a></h1>
+
+<p>Implementations of this SRFI as an R6RS-like library must be named
+<code>(srfi :104 library-files-utilities)</code>, and there must also be an alias
+named <code>(srfi :104)</code>, following
+<a href="http://srfi.schemers.org/srfi-97/srfi-97.html">
+SRFI 97: SRFI Libraries</a>.</p>
+
+<p>This specification refers to many aspects of 
+<a href="http://srfi.schemers.org/srfi-103/srfi-103.html">SRFI 103: Library Files</a>,
+and familiarity with it is assumed.</p>
+
+<h3><a name="requirements">Requirements</a></h3>
+
+<p><a href="http://srfi.schemers.org/srfi-39/srfi-39.html">
+SRFI 39: Parameter Objects</a></p>
+
+<h3><a name="bindings">Provided Bindings</a></h3>
+
+<dl>
+<dt><a name="implementation-name-def">
+    <span class="type">PARAMETER</span>
+    <b>implementation-name</b></a></dt>
+<dd><p>The name to use as the implementation-specific component of the file name
+extension.  It must be a non-empty string which is the non-encoded name.  Its
+encoded form is used to add or recognize the component.  The four special
+characters of SRFI 103, <code>#\0</code> through <code>#\9</code>, and any
+characters <code>encode-char?</code> returns true for are encoded.  This
+parameter must be initialized to the name of the host implementation.</p>
+
+<p>If this SRFI is used as the means for the host implementation to support SRFI
+103, changing the value of this parameter will dynamically reconfigure the
+implementation name used by SRFI 103.  If this SRFI is not used as the means for
+the host implementation to support SRFI 103, changing the value of this parameter
+will not affect the implementation name used by SRFI 103.</p></dd>
+
+
+<dt><a name="path-separator-def">
+    <span class="type">PARAMETER</span>
+    <b>path-separator</b></a></dt>
+<dd><p>The character used by the host platform to separate components in paths.
+It is used to join or split components of paths.  It is encoded in components of
+relative library file paths.  It must be a character, and it must not
+be <code>#\%</code>, <code>#\.</code>, <code>#\^</code>, or the same as the
+value of <code>environment-variable-separator</code>.  This parameter must be
+initialized to the host platform's path separator character.</p>
+
+<p>If this SRFI is used as the means for the host implementation to support SRFI
+103, changing the value of this parameter will dynamically reconfigure the path
+separator used by SRFI 103.  If this SRFI is not used as the means for the host
+implementation to support SRFI 103, changing the value of this parameter will not
+affect the path separator used by SRFI 103.</p></dd>
+
+
+<dt><a name="environment-variable-separator-def">
+    <span class="type">PARAMETER</span>
+    <b>environment-variable-separator</b></a></dt>
+<dd><p>The character used by the host platform to separate paths in the
+<code>SCHEME_LIBRARY_SEARCH_PATHS</code> environment variable.  It must be a
+character, and it must not be the same as the value of
+<code>path-separator</code>.  This parameter must be initialized to the host
+platform's environment variable separator character.</p>
+
+<p>If this SRFI is used as the means for the host implementation to support SRFI
+103, changing the value of this parameter will dynamically reconfigure the
+environment variable separator used by SRFI 103.  If this SRFI is not used as the
+means for the host implementation to support SRFI 103, changing the value of this
+parameter will not affect the environment variable separator used by SRFI 103.
+Note that SRFI 103 uses its environment variable separator only once when
+initializing its search paths.</p></dd>
+
+
+<dt><a name="search-paths-def">
+    <span class="type">PARAMETER</span>
+    <b>search-paths</b></a></dt>
+<dd><p>The list of names of directories to search for library files, in order of
+precedence.  It must be a list, possibly empty, of paths which must be
+independent, i.e., one cannot be a prefix of another.  This parameter must be
+initialized to the host implementation's search paths.</p>
+
+<p>If this SRFI is used as the means for the host implementation to support SRFI
+103, changing the value of this parameter will dynamically reconfigure the search
+paths used by SRFI 103.  If this SRFI is not used as the means for the host
+implementation to support SRFI 103, changing the value of this parameter will not
+affect the search paths used by SRFI 103.</p>
+
+<dl><dt>Examples:</dt>
+       <dd><table>
+           <tr><td>OK:</td>
+               <td><pre>(search-paths '("." "asdf/fdsa" "/foo/bar/blah" "/foo/bar/zab"))</pre></td></tr>
+           <tr><td>ERROR:</td>
+               <td><pre>(search-paths '("/foo/bar" "/foo/bar/zab"))</pre></td></tr>
+           </table></dd></dl></dd>
+
+
+<dt><a name="directory-list-def">
+    <span class="type">PARAMETER</span>
+    <b>directory-list</b></a></dt>
+<dd><p>The procedure which lists directories.  It is used when finding library
+files.  It must be a procedure which takes a path naming a directory and returns
+a list, possibly empty, of strings which are the relative names of the entities
+in the directory.  The procedure must return <code>#F</code> if the directory
+does not exist, so that the search may continue.  The procedure may raise an
+exception if there is any problem listing the directory (e.g., "not a directory"
+or "permission denied"), or it may return <code>#F</code> to ignore the problem
+and allow the search to continue.  This parameter must be initialized to a
+procedure which lists directories as described.</p>
+
+<p>If this SRFI is used as the means for the host implementation to support SRFI
+103, changing the value of this parameter will dynamically reconfigure the means
+of listing directories used by SRFI 103.  If this SRFI is not used as the means
+for the host implementation to support SRFI 103, changing the value of this
+parameter will not affect the means of listing directories used by SRFI
+103.</p></dd>
+
+
+<dt><a name="encode-charp-def">
+    <span class="type">PARAMETER</span>
+    <b>encode-char?</b></a></dt>
+<dd><p>The predicate which determines what additional characters to encode in
+components of relative library file paths.  It must be a procedure which takes a
+character and returns true or <code>#F</code>; true means the character will be
+encoded, <code>#F</code> means it will not be.  It cannot determine whether the
+special characters <code>#\%</code>, <code>#\.</code>, <code>#\^</code>, and the
+value of <code>path-separator</code> are encoded because they are always
+encoded.  If an appropriate set of characters to encode for the host platform's
+file system can be determined, this parameter must be initialized to a
+procedure which indicates to encode these.  If this cannot be determined, its
+default value is a procedure which always returns <code>#F</code>.</p>
+
+<p>If this SRFI is used as the means for the host implementation to support SRFI
+103, changing the value of this parameter will dynamically reconfigure the
+additional characters encoded by SRFI 103.  If this SRFI is not used as the means
+for the host implementation to support SRFI 103, changing the value of this
+parameter will not affect the additional characters encoded by SRFI 103.</p></dd>
+
+
+<dt><a name="search-paths-from-environment-variable-def">
+    <span class="type">PROCEDURE</span>
+    (<b>search-paths-from-environment-variable</b>)</a></dt>
+<dd><p>Returns a list, possibly empty, of strings which are the paths from the
+current value of the <code>SCHEME_LIBRARY_SEARCH_PATHS</code> environment
+variable at the time the procedure is called, in the same order they occured in
+the environment variable.  The character used to separate paths in the
+environment variable is the current value of
+<code>environment-variable-separator</code>.  Empty elements (e.g., caused
+by <code>"a/b::c/d"</code>, <code>":a/b"</code>, etc.) are filtered out.  If the
+environment variable is not defined, <code>'()</code> is returned.</p></dd>
+
+
+<dt><a name="library-name-to-path-def">
+    <span class="type">PROCEDURE</span>
+    (<b>library-name-&gt;path</b>
+                    <i>library-name</i>
+                    <i>implicit-main?</i>
+                    <i>implementation-name?</i>)</a></dt>
+<dd><p>Given a datum representing a &lt;library name&gt; (as defined by
+<a href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-10.html#node_sec_7.1">R6RS
+7.1</a>), return a string which is a relative library file path which represents
+the library name and can be used as the name of a file containing a library with
+the given library name.  The sequence of symbols in the library name are encoded
+to make the leading path components.  If the second argument is true, a last
+path component with prefix <code>"^main^"</code> is implicitly appended.  If the
+third argument is true, the file name extension of the last path component is
+prepended with the encoded form of the current value of
+<code>implementation-name</code>.  When encoding the library name's symbols and
+the implementation name, the current value of <code>encode-char?</code>
+determines what characters are encoded in addition to the characters which are
+always encoded.  The current value of <code>path-separator</code> is used to
+construct the returned path.</p>
+
+<dl><dt>Examples:</dt>
+       <dd><table>
+           <tr><td><pre>
+(library-name-&gt;path '(foo) #F #F)
+=&gt; "foo.sls"</pre></td></tr>
+           <tr><td><pre>
+(library-name-&gt;path '(foo) #T #F)
+=&gt; "foo/^main^.sls"</pre></td></tr>
+           <tr><td><pre>
+(library-name-&gt;path '(foo) #F #T)
+=&gt; "foo.acme.sls"</pre></td></tr>
+           <tr><td><pre>
+(library-name-&gt;path '(foo) #T #T)
+=&gt; "foo/^main^.acme.sls"</pre></td></tr>
+           <tr><td><pre>
+(library-name-&gt;path '(foo bar zab (1)) #F #F)
+=&gt; "foo/bar/zab.1.sls"</pre></td></tr>
+           <tr><td><pre>
+(parameterize ((implementation-name "Δ")
+               (path-separator #\\)
+               (encode-char? (lambda (c) (not (char&lt;=? #\a c #\z)))))
+  (library-name-&gt;path '(foo ♥ λ bar (1 2 3)) #T #T))
+=&gt; "foo\\%E2%99%A5\\%CE%BB\\bar\\^main^.1.2.3.%CE%94.sls"</pre></td></tr>
+           </table></dd></dl></dd>
+
+
+<dt><a name="library-file-path-info-def">
+    <span class="title">PROCEDURE</span>
+    (<b>library-file-path-info</b> <i>path</i>)</a></dt>
+<dd><p>Given a path, if the path is a valid library file path then return an
+association list of information about the path, else return <code>#F</code>.
+This can be used as a predicate to recognize library file paths versus other
+paths.  One association is always present: key <code>'library</code> and value
+being the library name decoded from the path.  If the path begins with one of
+the search paths, an association is present with key <code>'search-path</code>
+and value being the search path as a string.  If the last path component begins
+with the implicit file name prefix <code>"^main^"</code>, an association is
+present with key <code>'implicit</code> and value being <code>#T</code>.  If the
+file name extension is implementation-specific, an association is present with
+key <code>'implementation</code> and value being the decoded
+implementation-specific component as a string.  Encoded characters are decoded
+regardless of the value of <code>encode-char?</code>.  The current value of
+<code>path-separator</code> is used to recognize separate path
+components.</p>
+
+<dl><dt>Examples:</dt>
+       <dd><table>
+           <tr><td><pre>
+(library-file-path-info "foo.sls")
+=&gt; ((library . (foo)))</pre></td></tr>
+           <tr><td><pre>
+(parameterize ((search-paths '("/ab/cd/ef")))
+  (library-file-path-info "/ab/cd/ef/foo/bar/zab.1.2.sls"))
+=&gt; ((library . (foo bar zab (1 2)))
+    (search-path . "/ab/cd/ef"))</pre></td></tr>
+           <tr><td><pre>
+(library-file-path-info "foo/^main^.sls")
+=&gt; ((library . (foo))
+    (implicit . #T))</pre></td></tr>
+           <tr><td><pre>
+(library-file-path-info "foo.acme.sls")
+=&gt; ((library . (foo))
+    (implementation . "acme"))</pre></td></tr>
+           <tr><td><pre>
+(parameterize ((search-paths '("/ab/cd/ef")))
+  (library-file-path-info "/ab/cd/ef/foo/bar/^main^.1.2.3.acme.sls"))
+=&gt; ((library . (foo bar (1 2 3)))
+    (search-path . "/ab/cd/ef")
+    (implicit . #T)
+    (implementation . "acme"))</pre></td></tr>
+           <tr><td><pre>
+(parameterize ((encode-char? (lambda (c) #F)))
+  (library-file-path-info "%E2%99%A5/%CE%BB.%CE%94.sls"))
+=&gt; ((library . (♥ λ))
+    (implementation . "Δ"))</pre></td></tr>
+           <tr><td><pre>
+(let ((info (library-file-path-info "♥/λ/^main^.7.Δ.sls")))
+  (parameterize ((implementation-name
+                  (cond ((assq 'implementation info) =&gt; cdr)
+                        (else "ignored")))
+                 (path-separator #\\)
+                 (encode-char? (lambda (c) #T)))
+    (library-name-&gt;path (cdr (assq 'library info))
+                             (assq 'implicit info)
+                             (assq 'implementation info))))
+=&gt; "%E2%99%A5\\%CE%BB\\^main^.7.%CE%94.sls"</pre></td></tr>
+           <tr><td><pre>
+(library-file-path-info "foo.png")
+=&gt; #F</pre></td></tr>
+           <tr><td><pre>
+(library-file-path-info "foo.1.+2.3.sls")
+=&gt; #F</pre></td></tr>
+           <tr><td><pre>
+(library-file-path-info "^main^.sls")
+=&gt; #F</pre></td></tr>
+           </table></dd></dl></dd>
+
+
+<dt><a name="find-library-file-paths-def">
+    <span class="type">PROCEDURE</span>
+    (<b>find-library-file-paths</b> <i>library-reference</i>)</a></dt>
+<dd><p>Given a datum representing a &lt;library reference&gt; (as defined by
+<a href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-10.html#node_sec_7.1">R6RS
+7.1</a>), find the files in the search paths whose paths match the library
+reference, and return an association list describing the matching paths and
+their ordering.  Each association represents a search path which contains at
+least one match.  No association is present for a search path which does not
+contain a match.  The key of each association is the search path the association
+represents.  The associations are ordered the same as their keys are in
+the <code>search-paths</code> parameter.  The value of each association is a
+list of length one or two which represents the one or two possible directories
+in the association's search path which contain matches.  A directory containing
+implicit file names is one of the possibilities, and a directory containing
+non-implicit file names is the other possibility.  If both directories exist and
+contain matches, the directory containing implicit file names is ordered first.
+Each element of this list is a non-empty ordered list of matching paths from the
+corresponding directory, and these paths are relative to the association's
+search path, and they are ordered as described in the
+<a href="http://srfi.schemers.org/srfi-103/srfi-103.html#ordering">Ordering</a>
+section of SRFI 103.  If no matches are found, <code>'()</code> is returned.</p>
+
+<dl><dt>Example:</dt>
+       <dd><dl><dt>Given this structure of directories and files:</dt>
+                  <dd><dl><dt><code>/s/p/a/</code></dt>
+                          <dd><dl><dt><code>foo/</code></dt>
+                                  <dd><code>bar.1.0.acme.sls</code></dd>
+                                  <dd><code>bar.1.2.other.sls</code></dd>
+                                  <dd><code>bar.1.2.sls</code></dd>
+                                  <dd><code>bar.1.acme.sls</code></dd>
+                                  <dd><code>bar.1.sls</code></dd>
+                                  <dd><code>bar.2.acme.sls</code></dd>
+                                  <dd><code>bar.2.sls</code></dd>
+                                  <dd><code>bar.acme.sls</code></dd>
+                                  <dd><code>bar.other.sls</code></dd>
+                                  <dd><code>bar.png</code></dd>
+                                  <dd><code>bar.sls</code></dd>
+                                  <dd><code>zab.sls</code></dd>
+                                  <dd><dl><dt><code>bar/</code></dt>
+                                          <dd><code>^main^.1.9.acme.sls</code></dd>
+                                          <dd><code>^main^.sls</code></dd>
+                                          <dd><code>blah.sls</code></dd>
+                                      </dl></dd>
+                              </dl></dd>
+                          <dt><code>s/p/c/</code></dt>
+                          <dd><dl><dt><code>foo/</code></dt>
+                                  <dd><code>bar.1.1.sls</code></dd>
+                                  <dd><code>bar.3.sls</code></dd>
+                                  <dd><code>bar.other.sls</code></dd>
+                                  <dd><dl><dt><code>bar/</code></dt>
+                                          <dd><code>^main^.2.sls</code></dd>
+                                          <dd><code>^main^.other.sls</code></dd>
+                                      </dl></dd>
+                              </dl></dd>
+                          <dt><code>spb/</code></dt>
+                          <dd><dl><dt><code>foo/</code></dt>
+                                  <dd><code>blah.sls</code></dd>
+                                  <dd><code>zab.sls</code></dd>
+                                  <dd><dl><dt><code>bar/</code></dt>
+                                          <dd><code>^main^.0.7.acme.sls</code></dd>
+                                          <dd><code>^main^.0.9.sls</code></dd>
+                                          <dd><code>^main^.1.0.sls</code></dd>
+                                          <dd><code>^main^.1.2.acme.sls</code></dd>
+                                          <dd><code>^main^.other.sls</code></dd>
+                                          <dd><code>^main^.png</code></dd>
+                                          <dd><code>zab.sls</code></dd>
+                                      </dl></dd>
+                              </dl></dd>
+                          <dt><code>spd/</code></dt>
+                          <dd><dl><dt><code>foo/</code></dt>
+                                  <dd><code>it.sls</code></dd>
+                                  <dd><dl><dt><code>bar/</code></dt>
+                                          <dd><code>thing.sls</code></dd>
+                                      </dl></dd>
+                              </dl></dd>
+                      </dl></dd></dl>
+           <pre>
+(parameterize ((search-paths '("spd" "s/p/c" "spb" "/s/p/a"))
+               (implementation-name "acme"))
+  (find-library-file-paths '(foo bar (1))))
+=&gt;
+(("s/p/c"
+  ("foo/bar.1.1.sls"))
+ ("spb"
+  ("foo/bar/^main^.1.2.acme.sls"
+   "foo/bar/^main^.1.0.sls"))
+ ("/s/p/a"
+  ("foo/bar/^main^.sls"
+   "foo/bar/^main^.1.9.acme.sls")
+  ("foo/bar.acme.sls"
+   "foo/bar.sls"
+   "foo/bar.1.2.sls"
+   "foo/bar.1.0.acme.sls"
+   "foo/bar.1.acme.sls"
+   "foo/bar.1.sls")))</pre>
+       </dd></dl>
+</dd>
+
+
+<dt><a name="join-and-flatten-def">
+    <span class="type">PROCEDURE</span>
+    (<b>join-and-flatten</b>
+                    <i>library-file-paths</i>)</a></dt>
+<dd><p>Given a data structure returned by
+<code>find-library-file-paths</code>, join the relative paths with the
+search paths they are under and return a flat list of these joined paths,
+preserving the ordering in <i>library-file-paths</i>.</p>
+
+<dl><dt>Example:</dt>
+       <dd><pre>
+(join-and-flatten
+ '(("s/p/c"
+    ("foo/bar.1.1.sls"))
+   ("spb"
+    ("foo/bar/^main^.1.2.acme.sls"
+     "foo/bar/^main^.1.0.sls"))
+   ("/s/p/a"
+    ("foo/bar/^main^.sls"
+     "foo/bar/^main^.1.9.acme.sls")
+    ("foo/bar.acme.sls"
+     "foo/bar.sls"
+     "foo/bar.1.2.sls"
+     "foo/bar.1.0.acme.sls"
+     "foo/bar.1.acme.sls"
+     "foo/bar.1.sls"))))
+=&gt;
+("s/p/c/foo/bar.1.1.sls"
+ "spb/foo/bar/^main^.1.2.acme.sls"
+ "spb/foo/bar/^main^.1.0.sls"
+ "/s/p/a/foo/bar/^main^.sls"
+ "/s/p/a/foo/bar/^main^.1.9.acme.sls"
+ "/s/p/a/foo/bar.acme.sls"
+ "/s/p/a/foo/bar.sls"
+ "/s/p/a/foo/bar.1.2.sls"
+ "/s/p/a/foo/bar.1.0.acme.sls"
+ "/s/p/a/foo/bar.1.acme.sls"
+ "/s/p/a/foo/bar.1.sls")</pre></dd></dl></dd>
+</dl>
+
+<!-- ======================================================================= -->
+
+<h1><a name="reference-implementation">Reference Implementation</a></h1>
+
+<p>The reference implementation is provided as an R6RS library.  It requires a
+directory listing procedure, a number of R6RS bindings, 
+<a href="http://srfi.schemers.org/srfi-39/srfi-39.html"> SRFI 39: Parameter
+Objects</a>, and <a href="http://srfi.schemers.org/srfi-98/srfi-98.html">SRFI
+98: An Interface to Access Environment Variables</a>.  It can be used by Scheme
+implementations as a built-in library, e.g., in a boot image.  It can also be
+used as an externally-imported library.</p>
+
+<p>For use as an externally-imported library, the reference implementation uses
+implementation-specific library files in order to initialize the parameters of
+this SRFI.  Files are provided for Ikarus, Larceny, PLT, and Ypsilon, and these
+files should make it clear how other implementations can be supported.  If this
+SRFI is built-in to a Scheme implementation, the implementation-specific
+libraries are not needed and the main library can be easily adapted to not use
+them.</p>
+
+<p>The test program is provided as an R6RS program.  It requires, in addition to
+an implementation of this SRFI, 
+<a href="http://srfi.schemers.org/srfi-39/srfi-39.html"> 
+SRFI 39: Parameter Objects</a>, and 
+<a href="http://srfi.schemers.org/srfi-78/srfi-78.html">
+SRFI 78: Lightweight Testing</a>.</p>
+
+<p><a href="library-files-utilities.tar.gz">
+   The reference implementation and tests.</a></p>
+
+<!-- ======================================================================= -->
+
+<h1><a name="issues">Issues</a></h1>
+
+<p>(Section which points out things to be resolved.  This will not appear in the
+final SRFI.)</p>
+
+<ul>
+  <li><p>Are the initialization helper libraries all correct and as complete as
+  they should be?</p></li>
+
+  <li><p>Should <code>find-library-file-paths</code> return a joined and
+  flattened list, and get rid of
+  <code>join-and-flatten</code>, instead?
+  <code>library-file-path-info</code> can be used on the paths to know
+  their search path, etc.</p></li>
+
+  <li><p>How should absolute paths which aren't prefixed with a search path be
+  interpreted?:</p>
+  <pre>
+(parameterize ((search-paths '()))
+  (library-file-path-info "/a/b/c/foo.sls"))
+=&gt; #F or ((library . (a b c foo))) ???
+(parameterize ((path-separator #\\)
+               (search-paths '()))
+  (library-file-path-info "C:\\a\\b\\c\\foo.sls"))
+=&gt; ???</pre>
+  <p>Relative paths are OK because it makes sense to use all the components:</p>
+  <pre>
+(parameterize ((search-paths '()))
+  (library-file-path-info "a/b/c/foo.sls"))
+=&gt; ((library . (a b c foo)))</pre></li>
+
+  <li><p>What should be done about this absolute vs. relative path bug?:</p>
+  <pre>
+(parameterize ((search-paths '("/a/b/c")))
+  (library-file-path-info "a/b/c/foo.sls"))
+=&gt; ((library . (foo)))  ;; should be ((library . (a b c foo)))
+(parameterize ((search-paths '("a/b/c")))
+  (library-file-path-info "/a/b/c/foo.sls"))
+=&gt; ((library . (foo)))  ;; should it be #F,
+                        ;; or should it be ((library . (a b c foo)))?</pre>
+  <p>A <code>substring</code> and <code>string=?</code> could easily be done
+  instead, but then this would not work:</p>
+  <pre>
+(parameterize ((search-paths '("/a/b/c")))
+  (library-file-path-info "//a///b////c/////foo.sls"))
+=&gt; ((library . (foo))
+    (search-path . "/a/b/c"))
+(parameterize ((search-paths '("//a///b////c")))
+  (library-file-path-info "/a/b/c/foo.sls"))
+=&gt; ((library . (foo))
+    (search-path . "//a///b////c"))</pre>
+  <p>Some sort of smarter path splitting and joining is needed.  A first
+  <code>"/"</code> could be considered both a component and a separator, but
+  then what would be the ramifications to non-POSIX path support?  We want to
+  support the ability to use different path types at run-time (via
+  parameterization).  Make some path type parameter..?  Incorporate path
+  normalization..?  I wish a suitable path manipulation SRFI existed...</p></li>
+
+  <li><p>TODO: Anything else?</p></li>
+</ul>
+
+<!-- ======================================================================= -->
+
+<h1><a name="acknowledgements">Acknowledgments</a></h1>
+
+<p>I thank everyone who helped with SRFI 103: Library Files.  I thank all those
+who participated during the draft period of this SRFI.  I thank David Van Horn
+for editing this SRFI and for suggesting it be separated from SRFI 103.</p>
+
+<h1><a name="references">References</a></h1>
+
+<dl>
+  <dt>SRFI 103: Library Files</dt>
+  <dd>Derick Eddington<br/>
+      <a href="http://srfi.schemers.org/srfi-103/srfi-103.html">
+      http://srfi.schemers.org/srfi-103/srfi-103.html</a></dd>
+
+  <dt>Revised<sup>6</sup> Report on the Algorithmic Language Scheme</dt>
+  <dd>Michael Sperber, <i>et al.</i> (Editors)<br/>
+    <a href="http://www.r6rs.org/">http://www.r6rs.org/</a></dd>
+
+  <dt>SRFI 39: Parameter Objects</dt>
+  <dd>Marc Feeley<br/>
+      <a href="http://srfi.schemers.org/srfi-39/srfi-39.html">
+      http://srfi.schemers.org/srfi-39/srfi-39.html</a></dd>
+</dl>
+
+<!-- ======================================================================= -->
+
+<h1><a name="copyright">Copyright</a></h1>
+<p>
+Copyright (C) Derick Eddington (2009). All Rights Reserved.
+</p>
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+</p><p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+</p><p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+</p>
+    <hr/>
+    <address>Editor: <a href="mailto:srfi-editors at srfi dot schemers dot org">
+             David Van Horn</a></address>
+  </body>
+</html>
