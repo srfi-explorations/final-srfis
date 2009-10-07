@@ -30,7 +30,7 @@ William D Clinger
 
 <H1>Status</H1>
 
-This SRFI is currently in ``draft'' status.
+This SRFI is currently in ``final'' status.
 -->
 
 <!-- This is the real, valid XHTML text -->
@@ -45,7 +45,7 @@ This SRFI is currently in ``draft'' status.
 <h1>Status</h1>
 
 <p>
-This SRFI is currently in ``draft'' status.  To see an explanation of
+This SRFI is currently in ``final'' status.  To see an explanation of
 each status that a SRFI can hold, see <a
 href="http://srfi.schemers.org/srfi-process.html">here</a>.
 
@@ -62,6 +62,7 @@ the list.  You can access previous messages via
 <li>Draft: 2008/07/22-2008/09/22</li>
 <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-99/srfi-99.html?rev=1.9">2009/08/28</a></li>
 <li>Draft extended: 2009/08/28-2009/09/28</li>
+<li>Revised: 2009/10/7</li>
 
 </ul>
 
@@ -69,11 +70,16 @@ the list.  You can access previous messages via
 
 <ul>
   <li><a href="#Abstract">Abstract</a></li>
-  <li><a href="#Issues">Issues</a></li>
   <!--
   <li><a href="#RevisionHistory">Revision History</a></li>
   -->
   <li><a href="#Rationale">Rationale</a></li>
+    <ul>
+      <li><a href="#History">Records Before R6RS</a></li>
+      <li><a href="#R6RSrecords">R6RS Records</a></li>
+      <li><a href="#DesignRationale">Design Rationale for ERR5RS Records</a></li>
+      <li><a href="#Issues">Issues</a></li>
+    </ul>
   <li><a href="#Specification">Specification</a>
     <ul>
       <li><a href="#ProceduralLayer">Procedural Layer</a></li>
@@ -112,59 +118,6 @@ inspection layers of the R6RS record system, but offers
 several worthwhile improvements over the R6RS system.
 </p>
 
-
-<h1><a name="Issues">Issues</a></h1>
-
-<p>
-This SRFI's proposed answers to the following questions are
-indicated within parentheses.
-</p>
-
-<div>
-<ul>
-<li>Should ERR5RS records support single inheritance?<br />
-    (Yes.)
-    </li>
-<li>Should ERR5RS records support the non-generative
-    feature of R6RS records?<br />
-    (No, but this SRFI describes an optional extension for
-    non-generativity, and the reference implementation shows
-    how that extension is implemented in Larceny.)
-    </li>
-<li>Should ERR5RS records support the optional "sealed"
-    feature of R6RS records?<br />
-    (No, but this SRFI describes an optional extension for
-    sealed records, and the reference implementation shows
-    how that extension is implemented in Larceny.)
-    </li>
-<li>Should ERR5RS records support the optional "opaque"
-    feature of R6RS records?<br />
-    (No, but this SRFI describes an optional extension for
-    opaque records, and the reference implementation shows
-    how that extension is implemented in Larceny.)
-    </li>
-<li>Should ERR5RS records support the per-field
-    mutable/immutable feature of R6RS records?<br />
-    (Yes.)
-    </li>
-<li>Should ERR5RS support the record-constructor
-    descriptors of R6RS records?<br />
-    (No.  Even so, ERR5RS
-    records are compatible with the
-    <code>make-record-constructor-descriptor</code>
-    procedure of the R6RS.  Larceny, for example, allows that
-    procedure to be used with ERR5RS record type descriptors.)
-    </li>
-<li>Should mutable or immutable be the default for
-    fields that specify neither property explicitly?<br />
-    (For the <code>make-rtd</code> procedure, the succinct
-    identifier-only field spec implies mutability.
-    The <code>define-record-type</code> syntax provides
-    succinct abbreviations for both immutable and mutable
-    fields.)
-    </li>
-</ul>
-</div>
 
 <!--
 <h1><a name="RevisionHistory">Revision History</a></h1>
@@ -435,8 +388,8 @@ share."
 Since the record-type descriptor is an object, it can be
 the value of a variable that is exported by a library.
 As discussed below, however, the R6RS syntactic layer uses
-a different notion of record type that libraries may not
-be able to export.
+a different notion of record type that may be neither object
+nor syntax.
 </p>
 
 <h3><a name="R6RSsyntactic">R6RS Records: syntactic layer</a></h3>
@@ -465,10 +418,10 @@ bound to a record-type descriptor.  Portable code can only
 assume that the record name is bound to "an expand-time
 or run-time representation", whose semantics is not otherwise explained
 by the R6RS and R6RS library documents.  In particular,
-portable code cannot assume that the record name can be
-exported by a library; libraries can export names that
+it is far from obvious that portable code can export the
+record name from a library; libraries can export names that
 are bound to objects or to syntax, but the R6RS does not
-require the thing to which a record name is bound to be
+require the denotation of a record name to be
 either of those things.
 </p>
 
@@ -595,7 +548,7 @@ On the other hand, SRFI 99 describes three optional
 extensions (the <code>sealed</code>, <code>opaque</code>,
 and <code>uid</code> arguments to <code>make-rtd</code>)
 that would give SRFI 99 the same power as R6RS records.
-With those three extensions, SRFI 99 becomes a simple
+With those three extensions, SRFI 99 would become a simple
 and efficient foundation for implementing R6RS records.
 </p>
 
@@ -617,6 +570,70 @@ inspection layers of R6RS records.
 FIXME
 </p>
 -->
+
+
+<h2><a name="Issues">Issues</a></h2>
+
+<div>
+<ul>
+<li>ERR5RS records support single inheritance.</li>
+<li>ERR5RS records do not support the non-generative
+    feature of R6RS records.
+    (To show how SRFI 99 could be extended to provide
+    all useful features of R6RS records, 
+    SRFI 99 describes an optional extension for
+    non-generativity, and the reference implementation shows
+    how that extension is implemented in Larceny, but
+    that extension is not part of SRFI 99's API.)
+    </li>
+<li>ERR5RS records do not support the optional "sealed"
+    feature of R6RS records.
+    (To show how SRFI 99 could be extended to provide
+    all useful features of R6RS records, 
+    SRFI 99 describes an optional extension for
+    sealed records, and the reference implementation shows
+    how that extension is implemented in Larceny, but
+    that extension is not part of SRFI 99's API.)
+    </li>
+<li>ERR5RS records do not support the optional "opaque"
+    feature of R6RS records.
+    (To show how SRFI 99 could be extended to provide
+    all useful features of R6RS records, 
+    SRFI 99 describes an optional extension for
+    opaque records, and the reference implementation shows
+    how that extension is implemented in Larceny, but
+    that extension is not part of SRFI 99's API.)
+    </li>
+<li>ERR5RS records do not support the record-constructor
+    descriptors of R6RS records.
+    (Even so, ERR5RS
+    records are compatible with the
+    <code>make-record-constructor-descriptor</code>
+    procedure of the R6RS.  Larceny, for example, allows that
+    procedure to be used with ERR5RS record type descriptors.)
+    </li>
+<li>ERR5RS records support the per-field
+    mutable/immutable feature of R6RS records.
+    </li>
+<li>The <code>define-record-type</code> syntax provides
+    succinct defaults for both immutable and mutable fields.
+    An identifier-only field spec implies immutability.
+    When enclosed within parentheses, a single identifier
+    implies mutability.
+    </li>
+<li>ERR5RS records are partitioned into a procedural layer,
+    an inspection layer, and a syntactic layer.
+    (The primary reason for separating the procedural layer
+    from the inspection layer is to simplify comparisons
+    with R6RS records.)
+    </li>
+<li>The <code>make-rtd</code> procedure accepts a vector of
+    field specifiers instead of a list of field specifiers.
+    (This is carried over from the corresponding procedure
+    of the R6RS procedural layer.)
+    </li>
+</ul>
+</div>
 
 
 <h1><a name="Specification">Specification</a></h1>
@@ -719,6 +736,10 @@ combination of the following arguments to follow the optional
     R6RS.</li>
 </ul>
 </div>
+<p>
+The recommendation above is not binding on implementations of SRFI 99.
+There are other ways to realize sealed, opaque, or non-generative rtds.
+</p>
 
 <p>
 Returns an R6RS-compatible record-type descriptor.
@@ -1390,8 +1411,10 @@ is provided separately.
 
 <p>
 I am grateful to David Rush and Andre van Tonder for their
-comments and criticisms, as well as to all those mentioned
-by name in the <a href="#Rationale">Rationale</a>.
+comments and criticisms, to all those mentioned
+by name in the <a href="#Rationale">Rationale</a>,
+and to all who participated in the archived discussion
+of this SRFI.
 The <a href="srfi-99.sls">reference implementation</a>
 is adapted from Larceny v0.97.
 </p>
