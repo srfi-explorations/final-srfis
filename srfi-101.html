@@ -65,6 +65,7 @@ subscribe to the list.  You can access previous messages via
   <li>Received: 2009/09/09</li>
   <li>Draft: 2009/09/16-2009/11/16</li>
   <li>Revised: 2009/09/20</li>
+  <li>Revised: 2009/11/13</li>
 </ul>
 
 <h1>Table of contents</h1>
@@ -125,14 +126,6 @@ library [<a href="#note-3">3</a>].
 <div>
 <ul>
   <li>
-    Should the algorithmic characterizations be tightened as in
-    Okasaki, i.e., should <code>list-ref</code>, <code>list-set</code>
-    operations be required to be <em>O(min(i,log n))</em> or <em>O(log
-      n)</em>?  The latter allows for many of the implementation
-    requirements on argument checking mandated by R6RS to be done
-    naively.
-  </li>
-  <li>
     Procedure names have been chosen to be consistent with R6RS, even
     though in some cases such as <code>list-ref</code>
     and <code>list-tail</code> the choice seems poor since they
@@ -148,8 +141,8 @@ library [<a href="#note-3">3</a>].
     consume or construct lists be included in this proposal?  For
     example, should all of the <code>(rnrs base)</code> library that
     deals with lists be included?  By my count this would mean adding:
-    <code>equal?</code>, <code>lambda</code>, <code>apply</code>, 
-    <code>vector-&gt;list</code>, <code>list-&gt;vector</code>, 
+    <code>lambda</code>, <code>apply</code>, 
+    <code>vector-&gt;list</code>, <code>list-&gt;vector</code>,
     <code>string-&gt;list</code>, and <code>list->string</code>.  I am
     inclined to add these.  Should all of the <code>(rnrs
     lists)</code> library be included?  These procedures are easily
@@ -157,6 +150,13 @@ library [<a href="#note-3">3</a>].
     is gained by implementig them "under the hood" using the data
     structures in the reference implementation.  I am
     inclined <em>not</em> to include them.
+  </li>
+  <li>
+    Should a <code>car+cdr</code> procedure be added?
+  </li>
+  <li>
+    Should the current <code>syntax</code> and <code>procedures</code>
+    sub-libraries be included?
   </li>
 </ul>
 </div>
@@ -185,7 +185,7 @@ words, the typical list and pair operations such
 as <code>cons</code>, <code>car</code>, and <code>cdr</code>, all
 operate in <em>O(1)</em> time as usual.  However, random-access lists
 additionally support index-based access and functional update
-operations that are asymptotically cheaper; <em>O(log n)</em> for
+operations that are asymptotically cheaper; <em>O(log(n))</em> for
 random-access lists versus <em>O(n)</em> for linear-access lists,
 where <em>n</em> is the length of the list being access or updated.
 As such, many purely functional index-based list algorithms become
@@ -309,9 +309,14 @@ section <a href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-7.html#node_sec_4.
 of R6RS).  This notation is used to include constants.
 </p>
 
+<p>
+When the datum value represented by &lt;datum&gt; contains pair
+structure, <code>quote</code> produces random-access pairs.
+</p>
+
 <pre>
 (quote a)                                      &rArr; a
-(quote #(a b c))                               &rArr; (a b c)
+(quote #(a b c))                               &rArr; #(a b c)
 (quote (+ 1 2))                                &rArr; (+ 1 2)
 </pre>
 
@@ -345,6 +350,46 @@ of R6RS, constants are immutable.
     of <code>quote</code> expression may share the same locations.
   </p>
 </blockquote>
+
+<p class="proto">
+procedure: <code>(equal? <em>obj<sub>1</sub></em> <em>obj<sub>2</sub></em>)
+&rarr; <em>bool</em></code>
+</p>
+
+<p>
+The <code>equal?</code> predicate returns <code>#t</code> if and only
+if the (possibly infinite) unfoldings of its arguments into regular
+trees are equal as ordered trees.
+</p>
+
+<p>
+The <code>equal?</code> predicate treats pairs and vectors as nodes
+with outgoing edges, uses <code>string=?</code> to compare strings,
+uses <code>bytevector=?</code> to compare bytevectors, and
+uses <code>eqv?</code> to compare other nodes.
+</p>
+
+<pre>
+(equal? 'a 'a)                                 &rArr; #t
+(equal? '(a) '(a))                             &rArr; #t
+(equal? '(a (b) c)
+        '(a (b) c))                            &rArr; #t
+(equal? "abc" "abc")                           &rArr; #t
+(equal? 2 2)                                   &rArr; #t
+(equal? (make-vector 5 'a)
+        (make-vector 5 'a))                    &rArr; #t
+(equal? '#vu8(1 2 3 4 5)
+        (u8-list->bytevector
+         '(1 2 3 4 5))                         &rArr; #t
+(equal? (lambda (x) x)
+        (lambda (y) y))                        &rArr; <em>unspecified</em>
+
+(let* ((x (list 'a))
+       (y (list 'a))
+       (z (list x y)))
+  (list (equal? z (list y x))
+        (equal? z (list x x))))                &rArr; <em>(#t #t)</em>
+</pre>
 
 <p class="proto">
 procedure: <code>(pair? <em>obj</em>) &rarr; <em>bool</em></code> 
@@ -452,7 +497,7 @@ procedure: <code>(list? <em>obj</em>) &rarr; <em>bool</em></code>
 Returns <code>#t</code> if <em>obj</em> is a list, <code>#f</code>
 otherwise.  By definition, all lists are chains of pairs that have
 finite length and are terminated by the empty list.  This operation
-must take time bounded by <em>O(log n)</em>, where <em>n</em> is the
+must take time bounded by <em>O(log(n))</em>, where <em>n</em> is the
 number of pairs in the chain forming the potential list.
 </p>
 
@@ -488,7 +533,8 @@ procedure: <code>(make-list <em>k</em> <em>obj</em>)
 Returns a newly allocated list of <em>k</em> elements. If a second
 argument is given, then each element is initialized
 to <em>obj</em>. Otherwise the initial contents of each element is
-unspecified.
+unspecified. This operation must take time and space bounded
+by <em>O(log(k))</em>.
 </p>
 
 <pre>
@@ -501,7 +547,7 @@ procedure: <code>(length <em>list</em>) &rarr; <em>k</em></code>
 
 <p>
 Returns the length of <em>list</em>.  This operation must take time
-bounded by <em>O(log n)</em>, where <em>n</em> is the length of the
+bounded by <em>O(log(n))</em>, where <em>n</em> is the length of the
 list.
 </p>
 
@@ -509,6 +555,25 @@ list.
 (length '(a b c))                              &rArr;  3
 (length '(a (b) (c)))                          &rArr;  3
 (length '())                                   &rArr;  0
+</pre>
+
+<p class="proto">
+procedure: <code>(length&lt;=? <em>obj</em> <em>k</em>)
+&rarr; <em>bool</em></code>
+</p>
+
+<p>
+Returns true if <em>obj</em> is a chain of at least <em>k</em> pairs
+and false otherwise.  This operation must take time bounded
+by <em>O(log(min(k,n)))</em>, where <em>n</em> is the length of the
+chain of pairs.
+</p>
+
+<pre>
+(length&lt;=? 'not-a-list 0)                      &rArr;  #t
+(length&lt;=? '(a . b) 0)                         &rArr;  #t
+(length&lt;=? '(a . b) 1)                         &rArr;  #t
+(length&lt;=? '(a . b) 2)                         &rArr;  #f
 </pre>
 
 <p class="proto">
@@ -521,15 +586,15 @@ Returns a chain of pairs consisting of the elements of the
 first <em>list</em> followed by the elements of the other lists, with
 <em>obj</em> as the cdr of the final pair. An improper list results if
 <em>obj</em> is not a list.  This operation must take time bounded
-by <em>O(log n)</em>, where <em>n</em> is the total number of elements
+by <em>O(log(n))</em>, where <em>n</em> is the total number of elements
 in the given lists.
 </p>
 
 <pre>
 (append '(x) '(y))                             &rArr;  (x y)
 (append '(a) '(b c d))                         &rArr;  (a b c d)
-(append '(a (b)) ((c)))                        &rArr;  (a (b) (c))
-(append '(a b) (c . d))                        &rArr;  (a b c . d)
+(append '(a (b)) '((c)))                       &rArr;  (a (b) (c))
+(append '(a b) '(c . d))                       &rArr;  (a b c . d)
 (append '() 'a)                                &rArr;  a
 </pre>
 
@@ -545,7 +610,7 @@ bounded by <em>O(n)</em> where <em>n</em> is the length of the list.
 
 <pre>
 (reverse '(a b c))                             &rArr;  (c b a)
-(reverse '(a (b c) d (e (f))))                 &rArr;  ((e (f)) d (b c) a)
+(reverse '(a (b c) 'd '(e (f))))               &rArr;  ((e (f)) d (b c) a)
 </pre>
 
 <p class="proto">
@@ -557,12 +622,15 @@ procedure: <code>(list-tail <em>obj</em> <em>k</em>)
 <em>Obj</em> should be a chain of pairs with a count of at
 least <em>k</em>.  The <code>list-tail</code> procedure returns the
 object obtained by omitting the first <em>k</em> elements
-in <em>obj</em>.  This operation must take time bounded by <em>O(log
-k)</em>.
+in <em>obj</em>.  This operation must take time bounded
+by <em>O(log(min(k,n)))</em>, where <em>n</em> is the length of the
+chain of pairs.
 </p>
 
 <pre>
+(list-tail '(a b c d) 0)                       &rArr;  (a b c d)
 (list-tail '(a b c d) 2)                       &rArr;  (c d)
+(list-tail 'not-a-list 0)                      &rArr;  not-a-list
 </pre>
 
 <p>
@@ -580,7 +648,8 @@ procedure: <code>(list-ref <em>pair</em> <em>k</em>)
 <em>Pair</em> must be a chain of pairs whose count is at least <em>k +
 1</em>.  The <code>list-ref</code> procedure returns the <em>k</em>th
 element of <em>pair</em>. This operation must take time bounded
-by <em>O(log k)</em>.
+by <em>O(min(k,log(n)))</em>, where <em>n</em> is the length of the
+chain of pairs.
 </p>
 
 <pre>
@@ -600,9 +669,11 @@ procedure: <code>(list-set <em>pair</em> <em>k</em> <em>obj</em>)
 
 <p>
 <em>Pair</em> must be a chain of pairs whose count is at least <em>k +
-1</em>.  The <code>list-set</code> procedure returns the chain of pairs
-obtained by replacing the <em>k</em>th element with <em>obj</em>.
-This operation must take time bounded by <em>O(log k)</em>.
+1</em>.  The <code>list-set</code> procedure returns the chain of
+pairs obtained by replacing the <em>k</em>th element
+with <em>obj</em>.  This operation must take time bounded
+by <em>O(min(k,log(n)))</em>, where <em>n</em> is the length of the
+chain of pairs.
 </p>
 
 <pre>
@@ -755,15 +826,23 @@ conversions may simply be list identity procedures.
 requirements</a></h2>
 
 <p>
+Random-access pairs must be disjoint from all other base types with
+the possible exception of (linear-access) pairs.</p>
+
+<p>
 The external representation of random-access pairs is unspecified.
-The behavior of <code>equal?</code> on random-access pairs is
-unspecified.  The behavior of <code>eq?</code> and <code>eqv?</code>
-on random-access pairs must be the same as that for pairs, vectors, or
+The behavior of <code>equal?</code> when given a random-access pair
+and a sequential-access pair is unspecified in implementations with
+disjoint representations.
+</p>
+
+<p>
+The behavior of <code>eq?</code>  and <code>eqv?</code>  on
+random-access pairs must be the same as that for pairs, vectors, or
 records.  Namely, two random-access pair objects are <code>eq?</code>
 if and only if they are <code>eqv?</code>, and they
 are <code>eqv?</code> if and only if they refer to the same location
-in the store.  Random-access pairs must be disjoint from all other
-base types with the possible exception of pairs.
+in the store.
 </p>
 
 <p>
