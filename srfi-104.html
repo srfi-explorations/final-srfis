@@ -58,6 +58,8 @@ subscribe to the list.  You can access previous messages via
 
   <li>Draft: 2009/09/22-2009/11/22</li>
   <li>Revised: 2009/10/16</li>
+  <li>Revised: 2009/12/11</li>
+  <li>Draft extended: 2009/12/11-2010/1/11</li>
 </ul>
 
 <!-- ======================================================================= -->
@@ -72,10 +74,11 @@ subscribe to the list.  You can access previous messages via
   <li><a href="#requirements">Requirements</a></li>
   <li><a href="#bindings">Provided Bindings</a>
   <ul>
-    <li><a href="#implementation-name-def">implementation-name</a></li>
-    <li><a href="#path-separator-def">path-separator</a></li>
     <li><a href="#search-paths-def">search-paths</a></li>
-    <li><a href="#search-paths-from-environment-variable-def">search-paths-from-environment-variable</a></li>
+    <li><a href="#extensions-def">extensions</a></li>
+    <li><a href="#path-separator-def">path-separator</a></li>
+    <li><a href="#search-paths-from-env-var-def">search-paths-from-env-var</a></li>
+    <li><a href="#extensions-from-env-var-def">extensions-from-env-var</a></li>
     <li><a href="#library-name-to-path-def">library-name-&gt;path</a></li>
     <li><a href="#library-file-path-info-def">library-file-path-info</a></li>
     <li><a href="#find-library-file-paths-def">find-library-file-paths</a></li>
@@ -94,14 +97,14 @@ subscribe to the list.  You can access previous messages via
 <h1><a name="abstract">Abstract</a></h1>
 
 <p>This SRFI implements <a href="http://srfi.schemers.org/srfi-103/srfi-103.html">
-SRFI 103: Library Files</a> as a library.  It may be used as the means for Scheme
-implementations to support SRFI 103; in which case, the dynamically configurable
-aspects of this SRFI are the configuration of SRFI 103; which makes the
-configuration of SRFI 103 dynamically reconfigurable and inspectable by users.  If
-this SRFI is not used by Scheme implementations as the means to support SRFI 103,
-it is still useful for building upon to create software for managing library
-files and for users working with library files.  A reference implementation is
-provided.</p>
+SRFI 103: Library Files</a> as a library.  It may be used as the means for
+Scheme systems to implement SRFI 103; in which case, the dynamically
+configurable aspects of this SRFI are the configuration of SRFI 103; which makes
+the configuration of SRFI 103 dynamically reconfigurable and inspectable by
+users.  If this SRFI is not used by Scheme systems as the means to implement
+SRFI 103, it is still useful for building upon to create software for managing
+library files and for users working with library files.  A reference
+implementation is provided.</p>
 
 <!-- ======================================================================= -->
 
@@ -109,10 +112,10 @@ provided.</p>
 
 <p><a href="http://srfi.schemers.org/srfi-103/srfi-103.html">SRFI 103: Library
 Files</a> only defines a standard for naming and finding library files.  To
-assist in working with library files as defined by SRFI 103, and to assist Scheme
-implementations in supporting SRFI 103, this SRFI provides a library API of
+assist in working with library files as defined by SRFI 103, and to assist
+Scheme systems in implementing SRFI 103, this SRFI provides a library API of
 procedures and parameters for working with and configuring all the aspects of
-SRFI 103.  E.g., a Scheme implementation can use this SRFI as its primary means of
+SRFI 103.  E.g., a Scheme system can use this SRFI as its primary means of
 importing external libraries.  Or, e.g., a library manager application can use
 this SRFI to work with library files.</p>
 
@@ -120,15 +123,15 @@ this SRFI to work with library files.</p>
 
 <h1><a name="specification">Specification</a></h1>
 
-<p>Implementations of this SRFI as an R6RS-like library must be named
-<code>(srfi :104 library-files-utilities)</code>, and there must also be an alias
-named <code>(srfi :104)</code>, following
+<p>Implementations of this SRFI as an R6RS library must be named
+<code>(srfi :104 library-files-utilities)</code>, and there must also be an
+alias named <code>(srfi :104)</code>, following
 <a href="http://srfi.schemers.org/srfi-97/srfi-97.html">
 SRFI 97: SRFI Libraries</a>.</p>
 
 <p>This specification refers to many aspects of
-<a href="http://srfi.schemers.org/srfi-103/srfi-103.html">SRFI 103: Library Files</a>,
-and familiarity with it is assumed.</p>
+<a href="http://srfi.schemers.org/srfi-103/srfi-103.html">SRFI 103: Library
+Files</a>, and familiarity with it is assumed.</p>
 
 <h3><a name="requirements">Requirements</a></h3>
 
@@ -138,171 +141,213 @@ SRFI 39: Parameter Objects</a></p>
 <h3><a name="bindings">Provided Bindings</a></h3>
 
 <dl>
-<dt><a name="implementation-name-def">
+<dt><a name="search-paths-def">
     <span class="type">PARAMETER</span>
-    <b>implementation-name</b></a></dt>
-<dd><p>The name to use as the implementation-specific component of the file name
-extension.  It must be a non-empty string which is the non-encoded name.  Its
-encoded form is used to add or recognize the component.  The characters
-specified by the
-<a href="http://srfi.schemers.org/srfi-103/srfi-103.html#encoding">Encoding
-Characters</a> section of SRFI 103 to be encoded are encoded.  This parameter
-must be initialized to the name of the host implementation.</p>
+    <b>search-paths</b></a></dt>
+<dd><p>The list of names of directories to search for library files, in order of
+precedence.  It must be a list, possibly empty, of paths.  If the host Scheme
+system implements SRFI 103, this parameter must be initialized to the host's
+SRFI 103 search paths.</p>
 
-<p>If this SRFI is used as the means for the host implementation to support SRFI
-103, changing the value of this parameter will dynamically reconfigure the
-implementation name used by SRFI 103.  If this SRFI is not used as the means for
-the host implementation to support SRFI 103, changing the value of this parameter
-will not affect the implementation name used by SRFI 103.</p></dd>
+<p>(If this SRFI is used as the means for the host system to implement SRFI 103,
+changing the value of this parameter will dynamically reconfigure the search
+paths used by SRFI 103.  If this SRFI is not used as the means for the host
+system to implement SRFI 103, changing the value of this parameter will not
+affect the search paths used by SRFI 103.)</p></dd>
+
+
+<dt><a name="extensions-def">
+    <span class="type">PARAMETER</span>
+    <b>extensions</b></a></dt>
+<dd><p>The list of file name extensions to recognize when searching for library
+files, in order of precedence.  It must be a list, possibly empty, of strings
+which must not include the <code>#\.</code> character.  If the host Scheme
+system implements SRFI 103, this parameter must be initialized to the host's
+SRFI 103 file name extensions.</p>
+
+<p>(If this SRFI is used as the means for the host system to implement SRFI 103,
+changing the value of this parameter will dynamically reconfigure the extensions
+used by SRFI 103.  If this SRFI is not used as the means for the host system to
+implement SRFI 103, changing the value of this parameter will not affect the
+extensions used by SRFI 103.)</p></dd>
 
 
 <dt><a name="path-separator-def">
     <span class="type">PARAMETER</span>
     <b>path-separator</b></a></dt>
-<dd><p>The character used by the host platform to separate components in paths.
-It is used to join or split components of paths.  It is encoded in components of
-relative library file paths.  It must be a character, and it must not
-be <code>#\%</code> or <code>#\.</code>.  This parameter must be initialized to
-the host platform's path separator character.</p>
+<dd><p>The character used to separate path components.  It is encoded in
+components of relative library file paths.  It must be a character, and it must
+not be <code>#\%</code> or <code>#\.</code>.  This parameter must be initialized
+to the host platform's path separator character.</p>
 
-<p>If this SRFI is used as the means for the host implementation to support SRFI
-103, changing the value of this parameter will dynamically reconfigure the path
+<p>(If this SRFI is used as the means for the host system to implement SRFI 103,
+changing the value of this parameter will dynamically reconfigure the path
 separator used by SRFI 103.  If this SRFI is not used as the means for the host
-implementation to support SRFI 103, changing the value of this parameter will not
-affect the path separator used by SRFI 103.</p></dd>
+system to implement SRFI 103, changing the value of this parameter will not
+affect the path separator used by SRFI 103.)</p></dd>
 
 
-<dt><a name="search-paths-def">
-    <span class="type">PARAMETER</span>
-    <b>search-paths</b></a></dt>
-<dd><p>The list of names of directories to search for library files, in order of
-precedence.  It must be a list, possibly empty, of paths.  This parameter must
-be initialized to the host implementation's search paths.</p>
-
-<p>If this SRFI is used as the means for the host implementation to support SRFI
-103, changing the value of this parameter will dynamically reconfigure the search
-paths used by SRFI 103.  If this SRFI is not used as the means for the host
-implementation to support SRFI 103, changing the value of this parameter will not
-affect the search paths used by SRFI 103.</p></dd>
-
-
-<dt><a name="search-paths-from-environment-variable-def">
+<dt><a name="search-paths-from-env-var-def">
     <span class="type">PROCEDURE</span>
-    (<b>search-paths-from-environment-variable</b>)</a></dt>
-<dd><p>Returns a list, possibly empty, of strings which are the paths from the
-current value of the <code>R6RS_LIBRARY_PATH</code> environment
+    (<b>search-paths-from-env-var</b>)</a></dt>
+<dd><p>Returns a list, possibly empty, of the paths from the current value of
+the <code>SCHEME_LIB_PATH</code> environment variable at the time the procedure
+is called, in the same order they occured in the environment variable.  If the
+environment variable is not defined, the empty list is returned.</p></dd>
+
+
+<dt><a name="extensions-from-env-var-def">
+    <span class="type">PROCEDURE</span>
+    (<b>extensions-from-env-var</b>)</a></dt>
+<dd><p>Returns a list, possibly empty, of strings which are the file name
+extensions from the current value of the <code>SCHEME_LIB_EXT</code> environment
 variable at the time the procedure is called, in the same order they occured in
 the environment variable.  If the environment variable is not defined,
-<code>'()</code> is returned.</p></dd>
+the empty list is returned.</p></dd>
 
 
 <dt><a name="library-name-to-path-def">
     <span class="type">PROCEDURE</span>
     (<b>library-name-&gt;path</b>
                     <i>library-name</i>
-                    <i>implicit-main?</i>
-                    <i>implementation-name?</i>)</a></dt>
-<dd><p>Given a datum representing a &lt;library name&gt; (as defined by
-<a href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-10.html#node_sec_7.1">R6RS
-7.1</a>), return a string which is a relative library file path which represents
-the library name (without version) and can be used as the name of a file
-containing a library with the given library name.  The sequence of symbols in
-the library name are encoded to make the leading path components.  If the second
-argument is true, a last path component with prefix <code>"main"</code> is
-implicitly appended.  If the third argument is true, the file name extension of
-the last path component is prepended with the encoded form of the current value
-of <code>implementation-name</code>.  The current value of
-<code>path-separator</code> is used to construct the returned path.</p>
+                    <i>implicit?</i>
+                    <i>extension</i>)</a></dt>
+<dd><p>Given a library name, return a path which is a relative library file path
+which represents the library name and can be used as the name of a file
+containing a library with the given library name.  The first argument must be a
+non-empty list of symbols.  The symbols are encoded, according to the
+<a href="http://srfi.schemers.org/srfi-103/srfi-103.html#encoding">Encoding
+Characters</a> section of SRFI 103, to make the leading path components.  If the
+second argument is true, a last path component named <code>"main"</code> is
+implicitly appended.  If the second argument is <code>#F</code>, the last path
+component will be escaped if needed according to the
+<a href="http://srfi.schemers.org/srfi-103/srfi-103.html#implicit-main">
+Implicit File Name</a> section of SRFI 103.  The third argument must be a string
+which is the file name extension to use in the path, and the <code>#\.</code>
+character must not occur in this string.  The current value of the
+<code>path-separator</code> parameter is used to construct the path.</p>
 
 <dl><dt>Examples:</dt>
        <dd><table>
            <tr><td><pre>
-(library-name-&gt;path '(foo) #F #F)
-=&gt; "foo.sls"</pre></td></tr>
+(library-name-&gt;path '(foo) #F "ext")
+=&gt; "foo.ext"</pre></td></tr>
            <tr><td><pre>
-(library-name-&gt;path '(foo) #T #F)
-=&gt; "foo/main.sls"</pre></td></tr>
+(library-name-&gt;path '(foo) #T "ext")
+=&gt; "foo/main.ext"</pre></td></tr>
            <tr><td><pre>
-(library-name-&gt;path '(foo main) #F #F)
-=&gt; "foo/_main.sls"</pre></td></tr>
+(library-name-&gt;path '(foo main) #F "ext")
+=&gt; "foo/_main.ext"</pre></td></tr>
            <tr><td><pre>
-(library-name-&gt;path '(foo main) #T #F)
-=&gt; "foo/main/main.sls"</pre></td></tr>
+(library-name-&gt;path '(foo main) #T "ext")
+=&gt; "foo/main/main.ext"</pre></td></tr>
            <tr><td><pre>
-(library-name-&gt;path '(foo) #F #T)
-=&gt; "foo.acme.sls"</pre></td></tr>
+(library-name-&gt;path '(foo bar zab) #F "acme-ext")
+=&gt; "foo/bar/zab.acme-ext"</pre></td></tr>
            <tr><td><pre>
-(library-name-&gt;path '(foo) #T #T)
-=&gt; "foo/main.acme.sls"</pre></td></tr>
-           <tr><td><pre>
-(library-name-&gt;path '(foo bar zab (1)) #F #F)
-=&gt; "foo/bar/zab.sls"</pre></td></tr>
-           <tr><td><pre>
-(parameterize ((implementation-name "??")
-               (path-separator #\\))
-  (library-name-&gt;path '(:♥ λ* (1 2 3)) #T #T))
-=&gt; "%3A♥\\λ%2A\\main.%3F%3F.sls"</pre></td></tr>
+(parameterize ((path-separator #\\))
+  (library-name-&gt;path '(:♥ λ*) #T "%3F%3F-ext"))
+=&gt; "%3A♥\\λ%2A\\main.%3F%3F-ext"</pre></td></tr>
            </table></dd></dl></dd>
 
 
 <dt><a name="library-file-path-info-def">
     <span class="title">PROCEDURE</span>
     (<b>library-file-path-info</b> <i>path</i>)</a></dt>
-<dd><p>Given a path, if the path is a valid library file path then return an
-association list of information about the path, else return <code>#F</code>.
-This can be used as a predicate to recognize library file paths versus other
-paths.  One association is always present: key <code>'library</code> and value
-being the library name (without version) decoded from the path components.  If
-the last path component begins with the implicit file name
-prefix <code>"main"</code>, an association is present with
-key <code>'implicit</code> and value being <code>#T</code>.  If the file name
-extension is implementation-specific, an association is present with
-key <code>'implementation</code> and value being the decoded
-implementation-specific component as a string.  Encoded characters are decoded
-regardless of the set of characters SRFI 103 says to encode.  The current value
-of <code>path-separator</code> is used to recognize separate path
-components.</p>
+<dd><p>Given a path, if the path is a valid library file path according to SRFI
+103 then return an association list of information about it, else
+return <code>#F</code>.  This can be used as a predicate to recognize valid
+library file paths versus other paths.  An association with key
+<code>library</code> is always present and its value is a list of symbols which
+is the library name decoded from the path components.  The path is assumed to be
+a relative library file path, and so all the leading path components are
+considered library name components, and so absolute library file paths should
+not be given if the <code>library</code> association is desired to be correct
+because a search path prefix will be misinterpreted.  If there is more than one
+path component and the last one is named <code>"main"</code>, an association is
+present with key <code>implicit</code> and its value is <code>#T</code>, else
+this association is not present.  An association with key <code>extension</code>
+is always present and its value is a string which is the file name extension,
+without the <code>#\.</code> character, from the path.  The current value of
+the <code>path-separator</code> parameter is used to recognize separate path
+components.  In path components corresponding to library name components, the
+characters SRFI 103 says to encode must be encoded and others must not be, and
+the alphabetic hexadecimal digits of encoded characters must be upper case, else
+<code>#F</code> is returned.  The current value of the <code>extensions</code>
+parameter determines the extensions considered valid; if a path is otherwise a
+valid library file path but has an extension not in this parameter,
+<code>#F</code> is returned.</p>
 
 <dl><dt>Examples:</dt>
+       <dd><dl><dt>Given this value for <code>extensions</code>:</dt>
+                  <dd><code>("acme-ext" "ext" "Δ-ext")</code></dd></dl></dd>
        <dd><table>
            <tr><td><pre>
-(library-file-path-info "foo.sls")
-=&gt; ((library . (foo)))</pre></td></tr>
-           <tr><td><pre>
-(library-file-path-info "foo/main.sls")
+(library-file-path-info "foo.ext")
 =&gt; ((library . (foo))
-    (implicit . #T))</pre></td></tr>
+    (extension . "ext"))</pre></td></tr>
            <tr><td><pre>
-(library-file-path-info "foo/_main.sls")
-=&gt; ((library . (foo main)))</pre></td></tr>
-           <tr><td><pre>
-(library-file-path-info "foo.acme.sls")
+(library-file-path-info "foo/main.ext")
 =&gt; ((library . (foo))
-    (implementation . "acme"))</pre></td></tr>
+    (implicit . #T)
+    (extension . "ext"))</pre></td></tr>
            <tr><td><pre>
-(library-file-path-info "foo/bar/main.acme.sls")
+(library-file-path-info "foo/_main.ext")
+=&gt; ((library . (foo main))
+    (extension . "ext"))</pre></td></tr>
+           <tr><td><pre>
+(library-file-path-info "foo/main/main.ext")
+=&gt; ((library . (foo main))
+    (implicit . #T)
+    (extension . "ext"))</pre></td></tr>
+           <tr><td><pre>
+(library-file-path-info "foo/bar/main.acme-ext")
 =&gt; ((library . (foo bar))
     (implicit . #T)
-    (implementation . "acme"))</pre></td></tr>
+    (extension . "acme-ext"))</pre></td></tr>
            <tr><td><pre>
-(library-file-path-info "%E2%99%A5/%CE%BB.%CE%94.sls")
+(library-file-path-info "f%3Co%3Ao.ext")
+=&gt; ((library . (f&lt;o:o))
+    (extension . "ext"))</pre></td></tr>
+           <tr><td><pre>
+(parameterize ((path-separator #\\))
+  (library-file-path-info "foo\\bar\\zab.ext"))
+=&gt; ((library . (foo bar zab))
+    (extension . "ext"))</pre></td></tr>
+           <tr><td><pre>
+(parameterize ((extensions '("%CE%94")))
+  (library-file-path-info "♥/λ.%CE%94"))
 =&gt; ((library . (♥ λ))
-    (implementation . "Δ"))</pre></td></tr>
+    (extension . "%CE%94"))</pre></td></tr>
            <tr><td><pre>
-(let ((info (library-file-path-info "♥/λ.Δ.sls")))
-  (parameterize ((implementation-name
-                  (cond ((assq 'implementation info) =&gt; cdr)
-                        (else "ignored")))
-                 (path-separator #\\))
+(let ((info (library-file-path-info "♥/λ.Δ-ext")))
+  (parameterize ((path-separator #\\))
     (library-name-&gt;path (cdr (assq 'library info))
                         #T
-                        (assq 'implementation info))))
-=&gt; "♥\\λ\\main.Δ.sls"</pre></td></tr>
+                        (cdr (assq 'extension info)))))
+=&gt; "♥\\λ\\main.Δ-ext"</pre></td></tr>
+           <tr><td><pre>
+(library-file-path-info "/search/path/foo.ext")
+=&gt; ((library . (search path foo))
+    (extension . "ext"))</pre></td></tr>
+           <tr><td><pre>
+(library-file-path-info "_main.ext")
+=&gt; ((library . (main))
+    (extension . "ext"))</pre></td></tr>
+           <tr><td><pre>
+(library-file-path-info "main.ext")
+=&gt; #F</pre></td></tr>
            <tr><td><pre>
 (library-file-path-info "foo.png")
 =&gt; #F</pre></td></tr>
            <tr><td><pre>
-(library-file-path-info "main.sls")
+(library-file-path-info "fo:o.ext")
+=&gt; #F</pre></td></tr>
+           <tr><td><pre>
+(library-file-path-info "%61.ext")
+=&gt; #F</pre></td></tr>
+           <tr><td><pre>
+(library-file-path-info "%3a.ext")
 =&gt; #F</pre></td></tr>
            </table></dd></dl></dd>
 
@@ -310,14 +355,13 @@ components.</p>
 <dt><a name="find-library-file-paths-def">
     <span class="type">PROCEDURE</span>
     (<b>find-library-file-paths</b> <i>library-reference</i>)</a></dt>
-<dd><p>Given a datum representing a &lt;library reference&gt; (as defined by
-<a href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-10.html#node_sec_7.1">R6RS
-7.1</a>), find the files in the search paths whose paths match the library
-reference, and return an association list describing the matching paths and
-their ordering according to the
+<dd><p>Given a library reference, which must be a non-empty list of symbols,
+find the files in the search paths whose path matches the library reference and
+whose extension is in the file name extensions, and return an association list
+describing the matching paths and their ordering according to the
 <a href="http://srfi.schemers.org/srfi-103/srfi-103.html#ordering">Ordering</a>
-section of SRFI 103.  If no matches are found, <code>'()</code> is returned.
-Each association represents a search path which contains at least one match.  No
+section of SRFI 103.  If no matches are found, the empty list is returned.  Each
+association represents a search path which contains at least one match.  No
 association is present for a search path which does not contain a match.  The
 key of each association is the search path the association represents.  The
 associations are ordered the same as their keys are in the
@@ -327,97 +371,94 @@ association's search path which contain matches.  A directory containing
 implicit file names is one of the possibilities, and a directory containing
 non-implicit file names is the other possibility.  If both directories exist and
 contain matches, the directory containing implicit file names is ordered first.
-Each element of this list is a non-empty ordered list of matching paths from the
-corresponding directory, and these paths are relative to the association's
-search path.  The length of each list of matching paths is one or two, which
-corresponds to the one or two possible matches in a directory.  An
-implementation-specific file is one of the possibilities, and an unspecific file
-is the other possibility.  If both files exist, the implementation-specific file
-is ordered first.</p>
+Each element of an association-value's list is a non-empty ordered list of
+matching paths from the corresponding directory, and these paths are relative to
+the association's search path.  The elements of a list of matching paths are
+ordered the same as their extensions are in the <code>extensions</code>
+parameter.</p>
 
 <dl><dt>Example:</dt>
        <dd><dl><dt>Given this structure of directories and files:</dt>
                   <dd><dl><dt><code>/s/p/a/</code></dt>
                           <dd><dl><dt><code>foo/</code></dt>
-                                  <dd><code>bar.acme.sls</code></dd>
-                                  <dd><code>bar.other.sls</code></dd>
+                                  <dd><code>bar.acme-ext</code></dd>
+                                  <dd><code>bar.other-ext</code></dd>
                                   <dd><code>bar.png</code></dd>
-                                  <dd><code>bar.sls</code></dd>
-                                  <dd><code>zab.sls</code></dd>
+                                  <dd><code>bar.ext</code></dd>
+                                  <dd><code>zab.ext</code></dd>
                                   <dd><dl><dt><code>bar/</code></dt>
-                                          <dd><code>main.acme.sls</code></dd>
-                                          <dd><code>main.sls</code></dd>
-                                          <dd><code>blah.sls</code></dd>
+                                          <dd><code>main.acme-ext</code></dd>
+                                          <dd><code>main.ext</code></dd>
+                                          <dd><code>blah.ext</code></dd>
                                       </dl></dd>
                               </dl></dd>
                           <dt><code>s/p/c/</code></dt>
                           <dd><dl><dt><code>foo/</code></dt>
-                                  <dd><code>bar.sls</code></dd>
+                                  <dd><code>bar.ext</code></dd>
                                   <dd><dl><dt><code>bar/</code></dt>
-                                          <dd><code>main.other.sls</code></dd>
+                                          <dd><code>main.other-ext</code></dd>
                                       </dl></dd>
                               </dl></dd>
                           <dt><code>spb/</code></dt>
                           <dd><dl><dt><code>foo/</code></dt>
-                                  <dd><code>zab.sls</code></dd>
+                                  <dd><code>zab.ext</code></dd>
                                   <dd><dl><dt><code>bar/</code></dt>
-                                          <dd><code>main.sls</code></dd>
+                                          <dd><code>main.ext</code></dd>
                                       </dl></dd>
                               </dl></dd>
                           <dt><code>spd/</code></dt>
                           <dd><dl><dt><code>foo/</code></dt>
-                                  <dd><code>it.sls</code></dd>
+                                  <dd><code>it.ext</code></dd>
                                   <dd><dl><dt><code>bar/</code></dt>
-                                          <dd><code>thing.sls</code></dd>
+                                          <dd><code>thing.ext</code></dd>
                                       </dl></dd>
                               </dl></dd>
                       </dl></dd></dl>
            <pre>
 (parameterize ((search-paths '("spd" "s/p/c" "spb" "/s/p/a"))
-               (implementation-name "acme"))
-  (find-library-file-paths '(foo bar (1))))
+               (extensions '("acme-ext" "ext")))
+  (find-library-file-paths '(foo bar)))
 =&gt;
 (("s/p/c"
-  ("foo/bar.sls"))
+  ("foo/bar.ext"))
  ("spb"
-  ("foo/bar/main.sls"))
+  ("foo/bar/main.ext"))
  ("/s/p/a"
-  ("foo/bar/main.acme.sls"
-   "foo/bar/main.sls")
-  ("foo/bar.acme.sls"
-   "foo/bar.sls")))</pre>
+  ("foo/bar/main.acme-ext"
+   "foo/bar/main.ext")
+  ("foo/bar.acme-ext"
+   "foo/bar.ext")))</pre>
        </dd></dl>
 </dd>
 
 
 <dt><a name="join-and-flatten-def">
     <span class="type">PROCEDURE</span>
-    (<b>join-and-flatten</b>
-                    <i>library-file-paths</i>)</a></dt>
-<dd><p>Given a data structure returned by
-<code>find-library-file-paths</code>, join the relative paths with the
-search paths they are under and return a flat list of these joined paths,
-preserving the ordering in <i>library-file-paths</i>.</p>
+    (<b>join-and-flatten</b> <i>library-file-paths</i>)</a></dt>
+<dd><p>Given a data structure returned by <code>find-library-file-paths</code>,
+join the relative paths with the search paths they are under and return a flat
+list of these joined paths, preserving the ordering in the given data
+structure.</p>
 
 <dl><dt>Example:</dt>
        <dd><pre>
 (join-and-flatten
  '(("s/p/c"
-    ("foo/bar.sls"))
+    ("foo/bar.ext"))
    ("spb"
-    ("foo/bar/main.sls"))
+    ("foo/bar/main.ext"))
    ("/s/p/a"
-    ("foo/bar/main.acme.sls"
-     "foo/bar/main.sls")
-    ("foo/bar.acme.sls"
-     "foo/bar.sls"))))
+    ("foo/bar/main.acme-ext"
+     "foo/bar/main.ext")
+    ("foo/bar.acme-ext"
+     "foo/bar.ext"))))
 =&gt;
-("s/p/c/foo/bar.sls"
- "spb/foo/bar/main.sls"
- "/s/p/a/foo/bar/main.acme.sls"
- "/s/p/a/foo/bar/main.sls"
- "/s/p/a/foo/bar.acme.sls"
- "/s/p/a/foo/bar.sls")</pre></dd></dl></dd>
+("s/p/c/foo/bar.ext"
+ "spb/foo/bar/main.ext"
+ "/s/p/a/foo/bar/main.acme-ext"
+ "/s/p/a/foo/bar/main.ext"
+ "/s/p/a/foo/bar.acme-ext"
+ "/s/p/a/foo/bar.ext")</pre></dd></dl></dd>
 </dl>
 
 <!-- ======================================================================= -->
@@ -429,16 +470,15 @@ number of R6RS bindings,
 <a href="http://srfi.schemers.org/srfi-39/srfi-39.html"> SRFI 39: Parameter
 Objects</a>, and <a href="http://srfi.schemers.org/srfi-98/srfi-98.html">SRFI
 98: An Interface to Access Environment Variables</a>.  It can be used by Scheme
-implementations as a built-in library, e.g., in a boot image.  It can also be
-used as an externally-imported library.</p>
+systems as a built-in library, e.g., in a boot image.  It can also be used as an
+externally-imported library.</p>
 
 <p>For use as an externally-imported library, the reference implementation uses
-implementation-specific library files in order to initialize the parameters of
-this SRFI.  Files are provided for Ikarus, Larceny, PLT, and Ypsilon, and these
-files should make it clear how other implementations can be supported.  If this
-SRFI is built-in to a Scheme implementation, the implementation-specific
-libraries are not needed and the main library can be easily adapted to not use
-them.</p>
+system-specific library files in order to initialize the parameters of this
+SRFI.  Files are provided for Ikarus, Larceny, PLT, and Ypsilon, and these files
+should make it clear how other systems can be supported.  If this SRFI is
+built-in to a Scheme system, the system-specific libraries are not needed and
+the main library can be easily adapted to not use them.</p>
 
 <p>The test program is provided as an R6RS program.  It requires, in addition to
 an implementation of this SRFI,
@@ -458,10 +498,7 @@ SRFI 78: Lightweight Testing</a>.</p>
 final SRFI.)</p>
 
 <ul>
-  <li><p>Are the initialization helper libraries all correct and as complete as
-  they should be?</p></li>
-
-  <li><p>TODO: Anything else?</p></li>
+  <li><p>TODO: Anything?</p></li>
 </ul>
 
 <!-- ======================================================================= -->
