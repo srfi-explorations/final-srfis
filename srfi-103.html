@@ -53,6 +53,8 @@ subscribe to the list.  You can access previous messages via
 
   <li>Draft: 2009/09/22-2009/11/22</li>
   <li>Revised: 2009/10/16</li>
+  <li>Revised: 2009/12/11</li>
+  <li>Draft extended: 2009/12/11-2010/1/11</li>
 </ul>
 
 <!-- ======================================================================= -->
@@ -68,9 +70,10 @@ subscribe to the list.  You can access previous messages via
   <li><a href="#library-files">Library Files</a></li>
   <li><a href="#search-paths">Search Paths</a></li>
   <li><a href="#encoding">Encoding Characters</a></li>
-  <li><a href="#extension">File Name Extension</a></li>
+  <li><a href="#extensions">File Name Extensions</a></li>
   <li><a href="#implicit-main">Implicit File Name</a></li>
   <li><a href="#ordering">Ordering</a></li>
+  <li><a href="#r6rs-files">Portable R6RS Library Files</a></li>
 </ul></li>
 <li><a href="#companion-srfi">Companion SRFI</a></li>
 <li><a href="#issues">Issues</a></li>
@@ -84,136 +87,84 @@ subscribe to the list.  You can access previous messages via
 <h1><a name="abstract">Abstract</a></h1>
 
 <p>This SRFI defines a standard for naming and finding files containing
-R6RS libraries.</p>
+libraries, where a library name is a list of symbols.  It also defines a
+standard file format and file name extension for portable R6RS libraries.  It
+also supports dialects other than R6RS.</p>
 
 <!-- ======================================================================= -->
 
 <h1><a name="rationale">Rationale</a></h1>
 
-<p>The <a href="http://www.r6rs.org/">R6RS</a> does not specify how libraries
-are to be made available for importing.  In order for libraries to be portably
-organized, distributed, installed, and available for importing, using
-contemporary file systems, a standard is needed for naming and finding the files
-containing libraries.</p>
-
-<p>R6RS library names and library references as defined by
-<a href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-10.html#node_sec_7.1">R6RS
-7.1</a> are compound and consist of a list of one or more symbols and an
-optional last element of either a version or a version reference.  The compound
-nature of the names allows for hierarchical grouping of libraries under shared
-name prefixes, which is useful for avoiding name conflicts with others'
-libraries and for organizing related libraries.  A list of symbols closely
-matches a file system path because a path is a sequence of strings naming an
-entity in a hierarchy of directories.  Prior to this SRFI, most (if not all)
-implementations of R6RS had already exploited this obvious match and provided
-methods of finding library files based on libraries' names by using each symbol
-component as a path component.  However, implementations' rules for naming and
-finding library files were not the same, and this lack of coherency began to
-frustrate attempts at distributing and using library files in a portable
-way.</p>
+<p>For libraries to be portably organized, distributed, installed, and available
+for importing, using contemporary file systems, a standard is needed for naming
+and finding the files containing libraries.  The
+<a href="http://www.r6rs.org/">R6RS</a> does not specify how libraries are to be
+made available for importing, and this SRFI addresses that by providing a
+standard for R6RS library files.  Other dialects with list-of-symbols library
+names may need a standard for library files, and this SRFI addresses that by
+supporting such dialects.</p>
 
 <!-- ======================================================================= -->
 
 <h1><a name="design">Design</a></h1>
 
-<p>Prior to this SRFI, most implementations expected library files to each
-contain only one library.  However, at least one implementation, Larceny,
-supported files containing multiple libraries.  This SRFI has only
-single-library files, for the following reasons.  It is possible to one-to-one
-map a library file path to a library name and so know what library a file
-contains from only its path and without having to look in it, which allows
-knowing what libraries are present and where from only a file name listing.
-Also, to find a library which satisfies a library reference, only file names
-need to be searched for, as opposed to also searching through the contents of
-multiple-library files.</p>
+<p>This SRFI provides a method of finding library files based on libraries'
+names by using each symbol component as a file path component.  The compound
+nature of list-of-symbols library names allows for hierarchical grouping of
+libraries under shared name prefixes, which is useful for avoiding name
+conflicts with others' libraries and for organizing related libraries.  Such
+library names are similar to file system paths because a path is a sequence of
+strings naming an entity in a hierarchy of directories.  This similarity is
+exploited to hierarchically organize library files in the way which corresponds
+to hierarchical library names.</p>
 
-<p>Prior to this SRFI, implementations supported search paths which are
-configurable path prefixes under which library files are looked for.  In
-addition to allowing library files' locations to be configurable, search paths
-allow the possibility of configuring multiple implementations to use the same
-search path(s) and thus use the same directories and files containing libraries.
-This is desirable both for avoiding duplicating directories and files and for
-being able to add or remove library files by simply putting them into or
-deleting them from the search path(s) which all the implementations are already
-configured to use and so no further configuration or clean-up is required.  For
-these reasons, this SRFI has search paths and initializes them from an
-environment variable which all implementations use.</p>
+<p>This SRFI only supports files which each contain only one library, for the
+following reasons.  It is possible to one-to-one map a library file path to a
+library name and so know what library a file contains from only its path and
+without having to look in it, which allows knowing what libraries are present
+and where from only a file name listing.  Also, to find a library, only file
+names need to be searched for, as opposed to also searching through the contents
+of files which each contain multiple libraries.</p>
 
-<p>Symbols may contain characters which may not be allowed in paths of some file
-systems or which are interpreted specially in paths.  Prior to this SRFI,
-implementations encoded some characters in library file paths.  However, their
-encoding schemes were not the same.  This SRFI encodes three characters it uses
+<p>This SRFI provides configurable search paths and initializes them from a
+standard environment variable.  In addition to allowing library files' locations
+to be configurable, this allows configuring multiple Scheme systems to use the
+same search paths and thus use the same directories and files containing
+libraries.  This is desirable both for avoiding duplicating directories and
+files and for being able to add or remove library files by simply putting them
+into or deleting them from the search paths which all the systems are already
+configured to use and so no further configuration or clean-up is required.</p>
+
+<p>In library file paths, this SRFI encodes two characters which are used
 specially, and it encodes the characters which Unixes and Windows disallow, and
 it does not encode any other characters.  Unixes and Windows are chosen as the
 platforms to cater to because they are the prevalent contemporary platforms.
-All implementations of this SRFI are required to encode the same characters so
-that files may be exchanged between Unixes and Windows without renaming.  This
-SRFI uses a percent-character-escaped UTF-8 encoding scheme similar to the
-widespread URI encoding scheme.</p>
+Implementations of this SRFI are required to encode the same characters so that
+files may be exchanged between Unixes and Windows without renaming.</p>
 
-<p>To support selecting implementation-specific libraries from among other
-libraries with the same names but for other implementations, prior to this SRFI,
-most (if not all) implementations had an additional rule for finding library
-files.  This rule is that the file name extension has an additional component
-prepended to it, and this component is the name of the implementation, and files
-with the implementation-specific extension and files with only the basic
-unspecific extension are chosen, and files with an extension specific to other
-implementations are ignored.  This allows for structuring libraries such that
-portable interfaces to implementation-specific features can be made.  Also, this
-allows for structuring library files such that implementation-specific libraries
-can be used in preference over generic libraries.  By using the file name
-extension to accomplish this, files containing libraries named the same can be
-kept in the same directory and kept organized with other related libraries.  By
-providing implementation-specific functionality via the same library name and
-interface, importing source code remains portable and does not need to be
-changed to support new implementations because all that is required is to add a
-file for a new implementation.  However, implementations which did not encode
-the extension separator character suffered from allowing conflicts with some
-possible library names.  Some implementations may not want to support files
-specific to them.  For these reasons, this SRFI has optional
-implementation-specific file name extentions and encodes the extension separator
-character.</p>
+<p>This SRFI provides configurable file name extensions and initializes them
+from a standard environment variable.  This supports multiple Scheme dialects,
+supports Scheme-system-specific libraries, and supports users who desire to use
+arbitrary extensions.  Dialects other than R6RS can use this SRFI by defining
+their own file name extension.  System-specific libraries can be accomplished by
+including a system-specific extension in the extensions.  Users can configure
+the extensions by defining the environment variable.</p>
 
-<p>To support organizing all the files of libraries with a shared name prefix
-under the same directory, prior to this SRFI, some implementations had an
-additional rule for finding library files.  This rule is that an additional path
-component is implicitly appended to library file paths so that the last symbol
-of a library name corresponds to the last directory containing a library's file.
-E.g., a library named <code>(acme)</code> can have its file under the same
-<code>"/search/path/acme"</code> directory as the file for a library named
-<code>(acme foo bar)</code>, or a library named <code>(acme foo)</code> can have
-its file in the same <code>"/search/path/acme/foo"</code> directory as the file
-for a library named <code>(acme foo helper)</code>.  This is useful for
-organizing library collections (or sub-collections) as a tree of directories and
-files all under a single directory named after the libraries' shared name prefix
-(which is often also the name of the collection).  However, implementations'
-rules for implicit file names were not the same.  For these reasons, this SRFI
-has implicit file names.</p>
+<p>This SRFI provides implicit file names which allow the last directory
+containing a library's file to correspond to the last symbol of the library's
+name (this is considered implicit because the last path component is not derived
+from the library name).  This is useful for organizing all the files of
+libraries with a shared name prefix under the same directory named after the
+shared name prefix.  Users are free to use or not use implicit file names.</p>
 
-<p>Taking into account all possible combinations of the above features had not
-been coordinated between implementations and so they likely were not the same in
-how they handled various combinations.  This might have caused further
-portability problems.  This SRFI offers the above features in an integrated and
-standard way.</p>
-
-<p>So that there is consistency between different implementations about which
+<p>So that there is consistency between different Scheme systems about which
 library file is used to satisfy a library reference, this SRFI specifies an
 ordering of files matching a library reference, and this SRFI requires the
 first-ordered match be used.</p>
 
-<p>R6RS library names may contain a special version component, and R6RS library
-references may contain a special version reference component.  Prior to this
-SRFI, only one implementation, PLT Scheme, included the special version
-component in file names.  Including the special version component in file names
-significantly increases the complexity of finding files and of choosing a file
-from multiple possibilities.  Including the special version component in file
-names allows multiple versions to coexist in the same directory, but multiple
-versions typically cannot coexist in the same running Scheme system, so the
-rationale for allowing multiple versions to coexist in the same directory is not
-clear.  Including the special version component in file names is controversial
-and was strongly opposed during the draft period of this SRFI.  For these
-reasons, this SRFI does not include the special version component in file
-names.</p>
+<p>To provide a standard for portable R6RS library files, this SRFI specifies a
+file format and a file name extension for R6RS library files, and this SRFI
+requires R6RS systems to implement this standard.</p>
 
 <!-- ======================================================================= -->
 
@@ -221,140 +172,131 @@ names.</p>
 
 <h3><a name="library-files">Library Files</a></h3>
 
-<p>Library files are files which contain a library and which have a path
+<p>A <i>library file</i> is a file which contains a library and which has a path
 representing the name of the contained library.  Files conforming to this SRFI
-must have only one library per file, and they must contain the library as an
-<a href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-10.html#node_sec_7.1">R6RS
-library form</a> as the first syntactic datum which the standard
-<code>read</code> procedure would return.  Determining files' contents'
-character encoding is not handled by this SRFI.</p>
+must have only one library per file.  Except for <a href="#r6rs-files">portable
+R6RS library files</a>, the format of library files' content is not
+specified.</p>
 
-<p>A library file path consists of, in order: possibly a search path
+<p>A <i>library file path</i> consists of, in order: possibly a search path
 prefix, a sequence of path components corresponding to the sequence of symbols
 in the contained library's name, possibly an implicitly added last path
-component with prefix <code>"main"</code>, possibly an implementation name in
-the last path component, and the file name extension <code>"sls"</code>.  Path
-components are separated by a platform-dependent character.
-The <code>#\.</code> character is used in the last path component to separate
-the prefix, the implementation name, and
-the <code>"sls"</code> extension.</p>
-
-<p>A relative library file path is a library file path without a search path
-prefix.  An absolute library file path is a library file path with a search path
+component named <code>"main"</code>, and a file name extension.  Path components
+are separated by a platform-dependent character.  The <code>#\.</code> character
+is used in the last path component to separate the extension.  A <i>relative
+library file path</i> is a library file path without a search path prefix.  An
+<i>absolute library file path</i> is a library file path with a search path
 prefix.</p>
 
 <h3><a name="search-paths">Search Paths</a></h3>
 
-<p>Search paths are paths grouped in a sequence.  They must name directories.
-When finding library files, they are prefixed to relative library file paths to
-form absolute library file paths which are possible locations of library
-files.</p>
+<p><i>Search paths</i> is a sequence of paths which name directories.  When
+finding library files, each search path is joined to each relative library file
+path to make the set of possible locations.</p>
 
-<p>The operating system environment variable
-<code>R6RS_LIBRARY_PATH</code>, if it is defined, is used to
-initialize the search paths.  Its value is a string containing a sequence of
-paths separated by a platform-dependent character.  The order of the sequence is
-preserved in the sequence of search paths.  Implementations may initialize the
-search paths to include additional paths before or after those from the
-environment variable, such as paths given on the command line which are before,
-or system default paths which are after.</p>
+<p>The operating system environment variable <code>SCHEME_LIB_PATH</code>, if it
+is defined, is used to initialize the search paths.  Its value is a string
+containing a sequence of paths separated by a platform-dependent character.
+Scheme systems may initialize the search paths to include additional paths
+before or after those from the environment variable (such as paths given on the
+command line which are before, or system default paths which are after).</p>
 
-<p>The sequential ordering of search paths provides search path precedence which
-allows overlaying or overriding library files.  Multiple searched directories
-can contain different files for the same libraries, and the files in directories
-with greater precedence have greater precedence.  This can be exploited to
-extend and/or override the available library files, without modifying existing
-file system entities, by placing the new library files in similarly-structured
-directory trees located under new search paths with greater precedence.</p>
+<p>The sequential ordering of the search paths provides precedence which allows
+overlaying library files.  Multiple searched directories can contain different
+files for the same libraries, and the files in directories with greatest
+precedence are used instead of those in directories with lesser precedence.
+This can be exploited to extend or override the available library files, without
+modifying existing file system entities.</p>
 
 <h3><a name="encoding">Encoding Characters</a></h3>
 
 <p>Encoding characters in components of relative library file paths is necessary
 to avoid conflicts with the characters this SRFI uses specially, and it is also
 done to support the use of characters Unixes and Windows do not allow in paths.
-The special characters of this SRFI are: <code>#\%</code>, the path separator,
-and <code>#\.</code>.  Technically, only the last path component needs all three
-characters to be encoded, and non-last path components need only
-<code>#\%</code> and the path separator to be encoded.  However, all three
-characters are always encoded, to avoid causing an exceptional case for the last
-path component.  In addition to the three special characters, <code>#\x0</code>
+The special characters of this SRFI are: <code>#\%</code> and the path
+separator.  In addition to the two special characters, <code>#\x0</code>
 to <code>#\x1F</code> (inclusive), <code>#\&lt;</code>, <code>#\&gt;</code>,
 <code>#\:</code>, <code>#\"</code>, <code>#\/</code>, <code>#\\</code>,
 <code>#\|</code>, <code>#\?</code>, and <code>#\*</code> are encoded, because
 Windows disallows them and Unixes disallow <code>#\x0</code>.  All of these
 characters must be encoded, and all other characters must not be encoded, when
-transforming library name symbols and implementation names to library file
-paths.</p>
+transforming library name symbols to library file paths.</p>
 
 <p>Characters are encoded using their UTF-8 encoding such that each UTF-8 byte
 is represented as two hexadecimal digits, with alphabetic digits in upper case,
 preceded by the <code>#\%</code> character.  E.g., a library named
 <code>(a%b c/d e:f g*h)</code> may be in a file with path
-<code>"/search/path/a%25b/c%2Fd/e%3Af/g%2Ah.sls"</code>.</p>
+<code>"/search/path/a%25b/c%2Fd/e%3Af/g%2Ah.ext"</code>.</p>
 
-<h3><a name="extension">File Name Extension</a></h3>
+<h3><a name="extensions">File Name Extensions</a></h3>
 
-<p>This SRFI uses <code>"sls"</code> as the file name extension of library
-files, because "S.L.S." is the acronym of "Scheme library source".  The
-extension may have an optional implementation-specific component, and this
-component should be the name of the Scheme implementation a library file is for.
-Implementations of this SRFI are not required to support an
-implementation-specific extension; supporting it is optional.</p>
+<p><i>File name extensions</i> is a sequence of strings.  The strings must not
+include the <code>#\.</code> character, and all other characters are allowed
+(encoding is not done by this SRFI).  When finding library files, each extension
+is joined to each incomplete library file path to make the set of possible
+locations.  Except for <a href="#r6rs-files">portable R6RS library files</a>,
+the extensions are not specified.</p>
 
-<p>For implementation-specific library files, the implementation-specific
-component is prepended to <code>".sls"</code> to form the complete extension.
-For library files not specific to an implementation, only <code>"sls"</code> is
-used.  E.g., for an implementation named <code>"acme"</code>, a library named
-<code>(foo)</code> may be in a file with path
-<code>"/search/path/foo.acme.sls"</code> or <code>"/search/path/foo.sls"</code>,
-and a library named <code>(foo.acme)</code> may be in a file with path
-<code>"/search/path/foo%2Eacme.acme.sls"</code> or
-<code>"/search/path/foo%2Eacme.sls"</code>.  Encoding the <code>#\.</code>
-character avoids conflict because the files for the two libraries can be
-named <code>"/search/path/foo.acme.sls"</code> and
-<code>"/search/path/foo%2Eacme.sls"</code>.</p>
+<p>The operating system environment variable <code>SCHEME_LIB_EXT</code>, if it
+is defined, is used to initialize the file name extensions.  Its value is a
+string containing a sequence of extensions separated by a platform-dependent
+character.  Scheme systems may initialize the extensions to include additional
+extensions before or after those from the environment variable (such as
+system-specific extensions).</p>
 
-<p>The characters specified by the <a href="#encoding">Encoding Characters</a>
-section to be encoded are encoded in an implementation-specific component of an
-extension.  E.g., for an implementation named <code>"a%b/c:d*e"</code>, a
-library named <code>(foo)</code> may be in a file with path
-<code>"/search/path/foo.a%25b%2Fc%3Ad%2Ae.sls"</code>.  This way, conflict with
-the special characters is avoided and platform-disallowed characters can be
-used.</p>
+<p>Excluding the <code>#\.</code> character avoids conflict with library names
+whose last symbol contains this character.  E.g., if this character was not
+excluded, the extensions could be <code>"acme.ext"</code> and
+<code>"ext"</code>, and it would be ambiguous if the file with path
+<code>"/search/path/foo.acme.ext"</code> is for a library named
+<code>(foo)</code> or for a library named <code>(foo.acme)</code>.</p>
+
+<p>The sequential ordering of the extensions provides precedence, within the
+same directory, which causes library files whose extensions have greatest
+precedence to be used instead of files in the same directory for same-named
+libraries whose extensions have lesser precedence.  This can be exploited to
+have Scheme-system-specific libraries such that libraries specific to a system
+are used instead of possibly-present generic libraries, and libraries specific
+to other systems are ignored, and the files for all these libraries can coexist
+in the same directory.  E.g., a library named <code>(foo)</code> may have
+different implementations in files with paths
+<code>"/search/path/foo.ext"</code>, <code>"/search/path/foo.acme-ext"</code>,
+and <code>"/search/path/foo.ajax-ext"</code>, and the Acme Scheme system will
+use the file with extension <code>"acme-ext"</code>, the Ajax Scheme system will
+use the file with extension <code>"ajax-ext"</code>, and all other systems will
+use the file with extension <code>"ext"</code>.</p>
 
 <h3><a name="implicit-main">Implicit File Name</a></h3>
 
-<p>An implicit file name is a library file path with a last path component with
-prefix <code>"main"</code>.  This is considered implicit because it is not
-derived from a library name.  Implicit file names allow the last directory
-containing a library file to be named according to the last symbol of a library
-name.  There are two possible paths under a search path for a file for a
-library: one with the implicit component and one without.</p>
+<p>An <i>implicit file name</i> is a library file path with a last path
+component named <code>"main"</code>.  There are two possible directories under a
+search path where a file for a library may be, because of implicit file
+names.</p>
 
-<p>Implicit file names must avoid conflict with non-implicit file names, and
-this is accomplished by prepending the <code>#\_</code> character to the last
-component of paths of non-implicit file names if the prefix of the last
-component would otherwise have been zero or more <code>#\_</code> characters
-followed by <code>"main"</code>.  E.g., a library named
+<p>Implicit file names must avoid conflict with non-implicit file names.  This
+is accomplished by prepending the <code>#\_</code> character to the last
+component of paths of non-implicit file names if the name of the last component
+would otherwise have been zero or more <code>#\_</code> characters followed
+by <code>"main"</code>.  E.g., a library named
 <code>(foo)</code> may be in a file with path
-<code>"/search/path/foo/main.sls"</code> or
-<code>"/search/path/foo.sls"</code>, and a library named
+<code>"/search/path/foo/main.ext"</code> or
+<code>"/search/path/foo.ext"</code>, and a library named
 <code>(foo main)</code> may be in a file with path
-<code>"/search/path/foo/main/main.sls"</code> or
-<code>"/search/path/foo/_main.sls"</code>, and a library named
+<code>"/search/path/foo/main/main.ext"</code> or
+<code>"/search/path/foo/_main.ext"</code>, and a library named
 <code>(foo _main)</code> may be in a file with path
-<code>"/search/path/foo/_main/main.sls"</code> or
-<code>"/search/path/foo/__main.sls"</code>.  This way, conflict is avoided
+<code>"/search/path/foo/_main/main.ext"</code> or
+<code>"/search/path/foo/__main.ext"</code>.  This way, conflict is avoided
 because the files for the three libraries can be named
-<code>"/search/path/foo/main.sls"</code>,
-<code>"/search/path/foo/_main.sls"</code>, and
-<code>"/search/path/foo/__main.sls"</code>.
+<code>"/search/path/foo/main.ext"</code>,
+<code>"/search/path/foo/_main.ext"</code>, and
+<code>"/search/path/foo/__main.ext"</code>.
 Note that a library named <code>(main)</code> may be in a file with path
-<code>"/search/path/main/main.sls"</code> or
-<code>"/search/path/_main.sls"</code>, and a library named
+<code>"/search/path/main/main.ext"</code> or
+<code>"/search/path/_main.ext"</code>, and a library named
 <code>(_main)</code> may be in a file with path
-<code>"/search/path/_main/main.sls"</code> or
-<code>"/search/path/__main.sls"</code>.  Technically, prepending the extra
+<code>"/search/path/_main/main.ext"</code> or
+<code>"/search/path/__main.ext"</code>.  Technically, prepending the extra
 <code>#\_</code> character for non-implicit file names of such single-symbol
 library names is unnecessary, but it is always done to avoid causing an
 exceptional case.</p>
@@ -363,28 +305,21 @@ exceptional case.</p>
 
 <p>A library reference may match multiple files which each contain an
 implementation of the library.  This SRFI specifies an ordering for all the
-possibilities of matching files.  Scheme implementations must choose the
-first-ordered match.</p>
+possibilities of matching files.  Scheme systems must choose the first-ordered
+match.</p>
 
 <p>Multiple files matching a library reference is possible because of: multiple
-search paths each containing matches, implicit file name matches and
-non-implicitly-named matches both existing, and implementation-specific and
-unspecific matches both existing.  This SRFI uses a multi-level ordering to deal
-with all these aspects.  The first level is search paths, the second level is
-implicit naming of files, and the third level is implementation specificity of
-files.</p>
+search paths containing matches, implicit and non-implicit file name matches,
+and matches with different file name extensions.  This SRFI uses a multi-level
+ordering for these possibilities.  The first level is search paths, the second
+level is implicit naming of files, and the third level is file name
+extensions.</p>
 
-<p>Matches in a search path which is ordered before another search path
-are ordered before matches in the other search path.</p>
-
-<p>Within the same search path, an implicit file name match is ordered before a
-non-implicitly-named match.</p>
-
-<p>Within the same directory, a match which is specific to the implementation is
-ordered before a match which is not.  (Ordering files which are specific to
-different implementations is not necessary because the only files which can
-match are those which are not specific or are specific to the implementation
-being used.)</p>
+<p>Matches in a search path which is ordered before another search path are
+ordered before matches in the other search path.  Within the same search path,
+implicit file name matches are ordered before non-implicit file name matches.
+Within the same directory, a match with an extension which is ordered before the
+extension of another match is ordered before the other match.</p>
 
 <dl><dt>Example:</dt>
        <dd><dl><dt>Given this sequence of search paths:</dt>
@@ -392,67 +327,87 @@ being used.)</p>
                   <dd><code>s/p/c</code></dd>
                   <dd><code>spb</code></dd>
                   <dd><code>/s/p/a</code></dd></dl></dd>
+       <dd><dl><dt>Given this sequence of file name extensions:</dt>
+                  <dd><code>acme-ext</code></dd>
+                  <dd><code>ext</code></dd></dl></dd>
        <dd><dl><dt>Given this structure of directories and files:</dt>
                   <dd><dl><dt><code>/s/p/a/</code></dt>
                           <dd><dl><dt><code>foo/</code></dt>
-                                  <dd><code>bar.acme.sls</code></dd>
-                                  <dd><code>bar.other.sls</code></dd>
+                                  <dd><code>bar.acme-ext</code></dd>
+                                  <dd><code>bar.other-ext</code></dd>
                                   <dd><code>bar.png</code></dd>
-                                  <dd><code>bar.sls</code></dd>
-                                  <dd><code>zab.sls</code></dd>
+                                  <dd><code>bar.ext</code></dd>
+                                  <dd><code>zab.ext</code></dd>
                                   <dd><dl><dt><code>bar/</code></dt>
-                                          <dd><code>main.acme.sls</code></dd>
-                                          <dd><code>main.sls</code></dd>
-                                          <dd><code>blah.sls</code></dd>
+                                          <dd><code>main.acme-ext</code></dd>
+                                          <dd><code>main.ext</code></dd>
+                                          <dd><code>blah.ext</code></dd>
                                       </dl></dd>
                               </dl></dd>
                           <dt><code>s/p/c/</code></dt>
                           <dd><dl><dt><code>foo/</code></dt>
-                                  <dd><code>bar.sls</code></dd>
+                                  <dd><code>bar.ext</code></dd>
                                   <dd><dl><dt><code>bar/</code></dt>
-                                          <dd><code>main.other.sls</code></dd>
+                                          <dd><code>main.other-ext</code></dd>
                                       </dl></dd>
                               </dl></dd>
                           <dt><code>spb/</code></dt>
                           <dd><dl><dt><code>foo/</code></dt>
-                                  <dd><code>zab.sls</code></dd>
+                                  <dd><code>zab.ext</code></dd>
                                   <dd><dl><dt><code>bar/</code></dt>
-                                          <dd><code>main.sls</code></dd>
+                                          <dd><code>main.ext</code></dd>
                                       </dl></dd>
                               </dl></dd>
                           <dt><code>spd/</code></dt>
                           <dd><dl><dt><code>foo/</code></dt>
-                                  <dd><code>it.sls</code></dd>
+                                  <dd><code>it.ext</code></dd>
                                   <dd><dl><dt><code>bar/</code></dt>
-                                          <dd><code>thing.sls</code></dd>
+                                          <dd><code>thing.ext</code></dd>
                                       </dl></dd>
                               </dl></dd>
                       </dl></dd></dl></dd>
-       <dd><dl><dt>The ordering for the files matching the library
-                      reference <code>(foo bar (1))</code>, for an
-                      implementation named <code>"acme"</code>, is:</dt>
-                  <dd><code>s/p/c/foo/bar.sls</code></dd>
-                  <dd><code>spb/foo/bar/main.sls</code></dd>
-                  <dd><code>/s/p/a/foo/bar/main.acme.sls</code></dd>
-                  <dd><code>/s/p/a/foo/bar/main.sls</code></dd>
-                  <dd><code>/s/p/a/foo/bar.acme.sls</code></dd>
-                  <dd><code>/s/p/a/foo/bar.sls</code></dd></dl></dd>
+       <dd><dl><dt>The ordering for the files matching the library reference
+	           <code>(foo bar)</code> is:</dt>
+                  <dd><code>s/p/c/foo/bar.ext</code></dd>
+                  <dd><code>spb/foo/bar/main.ext</code></dd>
+                  <dd><code>/s/p/a/foo/bar/main.acme-ext</code></dd>
+                  <dd><code>/s/p/a/foo/bar/main.ext</code></dd>
+                  <dd><code>/s/p/a/foo/bar.acme-ext</code></dd>
+                  <dd><code>/s/p/a/foo/bar.ext</code></dd>
+               <dt>The file required to be used is:</dt>
+                  <dd><code>s/p/c/foo/bar.ext</code></dd>
+           </dl></dd>
 </dl>
+
+<h3><a name="r6rs-files">Portable R6RS Library Files</a></h3>
+
+<p>R6RS systems which implement this SRFI must conform to the following
+additional requirements.  Files with extension <code>"r6rs-lib"</code>, which
+contain a library as an
+<a href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-10.html#node_sec_7.1">
+R6RS library form</a> as the first syntactic datum which the R6RS
+<code>read</code> procedure would return, must be supported.  The file name
+extension <code>"r6rs-lib"</code> must be implicitly included in the extensions
+when the <code>SCHEME_LIB_EXT</code> environment variable is not defined.</p>
+
+<p>R6RS systems which desire to support system-specific libraries are
+encouraged, not required, to implicitly include a file name extension of the
+form <code>"acme-r6rs-lib"</code>, substituting the system's name for
+<code>"acme"</code>, and to order such extension before
+<code>"r6rs-lib"</code>.</p>
 
 <!-- ======================================================================= -->
 
 <h1><a name="companion-srfi">Companion SRFI</a></h1>
 
 <p>
-<a href="http://srfi.schemers.org/srfi-104/srfi-104.html">SRFI 104: Library Files
-Utilities</a> is a companion to this SRFI.  It is the reference implementation
-of this SRFI, and it is intended to be useful as a means for Scheme
-implementations to support this SRFI, and it is a library intended to be useful
+<a href="http://srfi.schemers.org/srfi-104/srfi-104.html">SRFI 104: Library
+Files Utilities</a> is a companion to this SRFI.  It is the reference
+implementation of this SRFI, and it is intended to be useful as a means for
+Scheme systems to implement this SRFI, and it is a library intended to be useful
 to users working with library files.  It is separate from this SRFI so that this
-SRFI is abstract and does not require providing a library API and may be
-provided without providing the companion SRFI.  It is intended to be useful on
-implementations supporting this SRFI, whether or not they use it to implement
-this SRFI.
+SRFI does not require providing a library API.  It is intended to be useful
+whether or not systems use it to implement this SRFI.
 </p>
 
 <!-- ======================================================================= -->
@@ -465,47 +420,18 @@ final SRFI.)
 </p>
 
 <ul>
-  <li><p>Instead of having special support for implementation-specific file name
-  extensions, should this SRFI have a sequence of searched-for extensions?  I
-  think this would improve this SRFI.  The <code>#\.</code> character would be
-  disallowed in such extensions, which would free it from needing to be encoded.
-  Implementation-specific files would be accomplished by implementations
-  including their specific extension in the sequence of searched-for extensions
-  (extensions without the <code>#\.</code> character, e.g.
-  <code>"acme-sls"</code>, would have to be used).  With the current design,
-  implementations already need to communicate, outside this SRFI, what their
-  implementation-specific extension is.  In that regard, accomplishing
-  implementation-specific files via a sequence of searched-for extensions would
-  not be worse.</p></li>
-
-  <li><p>Instead of using <code>"sls"</code> as the main file name extension,
-  should this SRFI use <code>"r6rs-lib"</code> for R6RS libraries?  (With the
-  above idea for changing how implementation-specific files are accomplished,
-  extensions like <code>"acme-r6rs-lib"</code> should be used for
-  implementation-specific files.)  This would allow this SRFI to be applicable
-  to any Scheme dialect with list-of-symbols library names, because different
-  dialects would use different extensions.  This SRFI would specify the
-  extension and format of files of R6RS libraries and also say that other
-  dialects using this SRFI must use a different extension.  Other dialects would
-  be free to have a different format for their files.  This would also allow the
-  search paths environment variable to begin with <code>"SCHEME_"</code>,
-  because different dialects' files would be distinguishable because of their
-  unique extensions.</p></li>
-
-  <li><p>TODO: Anything else?</p></li>
+  <li><p>TODO: Anything?</p></li>
 </ul>
 
 <!-- ======================================================================= -->
 
 <h1><a name="acknowledgements">Acknowledgments</a></h1>
 
-<p>I thank Aziz Ghuloum and Will Clinger for starting the
-implementation-specific file name extension idea.  I thank PLT Scheme for the
-ideas of implicit main files and URI-style UTF-8 encoding.  I thank all those
-who participated during the draft period of this SRFI and all those who
-participated in earlier discussions in various other forums.  I thank David Van
-Horn for editing this SRFI and for suggesting it be separated from its companion
-SRFI.</p>
+<p>I thank Ikarus for the idea of Scheme-system-specific file name extensions.
+I thank PLT for the idea of implicit file names.  I thank all those who
+participated during the draft period of this SRFI and in earlier discussions in
+various other forums.  I thank David Van Horn for editing this SRFI and for
+suggesting it be separated from its companion SRFI.</p>
 
 <h1><a name="references">References</a></h1>
 
