@@ -1,0 +1,357 @@
+#!r6rs
+;; Copyright (c) 2010 Derick Eddington
+;;
+;; Permission is hereby granted, free of charge, to any person obtaining a
+;; copy of this software and associated documentation files (the "Software"),
+;; to deal in the Software without restriction, including without limitation
+;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
+;; and/or sell copies of the Software, and to permit persons to whom the
+;; Software is furnished to do so, subject to the following conditions:
+;;
+;; The above copyright notice and this permission notice shall be included in
+;; all copies or substantial portions of the Software.
+;;
+;; Except as contained in this notice, the name(s) of the above copyright
+;; holders shall not be used in advertising or otherwise to promote the sale,
+;; use or other dealings in this Software without prior written authorization.
+;;
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+;; DEALINGS IN THE SOFTWARE.
+
+;; Refer to the SRFI document at:
+;;   http://srfi.schemers.org/srfi-103/srfi-103.html
+
+;; Running this program requires uncommenting the testing-only code indicated in
+;; the reference implementation of (srfi :103 library-files).
+
+(import
+  (rnrs (6))
+  (srfi :39 parameters)
+  (rename (srfi :78 lightweight-testing)
+          (check lwt:check))
+  (srfi :103 library-files))
+
+(define-syntax check
+  (syntax-rules (=>)
+    ((_ e => v)
+     (lwt:check e => v))
+    ((_ e => v ...)
+     (lwt:check (let-values ((r e)) r) => (list v ...)))))
+
+(define-syntax check-ex
+  ;; There are two clauses, to make `check' print-outs look pretty.
+  (syntax-rules (=>)
+    ((_ expr => pred)
+     (check (check-ex expr pred) => #T))
+    ((_ expr pred)
+     (call/cc
+       (lambda (k)
+         (with-exception-handler
+           (lambda (ex)
+             (k (or (pred ex)
+                    `(unexpected-exception:
+                      ,(if (condition? ex)
+                         `(conditions: . ,(simple-conditions ex))
+                         ex)))))
+           (lambda ()
+             (let-values ((v expr))
+               `(unexpected-return: . ,v)))))))))
+
+(define (typical-ex? primary? who msg irrts)
+  (lambda (x)
+    (and (primary? x)
+         (who-condition? x)
+         (equal? who (condition-who x))
+         (message-condition? x)
+         (equal? msg (condition-message x))
+         (irritants-condition? x)
+         (equal? irrts (condition-irritants x)))))
+
+(define (AV? who msg . irrts)
+  (typical-ex? assertion-violation? who msg irrts))
+
+(define (mock-file-exists? x) (and (member x (existing-mock-files)) #T))
+
+(define existing-mock-files (make-parameter '()))
+
+(define (join-and-flatten file-names)
+  (apply append
+         (map (lambda (x)
+                (map (lambda (y) (string-append (car x) "/" y))
+                     (cdr x)))
+              file-names)))
+
+(define-syntax with-mock-files
+  (syntax-rules ()
+    ((_ ((dir files ...) ...) . body)
+     (parameterize ((test:file-exists? mock-file-exists?)
+                    (existing-mock-files
+                     (join-and-flatten '((dir files ...) ...))))
+       . body))))
+
+(define-syntax check-parameterized
+  (syntax-rules ()
+    ((_ param expr)
+     (parameterize ((param expr))
+       (check (param)
+              => expr)))))
+
+
+;; searched-directories
+(let-syntax
+    ((check-bad
+      (syntax-rules ()
+        ((_ expr)
+         (check-ex (searched-directories expr)
+                   => (AV? 'searched-directories
+                           "not a list of strings" expr))))))
+  (check-bad 'oops)
+  (check-bad '("foo" 'oops "bar")))
+(check-parameterized searched-directories
+                     '())
+(check-parameterized searched-directories
+                     '("a"))
+(check-parameterized searched-directories
+                     '("a" "" "b"))
+(check-parameterized searched-directories
+                     '("/"))
+(check-parameterized searched-directories
+                     '("/s/d/A/bar" "s/d/B/zab/asdf" "/s/d/C" "sdd"))
+
+;; file-name-extensions
+(let-syntax
+    ((check-bad
+      (syntax-rules ()
+        ((_ expr)
+         (check-ex (file-name-extensions expr)
+                   => (AV? 'file-name-extensions
+                           "not a list of strings" expr))))))
+  (check-bad 'oops)
+  (check-bad '(oops)))
+(check-parameterized file-name-extensions
+                     '())
+(check-parameterized file-name-extensions
+                     '("x"))
+(check-parameterized file-name-extensions
+                     '(""))
+(check-parameterized file-name-extensions
+                     '("a.b"))
+(check-parameterized file-name-extensions
+                     '(".acme-ext" "ext"))
+
+
+;; initialize for the rest of the test program
+(searched-directories '("/s/d/A/bar" "s/d/B/zab/asdf" "/s/d/C" "sdd"))
+(file-name-extensions '(".acme-ext" ".ext"))
+
+
+;; library-name->file-name
+(let-syntax
+    ((check-bad
+      (syntax-rules ()
+        ((_ expr)
+         (check-ex (library-name->file-name expr ".ext")
+                   => (AV? 'library-name->file-name "not a library name" expr))))))
+  (check-bad 1)
+  (check-bad '())
+  (check-bad '("foo"))
+  (check-bad '(1))
+  (check-bad '(foo . bar))
+  (check-bad '(foo bar blah asdf "zab" hoho))
+  (check-bad '(foo bar (3))))
+(let-syntax
+    ((check-bad
+      (syntax-rules ()
+        ((_ expr)
+         (check-ex (library-name->file-name '(foo bar) expr)
+                   => (AV? 'library-name->file-name "not a string" expr))))))
+  (check-bad 'oops))
+(check (library-name->file-name '(foo) "ext")
+       => "fooext")
+(check (library-name->file-name '(foo) "a.b")
+       => "fooa.b")
+(check (library-name->file-name '(foo) "")
+       => "foo")
+(check (library-name->file-name '(foo) ".ext")
+       => "foo.ext")
+(check (library-name->file-name '(foo bar) ".blah")
+       => "foo/bar.blah")
+(check (library-name->file-name '(foo bar zab asdf) ".acme-ext")
+       => "foo/bar/zab/asdf.acme-ext")
+(check (library-name->file-name '(\x0;\x1;\x2;\x3;\x4;\x5;\x6;\x7; \x8;\x9;\xA;\xB;\xC;\xD;\xE;\xF;\x10;\x11;\x12;\x13;\x14;\x15;\x16;\x17; \x18;\x19;\x1A;\x1B;\x1C;\x1D;\x1E;\x1F;) ".ext")
+       => "\x0;\x1;\x2;\x3;\x4;\x5;\x6;\x7;/\x8;\x9;\xA;\xB;\xC;\xD;\xE;\xF;\x10;\x11;\x12;\x13;\x14;\x15;\x16;\x17;/\x18;\x19;\x1A;\x1B;\x1C;\x1D;\x1E;\x1F;.ext")
+(check (library-name->file-name '(<>:\x3B;\x22;/ \x5C;\x7C;?*~) ".ext")
+       => "<>:;\"//\\|?*~.ext")
+(check (library-name->file-name '(a%CE%BBb) ".ext")
+       => "a%CE%BBb.ext")
+(check (library-name->file-name '(main) ".ext")
+       => "main.ext")
+(check (library-name->file-name '(foo main) ".ext")
+       => "foo/main.ext")
+(check (library-name->file-name '(foo bar.acme) ".ext")
+       => "foo/bar.acme.ext")
+(check (library-name->file-name '(λλ ქართული 한국어) ".zzxyy")
+       => "λλ/ქართული/한국어.zzxyy")
+
+;; fold-find-library-file-names
+(define (find-library-file-names lib-name)
+  (let-values (((_ accum)
+                (fold-find-library-file-names
+                 lib-name
+                 (lambda (searched-dir file-name prev-sd accum)
+                   (values #T
+                           searched-dir
+                           (if (eq? prev-sd searched-dir)
+                             (cons (cons file-name (car accum))
+                                   (cdr accum))
+                             (cons (list file-name searched-dir)
+                                   accum))))
+                 #F '())))
+    (and (pair? accum)
+         (fold-left (lambda (a x) (cons (reverse x) a))
+                    '() accum))))
+(let-syntax
+    ((check-bad
+      (syntax-rules ()
+        ((_ expr)
+         (check-ex (find-library-file-names expr)
+                   => (AV? 'fold-find-library-file-names
+                           "not a library name" expr))))))
+  (check-bad 1)
+  (check-bad '())
+  (check-bad '("foo"))
+  (check-bad '(1))
+  (check-bad '(foo . bar))
+  (check-bad '(foo bar blah asdf "zab" hoho))
+  (check-bad '(foo bar (3))))
+(with-mock-files
+    (("/s/d/A/bar"
+      "asdf" "zab.nope-ext" "foo.png" "foo.ext")
+     ("/s/d/A/bar/asdf"
+      "fdsa.blah" "fdsa.ext")
+     ("s/d/B/zab/asdf"
+      "bar" "foo.acme-ext" "baz.acme-ext")
+     ("s/d/B/zab/asdf/bar"
+      "foo-1.ext" "foo.ext")
+     ("/s/d/C"
+      "bar" "zab" "zab.png" "zab.ext" "zab.acme-ext")
+     ("/s/d/C/bar"
+      "foo")
+     ("/s/d/C/bar/foo"
+      "zab" "zab.xyz")
+     ("/s/d/C/bar/foo/zab"
+      "main.ext")
+     ("/s/d/C/zab"
+      "foo.png" "main.ss")
+     ("sdd"
+      "blah" "blah.ext" "zab.ext"
+      "adbmal.nope-ext" "adbmal.abc")
+     ("sdd/blah"
+      "main.ext" "main.acme-ext"))
+  ;; searched directory precedence
+  ;; extension precedence
+  (check (find-library-file-names '(foo))
+         => '(("/s/d/A/bar" "foo.ext")
+              ("s/d/B/zab/asdf" "foo.acme-ext")))
+  (check (find-library-file-names '(zab))
+         => '(("/s/d/C" "zab.acme-ext" "zab.ext")
+              ("sdd" "zab.ext")))
+  (check (find-library-file-names '(blah))
+         => '(("sdd" "blah.ext")))
+  (check (find-library-file-names '(blah main))
+         => '(("sdd" "blah/main.acme-ext" "blah/main.ext")))
+  (check (find-library-file-names '(bar foo))
+         => '(("s/d/B/zab/asdf" "bar/foo.ext")))
+  (check (find-library-file-names '(asdf fdsa))
+         => '(("/s/d/A/bar" "asdf/fdsa.ext")))
+  ;; return #F if no matching file found
+  (check (find-library-file-names '(abcdefg))
+         => #F)
+  (check (find-library-file-names '(a b c d e f g))
+         => #F)
+  (check (find-library-file-names '(adbmal))
+         => #F)
+  (check (find-library-file-names '(bar foo zab))
+         => #F))
+(with-mock-files
+    (("sdd/foo/bar/zab"
+      "blah.ext" "nope.ext" "blah.acme-ext" "blah.nope-ext"
+      "blah.hehe" "blah.hoho")
+     ("/s/d/C/foo/bar/zab"
+      "blah.hehe" "nope.ext" "blah.hoho" "nope.acme-ext")
+     ("/s/d/A/bar/foo/bar"
+      "zab" "asdf.ext" "foo.png")
+     ("s/d/B/zab/asdf/foo/bar/zab"
+      "blah.nope-ext" "blah.ext"))
+  (parameterize ((file-name-extensions '(".hoho" ".acme-ext" ".ext" ".hehe")))
+    (check (find-library-file-names '(foo bar zab blah))
+           => '(("s/d/B/zab/asdf" "foo/bar/zab/blah.ext")
+                ("/s/d/C" "foo/bar/zab/blah.hoho" "foo/bar/zab/blah.hehe")
+                ("sdd" "foo/bar/zab/blah.hoho" "foo/bar/zab/blah.acme-ext"
+                       "foo/bar/zab/blah.ext" "foo/bar/zab/blah.hehe")))
+    ;; early stopping
+    (let-syntax ((check
+                  (syntax-rules (=>)
+                    ((_ n => v ...)
+                     (check (fold-find-library-file-names '(foo bar zab blah)
+                             (lambda (sd fn i)
+                               (if (= n i)
+                                 (values #F sd fn)
+                                 (values #T (+ 1 i))))
+                             0)
+                            => v ...)))))
+      (check 2 => "/s/d/C" "foo/bar/zab/blah.hehe")
+      (check 4 => "sdd" "foo/bar/zab/blah.acme-ext"))))
+;; non-portable characters
+(with-mock-files (("sdd" "a%25%b%2f%c%3C%d%3a%e%2A%f.ext"
+                         "a%25%b%2F%c%3c%d%3A%e%2a%f.ext"
+                         "a%25%b%2F%c%3C%d%3A%e%2A%f.ext")
+                  ("sdd/a%b" "c<d:e*f.ext"))
+  (check (find-library-file-names '(a%b/c<d:e*f))
+         => '(("sdd" "a%b/c<d:e*f.ext"))))
+
+
+;; searched-directories
+(with-mock-files (("foo/bar" "zab.ext")
+                  ("/asdf/blah" "zab.ext"))
+  (parameterize ((searched-directories '("foo/bar" "/asdf/blah")))
+    (check (find-library-file-names '(zab))
+           => '(("foo/bar" "zab.ext")
+                ("/asdf/blah" "zab.ext"))))
+  (parameterize ((searched-directories '("/asdf/blah" "foo/bar")))
+    (check (find-library-file-names '(zab))
+           => '(("/asdf/blah" "zab.ext")
+                ("foo/bar" "zab.ext"))))
+  (parameterize ((searched-directories '("")))
+    (check (find-library-file-names '(foo bar zab))
+           => '(("" "foo/bar/zab.ext")))
+    (check (find-library-file-names '(foo/bar zab))
+           => '(("" "foo/bar/zab.ext")))
+    (check (find-library-file-names '(foo bar/zab))
+           => '(("" "foo/bar/zab.ext")))
+    (check (find-library-file-names '(foo/bar/zab))
+           => '(("" "foo/bar/zab.ext")))
+    (check (find-library-file-names '(asdf blah zab))
+           => #F)))
+
+;; file-name-extensions
+(parameterize ((file-name-extensions '(".xyz" ".asdf")))
+  (check (library-name->file-name '(foo bar zab) ".abc")
+         => "foo/bar/zab.abc")
+  (with-mock-files (("/s/d/C/blah" "hoho.ext" "hoho.asdf" "hoho.xyz" "hoho"))
+    (check (find-library-file-names '(blah hoho))
+           => '(("/s/d/C" "blah/hoho.xyz" "blah/hoho.asdf")))
+    (parameterize ((file-name-extensions '(".asdf" ".xyz")))
+      (check (find-library-file-names '(blah hoho))
+             => '(("/s/d/C" "blah/hoho.asdf" "blah/hoho.xyz"))))
+    (parameterize ((file-name-extensions '("")))
+      (check (find-library-file-names '(blah hoho))
+             => '(("/s/d/C" "blah/hoho"))))))
+
+
+(check-report)

@@ -1,0 +1,160 @@
+#!r6rs
+;; Copyright (c) 2010 Derick Eddington
+;;
+;; Permission is hereby granted, free of charge, to any person obtaining a
+;; copy of this software and associated documentation files (the "Software"),
+;; to deal in the Software without restriction, including without limitation
+;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
+;; and/or sell copies of the Software, and to permit persons to whom the
+;; Software is furnished to do so, subject to the following conditions:
+;;
+;; The above copyright notice and this permission notice shall be included in
+;; all copies or substantial portions of the Software.
+;;
+;; Except as contained in this notice, the name(s) of the above copyright
+;; holders shall not be used in advertising or otherwise to promote the sale,
+;; use or other dealings in this Software without prior written authorization.
+;;
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+;; DEALINGS IN THE SOFTWARE.
+
+;; Refer to the SRFI document at:
+;;   http://srfi.schemers.org/srfi-103/srfi-103.html
+
+;; The "CUSTOMIZE" comments below indicate things which can or should be changed
+;; for particular Scheme systems or platforms.
+
+(library (srfi :103 library-files)
+  (export
+    library-name->file-name
+    searched-directories
+    file-name-extensions
+    fold-find-library-file-names
+    ;; Needed by the test program.
+    #;test:file-exists?)
+  (import
+    (rename (rnrs base (6))
+            (assertion-violation AV))
+    (only (rnrs control (6))
+          unless)
+    (rename (rnrs lists (6))
+            (for-all andmap))
+    (prefix (only (rnrs files (6))
+                  file-exists?)
+            rnrs:)
+    (only (srfi :39 parameters)
+          make-parameter)
+    (only (srfi :98 os-environment-variables)
+          get-environment-variable))
+
+  ;;----------------------------------------------------------------------------
+
+  ;; Uncomment for the test program.
+  #;(define test:file-exists? (make-parameter #F))
+
+  (define (file-exists? x)
+    ;; Comment-out for the test program.
+    (rnrs:file-exists? x)
+    ;; Uncomment for the test program.
+    #;((test:file-exists?) x))
+
+  ;;----------------------------------------------------------------------------
+
+  (define (file-name-join . fns)
+    (define (string-intersperse sl c)
+      (define (intersperse l x)
+        (let loop ((l l) (a '()))
+          (if (null? l)
+            (if (null? a) '() (reverse (cdr a)))
+            (loop (cdr l) (cons* x (car l) a)))))
+      (apply string-append (intersperse sl (string c))))
+    (string-intersperse (filter (lambda (x) (positive? (string-length x))) fns)
+                        file-name-component-separator))
+
+  (define (from-env-var ev)
+    (define (string-split s c)
+      (if (zero? (string-length s))
+        '()
+        (let loop ((l (reverse (string->list s))) (g '()) (a '()))
+          (if (null? l)
+            (cons (list->string g) a)
+            (if (char=? (car l) c)
+              (loop (cdr l) '() (cons (list->string g) a))
+              (loop (cdr l) (cons (car l) g) a))))))
+    (let ((x (get-environment-variable ev)))
+      (and x (string-split x env-var-element-separator))))
+
+  (define (library-name? x)
+    (define (non-empty-list? x) (and (list? x) (pair? x)))
+    (and (non-empty-list? x) (andmap symbol? x)))
+
+  ;;----------------------------------------------------------------------------
+
+  ;; CUSTOMIZE: file-name-component-separator and env-var-element-separator
+  ;; should be changed for Windows.
+
+  (define file-name-component-separator #\/)
+
+  (define env-var-element-separator #\:)
+
+  (define-syntax define-parameter
+    (syntax-rules ()
+      ((_ name env-var alt-init)
+       (define name
+         (make-parameter (or (from-env-var env-var)
+                             alt-init)
+          (lambda (x)
+            (if (and (list? x) (andmap string? x))
+              x
+              (AV 'name "not a list of strings" x))))))))
+
+  ;; CUSTOMIZE: searched-directories can be initialized to include additional
+  ;; elements.
+
+  (define-parameter searched-directories
+                    "SCHEME_LIB_PATH"
+                    '())
+
+  ;; CUSTOMIZE: file-name-extensions can be initialized to include additional
+  ;; elements, and ".acme-s6l" should have the Scheme system's name substituted
+  ;; for "acme".
+
+  (define-parameter file-name-extensions
+                    "SCHEME_LIB_EXTENSIONS"
+                    '(".acme-s6l" ".s6l"))
+
+  ;;----------------------------------------------------------------------------
+
+  (define (library-name->file-name lib-name extension)
+    (define (check x ? s)
+      (unless (? x)
+        (AV 'library-name->file-name (string-append "not a " s) x)))
+    (check lib-name library-name? "library name")
+    (check extension string? "string")
+    (string-append (apply file-name-join (map symbol->string lib-name))
+                   extension))
+
+  (define (fold-find-library-file-names lib-name proc . seeds)
+    (unless (library-name? lib-name)
+      (AV 'fold-find-library-file-names "not a library name" lib-name))
+    (let ((fn (apply file-name-join (map symbol->string lib-name))))
+      (let loop-s ((sds (searched-directories)) (seeds seeds))
+        (if (pair? sds)
+          (let ((sd (car sds)))
+            (let loop-e ((exts (file-name-extensions)) (seeds seeds))
+              (if (pair? exts)
+                (let ((fn (string-append fn (car exts))))
+                  (if (file-exists? (file-name-join sd fn))
+                    (let-values (((cont . seeds) (apply proc sd fn seeds)))
+                      (if cont
+                        (loop-e (cdr exts) seeds)
+                        (apply values seeds)))
+                    (loop-e (cdr exts) seeds)))
+                (loop-s (cdr sds) seeds))))
+          (apply values seeds)))))
+)

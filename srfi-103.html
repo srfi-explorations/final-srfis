@@ -3,7 +3,8 @@
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 
 <html xmlns="http://www.w3.org/1999/xhtml">
-<head><title>SRFI 103: Library Files</title></head>
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>SRFI 103: Library Files</title></head>
 <body>
 
 <!-- This commented out text is for the brittle SRFI tools -->
@@ -57,6 +58,7 @@ subscribe to the list.  You can access previous messages via
   <li>Draft extended: 2009/12/11-2010/1/11</li>
   <li>Revised: 2010/01/24</li>
   <li>Draft extended: 2010/03/04-2010/04/04</li>
+  <li>Revised: 2010/05/24</li>
 </ul>
 
 <!-- ======================================================================= -->
@@ -71,13 +73,12 @@ subscribe to the list.  You can access previous messages via
 <ul>
   <li><a href="#library-files">Library Files</a></li>
   <li><a href="#searched-directories">Searched Directories</a></li>
-  <li><a href="#encoding">Encoding Characters</a></li>
-  <li><a href="#extensions">File-Name Extensions</a></li>
-  <li><a href="#ordering">Ordering</a></li>
+  <li><a href="#file-name-extensions">File-Name Extensions</a></li>
+  <li><a href="#ordering-choosing">Ordering and Choosing</a></li>
 </ul></li>
-<li><a href="#r6rs-files">R6RS Library Files</a></li>
+<li><a href="#r6rs-library-files">R6RS Library Files</a></li>
 <li><a href="#dialects-formats-extensions">Dialects, Formats, and Extensions</a></li>
-<li><a href="#companion-srfi">Companion SRFI</a></li>
+<li><a href="#reference-implementation">Reference Implementation</a></li>
 <li><a href="#issues">Issues</a></li>
 <li><a href="#acknowledgements">Acknowledgments</a></li>
 <li><a href="#references">References</a></li>
@@ -128,11 +129,6 @@ initializes it from a standard environment variable.  This supports variable and
 multiple locations of library files, overlaying library files, and having
 different Scheme systems use the same library files.</p>
 
-<p>In library-file names, this SRFI encodes some characters possible in library
-names.  Implementations of this SRFI are required to encode the same set of
-characters so files can be exchanged between unixes and Windows without
-renaming.</p>
-
 <p>This SRFI provides a configurable sequence of recognized file-name extensions
 and initializes it from a standard environment variable.  This supports
 Scheme-system-specific libraries, multiple Scheme dialects, and using arbitrary
@@ -152,7 +148,7 @@ implement this standard.</p>
 <h3><a name="library-files">Library Files</a></h3>
 
 <p>A <i>library file</i> is a file which contains a library and which has a name
-representing the name of the contained library.  Files conforming to this SRFI
+derived from the name of the contained library.  Files conforming to this SRFI
 have one library per file.</p>
 
 <p>A <i>library-file name</i> consists of, in order: possibly a
@@ -176,49 +172,13 @@ systems may initialize the sequence to include additional directory names.
 Systems may have mechanisms to cause the variable to be ignored.  Systems may
 have mechanisms to reconfigure the sequence after it is initialized.</p>
 
-<h3><a name="encoding">Encoding Characters</a></h3>
-
-<p>Encoding characters is necessary to avoid conflicts with characters which are
-interpreted specially and to allow the use of characters which unixes or Windows
-disallow.</p>
-
-<dl><dt>The <i>set of encoded characters</i> is:</dt>
-    <dd><code>#\x0</code>&nbsp;to&nbsp;<code>#\x1F</code>&nbsp;(inclusive)<br/>
-        <code>#\"</code>&nbsp;<code>#\%</code>&nbsp;<code>#\*</code>&nbsp;<code>#\/</code>&nbsp;<code>#\:</code>&nbsp;<code>#\;</code>&nbsp;<code>#\&lt;</code>&nbsp;<code>#\&gt;</code>&nbsp;<code>#\?</code>&nbsp;<code>#\\</code>&nbsp;<code>#\|</code>&nbsp;<code>#\~</code>
-    </dd>
-</dl>
-
-<p>These characters must be encoded and all others must not be, in file-name
-components corresponding to library-name symbols.</p>
-
-<p>Characters are encoded as their code points such that a code point is
-represented as the minimal amount of hexadecimal digits, with alphabetic digits
-as upper-case, preceded and succeeded by the <code>#\%</code> character.  E.g.,
-a library named <code>(a%/b&nbsp;c:*d)</code> may be in a file named
-<code>"/somewhere/a%25%%2F%b/c%3A%%2A%d.ext"</code>.</p>
-
-<p><code>#\%</code> is encoded because this SRFI interprets it specially.
-<code>#\/</code> is encoded because it is the file-name component separator for
-unixes.  <code>#\\</code> and <code>#\/</code> are encoded because they are the
-file-name component separators for Windows.  <code>#\:</code> is encoded because
-it is the environment-variable element separator for unixes.  <code>#\;</code>
-is encoded because it is the environment-variable element separator for
-Windows.  <code>#\x0</code> is encoded because unixes disallow it.
-<code>#\x0</code> to <code>#\x1F</code>, <code>#\&lt;</code>,
-<code>#\&gt;</code>, <code>#\:</code>, <code>#\"</code>, <code>#\/</code>,
-<code>#\\</code>, <code>#\|</code>, <code>#\?</code>, and <code>#\*</code> are
-encoded because Windows disallows them.  <code>#\~</code> is encoded because
-Windows interprets it specially.</p>
-
-<p>The set of encoded characters might be changed in the future by the issuance
-of a new SRFI.</p>
-
-<h3><a name="extensions">File-Name Extensions</a></h3>
+<h3><a name="file-name-extensions">File-Name Extensions</a></h3>
 
 <p>The <i>sequence of recognized file-name extensions</i> is used to find
 library files such that each extension is appended to each incomplete
 library-file name to make the set of file names of possible library files.
-The <code>#\.</code> character is not allowed in an extension.</p>
+Extensions need to have <code>#\.</code> as their first character if it is
+desired that extensions be separated from the file-name prefix by it.</p>
 
 <p>The operating-system environment variable <code>SCHEME_LIB_EXTENSIONS</code>,
 if it is defined, is used to initialize the sequence.  Its value is a string
@@ -228,22 +188,17 @@ initialize the sequence to include additional extensions.  Systems may have
 mechanisms to cause the variable to be ignored.  Systems may have mechanisms to
 reconfigure the sequence after it is initialized.</p>
 
-<p>Excluding the <code>#\.</code> character avoids conflicts with library names
-whose last symbol contains this character.  E.g., if this character was not
-excluded, the extensions could be <code>"acme.ext"</code> and
-<code>"ext"</code>, and it would be ambiguous if the file named
-<code>"/somewhere/foo.acme.ext"</code> is for a library named <code>(foo)</code>
-or <code>(foo.acme)</code>.</p>
-
-<h3><a name="ordering">Ordering</a></h3>
+<h3><a name="ordering-choosing">Ordering and Choosing</a></h3>
 
 <p>The <i>ordering of matching files</i> is used to choose a file from a set of
 available files matching a library name.  Multiple files might match a library
 name because of multiple searched directories or multiple recognized file-name
-extensions.  Scheme systems may have other mechanisms to choose an auxiliary
-file instead (e.g., a compiled-code file).  If, for a system, no such auxiliary
-file is available, the system must choose the first-ordered file according to
-this SRFI.</p>
+extensions.  Scheme systems may have other mechanisms to choose auxiliary files
+instead (e.g., compiled-code files) or different mechanisms to locate files for
+libraries with names considered special (e.g., <code>(~ ---)</code> located in
+users' home directory).  If, for a system, no such auxiliary file is available
+and a library name is not considered special, the system must choose the
+first-ordered file according to this SRFI.</p>
 
 <p>Matches in a directory which is ordered before another directory are ordered
 before matches in the other directory.  For matches in the same directory, a
@@ -256,8 +211,8 @@ before a match with the other extension.</p>
                   <dd><code>sd/b</code></dd>
                   <dd><code>/sd/a</code></dd></dl></dd>
        <dd><dl><dt>Given this sequence of recognized file-name extensions:</dt>
-                  <dd><code>acme-ext</code></dd>
-                  <dd><code>ext</code></dd></dl></dd>
+                  <dd><code>.acme-ext</code></dd>
+                  <dd><code>.ext</code></dd></dl></dd>
        <dd><dl><dt>Given this structure of directories and files:</dt>
                   <dd><dl><dt><code>/sd/a/</code></dt>
                           <dd><dl><dt><code>foo/</code></dt>
@@ -287,23 +242,23 @@ before a match with the other extension.</p>
 
 <!-- ======================================================================= -->
 
-<h1><a name="r6rs-files">R6RS Library Files</a></h1>
+<h1><a name="r6rs-library-files">R6RS Library Files</a></h1>
 
 <p>R6RS systems which implement this SRFI must conform to the following
-requirements.  Files with name extension <code>"r6rs-lib"</code>, which each
+requirements.  Files with name extension <code>".s6l"</code>, which each
 contain one library as an
 <a href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-10.html#node_sec_7.1">
 R6RS library form</a> as the first syntactic datum which the R6RS
 <code>get-datum</code> procedure will read, must be supported.  The
-<code>"r6rs-lib"</code> extension must be implicitly included in the sequence of
+<code>".s6l"</code> extension must be implicitly included in the sequence of
 recognized file-name extensions, when the <code>SCHEME_LIB_EXTENSIONS</code>
 environment variable is not defined.</p>
 
 <p>R6RS systems which desire to support system-specific libraries are encouraged
 to implicitly include, when <code>SCHEME_LIB_EXTENSIONS</code> is not defined, a
-file-name extension of the form <code>"acme-r6rs-lib"</code>, substituting the
+file-name extension of the form <code>".acme-s6l"</code>, substituting the
 system's name for <code>"acme"</code>, and to order such extension before
-<code>"r6rs-lib"</code>.</p>
+<code>".s6l"</code>.</p>
 
 <!-- ======================================================================= -->
 
@@ -333,17 +288,19 @@ searched directories.</p>
 
 <!-- ======================================================================= -->
 
-<h1><a name="companion-srfi">Companion SRFI</a></h1>
+<h1><a name="reference-implementation">Reference Implementation</a></h1>
 
-<p>
-<a href="http://srfi.schemers.org/srfi-104/srfi-104.html">SRFI 104: Library
-Files Utilities</a> is a companion to this SRFI.  Its reference implementation
-is the reference implementation of this SRFI, and it is intended to be useful as
-a means for Scheme systems to implement this SRFI, and it is a library intended
-to be useful to users working with library files.  It is separate so this SRFI
-does not require providing a library API.  It is intended to be useful whether
-or not systems use it to implement this SRFI.
-</p>
+<p><a href="library-files.s6l">The reference implementation</a> is provided as
+an R6RS library.  It requires some R6RS bindings,
+<a href="http://srfi.schemers.org/srfi-39/srfi-39.html">SRFI&nbsp;39: Parameter
+Objects</a>, and <a href="http://srfi.schemers.org/srfi-98/srfi-98.html">
+SRFI&nbsp;98: An Interface to Access Environment Variables</a>.</p>
+
+<p><a href="tests.s6p">A test program</a> is provided as an R6RS program.  It
+requires, in addition to the reference implementation, some R6RS bindings,
+<a href="http://srfi.schemers.org/srfi-39/srfi-39.html">SRFI&nbsp;39: Parameter
+Objects</a>, and <a href="http://srfi.schemers.org/srfi-78/srfi-78.html">
+SRFI&nbsp;78: Lightweight Testing</a>.</p>
 
 <!-- ======================================================================= -->
 
@@ -373,11 +330,6 @@ editor for editing this SRFI.</p>
   <dt>Revised<sup>6</sup> Report on the Algorithmic Language Scheme</dt>
   <dd>Michael Sperber, <i>et al.</i> (Editors)<br/>
     <a href="http://www.r6rs.org/">http://www.r6rs.org/</a></dd>
-
-  <dt>SRFI 104: Library Files Utilities</dt>
-  <dd>Derick Eddington<br/>
-      <a href="http://srfi.schemers.org/srfi-104/srfi-104.html">
-      http://srfi.schemers.org/srfi-104/srfi-104.html</a></dd>
 </dl>
 
 <!-- ======================================================================= -->
