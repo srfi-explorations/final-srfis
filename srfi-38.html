@@ -527,7 +527,7 @@ operations if you have access to the system's internals.
 	    (case (car first-token)
 	      ((#\() (read-list-tail))
 	      ((#\#) (list->vector (read-list-tail)))
-	      ((#\. #\)) (error (string-append "Unexpected \"" first-token "\"")))
+	      ((#\. #\)) (error (string-append "Unexpected \"" (string (car first-token)) "\"")))
 	      (else
 	       (list (caadr (assv (car first-token)
 				  '((#\' 'x) (#\, ,x) (#\` `x) (#\@ ,@x))))
@@ -631,7 +631,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     href="mailto:srfi minus editors at srfi dot schemers dot org">David Rush</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Sun Jan 28 13:40:33 MET 2007
+Last modified: Wed Jan 19 08:52:24 MET 2011
 <!-- hhmts end -->
   </body>
 </html>
