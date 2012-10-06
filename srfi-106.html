@@ -1,0 +1,493 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 106: Basic socket interface</title>
+    <style type="text/css">
+      dt.proc-def {
+        font-style: italic;
+        font-family: monospace;
+      }
+      dd.proc-desc {
+        padding-top: 5px;
+        padding-bottom: 15px;
+      }
+      a.proc-name {
+        font-style: normal;
+        font-weight: bold;
+        font-family: monospace;
+      }
+      table.notation {
+        padding: 10px;
+      }
+      td.notation-name {
+        font-weight: bold;
+        padding-right: 20px;
+      }
+    </style>
+  </head>
+
+<body>
+
+<H1>Title</H1>
+
+Basic socket interface
+
+<H1>Author</H1>
+
+Takashi Kato
+
+<H1>Abstract</H1>
+
+This document specifies basic socket interfaces.
+
+<H1>Status</H1>
+<p>
+This SRFI is currently in ``draft'' status.  To see an explanation of
+each status that a SRFI can hold, see <a
+href="http://srfi.schemers.org/srfi-process.html">here</a>.
+
+To provide input on this SRFI, please
+<a href="mailto:srfi minus 106 at srfi dot schemers dot org">mail to
+<code>&lt;srfi minus 106 at srfi dot schemers dot org&gt;</code></a>.  See
+<a href="../srfi-list-subscribe.html">instructions here</a> to
+subscribe to the list.  You can access previous messages via
+<a href="mail-archive/maillist.html">the archive of the mailing list</a>.
+</p>
+
+<ul>
+      <li>
+	Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-106/srfi-106.html?rev=1.1">2012/08/29</a></li>
+
+      <li>Draft: 2012/10/07-2012/12/07</li>
+</ul>
+
+
+<H1>Issues</H1>
+
+<ul>
+  <li>The constants variables' names are taken from POSIX, should this be renamed?</li>
+  <li>At least how many constant variables should this SRFI support?</li>
+</ul>
+
+<H1>Rationale</H1>
+
+<p>
+Many Scheme implementation have its own socket APIs however there are no
+portable way to write socket program. Therefore programmers need to provide
+implementation dependent layer for their program.
+</p>
+
+<p>
+This document specifies a uniform interface to write socket programming. That
+should make it easier to write portable programs that need to send or receive
+data from their socket.
+</p>
+
+<H1>Specification</H1>
+
+Names defined in this document:
+<dl>
+  <dt>Constructors and predicate</dt>
+  <dd>
+    <pre>
+      <a href="#make-client-socket">make-client-socket</a> <a href="#make-server-socket">make-server-socket</a> <a href="#socket-p">socket?</a>
+    </pre>
+  </dd>
+
+  <dt>Socket operations</dt>
+  <dd>
+    <pre>
+      <a href="#socket-accept">socket-accept</a> <a href="#socket-send">socket-send</a> <a href="#socket-recv">socket-recv</a>
+      <a href="#socket-shutdown">socket-shutdown</a> <a href="#socket-close">socket-close</a>
+    </pre>
+
+  <dt>Port conversion</dt>
+  <dd>
+    <pre>
+      <a href="#socket-port">socket-port</a>
+    </pre>
+  </dd>
+
+  <dt>Control feature</dt>
+  <dd>
+    <pre>
+      <a href="#call-with-socket">call-with-socket</a>
+    </pre>
+  </dd>
+
+  <dt>Constant values</dt>
+  <dd>
+    <pre>
+      <a href="#AF_UNSPEC">AF_UNSPEC</a> <a href="#AF_INET">AF_INET</a> <a href="#AF_INET6">AF_INET6</a>
+      <a href="#SOCK_STREAM">SOCK_STREAM</a> <a href="#SOCK_DGRAM">SOCK_DGRAM</a>
+      <a href="#AI_PASSIVE">AI_PASSIVE</a> <a href="#AI_CANONNAME">AI_CANONNAME</a> <a href="#AI_NUMERICHOST">AI_NUMERICHOST</a>
+      <a href="#AI_V4MAPPED">AI_V4MAPPED</a> <a href="#AI_ALL">AI_ALL</a> <a href="#AI_ADDRCONFIG">AI_ADDRCONFIG</a>
+      <a href="#SHUT_RD">SHUT_RD</a> <a href="#SHUT_WR">SHUT_WR</a> <a href="#SHUT_RDWR">SHUT_RDWR</a>
+    </pre>
+  </dd>
+</dl>
+
+<h2>The procedures</h2>
+
+<div>
+  The procedure description uses following notation;
+  <table class="notation">
+    <tr><td class="notation-name">socket</td><td>a socket object</td></tr>
+    <tr><td class="notation-name">bv</td><td>a bytevector</td></tr>
+    <tr><td class="notation-name">object</td><td>any value</td></tr>
+  </table>
+</div>
+
+<h3>Constructors and predicate</h3>
+<dl>
+  <dt class="proc-def">
+    <a name="make-client-socket" class="proc-name">make-client-socket</a>
+    node service [ai-family [ai-socktype [ai-flags [ai-protocol]]]] -&gt; socket
+  </dt>
+  <dd class="proc-desc">
+    <div>Returns a client socket connected to an Internet addres.</div>
+    <div>
+      The Internet address is identified by <var>node</var> and
+      <var>service</var>. <var>node</var> and <var>service</var> must be string.
+    </div>
+    <div>
+      Example value of <var>node</var>: <code>"localhost" "127.0.0.1"</code>
+    </div>
+    <div>
+      Example value of <var>service</var>: <code>"http" "80"</code>
+    </div>
+    <div>
+      The optional parameter may specify the created socket's behaviour.
+    </div>
+  </dd>
+  <dt class="proc-def">
+    <a name="make-server-socket" class="proc-name">make-server-socket</a>
+    service [ai-family [ai-socktype [ai-protocol]]] -> socket
+  </dt>
+  <dd class="proc-desc">
+    <div>Returns a server socket waiting for connection.</div>
+    <div>
+      The description of <var>node</var> argument is the same as
+      <code>make-client-socket</code>.
+    </div>
+    <div>
+      The optional parameter may specify the created socket's behaviour.
+    </div>
+  </dd>
+  <dt class="proc-def">
+    <a name="socket-p" class="proc-name">socket?</a> object -&gt; boolean
+  </dt>
+  <dd class="proc-desc">
+    <div>
+      Returns #t if given <var>object</var> is socket object. Otherwise #f.
+    </div>
+  </dd>
+</dl>
+<h3>Socket operations</h3>
+<dl>
+  <dt class="proc-def">
+    <a name="socket-accept" class="proc-name">socket-accept</a>
+    socket -&gt; socket
+  </dt>
+  <dd class="proc-desc">
+    <div>
+      Wait for an incomming connection request, and returns a fresh connected
+      client socket.
+    </div>
+  </dd>
+
+  <dt class="proc-def">
+    <a name="socket-send" class="proc-name">socket-send</a>
+    socket bv [flags] -&gt; size
+  </dt>
+  <dd class="proc-desc">
+    <div>
+      Sends a binary data block to a socket and returns the sent data size.
+    </div>
+    <div>
+      <var>flags</var> may specify the procedure's behaviour.
+    </div>
+  </dd>
+
+  <dt class="proc-def">
+    <a name="socket-recv" class="proc-name">socket-recv</a>
+    socket size [flags] -&gt; bv
+  </dt>
+  <dd class="proc-desc">
+    <div>
+      Receives a binary data block from a socket.
+    </div>
+    <div>
+      <var>flags</var> may specify the procedure's behaviour.
+    </div>
+  </dd>
+
+  <dt class="proc-def">
+    <a name="socket-shutdown" class="proc-name">socket-shutdown</a>
+    socket how -&gt; (unspeficied)
+  </dt>
+  <dd class="proc-desc">
+    <div>
+      Shutdows a socket.
+    </div>
+    <div>
+      <var>how</var> must be one of the following constants;
+      <ul>
+	<li>SHUT_RD</li>
+	<li>SHUT_WR</li>
+	<li>SHUT_RDWR</li>
+      </ul>
+    </div>
+  </dd>
+
+  <dt class="proc-def">
+    <a name="socket-close" class="proc-name">socket-close</a>
+    socket -&gt; (unspeficied)
+  </dt>
+  <dd class="proc-desc">
+    <div>
+      Closes a socket.
+    </div>
+  </dd>
+</dl>
+
+<h3>Port conversion</h3>
+<dl>
+  <dt class="proc-def">
+    <a name="socket-port" class="proc-name">socket-port</a>
+    socket -&gt; binary-input/output-port
+  </dt>
+  <dd class="proc-desc">
+    <div>
+      Returns a fresh binary input/output port associated with a <var>socket</var>.
+    </div>
+  </dd>
+</dl>
+
+<h3>Control feature</h3>
+<dl>
+  <dt class="proc-def">
+    <a name="call-with-socket" class="proc-name">call-with-socket</a>
+    socket proc -&gt; object
+  </dt>
+  <dd class="proc-desc">
+    <div>
+      Calls a given procedure with a given socket as an argument.
+    </div>
+  </dd>
+</dl>
+
+<h3>Constants</h3>
+
+The following variable should be defined but it highly depends on the platform.
+<ul>
+  <li><a name="AF_UNSPEC">AF_UNSPEC</a></li>
+  <li><a name="AF_INET">AF_INET</a></li>
+  <li><a name="AF_INET6">AF_INET6</a></li>
+  <li><a name="SOCK_STREAM">SOCK_STREAM</a></li>
+  <li><a name="SOCK_DGRAM">SOCK_DGRAM</a></li>
+  <li><a name="AI_PASSIVE">AI_PASSIVE</a></li>
+  <li><a name="AI_CANONNAME">AI_CANONNAME</a></li>
+  <li><a name="AI_NUMERICHOST">AI_NUMERICHOST</a></li>
+  <li><a name="AI_V4MAPPED">AI_V4MAPPED</a></li>
+  <li><a name="AI_ALL">AI_ALL</a></li>
+  <li><a name="AI_ADDRCONFIG">AI_ADDRCONFIG</a></li>
+  <li><a name="SHUT_RD">SHUT_RD</a></li>
+  <li><a name="SHUT_WR">SHUT_WR</a></li>
+  <li><a name="SHUT_RDWR">SHUT_RDWR</a></li>
+</ul>
+
+<H1>Example</H1>
+
+<pre>
+(import (rnrs) (socket))
+
+(define echo-server-socket (make-server-socket "5000"))
+
+(define (server-run)
+  (define (get-line-from-binary-port bin)
+    (utf8->string
+     (call-with-bytevector-output-port
+      (lambda (out)
+        (let loop ((b (get-u8 bin)))
+          (case b
+            ((#xA) #t) ;; newline
+            ((#xD) (loop (get-u8 bin))) ;; carriage return
+            (else (put-u8 out b) (loop (get-u8 bin))))))))
+  (let ((addr (socket-accept echo-server-socket)))
+    (call-with-socket
+     addr
+     (lambda (sock)
+       (let ((p (socket-port sock)))
+         (call-with-port
+          p
+          (lambda (p)
+            (let lp2 ((r (get-line-from-binary-port p)))
+              (put-bytevector p (string->utf8 (string-append r "\r\n"))
+              (lp2 (get-line-from-binary-port p))))))))))
+(server-run)
+</pre>
+
+<H1>Implementation</H1>
+The following implementation is written in R6RS.
+
+<h2>Interface layer</h2>
+<pre>
+(library (socket)
+    (export make-client-socket make-server-socket
+       	    socket? socket-port call-with-socket
+       	    socket-accept socket-send socket-recv socket-shutdown socket-close
+       	    AF_UNSPEC AF_INET AF_INET6
+       	    SOCK_STREAM SOCK_DGRAM
+       	    AI_PASSIVE AI_CANONNAME AI_NUMERICHOST
+       	    AI_V4MAPPED AI_ALL AI_ADDRCONFIG
+       	    SHUT_RD SHUT_WR SHUT_RDWR)
+    (import (socket impl)))
+</pre>
+
+<h2>Implementation dependent layer</h2>
+<h3>For Ypsilon</h3>
+<pre>
+(library (socket impl)
+    (export make-client-socket make-server-socket
+            socket? socket-port call-with-socket
+            socket-accept socket-send socket-recv socket-shutdown socket-close
+            AF_UNSPEC AF_INET AF_INET6
+            SOCK_STREAM SOCK_DGRAM
+            AI_PASSIVE AI_CANONNAME AI_NUMERICHOST
+            AI_V4MAPPED AI_ALL AI_ADDRCONFIG
+            SHUT_RD SHUT_WR SHUT_RDWR)
+    (import (rnrs) (rename (ypsilon socket)
+                           (socket-send %socket-send)
+                           (socket-recv %socket-recv)))
+
+  (define (socket-send socket bv . flags)
+    (let ((flags (if (null? flags) 0 (car flags))))
+      (%socket-send socket bv flags)))
+
+  (define (socket-recv socket size . flags)
+    (let ((flags (if (null? flags) 0 (car flags))))
+      (%socket-recv socket size flags)))
+)
+</pre>
+
+<h3>For Mosh</h3>
+<pre>
+(library (socket impl)
+    (export make-client-socket make-server-socket
+            socket? socket-port call-with-socket
+            socket-accept socket-send socket-recv socket-shutdown socket-close
+            AF_UNSPEC AF_INET AF_INET6
+            SOCK_STREAM SOCK_DGRAM
+            AI_PASSIVE AI_CANONNAME AI_NUMERICHOST
+            AI_V4MAPPED AI_ALL AI_ADDRCONFIG
+            SHUT_RD SHUT_WR SHUT_RDWR)
+    (import (mosh socket))
+</pre>
+
+<h3>For Sagittarius</h3>
+<pre>
+(library (socket impl)
+    (export make-client-socket make-server-socket
+            socket? socket-port call-with-socket
+            socket-accept socket-send socket-recv socket-shutdown socket-close
+            AF_UNSPEC AF_INET AF_INET6
+            SOCK_STREAM SOCK_DGRAM
+            AI_PASSIVE AI_CANONNAME AI_NUMERICHOST
+            AI_V4MAPPED AI_ALL AI_ADDRCONFIG
+            SHUT_RD SHUT_WR SHUT_RDWR)
+    (import (rnrs) (rename (sagittarius socket)
+                           (socket-send %socket-send)
+                           (socket-recv %socket-recv)))
+
+  (define (socket-send socket bv :optional (flags 0))
+    (%socket-send socket bv flags))
+
+  (define (socket-recv socket size :optional (flags 0))
+    (%socket-recv socket size flags))
+  )
+</pre>
+
+<h3>For others</h3>
+<pre>
+(library (socket impl)
+    (export make-client-socket make-server-socket
+            socket? socket-port call-with-socket
+            socket-accept socket-send socket-recv socket-shutdown socket-close
+            AF_UNSPEC AF_INET AF_INET6
+            SOCK_STREAM SOCK_DGRAM
+            AI_PASSIVE AI_CANONNAME AI_NUMERICHOST
+            AI_V4MAPPED AI_ALL AI_ADDRCONFIG
+            SHUT_RD SHUT_WR SHUT_RDWR)
+    (import (rnrs))
+
+  (define-syntax define-unsupported
+    (syntax-rules ()
+      ((_ (name))
+       (define (name . _)
+         (raise 
+          (condition (make-implementation-restriction-violation)
+                     (make-who-condition 'name)
+                     (make-message-condition
+                      "This SRFI is not supported on this implementation")))))
+      ((_ name)
+       (define name #f))))
+
+  (define-unsupported (make-client-socket))
+  (define-unsupported (make-server-socket))
+  (define-unsupported (socket?           ))
+  (define-unsupported (socket-port       ))
+  (define-unsupported (call-with-socket  ))
+  (define-unsupported (socket-accept     ))
+  (define-unsupported (socket-send       ))
+  (define-unsupported (socket-recv       ))
+  (define-unsupported (socket-shutdown   ))
+  (define-unsupported (socket-close      ))
+
+  (define-unsupported AF_UNSPEC     )
+  (define-unsupported AF_INET       )
+  (define-unsupported AF_INET6      )
+  (define-unsupported SOCK_STREAM   )
+  (define-unsupported SOCK_DGRAM    )
+  (define-unsupported AI_PASSIVE    )
+  (define-unsupported AI_CANONNAME  )
+  (define-unsupported AI_NUMERICHOST)
+  (define-unsupported AI_V4MAPPED   )
+  (define-unsupported AI_ALL        )
+  (define-unsupported AI_ADDRCONFIG )
+
+  (define-unsupported SHUT_RD)
+  (define-unsupported SHUT_WR)
+  (define-unsupported SHUT_RDWR))
+</pre>
+
+<H1>Copyright</H1>
+Copyright (C) Takashi Kato (2012). All Rights Reserved. 
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+<p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+    <hr>
+    <address>Editor: <a href="mailto:srfi-editors at srfi dot schemers dot org">Mike Sperber</a></address>
+    <address>Author: <a href="mailto:ktakashi@ymail.com">Takashi Kato</a></address>
+<!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
+<!-- hhmts start -->
+Last modified: Sat Oct  6 19:23:20 MST 2012
+<!-- hhmts end -->
+  </body>
+</html>
