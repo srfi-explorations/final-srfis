@@ -55,19 +55,13 @@ subscribe to the list.  You can access previous messages via
 </p>
 
 <ul>
-      <li>
-	Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-106/srfi-106.html?rev=1.1">2012/08/29</a></li>
-
+      <li>Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-106/srfi-106.html?rev=1.1">2012/08/29</a></li>
+      <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-106/srfi-106.html?rev=1.2">2012/10/09</a></li>
       <li>Draft: 2012/10/07-2012/12/07</li>
 </ul>
+<H1>Abstract</H1>
 
-
-<H1>Issues</H1>
-
-<ul>
-  <li>The constants variables' names are taken from POSIX, should this be renamed?</li>
-  <li>At least how many constant variables should this SRFI support?</li>
-</ul>
+This document specifies basic socket interfaces.
 
 <H1>Rationale</H1>
 
@@ -78,12 +72,20 @@ implementation dependent layer for their program.
 </p>
 
 <p>
-This document specifies a uniform interface to write socket programming. That
-should make it easier to write portable programs that need to send or receive
-data from their socket.
+This document specifies high and middle range of socket interfaces which are
+commonly used to write socket programming. That should make it easier to write
+portable programs that need to send or receive data from their socket.
 </p>
 
 <H1>Specification</H1>
+
+<div>
+  All procedures defined in this SRFI may raise an error when the procedure
+  failed because of the connection problem or other socket related problem. This
+  document does not specify which condition should be raised. The end of this
+  section, I put a table described which condition will be raised by some of
+  the Scheme implementations.
+</div>
 
 Names defined in this document:
 <dl>
@@ -115,6 +117,14 @@ Names defined in this document:
     </pre>
   </dd>
 
+  <dt>Flag operations</dt>
+  <dd>
+    <pre>
+      <a href="#socket-merge-flags">socket-merge-flags</a>
+      <a href="#socket-parge-flags">socket-parge-flags</a>
+    </pre>
+  </dd>
+
   <dt>Constant values</dt>
   <dd>
     <pre>
@@ -122,6 +132,7 @@ Names defined in this document:
       <a href="#SOCK_STREAM">SOCK_STREAM</a> <a href="#SOCK_DGRAM">SOCK_DGRAM</a>
       <a href="#AI_PASSIVE">AI_PASSIVE</a> <a href="#AI_CANONNAME">AI_CANONNAME</a> <a href="#AI_NUMERICHOST">AI_NUMERICHOST</a>
       <a href="#AI_V4MAPPED">AI_V4MAPPED</a> <a href="#AI_ALL">AI_ALL</a> <a href="#AI_ADDRCONFIG">AI_ADDRCONFIG</a>
+      <a href="#IPPROTO_IP">IPPROTO_IP</a> <a href="#IPPROTO_TCP">IPPROTO_TCP</a> <a href="#IPPROTO_UDP">IPPROTO_UDP</a>
       <a href="#SHUT_RD">SHUT_RD</a> <a href="#SHUT_WR">SHUT_WR</a> <a href="#SHUT_RDWR">SHUT_RDWR</a>
     </pre>
   </dd>
@@ -157,7 +168,19 @@ Names defined in this document:
       Example value of <var>service</var>: <code>"http" "80"</code>
     </div>
     <div>
-      The optional parameter may specify the created socket's behaviour.
+      The optional parameter may specify the created socket's behaviour.<br />
+      If the optional argument(s) is omitted, then following flags should be
+      used as default.
+      <dl>
+	<dt><var>ai-family</var></dt>
+	<dd><code>AF_INET</code></dd>
+	<dt><var>ai-socktype</var></dt>
+	<dd><code>SOCK_STREAM</code></dd>
+	<dt><var>ai-flags</var></dt>
+	<dd><code>(socket-merge-flags AI_V4MAPPED AI_ADDRCONFIG)</code></dd>
+	<dt><var>ai-protocol</var></dt>
+	<dd><code>IPPROTO_IP</code></dd>
+      </dl>
     </div>
   </dd>
   <dt class="proc-def">
@@ -171,7 +194,17 @@ Names defined in this document:
       <code>make-client-socket</code>.
     </div>
     <div>
-      The optional parameter may specify the created socket's behaviour.
+      The optional parameter may specify the created socket's behaviour. <br />
+      If the optional argument(s) is omitted, then following flags should be
+      used as default.
+      <dl>
+	<dt><var>ai-family</var></dt>
+	<dd><code>AF_INET</code></dd>
+	<dt><var>ai-socktype</var></dt>
+	<dd><code>SOCK_STREAM</code></dd>
+	<dt><var>ai-protocol</var></dt>
+	<dd><code>IPPROTO_IP</code></dd>
+      </dl>
     </div>
   </dd>
   <dt class="proc-def">
@@ -206,6 +239,8 @@ Names defined in this document:
     </div>
     <div>
       <var>flags</var> may specify the procedure's behaviour.
+      If <var>flags</var> is ommited, then the procedure should behave as if no
+      flag is given. <br />
     </div>
   </dd>
 
@@ -215,16 +250,19 @@ Names defined in this document:
   </dt>
   <dd class="proc-desc">
     <div>
-      Receives a binary data block from a socket.
+      Receives a binary data block from a socket. If zero length bytevector is
+      returned, it means the peer connection is closed.
     </div>
     <div>
       <var>flags</var> may specify the procedure's behaviour.
+      If <var>flags</var> is ommited, then the procedure should behave as if no
+      flag is given. <br />
     </div>
   </dd>
 
   <dt class="proc-def">
     <a name="socket-shutdown" class="proc-name">socket-shutdown</a>
-    socket how -&gt; (unspeficied)
+    socket how -&gt; (unspecified)
   </dt>
   <dd class="proc-desc">
     <div>
@@ -242,7 +280,7 @@ Names defined in this document:
 
   <dt class="proc-def">
     <a name="socket-close" class="proc-name">socket-close</a>
-    socket -&gt; (unspeficied)
+    socket -&gt; (unspecified)
   </dt>
   <dd class="proc-desc">
     <div>
@@ -259,7 +297,8 @@ Names defined in this document:
   </dt>
   <dd class="proc-desc">
     <div>
-      Returns a fresh binary input/output port associated with a <var>socket</var>.
+      Returns a fresh binary input/output port associated with a
+      <var>socket</var>.
     </div>
   </dd>
 </dl>
@@ -274,6 +313,31 @@ Names defined in this document:
     <div>
       Calls a given procedure with a given socket as an argument.
     </div>
+    <div>
+      If given <var>proc</var> returns then it returns the result of 
+      <var>proc</var> and <var>socket</var> will be automatically closed. If
+      <var>proc</var> doesn't return then given <var>socket</var> won't be
+      closed automatically. It's analogy of <code>call-with-port</code>.
+    </div>
+  </dd>
+</dl>
+
+<h3>Flag operations</h3>
+<dl>
+  <dt class="proc-def">
+    <a name="socket-merge-flags" class="proc-name">socket-merge-flags</a>
+    flags ... -&gt; new-flags
+  </dt>
+  <dd class="proc-desc">
+    Merges given <var>flags</var> and returns a new flag.
+  </dd>
+  <dt class="proc-def">
+    <a name="socket-parge-flags" class="proc-name">socket-parge-flags</a>
+    base-flag flags ... -&gt; new-flags
+  </dt>
+  <dd class="proc-desc">
+    Removes <var>flags</var> from <var>base-flag</var> if exists and returns a
+    new flag.
   </dd>
 </dl>
 
@@ -292,10 +356,27 @@ The following variable should be defined but it highly depends on the platform.
   <li><a name="AI_V4MAPPED">AI_V4MAPPED</a></li>
   <li><a name="AI_ALL">AI_ALL</a></li>
   <li><a name="AI_ADDRCONFIG">AI_ADDRCONFIG</a></li>
+  <li><a name="IPPROTO_IP">IPPROTO_IP</a></li>
+  <li><a name="IPPROTO_TCP">IPPROTO_TCP</a></li>
+  <li><a name="IPPROTO_UDP">IPPROTO_UDP</a></li>
   <li><a name="SHUT_RD">SHUT_RD</a></li>
   <li><a name="SHUT_WR">SHUT_WR</a></li>
   <li><a name="SHUT_RDWR">SHUT_RDWR</a></li>
 </ul>
+
+<h3>Conditions</h3>
+
+These are some of conditions raised when networking error occurs.
+
+<table>
+  <tr><th>Implementation name</th><th>Condition type</th></tr>
+  <tr><td>Gauche</td><td>&lt;system-error&gt;</td></tr>
+  <tr><td>Larceny</td><td>no error, returns #f</td></tr>
+  <tr><td>Mosh</td><td>&i/o-read</td></tr>
+  <tr><td>Racket</td><td>exn:fail:network</td></tr>
+  <tr><td>Sagittarius</td><td>&i/o</td></tr>
+  <tr><td>Ypsilon</td><td>&i/o</td></tr>
+</table>
 
 <H1>Example</H1>
 
@@ -333,33 +414,41 @@ The following implementation is written in R6RS.
 
 <h2>Interface layer</h2>
 <pre>
-(library (socket)
+(library (srfi :106 socket)
     (export make-client-socket make-server-socket
        	    socket? socket-port call-with-socket
+            socket-merge-flags socket-parge-flags
        	    socket-accept socket-send socket-recv socket-shutdown socket-close
        	    AF_UNSPEC AF_INET AF_INET6
        	    SOCK_STREAM SOCK_DGRAM
        	    AI_PASSIVE AI_CANONNAME AI_NUMERICHOST
        	    AI_V4MAPPED AI_ALL AI_ADDRCONFIG
+            IPPROTO_IP IPPROTO_TCP IPPROTO_UDP
        	    SHUT_RD SHUT_WR SHUT_RDWR)
-    (import (socket impl)))
+    (import (srfi :106 socket impl)))
 </pre>
 
 <h2>Implementation dependent layer</h2>
 <h3>For Ypsilon</h3>
 <pre>
-(library (socket impl)
+(library (srfi :106 socket impl)
     (export make-client-socket make-server-socket
             socket? socket-port call-with-socket
+            (rename (bitwise-ior socket-merge-flags)
+                    (bitwise-xor socket-parge-flags))
             socket-accept socket-send socket-recv socket-shutdown socket-close
             AF_UNSPEC AF_INET AF_INET6
             SOCK_STREAM SOCK_DGRAM
             AI_PASSIVE AI_CANONNAME AI_NUMERICHOST
             AI_V4MAPPED AI_ALL AI_ADDRCONFIG
+            IPPROTO_IP IPPROTO_TCP IPPROTO_UDP
             SHUT_RD SHUT_WR SHUT_RDWR)
     (import (rnrs) (rename (ypsilon socket)
                            (socket-send %socket-send)
                            (socket-recv %socket-recv)))
+  (define IPPROTO_IP 0)
+  (define IPPROTO_TCP 6)
+  (define IPPROTO_UDP 17)
 
   (define (socket-send socket bv . flags)
     (let ((flags (if (null? flags) 0 (car flags))))
@@ -373,32 +462,43 @@ The following implementation is written in R6RS.
 
 <h3>For Mosh</h3>
 <pre>
-(library (socket impl)
+(library (srfi :106 socket impl)
     (export make-client-socket make-server-socket
             socket? socket-port call-with-socket
+            (rename (bitwise-ior socket-merge-flags)
+                    (bitwise-xor socket-parge-flags))
             socket-accept socket-send socket-recv socket-shutdown socket-close
             AF_UNSPEC AF_INET AF_INET6
             SOCK_STREAM SOCK_DGRAM
             AI_PASSIVE AI_CANONNAME AI_NUMERICHOST
             AI_V4MAPPED AI_ALL AI_ADDRCONFIG
+            IPPROTO_IP IPPROTO_TCP IPPROTO_UDP
             SHUT_RD SHUT_WR SHUT_RDWR)
-    (import (mosh socket))
+    (import (rnrs) (mosh socket)
+  (define IPPROTO_IP 0)
+  )
 </pre>
 
 <h3>For Sagittarius</h3>
 <pre>
-(library (socket impl)
+(library (srfi :106 socket impl)
     (export make-client-socket make-server-socket
             socket? socket-port call-with-socket
+            (rename (bitwise-ior socket-merge-flags)
+                    (bitwise-xor socket-parge-flags))
             socket-accept socket-send socket-recv socket-shutdown socket-close
             AF_UNSPEC AF_INET AF_INET6
             SOCK_STREAM SOCK_DGRAM
             AI_PASSIVE AI_CANONNAME AI_NUMERICHOST
             AI_V4MAPPED AI_ALL AI_ADDRCONFIG
+            IPPROTO_IP IPPROTO_TCP IPPROTO_UDP
             SHUT_RD SHUT_WR SHUT_RDWR)
     (import (rnrs) (rename (sagittarius socket)
                            (socket-send %socket-send)
                            (socket-recv %socket-recv)))
+  (define IPPROTO_IP 0)
+  (define IPPROTO_TCP 6)
+  (define IPPROTO_UDP 17)
 
   (define (socket-send socket bv :optional (flags 0))
     (%socket-send socket bv flags))
@@ -410,14 +510,17 @@ The following implementation is written in R6RS.
 
 <h3>For others</h3>
 <pre>
-(library (socket impl)
+(library (srfi :106 socket impl)
     (export make-client-socket make-server-socket
             socket? socket-port call-with-socket
+            (rename (bitwise-ior socket-merge-flags)
+                    (bitwise-xor socket-parge-flags))
             socket-accept socket-send socket-recv socket-shutdown socket-close
             AF_UNSPEC AF_INET AF_INET6
             SOCK_STREAM SOCK_DGRAM
             AI_PASSIVE AI_CANONNAME AI_NUMERICHOST
             AI_V4MAPPED AI_ALL AI_ADDRCONFIG
+            IPPROTO_IP IPPROTO_TCP IPPROTO_UDP
             SHUT_RD SHUT_WR SHUT_RDWR)
     (import (rnrs))
 
@@ -456,6 +559,10 @@ The following implementation is written in R6RS.
   (define-unsupported AI_ALL        )
   (define-unsupported AI_ADDRCONFIG )
 
+  (define-unsupported IPPROTO_IP)
+  (define-unsupported IPPROTO_TCP)
+  (define-unsupported IPPROTO_UDP)
+
   (define-unsupported SHUT_RD)
   (define-unsupported SHUT_WR)
   (define-unsupported SHUT_RDWR))
@@ -487,7 +594,7 @@ DEALINGS IN THE SOFTWARE.
     <address>Author: <a href="mailto:ktakashi@ymail.com">Takashi Kato</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Sat Oct  6 19:23:20 MST 2012
+Last modified: Tue Oct  9 08:21:24 MST 2012
 <!-- hhmts end -->
   </body>
 </html>
