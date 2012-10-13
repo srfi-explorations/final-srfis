@@ -57,6 +57,7 @@ subscribe to the list.  You can access previous messages via
 <ul>
       <li>Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-106/srfi-106.html?rev=1.1">2012/08/29</a></li>
       <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-106/srfi-106.html?rev=1.2">2012/10/09</a></li>
+      <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-106/srfi-106.html?rev=1.3">2012/10/13</a></li>
       <li>Draft: 2012/10/07-2012/12/07</li>
 </ul>
 <H1>Abstract</H1>
@@ -120,6 +121,10 @@ Names defined in this document:
   <dt>Flag operations</dt>
   <dd>
     <pre>
+      <a href="#address-family">address-family</a> <a href="#address-info">address-info</a> 
+      <a href="#socket-domain">socket-domain</a> <a href="#ip-protocol">ip-protocol</a>
+      <a href="#message-type">message-type</a> <a href="#shutdown-method">shutdown-method</a>
+
       <a href="#socket-merge-flags">socket-merge-flags</a>
       <a href="#socket-parge-flags">socket-parge-flags</a>
     </pre>
@@ -128,12 +133,13 @@ Names defined in this document:
   <dt>Constant values</dt>
   <dd>
     <pre>
-      <a href="#AF_UNSPEC">AF_UNSPEC</a> <a href="#AF_INET">AF_INET</a> <a href="#AF_INET6">AF_INET6</a>
-      <a href="#SOCK_STREAM">SOCK_STREAM</a> <a href="#SOCK_DGRAM">SOCK_DGRAM</a>
-      <a href="#AI_PASSIVE">AI_PASSIVE</a> <a href="#AI_CANONNAME">AI_CANONNAME</a> <a href="#AI_NUMERICHOST">AI_NUMERICHOST</a>
-      <a href="#AI_V4MAPPED">AI_V4MAPPED</a> <a href="#AI_ALL">AI_ALL</a> <a href="#AI_ADDRCONFIG">AI_ADDRCONFIG</a>
-      <a href="#IPPROTO_IP">IPPROTO_IP</a> <a href="#IPPROTO_TCP">IPPROTO_TCP</a> <a href="#IPPROTO_UDP">IPPROTO_UDP</a>
-      <a href="#SHUT_RD">SHUT_RD</a> <a href="#SHUT_WR">SHUT_WR</a> <a href="#SHUT_RDWR">SHUT_RDWR</a>
+      <a href="#*af-unspec*">*af-unspec*</a> <a href="#*af-inet*">*af-inet*</a> <a href="#*af-inet6*">*af-inet6*</a>
+      <a href="#*sock-stream*">*sock-stream*</a> <a href="#*sock-dgram*">*sock-dgram*</a>
+      <a href="#*ai-canoname*">*ai-canoname*</a> <a href="#*ai-numerichost*">*ai-numerichost*</a>
+      <a href="#*ai-v4mapped*">*ai-v4mapped*</a> <a href="#*ai-all*">*ai-all*</a> <a href="#*ai-addrconfig*">*ai-addrconfig*</a>
+      <a href="#*ipproto-ip*">*ipproto-ip*</a> <a href="#*ipproto-tcp*">*ipproto-tcp*</a> <a href="#*ipproto-udp*">*ipproto-udp*</a>
+      <a href="*msg-peek*">*msg-peek*</a> <a href="*msg-oob*">*msg-oob*</a> <a href="*msg-waitall*">*msg-waitall*</a>
+      <a href="#*shut-rd*">*shut-rd*</a> <a href="#*shut-wr*">*shut-wr*</a> <a href="#*shut-rdwr*">*shut-rdwr*</a>
     </pre>
   </dd>
 </dl>
@@ -173,13 +179,13 @@ Names defined in this document:
       used as default.
       <dl>
 	<dt><var>ai-family</var></dt>
-	<dd><code>AF_INET</code></dd>
+	<dd><code>*af-inet*</code></dd>
 	<dt><var>ai-socktype</var></dt>
-	<dd><code>SOCK_STREAM</code></dd>
+	<dd><code>*sock-stream*</code></dd>
 	<dt><var>ai-flags</var></dt>
-	<dd><code>(socket-merge-flags AI_V4MAPPED AI_ADDRCONFIG)</code></dd>
+	<dd><code>(socket-merge-flags *ai-v4mapped* *ai-addrconfig*)</code></dd>
 	<dt><var>ai-protocol</var></dt>
-	<dd><code>IPPROTO_IP</code></dd>
+	<dd><code>*ipproto-ip*</code></dd>
       </dl>
     </div>
   </dd>
@@ -199,11 +205,11 @@ Names defined in this document:
       used as default.
       <dl>
 	<dt><var>ai-family</var></dt>
-	<dd><code>AF_INET</code></dd>
+	<dd><code>*af-inet*</code></dd>
 	<dt><var>ai-socktype</var></dt>
-	<dd><code>SOCK_STREAM</code></dd>
+	<dd><code>*sock-stream*</code></dd>
 	<dt><var>ai-protocol</var></dt>
-	<dd><code>IPPROTO_IP</code></dd>
+	<dd><code>*ipproto-ip*</code></dd>
       </dl>
     </div>
   </dd>
@@ -238,9 +244,10 @@ Names defined in this document:
       Sends a binary data block to a socket and returns the sent data size.
     </div>
     <div>
-      <var>flags</var> may specify the procedure's behaviour.
-      If <var>flags</var> is ommited, then the procedure should behave as if no
-      flag is given. <br />
+      <var>flags</var> may specify the procedure's behaviour.<br>
+      If the <var>flags</var> is omitted, the default value must be the result
+      of following form;<br>
+      <code>(message-type none)</code>
     </div>
   </dd>
 
@@ -254,9 +261,10 @@ Names defined in this document:
       returned, it means the peer connection is closed.
     </div>
     <div>
-      <var>flags</var> may specify the procedure's behaviour.
-      If <var>flags</var> is ommited, then the procedure should behave as if no
-      flag is given. <br />
+      <var>flags</var> may specify the procedure's behaviour.<br>
+      If the <var>flags</var> is omitted, the default value must be the result
+      of following form;<br>
+      <code>(message-type none)</code>
     </div>
   </dd>
 
@@ -266,14 +274,14 @@ Names defined in this document:
   </dt>
   <dd class="proc-desc">
     <div>
-      Shutdows a socket.
+      Shutdowns a socket.
     </div>
     <div>
       <var>how</var> must be one of the following constants;
       <ul>
-	<li>SHUT_RD</li>
-	<li>SHUT_WR</li>
-	<li>SHUT_RDWR</li>
+	<li>*shut-rd*</li>
+	<li>*shut-wr*</li>
+	<li>*shut-rdwr*</li>
       </ul>
     </div>
   </dd>
@@ -325,6 +333,126 @@ Names defined in this document:
 <h3>Flag operations</h3>
 <dl>
   <dt class="proc-def">
+    <a name="address-family" class="proc-name">address-family</a>
+    name -&gt; address-family
+  </dt>
+  <dd class="proc-desc">
+    Returns proper address family from given <var>name</var>.<br>
+    Implementation must support at least following names and must have the
+    described behaviour.
+    <dl>
+      <dt><code>inet</code></dt>
+      <dd>Returns <code>*af-inet*</code></dd>
+      <dt><code>inet6</code></dt>
+      <dd>Returns <code>*af-inet6*</code></dd>
+      <dt><code>unspec</code></dt>
+      <dd>Returns <code>*af-unspec*</code></dd>
+    </dl>
+    Implementation may support more names such as <code>unix</code> or
+    <code>local</code> or other names.
+  </dd>
+
+  <dt class="proc-def">
+    <a name="address-info" class="proc-name">address-info</a>
+    names ... -&gt; address-info
+  </dt>
+  <dd class="proc-desc">
+    Returns merged address info flags from given <var>names</var>.<br>
+    Implementation must support at least following names and must have the
+    described behaviour.    
+    <dl>
+      <dt><code>canoname</code></dt>
+      <dd>Returns <code>*ai-canoname*</code></dd>
+      <dt><code>numerichost</code></dt>
+      <dd>Returns <code>*ai-numerichost*</code></dd>
+      <dt><code>v4mapped</code></dt>
+      <dd>Returns <code>*ai-v4mapped*</code></dd>
+      <dt><code>all</code></dt>
+      <dd>Returns <code>*ai-all*</code></dd>
+      <dt><code>addrconfig</code></dt>
+      <dd>Returns <code>*ai-addrconfig*</code></dd>
+    </dl>
+    Implementation may support more names.
+  </dd>
+
+  <dt class="proc-def">
+    <a name="socket-domain" class="proc-name">socket-domain</a>
+    name -&gt; socket-domain
+  </dt>
+  <dd class="proc-desc">
+    Returns socket domain flags from given <var>name</var>.<br>
+    Implementation must support at least following names and must have the
+    described behaviour.    
+    <dl>
+      <dt><code>stream</code></dt>
+      <dd>Returns <code>*sock-stream*</code></dd>
+      <dt><code>datagram</code></dt>
+      <dd>Returns <code>*sock-dgram*</code></dd>
+    </dl>
+    Implementation may support more names.
+  </dd>
+
+  <dt class="proc-def">
+    <a name="ip-protocol" class="proc-name">ip-protocol</a>
+    name -&gt; ip-protocol
+  </dt>
+  <dd class="proc-desc">
+    Returns ip-protocol flag from given <var>name</var>.<br>
+    Implementation must support at least following names and must have the
+    described behaviour.
+    <dl>
+      <dt><code>ip</code></dt>
+      <dd>Returns <code>*ipproto-ip*</code></dd>
+      <dt><code>tcp</code></dt>
+      <dd>Returns <code>*ipproto-tcp*</code></dd>
+      <dt><code>udp</code></dt>
+      <dd>Returns <code>*ipproto-udp*</code></dd>
+    </dl>
+    Implementation may support more names.
+  </dd>
+
+  <dt class="proc-def">
+    <a name="message-type" class="proc-name">message-type</a>
+    names ... -&gt; message-type
+  </dt>
+  <dd class="proc-desc">
+    Returns message type flag from given <var>name</var>.<br>
+    The flag can be used both <code>socket-recv</code> and
+    <code>socket-send</code>.<br>
+    Implementation must support at least following names and must have the
+    described behaviour.
+    <dl>
+      <dt><code>none</code></dt>
+      <dd>Returns no flag.</dd>
+      <dt><code>peek</code></dt>
+      <dd>Returns <code>*msg-peek*</code></dd>
+      <dt><code>oob</code></dt>
+      <dd>Returns <code>*msg-oob*</code></dd>
+      <dt><code>wait-all</code></dt>
+      <dd>Returns <code>*msg-waitall*</code></dd>
+    </dl>
+    Implementation may support more names.
+  </dd>
+
+  <dt class="proc-def">
+    <a name="shutdown-method" class="proc-name">shutdown-method</a>
+    names ... -&gt; shutdown-method
+  </dt>
+  <dd class="proc-desc">
+    Returns shutdown method flags from given <var>names</var>.<br>
+    Implementation must support at least following names and must have the
+    described behaviour.    
+    <dl>
+      <dt><code>read</code></dt>
+      <dd>Returns <code>*shut-rd*</code></dd>
+      <dt><code>write</code></dt>
+      <dd>Returns <code>*shut-wr*</code></dd>
+    </dl>
+    If <code>shutdown-method</code> is given both <code>read</code> and
+    <code>write</code>, then it must return <code>*shut-rdwr*</code>
+  </dd>
+
+  <dt class="proc-def">
     <a name="socket-merge-flags" class="proc-name">socket-merge-flags</a>
     flags ... -&gt; new-flags
   </dt>
@@ -343,26 +471,126 @@ Names defined in this document:
 
 <h3>Constants</h3>
 
-The following variable should be defined but it highly depends on the platform.
-<ul>
-  <li><a name="AF_UNSPEC">AF_UNSPEC</a></li>
-  <li><a name="AF_INET">AF_INET</a></li>
-  <li><a name="AF_INET6">AF_INET6</a></li>
-  <li><a name="SOCK_STREAM">SOCK_STREAM</a></li>
-  <li><a name="SOCK_DGRAM">SOCK_DGRAM</a></li>
-  <li><a name="AI_PASSIVE">AI_PASSIVE</a></li>
-  <li><a name="AI_CANONNAME">AI_CANONNAME</a></li>
-  <li><a name="AI_NUMERICHOST">AI_NUMERICHOST</a></li>
-  <li><a name="AI_V4MAPPED">AI_V4MAPPED</a></li>
-  <li><a name="AI_ALL">AI_ALL</a></li>
-  <li><a name="AI_ADDRCONFIG">AI_ADDRCONFIG</a></li>
-  <li><a name="IPPROTO_IP">IPPROTO_IP</a></li>
-  <li><a name="IPPROTO_TCP">IPPROTO_TCP</a></li>
-  <li><a name="IPPROTO_UDP">IPPROTO_UDP</a></li>
-  <li><a name="SHUT_RD">SHUT_RD</a></li>
-  <li><a name="SHUT_WR">SHUT_WR</a></li>
-  <li><a name="SHUT_RDWR">SHUT_RDWR</a></li>
-</ul>
+Implementation must support following constant variables.<br>
+All constant variable must be consistent with POSIX's[1] definition.
+<h4>Address family</h4>
+<dl>
+  <dt><a name="*af-inet*">*af-inet*</a></dt>
+  <dd>
+    Internet domain sockets for use with IPv4 addresses.<br>
+    This must behave the same as POSIX's <code>AF_INET</code>.
+  </dd>
+  <dt><a name="*af-inet6*">*af-inet6*</a></dt>
+  <dd>
+    Internet domain sockets for use with IPv6 addresses.</br>
+    This must behave the same as POSIX's <code>AF_INET6</code>.
+  </dd>
+  <dt><a name="*af-unspec*">*af-unspec*</a></dt>
+  <dd>
+    Unspecified.<br>
+    This must behave the same as POSIX's <code>AF_UNSPEC</code>.
+  </dd>
+</dl>
+
+<h4>Socket domain</h4>
+<dl>
+  <dt><a name="*sock-stream*">*sock-stream*</a></dt>
+  <dd>
+    Byte-stream socket.<br>
+    This must behave the same as POSIX's <code>SOCK_STREAM</code>.
+  </dd>
+  <dt><a name="*sock-dgram*">*sock-dgram*</a></dt>
+  <dd>
+    Datagram socket.<br>
+    This must behave the same as POSIX's <code>SOCK_DGRAM</code>.
+  </dd>
+</dl>
+
+<h4>Address info</h4>
+<dl>
+  <dt><a name="*ai-canoname*">*ai-canoname*</a></dt>
+  <dd>
+    This must behave the same as POSIX's <code>AI_CANONNAME</code>.
+  </dd>
+  <dt><a name="*ai-numerichost*">*ai-numerichost*</a></dt>
+  <dd>
+    This must behave the same as POSIX's <code>AI_NUMERICHOST</code>.
+  </dd>
+  <dt><a name="*ai-v4mapped*">*ai-v4mapped*</a></dt>
+  <dd>
+    This must behave the same as POSIX's <code>AI_V4MAPPED</code>.
+  </dd>
+  <dt><a name="*ai-all*">*ai-all*</a></dt>
+  <dd>
+    This must behave the same as POSIX's <code>AI_ALL</code>.
+  </dd>
+  <dt><a name="*ai-addrconfig*">*ai-addrconfig*</a></dt>
+  <dd>
+    This must behave the same as POSIX's <code>AI_ADDRCONFIG</code>.
+  </dd>
+</dl>
+
+<h4>IP protocol</h4>
+<dl>
+  <dt><a name="*ipproto-ip*">*ipproto-ip*</a></dt>
+  <dd>
+    Internet protocol.<br>
+    This must behave the same as POSIX's <code>IPPROTO_IP</code>.
+  </dd>
+  <dt><a name="*ipproto-tcp*">*ipproto-tcp*</a></dt>
+  <dd>
+    Transmission control protocol.<br>
+    This must behave the same as POSIX's <code>IPPROTO_TCP</code>.
+  </dd>
+  <dt><a name="*ipproto-udp*">*ipproto-udp*</a></dt>
+  <dd>
+    User datagram protocol.<br>
+    This must behave the same as POSIX's <code>IPPROTO_UDP</code>.
+  </dd>
+</dl>
+
+<h4>Message type</h4>
+<dl>
+  <dt><a name="*msg-peek*">*msg-peek*</a></dt>
+  <dd>
+    For <code>socket-recv</code>.<br>
+    Peeks at an incoming message. The data is treated as unread and the next
+    <code>socket-recv</code> shall still return this data.<br>
+    This must behave the same as POSIX's <code>MSG_PEEK</code>.
+  </dd>
+  <dt><a name="*msg-oob*">*msg-oob*</a></dt>
+  <dd>
+    For both <code>socket-recv</code> and <code>socket-send</code>.<br>
+    Requests/sends out-of-band data.<br>
+    This must behave the same as POSIX's <code>MSG_OOB</code>.
+  </dd>
+  <dt><a name="*msg-waitall*">*msg-waitall*</a></dt>
+  <dd>
+    For <code>socket-recv</code>.<br>
+    On sockets created with <code>*sock-stream*</code> flag, this requests
+    the procedure block until the full amount of data ban be returned.<br>
+    This must behave the same as POSIX's <code>MSG_WAITALL</code>.
+  </dd>
+</dl>
+
+<h4>Shutdown method</h4>
+<dl>
+  <dt><a name="*shut-rd*">*shut-rd*</a></dt>
+  <dd>
+    Disables further receive operation.<br>
+    This must behave the same as POSIX's <code>SHUT_RD</code>.
+  </dd>
+  <dt><a name="*shut-wr*">*shut-wr*</a></dt>
+  <dd>
+    Disables further send operations.<br>
+    This must behave the same as POSIX's <code>SHUT_WR</code>.
+  </dd>
+  <dt><a name="*shut-rdwr*">*shut-rdwr*</a></dt>
+  <dd>
+    Disables further send and receive operations.<br>
+    This must behave the same as POSIX's <code>SHUT_RDWR</code>.
+  </dd>
+</dl>
 
 <h3>Conditions</h3>
 
@@ -381,7 +609,8 @@ These are some of conditions raised when networking error occurs.
 <H1>Example</H1>
 
 <pre>
-(import (rnrs) (socket))
+;; simple echo server
+(import (rnrs) (srfi :106 socket))
 
 (define echo-server-socket (make-server-socket "5000"))
 
@@ -404,9 +633,19 @@ These are some of conditions raised when networking error occurs.
           p
           (lambda (p)
             (let lp2 ((r (get-line-from-binary-port p)))
-              (put-bytevector p (string->utf8 (string-append r "\r\n"))
+              (put-bytevector p (string-&gt;utf8 (string-append r "\r\n"))
               (lp2 (get-line-from-binary-port p))))))))))
 (server-run)
+
+;; simple echo client
+(import (rnrs) (srfi :106 socket))
+(define client-socket (make-client-socket "localhost" "5000"
+                                          (address-family inet)
+                                          (socket-domain stream)
+                                          (address-info v4mapped addrconfig)
+                                          (ip-protocol ip)))
+(socket-send client-socket (string-&gt;utf8 "hello\r\n"))
+(socket-recv client-socket (string-length "hello\r\n"))
 </pre>
 
 <H1>Implementation</H1>
@@ -416,17 +655,101 @@ The following implementation is written in R6RS.
 <pre>
 (library (srfi :106 socket)
     (export make-client-socket make-server-socket
-       	    socket? socket-port call-with-socket
+            socket? socket-port call-with-socket
             socket-merge-flags socket-parge-flags
-       	    socket-accept socket-send socket-recv socket-shutdown socket-close
-       	    AF_UNSPEC AF_INET AF_INET6
-       	    SOCK_STREAM SOCK_DGRAM
-       	    AI_PASSIVE AI_CANONNAME AI_NUMERICHOST
-       	    AI_V4MAPPED AI_ALL AI_ADDRCONFIG
-            IPPROTO_IP IPPROTO_TCP IPPROTO_UDP
-       	    SHUT_RD SHUT_WR SHUT_RDWR)
-    (import (srfi :106 socket impl)))
+            socket-accept socket-send socket-recv socket-shutdown socket-close
+            *af-unspec* *af-inet* *af-inet6*
+            *sock-stream* *sock-dgram*
+            *ai-canoname* *ai-numerichost*
+            *ai-v4mapped* *ai-all* *ai-addrconfig*
+            *ipproto-ip* *ipproto-tcp* *ipproto-udp*
+            *shut-rd* *shut-wr* *shut-rdwr*
+            address-family socket-domain address-info
+            ip-protocol message-type shutdown-method)
+    (import (rnrs) (srfi :106 socket impl))
+
+  (define %address-family `((inet    ,*af-inet*)
+                            (inet6   ,*af-inet6*)
+                            (unspec  ,*af-unspec*)))
+  (define %address-info `((canoname     ,*ai-canoname*)
+                          (numerichost  ,*ai-numerichost*)
+                          (v4mapped     ,*ai-v4mapped*)
+                          (all          ,*ai-all*)
+                          (addrconfig   ,*ai-addrconfig*)))
+
+  (define %ip-protocol `((ip  ,*ipproto-ip*)
+                         (tcp ,*ipproto-tcp*)
+                         (udp ,*ipproto-udp*)))
+
+  (define %socket-domain `((stream   ,*sock-stream*)
+                           (datagram ,*sock-dgram*)))
+
+  (define %message-types `((none 0)
+                           (peek ,*msg-peek*)
+                           (oob  ,*msg-oob*)
+                           (wait-all ,*msg-waitall*)))
+
+  (define (lookup who sets name)
+    (cond ((assq name sets) => cadr)
+          (else (assertion-violation who "no name defined" name))))
+
+  (define-syntax address-family
+    (syntax-rules ()
+      ((_ name)
+       (lookup 'address-family %address-family 'name))))
+
+  (define-syntax address-info
+    (syntax-rules ()
+      ((_ names ...)
+       (apply socket-merge-flags 
+              (map (lambda (name) (lookup 'address-info %address-info name))
+                   '(names ...))))))
+
+  (define-syntax socket-domain
+    (syntax-rules ()
+      ((_ name)
+       (lookup 'socket-domain %socket-domain 'name))))
+
+  (define-syntax ip-protocol
+    (syntax-rules ()
+      ((_ name)
+       (lookup 'ip-protocol %ip-protocol 'name))))
+
+  (define-syntax message-type
+    (syntax-rules ()
+      ((_ names ...)
+       (apply socket-merge-flags 
+              (map (lambda (name) (lookup 'message-type %message-types name))
+                   '(names ...))))))
+
+  (define (%proper-method methods)
+    (define allowed-methods '(read write))
+    (define (check-methods methods)
+      (let loop ((methods methods) (seen '()))
+        (cond ((null? methods))
+              ((memq (car methods) allowed-methods)
+               => (lambda (m)
+                    (if (memq (car m) seen)
+                        (assertion-violation 'shutdown-method
+                                             "duplicate method" m)
+                        (loop (cdr methods) (cons (car m) seen)))))
+              (else (assertion-violation 'shutdown-method
+                                         "unknown method" (car methods))))))
+    (check-methods methods)
+    (if (null? (cdr methods))
+        (case (car methods)
+          ((read) *shut-rd*)
+          ((write) *shut-wr*))
+        *shut-rdwr*))
+
+  (define-syntax shutdown-method
+    (syntax-rules ()
+      ((_ methods ...)
+       (%proper-method '(methods ...)))))
+
+  )
 </pre>
+
 
 <h2>Implementation dependent layer</h2>
 <h3>For Ypsilon</h3>
@@ -437,15 +760,29 @@ The following implementation is written in R6RS.
             (rename (bitwise-ior socket-merge-flags)
                     (bitwise-xor socket-parge-flags))
             socket-accept socket-send socket-recv socket-shutdown socket-close
-            AF_UNSPEC AF_INET AF_INET6
-            SOCK_STREAM SOCK_DGRAM
-            AI_PASSIVE AI_CANONNAME AI_NUMERICHOST
-            AI_V4MAPPED AI_ALL AI_ADDRCONFIG
-            IPPROTO_IP IPPROTO_TCP IPPROTO_UDP
-            SHUT_RD SHUT_WR SHUT_RDWR)
+            (rename (AF_UNSPEC *af-unspec*)
+                    (AF_INET   *af-inet*)
+                    (AF_INET6  *af-inet6*))
+            (rename (SOCK_STREAM *sock-stream*)
+                    (SOCK_DGRAM  *sock-dgram*))
+            (rename (AI_CANONNAME   *ai-canoname*)
+                    (AI_NUMERICHOST *ai-numerichost*)
+                    (AI_V4MAPPED    *ai-v4mapped*)
+                    (AI_ALL         *ai-all*)
+                    (AI_ADDRCONFIG  *ai-addrconfig*))
+            (rename (IPPROTO_IP  *ipproto-ip*)
+                    (IPPROTO_TCP *ipproto-tcp*)
+                    (IPPROTO_UDP *ipproto-udp*))
+            (rename (MSG_PEEK     *msg-peek*)
+                    (MSG_OOB      *msg-oob*)
+                    (MSG_WAITALL  *msg-waitall*))
+            (rename (SHUT_RD   *shut-rd*)
+                    (SHUT_WR   *shut-wr*)
+                    (SHUT_RDWR *shut-rdwr*)))
     (import (rnrs) (rename (ypsilon socket)
-                           (socket-send %socket-send)
+                           (socket-send %socket-send)        
                            (socket-recv %socket-recv)))
+
   (define IPPROTO_IP 0)
   (define IPPROTO_TCP 6)
   (define IPPROTO_UDP 17)
@@ -468,14 +805,30 @@ The following implementation is written in R6RS.
             (rename (bitwise-ior socket-merge-flags)
                     (bitwise-xor socket-parge-flags))
             socket-accept socket-send socket-recv socket-shutdown socket-close
-            AF_UNSPEC AF_INET AF_INET6
-            SOCK_STREAM SOCK_DGRAM
-            AI_PASSIVE AI_CANONNAME AI_NUMERICHOST
-            AI_V4MAPPED AI_ALL AI_ADDRCONFIG
-            IPPROTO_IP IPPROTO_TCP IPPROTO_UDP
-            SHUT_RD SHUT_WR SHUT_RDWR)
-    (import (rnrs) (mosh socket)
+            (rename (AF_UNSPEC *af-unspec*)
+                    (AF_INET   *af-inet*)
+                    (AF_INET6  *af-inet6*))
+            (rename (SOCK_STREAM *sock-stream*)
+                    (SOCK_DGRAM  *sock-dgram*))
+            (rename (AI_CANONNAME   *ai-canoname*)
+                    (AI_NUMERICHOST *ai-numerichost*)
+                    (AI_V4MAPPED    *ai-v4mapped*)
+                    (AI_ALL         *ai-all*)
+                    (AI_ADDRCONFIG  *ai-addrconfig*))
+            (rename (IPPROTO_IP  *ipproto-ip*)
+                    (IPPROTO_TCP *ipproto-tcp*)
+                    (IPPROTO_UDP *ipproto-udp*))
+            (rename (MSG_PEEK     *msg-peek*)
+                    (MSG_OOB      *msg-oob*)
+                    (MSG_WAITALL  *msg-waitall*))
+            (rename (SHUT_RD   *shut-rd*)
+                    (SHUT_WR   *shut-wr*)
+                    (SHUT_RDWR *shut-rdwr*)))
+    (import (rnrs) (mosh socket))
   (define IPPROTO_IP 0)
+  (define MSG_OOB 1)
+  (define MSG_PEEK 2)
+  (define MSG_WAITALL 8)
   )
 </pre>
 
@@ -487,16 +840,30 @@ The following implementation is written in R6RS.
             (rename (bitwise-ior socket-merge-flags)
                     (bitwise-xor socket-parge-flags))
             socket-accept socket-send socket-recv socket-shutdown socket-close
-            AF_UNSPEC AF_INET AF_INET6
-            SOCK_STREAM SOCK_DGRAM
-            AI_PASSIVE AI_CANONNAME AI_NUMERICHOST
-            AI_V4MAPPED AI_ALL AI_ADDRCONFIG
-            IPPROTO_IP IPPROTO_TCP IPPROTO_UDP
-            SHUT_RD SHUT_WR SHUT_RDWR)
+            (rename (AF_UNSPEC *af-unspec*)
+                    (AF_INET   *af-inet*)
+                    (AF_INET6  *af-inet6*))
+            (rename (SOCK_STREAM *sock-stream*)
+                    (SOCK_DGRAM  *sock-dgram*))
+            (rename (AI_CANONNAME   *ai-canoname*)
+                    (AI_NUMERICHOST *ai-numerichost*)
+                    (AI_V4MAPPED    *ai-v4mapped*)
+                    (AI_ALL         *ai-all*)
+                    (AI_ADDRCONFIG  *ai-addrconfig*))
+            (rename (IPPROTO_IP  *ipproto-ip*)
+                    (IPPROTO_TCP *ipproto-tcp*)
+                    (IPPROTO_UDP *ipproto-udp*))
+            (rename (MSG_PEEK     *msg-peek*)
+                    (MSG_OOB      *msg-oob*)
+                    (MSG_WAITALL  *msg-waitall*))
+            (rename (SHUT_RD   *shut-rd*)
+                    (SHUT_WR   *shut-wr*)
+                    (SHUT_RDWR *shut-rdwr*)))
     (import (rnrs) (rename (sagittarius socket)
                            (socket-send %socket-send)
                            (socket-recv %socket-recv)))
-  (define IPPROTO_IP 0)
+
+  (define IPPROTO_IP  0)
   (define IPPROTO_TCP 6)
   (define IPPROTO_UDP 17)
 
@@ -513,15 +880,26 @@ The following implementation is written in R6RS.
 (library (srfi :106 socket impl)
     (export make-client-socket make-server-socket
             socket? socket-port call-with-socket
-            (rename (bitwise-ior socket-merge-flags)
-                    (bitwise-xor socket-parge-flags))
             socket-accept socket-send socket-recv socket-shutdown socket-close
-            AF_UNSPEC AF_INET AF_INET6
-            SOCK_STREAM SOCK_DGRAM
-            AI_PASSIVE AI_CANONNAME AI_NUMERICHOST
-            AI_V4MAPPED AI_ALL AI_ADDRCONFIG
-            IPPROTO_IP IPPROTO_TCP IPPROTO_UDP
-            SHUT_RD SHUT_WR SHUT_RDWR)
+            (rename (AF_UNSPEC *af-unspec*)
+                    (AF_INET   *af-inet*)
+                    (AF_INET6  *af-inet6*))
+            (rename (SOCK_STREAM *sock-stream*)
+                    (SOCK_DGRAM  *sock-dgram*))
+            (rename (AI_CANONNAME   *ai-canoname*)
+                    (AI_NUMERICHOST *ai-numerichost*)
+                    (AI_V4MAPPED    *ai-v4mapped*)
+                    (AI_ALL         *ai-all*)
+                    (AI_ADDRCONFIG  *ai-addrconfig*))
+            (rename (IPPROTO_IP  *ipproto-ip*)
+                    (IPPROTO_TCP *ipproto-tcp*)
+                    (IPPROTO_UDP *ipproto-udp*))
+            (rename (MSG_PEEK     *msg-peek*)
+                    (MSG_OOB      *msg-oob*)
+                    (MSG_WAITALL  *msg-waitall*))
+            (rename (SHUT_RD   *shut-rd*)
+                    (SHUT_WR   *shut-wr*)
+                    (SHUT_RDWR *shut-rdwr*)))
     (import (rnrs))
 
   (define-syntax define-unsupported
@@ -552,7 +930,6 @@ The following implementation is written in R6RS.
   (define-unsupported AF_INET6      )
   (define-unsupported SOCK_STREAM   )
   (define-unsupported SOCK_DGRAM    )
-  (define-unsupported AI_PASSIVE    )
   (define-unsupported AI_CANONNAME  )
   (define-unsupported AI_NUMERICHOST)
   (define-unsupported AI_V4MAPPED   )
@@ -563,9 +940,21 @@ The following implementation is written in R6RS.
   (define-unsupported IPPROTO_TCP)
   (define-unsupported IPPROTO_UDP)
 
+  (define-unsupported MSG_OOB)
+  (define-unsupported MSG_PEEK)
+  (define-unsupported MSG_WAITALL)
+
   (define-unsupported SHUT_RD)
   (define-unsupported SHUT_WR)
-  (define-unsupported SHUT_RDWR))
+  (define-unsupported SHUT_RDWR)
+)
+</pre>
+
+<H1>References</H1>
+
+<pre>
+[1] The Open Group Base Specifications Issue 7
+    http://pubs.opengroup.org/onlinepubs/9699919799/nframe.html
 </pre>
 
 <H1>Copyright</H1>
@@ -594,7 +983,7 @@ DEALINGS IN THE SOFTWARE.
     <address>Author: <a href="mailto:ktakashi@ymail.com">Takashi Kato</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Tue Oct  9 08:21:24 MST 2012
+Last modified: Sat Oct 13 15:19:20 MST 2012
 <!-- hhmts end -->
   </body>
 </html>
