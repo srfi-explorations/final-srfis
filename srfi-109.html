@@ -12,15 +12,9 @@
   var { font-family: monospace; }
   em.non-terminal { }
   em.non-termina-def { }
-  code.literal { font-style: normal; font-weight: bold; color: green }
-  code.literal:before { content: "“"; color: black }
-  code.literal:after { content: "”"; color: black }
-  pre.xml-style { border: thin solid red }
-  pre.scribble-style { border: thin solid green }
-  div.xml-style { border: thin solid red }
-  div.scribble-style { border: thin solid green }
-  span.xml-style { border: thin solid red }
-  span.scribble-style { border: thin solid green }
+  code.literal { font-style: normal; }
+  code.literal:before { content: "“" }
+  code.literal:after { content: "”" }
 </style>
   </head>
 
@@ -49,30 +43,25 @@ subscribe to the list.  You can access previous messages via
 </p>
 
 <ul>
-      <li>Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-109/srfi-109.html?rev=1.1">2012/11/03</a></li>
-
+      <li>
+	Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-109/srfi-109.html?rev=1.1">2012/11/03</a></li>
+       <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-109/srfi-109.html?rev=1.2">2013/02/04</a></li>
+       <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-109/srfi-109.html?rev=1.3">2013/03/26</a></li>
       <li>Draft: 2012/11/10-2013/01/10</li>
-      <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-109/srfi-109.html?rev=1.2">2013/02/04</a></li>
 </ul>
 
 <H1>Abstract</H1>
 <p>
 This specifies a reader extension for extended string quasi-literals,
-including nicer multi-line strings, enclosed unquoted expressions,
-and formatting.
+including nicer multi-line strings,and  enclosed unquoted expressions.
 <p>
 This proposal is related to 
-<a href="../srfi-108/srfi-108.html">SRFI-108 (named quasi-literal constructors)</a> and <a href="../srfi-107/srfi-107.html">SRFI-107 (XML reader syntax)</a>,
+<a href="../srfi-108/srfi-108.html">SRFI-109 (named quasi-literal constructors)</a> and <a href="../srfi-107/srfi-107.html">SRFI-107 (XML reader syntax)</a>,
 as they share quite a bit of syntax.
 
 <h1>Rationale</h1>
 <p>This proposal aims to aid in a number of related problems
 relating to string literals.
-<p><b>Note</b> the section <a href="../srfi-108/srfi-108.html#Delimiter-options">Discussion: Delimiter options in SRFI-108</a>
-discusses alternative delimiter characters.
-The syntax examples show two plausible syntax choices:
-What I call <q>xml-style</q> in <span class="xml-style">red</span>,
-or <q>scribble-style</q> in <span class="scribble-style">green</span>.
 
 <h2>Multi-line string literals</h2>
 <p>Standard Scheme literals are awkward for multi-line strings.
@@ -98,237 +87,24 @@ uno dos tres
 END_TEXT
 </pre>
 <p>
-This proposal uses just <code>#&amp;[</code> and <code>]</code>
+This proposal uses just <code>#&amp;{</code> and <code>}</code>
 as the default start and end delimiters, respectively:
-<pre class="xml-style">
-(string-upcase #&amp;[
-one two three
-uno dos tres
-])
-</pre>
-<p>
-or when if the consensus prefers Scribble-style syntax:
-<pre class="scribble-style">
-(string-upcase @{
+<pre>
+(string-upcase &amp;{
 one two three
 uno dos tres
 })
 </pre>
-<p>
-<b>Discussion:</b> It may be useful to allow an <em>option</em> to use
-a user-defined token, following a marker
-character - for example<code class="literal">!</code>:
-</p>
-<pre class="xml-style">
-(string-upcase #&amp;!END-TEXT[
-one two three
-uno dos tres
-!END-TEXT])
-</pre>
-<pre class="scribble-style">
-(string-upcase @!END-TEXT{
-one two three
-uno dos tres
-!END-TEXT})
-</pre>
-Perhaps the end delimiter should be like this instead:
-<pre class="xml-style">
-]END-TEXT!)
-</pre>
-<pre class="scribble-style">
-}END-TEXT!)
-</pre>
-<h2>Indentation and line-endings</h2>
-<p>
-It is nice to have a feature where continuation lines can be
-indented relative to the surreounding expression context.
-The characters <span class="xml-style"><code class="literal">&amp;|</code></span> or
-<span class="scribble-style"><code class="literal">@|</code></span> are only allowed following
-initial whitespace on a (source) line.  Those character and all the preceding
-whitespace are removed:
-<pre class="xml-style">
-(display (string-upcase #&amp;[
-     &amp;|one two three
-     &amp;|uno dos tres
-]) out)
-</pre>
-<pre class="scribble-style">
-(display (string-upcase @{
-     @|one two three
-     @|uno dos tres
-}) out)
-</pre>
-(An implementation is encouraged to warn if indentation is inconsistent.)
-<p><b>Discusssion:</b>
-How about initial and final newlines?  Normally, for a multi-line string
-you want each line to be ended by a newline.  In a multi-line literal,
-you want to start the first line on a fresh line following the
-start delimiter <span class="xml-style"><code class="literal">[</code></span>.
-The suggests the following: If a start delimiter is following immediately
-by a newline (with possible spaces between the delimiter and the newline),
-then that initial newline is ignored.  The alternative is to require
-use of a continuation (line-join) marker on the first line following the
-delimiter.  That may be more <q>logical</q> but less friendly.
-<p>
-On the other hand, a final newline should not be suppressed.
-The above example gives the desired result: two lines, each terminated
-by a newline.  However, the code looks prettier if the closing delimiter
-<span class="xml-style"><code class="literal">]</code></span> can be indented, without adding extra
-final whitespace:
-<pre class="xml-style">
-(display (string-upcase #&amp;[
-     &amp;|one two three
-     &amp;|uno dos tres
-  ]) out)
-</pre>
-<pre class="scribble-style">
-(display (string-upcase @{
-     @|one two three
-     @|uno dos tres
-  }) out)
-</pre>
-This would create the undesired extra spaces unless there is a
-rule to suppress them.  Instead of adding such a rule, people
-could use indentation markers, though that is rather ugly:
-<pre class="xml-style">
-(display (string-upcase #&amp;[
-     &amp;|one two three
-     &amp;|uno dos tres
-     &amp;|]) out)
-</pre>
-<pre class="scribble-style">
-(display (string-upcase @{
-     @|one two three
-     @|uno dos tres
-     @|}) out)
-</pre>
-<!--
-A bonus would be a convention so lines can be properly
-indented properly relative to surrounding context.
-Having each line start with a special charcter that marks the
-beginning of each line helps editors indent and re-indent easily.
-<pre>
-(display (string-upcase #&amp;|[
-    |one two three
-    |uno dos tres
-  ]) out)
-</pre>
--->
-<!--
-<p>An idea - perhaps not sufficiently useful - allows prefixed line numbers.
-<pre>
-(display (string-upcase #&amp;|[
-     1: |one two three
-     2: |uno dos tres
-  ]) out)
-</pre>
--->
-It might be useful to allow comments at the end of each line.
-For example, this facility could be used for line numbers:
-<pre class="xml-style">
-(display (string-upcase #&amp;[
-     &amp;|one two three &amp;;; 1
-     &amp;|uno dos tres &amp;;;  2
-  ]) out)
-</pre>
-<pre class="scribble-style">
-(display (string-upcase @{
-     @|one two three @;; 1
-     @|uno dos tres @;;  2
-  ]) out)
-</pre>
-<p>
-Here <span class="xml-style"><code>&amp;;</code></span> can be followed by horizontal whitespace
-or comments; both the <span class="xml-style"><code>&amp;;</code></span> and the whitespace and comments
-are ignored.  (It is an error if there is anything else following.)
-This is useful to add per-line comments.  It is also useful to indicate
-that the line ends with whitespace; adding <span class="xml-style"><code>&amp;;</code></span> after the
-included whitespace makes that clear.
-<p>
-The marker  <span class="xml-style"><code>&amp;-</code></span> is used to suppress a newline:
-<pre class="xml-style">
-(display (string-upcase #&amp;[
-     &amp;|one two&amp;-
-     &amp;| three
-     &amp;|uno dos tres
-  ]) out)
-</pre>
-<pre class="scribble-style">
-(display (string-upcase @{
-     @|one two&@-
-     @| three
-     @|uno dos tres
-  }) out)
-</pre>
-
-<h2>Character escapes</h2>
-<p>
-(This dicussion assumes "xml style".
-I haven't decided on how best to do character escapes in Scribble style.)
-<p>
-We support the standard XML syntax for character references,
-using either decimal or hexadecimal values.
-The following string has two instances of the Ascii escape character,
-as either decimal 27 or hex <code>1B</code>:
-<pre class="xml-style">
-#&amp;[&amp;#27;&amp;#x1B;]
-</pre>
-<p><b>Design note:</b> Note we use <code>#&</code>
-to introduce a literal, and <code>&#</code> for a character escape.
-This could be confusing, but we assume numeric character escapes will be rare.
-<p>
-You can also use the pre-defined XML entity names:
-<pre class="xml-style">
-#&amp;[&amp;amp; &amp;lt; &amp;gt;] ==> "&amp; &lt; &gt;"
-</pre>
-You can also use the standard Scheme character names, for example:
-<pre>
-#&amp;[&amp;esc;&amp;space;]
-</pre>
-Similar to Scheme character literals, a single-character name
-names that character.  This provides a reasonable solution to
-escaping the special characters:
-<pre>
-#&amp; [&amp;{; &amp;}; &amp;[; &amp;]; &amp&;] ==> "{ } [ ] &amp;"
-</pre>
-<b>Discussion:</b>
-Alternatively we could introduces names for these:
-<pre class="xml-style">
-#&amp;[&amp;lcurly;&amp;rcurly;&amp;lsquare;&amp;rsquare;] ==> "{}[]"
-</pre>
-<p><b>Discussion:</b> Should we also support the standard
-string single-character slash escapes in some form?  For example:
-<pre class="xml-style">
-#&amp;[Hello!&amp;\r&amp;\n] ==> "Hello\r\n"
-</pre>
-Maybe not really needed, since one could just write:
-<pre class="xml-style">
-#&amp;[Hello&amp{"\r\n"}]
-</pre>
-<p><b>Discussion:</b> Instead of
-<code>&amp;lcurly; &amp;rcurly; &amp;lsquare; &amp;rsquare;</code>
-would other names be better?  For example:
-<code>&amp;lbrace; &amp;rbrace; &amp;lbracket; &amp;rbracket;</code>.
-If we support slash-forms perhaps we don't need them,
-but instead one could write:
-<code>&amp;\{ &amp;\} &amp;\[ &amp;\]</code>.
-<p><b>Discussion:</b>
-Should we allow user-defined "entity" strings?  For example:
-<pre class="xml-style">
-(define crln "\r\n")
-#&amp;[&crnl;] ==> "\r\n"
-</pre>
-
 <h2>Enclosed (unquoted) expressions</h2>
 
 <p>Commonly one wants to construct a string as a concatenation of
-literal text with evaluated expressions.
+literal text and evaluated expressions.
 Using explicit string concatenation (Scheme <code>string-append</code>
 or Java's <code>+</code> operator)
 is verbose and can be error-prone.
-Using <code>format</code> is an alternative, but it is also a bit verbose,
-and has the problem that the format specifier in the string is widely
-separated from the expression.
+Using <code>format</code> is an alternative, but it is also a bit verbose.
+Worse, the format specifier and expression it controls
+are non-adjacent, which is awkward and error-prone.
 Nicer is to be able to use
 <a href="http://en.wikipedia.org/wiki/Variable_interpolation">Variable interpolation</a>, as in Unix shells:
 <pre>
@@ -336,233 +112,353 @@ echo "Hello ${name}!"
 </pre>
 <p>
 This proposal uses the syntax:
-<pre class="xml-style">
-#&amp;[Hello &amp;{name}!]
-</pre>
-<pre class="scribble-style">
-@{Hello @[name]!}
+<pre>
+&amp;{Hello &amp;[name]!}
 </pre>
 
 <p>
-Note that <span class="xml-style"><code>&amp;</code></span> is used for two different related purposes:
-Part of the prefix <code>#&amp;[</code> to mark the entire string,
-and as an escape character for the variable interpolation.
-This will be justified shortly xxxx.
+Note that <span><code class="literal">&amp;</code></span> is used both
+as part of the prefix <code class="literal">&amp;{</code> to mark the entire string, and as an escape character within the string.
+See the discussion
+<a href="../srfi-108/srfi-108.html#delimiter-options">SRFI-108 (delimiter options)</a>.
 
 <h2>Template processing</h2>
 
-Going one step further,
+Going one step further, a
 <a href="http://en.wikipedia.org/wiki/Template_processor">template processor</a>
 has many uses.
 Examples include <a href="http://brl.sourceforge.net/">BRL</a>
 and <a href="http://en.wikipedia.org/wiki/JavaServer_Pages">JSP</a>,
 which are both used to generate web pages.
 <p>
-The simple solution is to allow general Kawa expressions in substitutions:
-<pre class="xml-style">
-#&amp;[Hello &amp;{(string-capitalize name)}!]
-</pre>
-<pre class="scribble-style">
-@{Hello @[{(string-capitalize name)]!}
+The simple solution is to allow general Scheme expressions in substitutions:
+<pre>
+&amp;{Hello &amp;[(string-capitalize name)]!}
 </pre>
 <p>
-You can also leave out the curly braces when the expression is
+You can also leave out the square brackets when the expression is
 a parenthesized expression:
-<pre class="xml-style">
-#&amp;[Hello &amp;(string-capitalize name)!]
-</pre>
-<pre class="scribble-style">
-@{Hello @(string-capitalize name)!}
+<pre>
+&amp;{Hello &amp;(string-capitalize name)!}
 </pre>
 <p>
-<span class="xml-style">Note that this syntax for unquoted expressions matches that used in
-<a href="../srfi-107/srfi-107.html">SRFI-107 (XML reader syntax)</a>.</span>
+Note that this syntax for unquoted expressions matches that used in
+<a href="../srfi-107/srfi-107.html">SRFI-107 (XML reader syntax)</a>.
 
-<h2>Formatting</h2>
+<h2>Indentation and line-endings</h2>
+<p>By default there is a one-to-one mapping between
+whitespace in the literal and the resulting string
+(except that <var>line-ending</var> is normalized to the newline character),
+but it is often convenient (or at least prettier)
+for them to be different.
+<p>
+You can of course easily add extra newline characters beyond those in
+the literal:
+<pre>
+&amp{a&newline;b} &#x027F9 "a\nb"
+</pre>
+<p>
+Conversely, the <dfn>line-continuation marker</dfn>
+<code class="literal">&amp;-</code> is used to suppress a newline:
+<pre>
+&amp;{abc&amp;-
+  def} &#x027F9 "abc  def"
+</pre>
+<p>The marker also suppresses any <i>intraline whitespace</i> between
+the <code class="literal">&amp;-</code> and the newline,
+but it does <em>not</em> suppress <i>intraline whitespace</i>
+following the newline.
+In the latter respect it differs from the <code class="literal">\</code>
+at the end of a line in an R6RS string literal.
+<p>
+Suppressing initial whitespace is more generally useful than
+just for continuation lines.  For example it is important for properly
+indenting source code to match the program structure.
+The <dfn>indentation marker</dfn> <code class="literal">&amp;|</code>
+is used to mark the end of insignificant initial whitespace,
+typically to indent strings inside a function.
+The <code class="literal">&amp;|</code> characters and all the preceding
+whitespace are removed:
+<pre>
+(display (string-upcase &amp;{
+     &amp;|one two three
+     &amp;|uno dos tres
+}) out)
+</pre>
+<p>
+As a matter of style, all of the identation lines should line up:
+An implementation may warn if indentation is inconsistent.
+It is an error if there are any non-whitespace characters
+between the previous newline and the indentation marker.
+It is also an error to write an indentation marker
+before the first newline in the literal.
+<p>
+One does not normally want an initial newline in a multi-line string.
+However, as in the above example, the natural way to write this
+is with the left brace on the previous line - otherwise either
+the source is <q>wrongly</q> indented, or the matching columns
+in the result don't line up in the source.
+For that reason <code class="literal">&amp;|</code>
+also suppresses an initial newline.
+Specifically, when the initial left-brace is followed by
+optional (invisible) intraline-whitespace, then a newline,
+then optional intraline-whitespace (the indentation), and
+finally the indentation marker <code class="literal">&amp;|</code>
+- all of which is removed from the output.
+Otherwise the <code class="literal">&amp;|</code> only removes
+initial intraline-whitespace on the same line (and itself).
+<p>
+However, traditionally there should be a <em>final</em> newline
+in a multi-line string.  So the following styles are suggested.
+If the text is at top-level, or more generally,
+the closing brace is in the first column, then write it like this:
+<pre>
+(define help-message &amp;{
+   &amp;|This is the first of 2 lines.
+   &amp;|This last line is followed by a final newline.
+})
+</pre>
+When the text is nested such that writing the closing brace should not
+be in the left column, then you can use an extra indentation marker,
+like this:
+<pre>
+(display
+  (string-upcase &amp;{
+     &amp;|This is the first of 2 lines.
+     &amp;|This last line is followed by a final newline.
+     &amp;|})
+  out)
+</pre>
+<p>Note in the above there are 3 indentation markers, but the
+resulting string has 2 lines followed by a total of 2 newline characters,
+because the first indentation markers suppresses the initial newline.
+<p>
+If you do not want to not end the final line with a newline,
+you can either use a line-continuation marker,
+or end the line with the closing brace:
+<pre>
+(display (string-upcase &amp;{
+   &amp;|This is the first of 2 lines.
+   &amp;|This last line is not followed by a final newline.}) out)
+</pre>
+<!--
+<p>An idea - perhaps not sufficiently useful - allows prefixed line numbers.
+<pre>
+(display (string-upcase &amp;|{
+     1: |one two three
+     2: |uno dos tres
+  }) out)
+</pre>
+-->
+<!--
+FIXME - see later ...
+It might be useful to allow comments at the end of each line.
+For example, this facility could be used for line numbers:
+<pre>
+(display (string-upcase &amp;{
+     &amp;|one two three &amp;;; 1
+     &amp;|uno dos tres &amp;;;  2
+  }) out)
+</pre>
+<p>
+Here <span><code>&amp;;</code></span> can be followed by horizontal whitespace
+or comments; both the <span><code>&amp;;</code></span> and the whitespace and comments
+are ignored.  (It is an error if there is anything else following.)
+This is useful to add per-line comments.  It is also useful to indicate
+that the line ends with whitespace; adding <span><code>&amp;;</code></span> after the
+included whitespace makes that clear.
+-->
+
+<h2>Embedded comments</h2>
+<p>For long strings it may be useful to embed comments, even
+though this is redundant since it could be done using enclosed expressions:
+<pre>
+&{preamble &amp;[#|ignore this part|#] postamble}
+</pre>
+<p>
+However, this seems clumsy, so this specification has a comment syntax:
+<pre>
+&amp;{preamble &amp;#|ignore this part|# postamble}
+</pre>
+For example for line numbers:
+<pre>
+(display (string-upcase &amp;{
+     &amp;|&amp;#|line 1|#one two
+     &amp;|&amp;#|line 2|# three
+     &amp;|&amp;#|line 3|#uno dos tres
+  }) out)
+</pre>
+<p>
+
+(It is temping to allow comments before a
+<code class="literal">&amp;|</code> indentation marker,
+but it entails more complexity that seems justified.)
+
+<h2>Character escapes</h2>
+<p>
+We support the standard XML syntax for character references,
+using either decimal or hexadecimal values.
+The following string has two instances of the Ascii escape character,
+as either decimal 27 or hex <code>1B</code>:
+<pre>
+&amp;{&amp;#27;&amp;#x1B;}
+</pre>
+<!--<p><b>Design note:</b> Note we use <code>#&</code>
+to introduce a literal, and <code>#</code> for a character escape. This could
+be confusing, but we assume numeric character escapes will be rare.-->
+<p>
+You can also use the pre-defined XML entity names:
+<pre>
+&amp;{&amp;amp; &amp;lt; &amp;gt; &amp;quot; &amp;apos;} &#x027F9 "&amp; &lt; &gt; \&quot; &apos;"
+</pre>
+You can also use the standard Scheme character names, for example:
+<pre>
+&amp;{&amp;escape;&amp;space;}
+</pre>
+<p>
+In addition, <code>&amp;lbrace;</code> <code>&amp;rbrace;</code>
+can be used for left and right curly brace:
+<pre>
+&amp;{&amp;lbrace;_&amp;rbrace;}  &#x027F9 "{_}"
+</pre>
+Note that these are only needed for unbalanced braces:
+<pre>
+&amp{A left brace '{' followed by a right brace '}' is ok.}
+  &#x027F9 "A left brace '{' followed by a right brace '}' is ok."
+</pre>
+<p>
+An implementation <em>must</em> support the character names <code>amp</code>,
+<code>lt</code>, <code>gt</code>, <code>quot</code>,
+<code>apos</code>, <code>lbrace</code>, and <code>rbrace</code>.
+An implementation <em>should</em> support
+<a href="http://www.w3.org/2003/entities/2007/w3centities-f.ent">the standard XML entity names</a>,
+as well as the standard Scheme character names
+(such as <code>newline</code>),
+though resource-limited or non-Unicode-based implementations
+are not required to.
+<pre>
+&amp;{L&amp;aelig;rdals&amp;oslash;yri}
+  &#x027F9 "L&#xe6;rdals&#xf8;yri"
+</pre>
+</pre>
+<p>
+The reader translates the entity reference
+<code>&amp;<var>name</var>;</code>
+to the variable reference <code>$entity$:<var>name</var></code>.
+Therefore user-defined entity names are possible:
+<pre>
+(define $entity$:crnl "\r\n")
+&amp;{&amp;crnl;} &#x027F9 "\r\n"
+</pre>
+<p>
+<!--
+<p><b>Discussion:</b> Instead of
+<code>&amp;lcurly; &amp;rcurly; &amp;lsquare; &amp;rsquare;</code>
+would other names be better?  For example:
+<code>&amp;lbrace; &amp;rbrace; &amp;lbracket; &amp;rbracket;</code>.
+If we support slash-forms perhaps we don't need them,
+but instead one could write:
+<code>&amp;\{ &amp;\} &amp;\[ &amp;\]</code>.
+-->
+
+<h2>Possible extensions</h2>
+<p>
+This section discusses some ideas that seem worthwhile,
+but need more thought, so are deferred for now.
+
+<h3>Special characters</h3>
+<p>
+Only the characters <code>'{'</code>, <code>'}'</code>, and
+<code>'&amp;'</code> are reserved and thus need special escaping.
+Braces only need escaping when unbalanced, which is likely
+to be rare in both text and quoted programs, thus the only
+real problem is <code class="literal">&amp;</code>.
+A common solution in other languages is doubling.
+That is one could read <code>&amp;&amp;</code> as
+a single <code>&amp;</code>.  However, doubling is not otherwise
+used in Scheme, so it may not be worth adding as a special case.
+<p>
+It might convenient to support standard string single-character slash
+escapes in some form,  For example:
+<pre>
+&amp;{Hello!&amp;\r&amp;\n} &#x027F9 "Hello\r\n"
+</pre>
+<p>
+Maybe not really needed, since one could just write:
+<pre>
+&amp;{Hello&amp["\r\n"]}
+</pre>
+
+<h3>Formatting</h3>
 <p>
 Many Scheme implementations use <a href="http://srfi.schemers.org/srfi-48/srfi-48.html"><code>format</code></a> for
 finer-grained control of the output.  A problem with <code>format</code>
 is that the association between format specifiers and data expressions
-is positional, which is harder-to-read and error-prone.
-A better solution would place these adjacant to the data expressions.
-The proposal provides allows an enclosed expression
-to be prefixed by a format specifier:
-<pre class="xml-style">
-#&[The response was &~,2f(* 100.0 (/ responses total))%.]
+is positional, which is hard-to-read and error-prone.
+A better solution places the specifier adjacant to the data expression:
+<pre>
+&amp;{The response was &amp;~,2f(* 100.0 (/ responses total))%.}
 </pre>
-<pre class="scribble-style">
-@{The response was @~,2f(* 100.0 (/ responses total))%.}
+<p>
+The reader would map this to:
+<pre>
+($string$ "The response was " ($format$ "~,2f" (* 100.0 (/ responses total))) "%.")
 </pre>
-<p>This is an optional extension for implementations that
-support <code>format</code>.  Imlementations that support printf-style
-formatting can also optionally support those:
-<pre class="xml-style">
-#&[The response was &%.2f(* 100.0 (/ responses total))%.]
+<p>A simple definition of <code>$format$</code>:
+<pre>
+(define ($format$ fmt . args) (apply format #t fmt args))
 </pre>
-<pre class="scribble-style">
-@{The response was @%.2f(* 100.0 (/ responses total))%.}
+<p>Implementations that support
+<a href="http://en.wikipedia.org/wiki/Printf_format_string"><code>printf</code>-style formatting</a> can also optionally support those:
+<pre>
+&amp;{The response was &amp;%.2f(* 100.0 (/ responses total))%.}
+</pre>
+This would be read as:
+<pre>
+($string$ "The response was " ($sprintf$ "%.2f" (* 100.0 (/ responses total))) "%.")
 </pre>
 <p>
 (The JavaFX Script language provided similar functionality.)
 
-<h2>Internationalized strings</h2>
-
-<i>(Probably this should be a separate SRFI.)</i>
+<h3>Internationalized strings</h3>
 <p>
+Internationalization refers to a framework so that
+text messages can be emitted in multiple (human) languages,
+depending on the user's preferred locale.
 See <a href="http://srfi.schemers.org/srfi-29/srfi-29.html">SRFI-29</a>.
-<p>
-((motivation))
-<p>
-An internationalized string is marked with the prefix <code>^</code>
+Strings that may need to be translated are marked specially.
+For the sake of discussion we can use the prefix <code>^</code>
 followed by a <var>key</var>:
-<pre class="xml-style">
-#&amp;^hello[Hello!]
-</pre>
-<pre class="scribble-style">
-@^hello{Hello!}
+<pre>
+&amp;^hello{Hello!}
 </pre>
 Here the key is the string <code>hello</code>.  At runtime this key
 is combined with the <q>current language</q> to produce a translated string.
-If no translation is found, the the string in the literal <code>Hello!</code>
+If no translation is found, then the string in the literal <code>Hello!</code>
 is used.
-<p>
-<i>(Formatting makes this more complicated.
-Note that a translation might want to use different formats,
-and may also want to re-order the arguments,
-so positional formats must be supported and part of the trabslation.)</i>
 <p>
 If there is no explicit key, the string is used as the key.
 In the following, <code>"Hello!"</code> is used as the key.
-<pre class="xml-style">
-#&amp;^[Hello!]
-</pre>
-<pre class="scribble-style">
-@^{Hello!}
+<pre>
+&amp;^{Hello!}
 </pre>
 
-<h1>Specification</h1>
-
-<div class="xml-style">
-<h2>Syntax - if using &amp; as escape (XML-style)</h2>
-<pre>
-<var class="non-terminal-def">expression</var> ::= ...
-  | <var>extended-string-literal</var>
-</pre>
-<pre>
-<va class="non-terminal-def"r>extended-string-literal</var> ::= <code class="literal">#&[</code><var>string-literal-part</var>...<code class="literal">]</code>
-<var class="non-terminal-def">string-literal-part</var> ::=
-    <i>any character except </i><code>&amp;</code><i>, </i><code>[</code> <i>or</i> <code>]</code>
-  | <code class="literal">[</code><var class="non-terminal">string-literal-part</var>...<code class="literal">]</code>
-  | <var class="non-terminal">char-or-entity-ref</var>
-  | <var class="non-terminal">special-escape</var>
-  | <code class="literal">&amp;</code><var>enclosed-part</var>
-<var class="non-terminal-def">special-escape</var> ::=
-    <var class="non-terminal">ignored-whitespace</var><code class="literal">&amp;|</code>
-  | TBD (at least line pasting and comments)
-<var class="non-terminal-def">char-or-entity-ref</var> ::=
-    <code class="literal">&amp;</code><var class="non-terminal">char-or-entity-name</var><code class="literal">;</code>
-  | <code class="literal">&amp;#</code><var class="non-terminal">digits</var><code class="literal">;</code>
-  | <code class="literal">&amp;#x</code><var class="non-terminal">hex-digits</var><code class="literal">;</code>
-<var class="non-terminal-def">opt-format-specifier</var> ::= <i>empty</i>
-  | <code class="literal">~</code><var class="non-terminal">format-specifier-after-tilde</var>
-  | <code class="literal">%</code><var class="non-terminal">format-specifier-after-percent</var>
-<var class="non-terminal-def">enclosed-part</var> ::=
-    <code class="literal">&amp;</code><var class="non-terminal">opt-format-specifier</var><code class="literal">{</code><var>expression ...</var><code class="literal">}</code>
-  | <code class="literal">&amp;</code><var class="non-terminal">opt-format-specifier</var><code class="literal">(</code><var>expression</var>...<code class="literal">)</code>
-</pre>
-<!--
-<pre>
-<var class="non-terminal-def">extended-datum-literal</var> ::= <code class="literal">#&</code><var>enclosed-datum</var>
-<va class="non-terminal-def"r>enclosed-datum</var> ::= <var>enclosed-cmd</var>?<code class="literal">{</code><var>expression ...</var><code class="literal">}</code>?<code class="literal">[</code><var>enclosed-text</var><code class="literal">}</code>?
-</pre>
--->
-</div>
-
-<div class="scribble-style">
-<h2>Syntax - if using @ as escape (Scribble-style)</h2>
-
-<pre>
-<var class="non-terminal-def">expression</var> ::= ...
-  | <var>extended-string-literal</var>
-</pre>
-<pre>
-<va class="non-terminal-def" id="extended-string-literal-def">extended-string-literal</var> ::= <code class="literal">@{</code><var>string-literal-part</var>...<code class="literal">}</code>
-<var class="non-terminal-def" id="string-literal-part-def">string-literal-part</var> ::=
-    <i>any character except </i><code>@</code><i>, </i><code>{</code> <i>or</i> <code>}</code>
-  | <code class="literal">{</code><var class="non-terminal">string-literal-part</var>...<code class="literal">}</code>
-  | <var class="non-terminal">char-or-entity-ref</var>
-  | <var class="non-terminal">special-escape</var>
-  | <code class="literal">@</code><var>enclosed-part</var>
-<var class="non-terminal-def">special-escape</var> ::=
-    <var class="non-terminal">ignored-whitespace</var><code class="literal">@|</code>
-  | TBD (at least line pasting and comments)
-<var class="non-terminal-def">char-or-entity-ref</var> ::=
-    <code class="literal">@</code><var class="non-terminal">char-or-entity-name</var><code class="literal">;</code>
-  | <code class="literal">@#</code><var class="non-terminal">digits</var><code class="literal">;</code>
-  | <code class="literal">@#x</code><var class="non-terminal">hex-digits</var><code class="literal">;</code>
-<var class="non-terminal-def">opt-format-specifier</var> ::= <i>empty</i>
-  | <code class="literal">~</code><var class="non-terminal">format-specifier-after-tilde</var>
-  | <code class="literal">%</code><var class="non-terminal">format-specifier-after-percent</var>
-<var class="non-terminal-def">enclosed-part</var> ::=
-    <code class="literal">@</code><var class="non-terminal">opt-format-specifier</var><code class="literal">[</code><var>expression ...</var><code class="literal">]</code>
-  | <code class="literal">@</code><var class="non-terminal">opt-format-specifier</var><code class="literal">(</code><var>expression</var>...<code class="literal">)</code>
-</pre>
-</div>
-
-<h2>Translation</h2>
-<div class="xml-style">
-<pre>
-<b>Tr[</b><code class="literal">#&amp;[</code><var class="non-terminal">content-piece</var>...<code class="literal">]</code><b>]</b>
-   &#x27fe; <code class="literal">($quasi-string$</code> <b>TrContent[</b><var class="non-terminal">content-piece</var><b>]</b>...<code class="literal">)</code>
-</pre>
-<pre>
-<b>TrChar[</b>any character except &amp;, or &lt;<b>]</b>
-  &#x27fe; any character except &amp;, or &lt;
-<b>TrChar[</b><code class="literal">&amp;#x</code> <var class="replaceable">hex-digit</var> <var class="non-terminal">hex-digit</var>... <code class="literal">;</code><b>]</b>
-  &#x27fe; <code class="literal">\x</code><var class="replaceable">hex-digit</var> <var class="non-terminal">hex-digit</var>... <code class="literal">;</code>
-<b>TrChar[</b><code class="literal">&amp;#x</code> <var class="replaceable">digit</var> <var class="non-terminal">digit</var>... <code class="literal">;</code><b>]</b>
-  &#x27fe; <code class="literal">\x</code><i>corresponding hex-digits</i><code class="literal">;</code>
-<b>TrContent[</b>simple-char...<b>]</b>
-   &#x27fe; <code class="literal">&quot;</code><b>TrChar[</b>simple-char<b>]</b>...<code class="literal">&quot;</code>
-<b>TrContent[</b><code class="literal">&amp;</code>cname<code class="literal">;</code><b>]</b>
-   &#x27fe; <code class="literal">($entity-reference$</code> cname <code class="literal">)</code>
-<b>TrContent[</b><code class="literal">&amp;~</code>format <code class="literal">(</code><var class="non-terminal">expression</var> <code class="literal">)</code><b>]</b>
-   &#x27fe;  <code class="literal">($format$ "</code>format<code class="literal">"</code> <code class="literal">(</code><var class="non-terminal">expression</var><code class="literal">))</code>
-<b>TrContent[</b><code class="literal">&amp;~</code><var class="non-terminal">format</var> <code class="literal">{</code></code> <var class="non-terminal">expression</var>... <code class="literal">}</code><b>]</b>
-   &#x27fe;  <code class="literal">($format$ "</code><var class="non-terminal">format</var><code class="literal">"</code> <var class="non-terminal">expression</var>...<code class="literal">)</code>
-</pre>
-</div>
-
-<h2>Translated forms</h2>
-<pre>
-($quasi-string$ <var class="non-terminal">form</var> ...)
-</pre>
-evaluates approximately to an immutable string created by
-concatenating each <var class="non-terminal">form</var>.
-Thus a basic implementation would be to expand to:
-<pre>
-(string-append (format #f "~a" <var class="non-terminal">form</var>) ...)
-</pre>
+<h3>Complex formats and internationalization</h3>
 <p>
-This assumes we translate:
+A simple implementation of <code>$format$</code> as
+a call to the <code>format</code> function
+does not handle format specifiers that change the
+argument order.
+These are primarily useful for localizing messages,
+since one might want change argument order when translating
+from one language to another.  Consider this warning message:
 <pre>
-($format$ <var class="non-terminal">format-specifier</var> <var class="non-terminal">form</var> ...)
-</pre>
-to the obvious call to <code>format</code>:
-<pre>
-(format #f <var class="non-terminal">format-specifier</var> <var class="non-terminal">form</var> ...)
-</pre>
-<p>
-However, this doesn't work as desired if the <var class="non-terminal">format-specifier</var> contains specifiers that change the argument order.
-This would be rare as entered by a programmer, but it can
-happen for localized (translated) text. Consider:
-<pre class="xml-style">
-#&amp^['&amp;{partition}' has only &amp;{avail} bytes free.]
+&amp^{['&amp;[partition]' has only &amp;[avail] bytes free.}
 </pre>
 <p>
 A translation might want to re-order the arguments, as if it were:
-<pre class="xml-style">
-#&amp^[Only &amp;{avail} bytes free on '&amp;{partition}'.]
+<pre>
+&amp^{Only &amp;[avail] bytes free on '&amp;[partition]'.}
 </pre>
 <p>
 That could be done if the translation database provides
@@ -570,32 +466,42 @@ for a format that re-orders the arguments,
 perhaps using the tilde-asterisk format specifier forms.
 For example (to pick some hypothetical translation database syntax):
 <pre>
-"'&amp;{}' has only &amp;{} bytes free." => "Only &amp;~1@*~d{} bytes free on '&amp;~0@*~s{}'."
+"'&amp;[]' has only &amp;[] bytes free." => "Only &amp;~1@*~d[] bytes free on '&amp;~0@*~s[]'."
 </pre>
 <p>
-Supporting localization and complex formats requires a more complex
-implementation:
+It follows that we can't use a one-to-one translation from
+a format-specifier (<code>$format$</code>) to a call to the
+<code>format</code> function.  Instead we need to work with
+single format string constructed from the entire text to be localized.
+The complicates the implementation.
+The basic algorithm should be something like:
 <ol>
 <li>
 Construct a <var>text-part</var> by taking the literal text,
 format specifiers, and expanded entity-references.
 Leave out all the enclosed expressions.
-(Exact translation format to be specified.)
+Exact translation format to be specified,
+but one idea is to represent each enclosed expression
+by <code class="literal">&amp;[]</code> if there is no format-specifier,
+and <code class="literal">&amp;[<var>specifier</var>]</code> if there is one.
 <li>
 If translation is specified, create a <var>translation-key</var>:
 Either use an explicit <var>translation-key</var> given in the quasi-literal, or use
 the <var>text-part</var> as an implicit <var>translation-key</var>
 (GNU <code>gettext</code>-style).
-Look for a translation in the translation datebase.
+Look for a translation in the translation database.
 If one is found, use that as the translated <var>text-part</var>;
 otherwise use <var>text-part</var> as-is.
 <li>Convert the <var>text-part</var> to a format-string
 by escaping stand-alone <code class="literal">~</code> characters.
-Remove <span class="xml-style"><code>{}</code></span> pairs if they're preceded
-by format specifier, or replace the pairs with <code class="literal">~a</code> if there is no format specifier.
+Replace each <code class="literal">&amp;[]</code>
+by <code class="literal">~a</code>,
+and each <code class="literal">&amp;[<var>specifier</var>]</code>
+by the <code class="literal"><var>specifier</var></code>,
 <li>Invoke <code>format</code> with the resulting format string and
-the enclosed expressions as format arguments.
+the enclosed expressions as the arguments.
 </ol>
+<!--
 <p>
 This procedure can be optimized at compile time if there is
 no localizarion or format specifiers.  Unfortunately, if
@@ -606,6 +512,7 @@ Only the first part can be done at compile-time.
 This unparsing and reparsing is hard to avoid
 as long as the translation mappings are in text form, and anything
 else seems difficult to work with.
+-->
 <!--
 <p>
 Hence the actual translation is more complex:
@@ -644,26 +551,298 @@ When standalone, this is implemented as:
 </pre>
 -->
 
-<h1>Implementation</h1>
+<h3>User-defined end token</h3>
+<p>
+Many languages, including the Bourne shell,
+allow for a a user-defined end token.
+We could allow the as an option following a marker
+character - for example <code class="literal">!</code>:
+</p>
+<pre>
+(string-upcase &amp;!END-TEXT{
+one two three
+uno dos tres
+!END-TEXT})
+</pre>
+Perhaps the end delimiter should be like this instead:
+<pre>
+}END-TEXT!)
+</pre>
+<p>
+The main issue is here is defining the syntax,
+and doing so in a way that works well with internationalization.
+
+<!--
+<h2>Translation to S-expressions</h2>
+<p>
+This specification could leave it implementation-defined how
+the above syntax is implemented.  Instead, following Scheme
+tradition (including old-fashioned quasi-quotation), we specify
+a mapping performed by the Scheme reader into a simpler S-expression format.
+This allows quotation to be well-defined, and makes it easier
+for various tools (and macros) to process this syntax.
+For example:
+<pre>
+&amp;{Hello &[name]!}
+</pre>
+is read as if it were:
+<pre>
+($string$ "Hello " $&lt;&lt;$ name $>>$ "!")
+</pre>
+We assume a predefined macro named <code>$string$</code>
+which concatenates the various pieces together.  The dollar-signs
+are used to reduce name conflicts - they indicate <code>$string$</code>
+is a special keyword which would normally not be redefined by the user.
+<p>
+Delimiting an enclosed expression inside a <code>$&lt;&lt;$</code>...<code>$>>$</code> pair
+is mostly redundant, but can be important if we add support for
+format specifiers: Enclosed expressions should be formatted
+as if with a <code>~a</code> format specifiers, while literal
+text should be part of the format string.  The distinction
+matters if we support format specifiers that re-order the arguments
+(move the argument cursors), which is useful for internationalization.
+-->
+
+<h1>Specification</h1>
+
 <h2>Syntax</h2>
+<pre>
+<var class="non-terminal-def">expression</var> ::= ...
+  | <var>extended-string-literal</var>
+</pre>
+<pre>
+<var class="non-terminal-def" id="extended-string-literal-def">extended-string-literal</var> ::= <code class="literal">&{</code> <var class="non-terminal">initial-ignored</var>? <var>string-literal-part</var><sup>*</sup> <code class="literal">}</code>
+<var class="non-terminal-def" id="string-literal-part-def">string-literal-part</var> ::=
+    <i>any character except </i><code>&amp;</code><i>, </i><code>{</code> <i>or</i> <code>}</code>
+  | <code class="literal">{</code> <var class="non-terminal">string-literal-part</var><sup>*</sup> <code class="literal">}</code>
+  | <var class="non-terminal">char-ref</var>
+  | <var class="non-terminal">entity-ref</var>
+  | <var class="non-terminal">special-escape</var>
+  | <var>enclosed-part</var>
+<var class="non-terminal-def">char-ref</var> ::=
+    <code class="literal">&amp;#</code> <var class="non-terminal">digit<sup>+</sup></var> <code class="literal">;</code>
+  | <code class="literal">&amp;#x</code> <var class="non-terminal">hex-digit<sup>+</sup></var> <code class="literal">;</code>
+<var class="non-terminal-def">entity-ref</var> ::=
+    <code class="literal">&amp;</code> <var class="non-terminal">char-or-entity-name</var> <code class="literal">;</code>
+<var class="non-terminal-def">char-or-entity-name</var> ::= <var>tagname</var>
+<var class="non-terminal-def">initial-ignored</var> ::=
+    <var class="non-terminal">intraline-whitespace</var> <var class="non-terminal">line-ending</var> <var class="non-terminal">intraline-whitespace</var> <code class="literal">&amp;|</code>
+<var class="non-terminal-def">special-escape</var> ::=
+    <var class="non-terminal">intraline-whitespace</var> <code class="literal">&amp;|</code>
+  | <code class="literal">&amp;</code> <var class="non-terminal">nested-comment</var>
+  | <code class="literal">&amp;-</code> <var class="non-terminal">intraline-linespace</var> <var class="non-terminal">line-ending</var>
+<var class="non-terminal-def">enclosed-part</var> ::=
+    <code class="literal">&amp;</code> <var class="non-terminal">enclosed-modifier</var> <code class="literal">{</code> <var>expression<sup>*</sup></var> <code class="literal">}</code>
+  | <code class="literal">&amp;</code> <var class="non-terminal">enclosed-modifier</var> <code class="literal">(</code> <var>expression</var><sup>+</sup> <code class="literal">)</code>
+</pre>
+<pre>
+<var class="non-terminal-def" id="tagname-def">tagname</var> ::= <var class="non-terminal">tagname-initial</var> <var class="non-terminal">tagname-subsequent</var>*
+<var class="non-terminal-def">tagname-initial</var> ::= <var class="non-terminal">letter</var>
+<var class="non-terminal-def">tagname-subsequent</var> ::= <var class="non-terminal">tagname-initial</var> | <var class="non-terminal">digit</var> | <code class="literal">-</code> (hyphen) | <code class="literal">_</code> (underscore)
+</pre>
+<p>
+If we allowed <var class="non-terminal">tagname</var> to be an
+arbitrary Scheme identifier there would be parsing difficulties.
+One problem is that we use <code class="literal">&amp;|</code> to skip
+indentation, but R7RS identifier syntax uses <code class="literal">|</code>
+as a delimiter for symbols with special characters.
+Another conflict is if an implementation uses
+<code class="literal">&amp;~</code> or
+<code class="literal">&amp;%</code> to indicate format specifiers,
+since these are allowed as R7RS identifier <var>initial</var> characters.
+<p>
+An implementation <em>may</em> extend
+<var class="non-terminal">tagname</var>
+to match <var class="non-terminal">Name</var> as
+defined by the <a href="http://www.w3.org/TR/xml11/">XML 1.1 specification</a>.
+<!--
+<var class="non-terminal">NameStartChar</var> and
+<var class="non-terminal">NameChar</var> are
+defined in the <a href="http://www.w3.org/TR/xml11/">XML 1.1 specification</a>.
+(<em>Note:</em> 
+<p>
+As a matter of style, it is recommended that a <var>tagname</var>
+consist of a letter, followed by zero or more letters, digits,
+hyphens (<code>#\x2d</code>), or underscores (<code>#\x5f</code>).
+<pre>
+<var class="non-terminal-def">tagname-initial</var> ::= <var class="non-terminal">NameStartChar</var>
+<var class="non-terminal-def">tagname-subsequent</var> ::= <var class="non-terminal">NameChar</var>
+</pre>
+-->
+<!--Cowan suggested: "the cname must be a valid Scheme identifier (according to
+the implementation's definition) which consists solely of characters
+with Unicode general categories Lu, Ll, Lt, Lm, Lo, Mn, Mc, Me, Nd, Nl,
+or No (i.e. letters, combining marks, and numbers only)."
+"XML special-cases hyphen, underscore, dot, and U+00B7,
+the middle dot (which cannot be initial)"
+-->
+<p>
+The following are defined by R7RS: <var class="non-terminal">nested-comment</var>,
+<var class="non-terminal">intraline-whitespace</var>,
+<var class="non-terminal">line-ending</var>,
+<var class="non-terminal">letter</var>,
+<var class="non-terminal">digit</var>,
+and <var class="non-terminal">hex-digit</var>.
+<pre>
+<var class="non-terminal-def" id="enclosed-modifier-def">enclosed-modifier</var> ::= <i>empty</i>
+</pre>
+An <var class="non-terminal">enclosed-modifier</var> is normally empty:
+However, implementations or future extensions may support non-empty modifiers.
+For example, Kawa supports both <code>format</code>-style
+and <code>printf</code>-style specifiers, so the syntax is:
+<pre>
+<var class="non-terminal-def">enclosed-modifier</var> ::= <i>empty</i>
+  | <code class="literal">~</code> <var class="non-terminal">format-specifier-after-tilde</var> (optional feature)
+  | <code class="literal">%</code> <var class="non-terminal">format-specifier-after-percent</var> (optional feature)
+</pre>
+
+<!--
+<pre>
+<var class="non-terminal-def">extended-datum-literal</var> ::= <code class="literal">#&</code><var>enclosed-datum</var>
+<va class="non-terminal-def"r>enclosed-datum</var> ::= <var>enclosed-cmd</var>?<code class="literal">{</code><var>expression ...</var><code class="literal">}</code>?<code class="literal">[</code><var>enclosed-text</var><code class="literal">}</code>?
+</pre>
+-->
+
+<h2 id="specification-translation">Translation</h2>
+<p>
+When the Scheme reader reads an <var class="non-terminal">extended-string-literal</var>
+it returns a list whose first element is the symbol <code>$string$</code>,
+and whose remaining elements are the translations of the string-literal parts.
+The literal content (including each
+<var class="non-terminal">char-ref</var> but excluding each
+<var class="non-terminal">entity-ref</var>) is translated to
+literal strings.
+An <var class="non-terminal">entity-ref</var>
+<code>&amp;<var>ename</var>;</code> is translated to a
+symbol <code>$entity$:<var>ename</var></code>.
+Enclosed expressions are prefixed by a <code class="literal">$&lt;&lt;$</code>
+symbol¸ and followed by a <code class="literal">$&gt;&gt;$</code>.
+<p>
+The translation is defined by conceptual
+<q>read-time re-write function</q> <b>Tr</b>
+which maps an <var class="non-terminal">extended-string-literal</var>
+in the input stream to an equivalent <code>$string$</code> list - which
+is then (conceptually) re-read.  (A real reader would generate
+S-expression forms directly, but this way we can express the
+translation more concisely.)
+<pre>
+<b>Tr[</b><code class="literal">&amp;{</code> <var class="non-terminal">initial-ignored</var>? <var class="non-terminal">content-segment</var><sup>*</sup> <code class="literal">}</code><b>]</b>
+   &#x27fe; <code class="literal">($string$</code> <b>TrContent[</b><var class="non-terminal">content-segment</var><b>]</b><sup>*</sup> <code class="literal">)</code>
+</pre>
+<p>
+Each <q>segment</q> corresponds to a
+<var class="non-terminal">string-literal-part</var> in the syntax,
+except that a run of multiple plain characters and
+<var class="non-terminal">char-ref</var>s are combined to a single
+string literal.  In addition the <var class="non-terminal">special-escape</var>
+forms are dropped without appearing in the result.
+<pre>
+<b>TrContent[</b>simple-text<sup>+</sup><b>]</b>
+   &#x27fe; <code class="literal">&quot;</code><b> TrText[</b>simple-text<b>]</b><sup>+</sup> <code class="literal">&quot;</code>
+<b>TrText[</b><i>any character except </i><code class="literal">&amp;</code><i>, or</i> <code class="literal">\</code><i>, line-ending, or final (unbalanced)</i> <code class="literal">}</code><b>]</b>
+  &#x27fe; <i>that character as-is</i>
+<b>TrText[</b><var>line-ending</var><b>]</b>
+  &#x27fe; <code class="literal">\n</code>
+<b>TrText[</b><code class="literal">\</code><b>]</b>
+  &#x27fe; <code class="literal">\\</code>
+<b>TrText[</b><code class="literal">&amp;#x</code> <var class="non-terminal">hex-digit</var><sup>+</sup> <code class="literal">;</code><b>]</b>
+  &#x27fe; <code class="literal">\x</code> <var class="non-terminal">hex-digit</var><sup>+</sup> <code class="literal">;</code>
+<b>TrText[</b><code class="literal">&amp;#</code> <var class="non-terminal">digit</var><sup>+</sup> <code class="literal">;</code><b>]</b>
+  &#x27fe; <code class="literal">\x</code> <i>corresponding hex-digits</i> <code class="literal">;</code>
+<b>TrText[</b><code class="literal">&amp;</code> <var class="non-terminal">nested-comment</var><b>]</b>
+  &#x27fe; <code class="literal"></code>
+<b>TrText[</b><var class="non-terminal">intraline-whitespace</var> <code class="literal">&amp;|</code><b>]</b>
+  &#x27fe; <code class="literal"></code>
+<b>TrText[</b><code class="literal">&amp;-</code> <var  class="non-terminal">intraline-whitespace</var> <var class="non-terminal">line-ending</var><b>]</b>
+  &#x27fe; <code class="literal"></code>
+</pre>
+<p>
+Translations for the other segment kinds are straight-forward:
+<pre>
+<b>TrContent[</b><code class="literal">&amp;</code><var class="non-terminal">ename</var><code class="literal">;</code><b>]</b>
+   &#x27fe; <code class="literal">$entity$:</code><var class="non-terminal">ename</var>
+<b>TrContent[</b><code class="literal">&amp;(</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">)</code><b>]</b>
+   &#x27fe;  <code class="literal">$&lt;&lt;$ (</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">) $&gt;&gt;$</code>
+<b>TrContent[</b><code class="literal">&amp;[</code></code> <var class="non-terminal">expression</var><sup>*</sup> <code class="literal">]</code><b>]</b>
+   &#x27fe;  <code class="literal">$&lt;&lt;$</code> <var class="non-terminal">expression</var><sup>*</sup> <code class="literal">$&gt;&gt;$</code>
+</pre>
+<p>The following are optional and/or for a future specification:
+<pre>
+<b>TrContent[</b><code class="literal">&amp;~</code> <var class="non-terminal">format</var> <code class="literal">(</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">)</code><b>]</b>
+   &#x27fe;  <code class="literal">($format$ "</code> <var class="non-terminal">format</var> <code class="literal">" (</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">))</code>
+<b>TrContent[</b><code class="literal">&amp;~</code> <var class="non-terminal">format</var> <code class="literal">[</code></code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">]</code><b>]</b>
+   &#x27fe;  <code class="literal">($format$ "</code><var class="non-terminal">format</var><code class="literal">"</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">)</code>
+<b>TrContent[</b><code class="literal">&amp;%</code> <var class="non-terminal">format</var> <code class="literal">(</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">)</code><b>]</b>
+   &#x27fe;  <code class="literal">($sprintf$ "</code> <var class="non-terminal">format</var> <code class="literal">" (</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">))</code>
+<b>TrContent[</b><code class="literal">&amp;%</code> <var class="non-terminal">format</var> <code class="literal">[</code></code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">]</code><b>]</b>
+   &#x27fe;  <code class="literal">($sprintf$ "</code><var class="non-terminal">format</var><code class="literal">"</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">)</code>
+</pre>
+
+<h2>Implementing the translated forms</h2>
+The reader translation:
+<pre>
+($string$ <var class="non-terminal">form</var> ...)
+</pre>
+evaluates approximately to an immutable string created by
+concatenating each <var class="non-terminal">form</var>.
+A basic implementation could be:
+<pre>
+(define ($string$ . args)
+  (let ((port (open-output-string)))
+    (for-each
+     (lambda (arg) (display arg port))
+     args)
+    (get-output-string port)))
+</pre>
+<p>
+The string created by a <code>$string$</code> form is immutable,
+and need not have a unique identity.  E.g. if the operands
+are constant then an implementation is allowed to constant-fold
+the expression to a string literal.
+<p>
+In addition <code>$&lt;&lt;$</code> <code>$&gt;&gt;$</code> are
+constant unique zero-length strings.  These bindings
+should preferbly be non-assignable if an implementation has
+a mechanism for that (for example using identifier macros).
+<pre>
+(define $&lt;&lt;$ (make-string 0))
+(define $&gt;&gt;$ (make-string 0))
+</pre>
+<p>
+If <code>$format$</code> is supported, a minimal implementation is:
+<pre>
+(define-syntax $format$
+  (syntax-rules ()
+    (($format$ fmt arg ...)
+     (format #f fmt arg ...))))
+</pre>
+
+</pre>
+
+<h1>Implementation</h1>
 <p>
 Since this specification changes the reader format, and there
 is no standard Scheme way to do that, there is no portable implementation.
 However, this specification is being implemented in
-<a href="http://wwww.gnu.org/software/kawa/">Kawa</a>.
-<h2>Translation</h2>
-<!--
-<pre>
-(translate-string-literal str) =>
-   (format #t (translate-string-literal-format str)
-              (translate-string-literal-args str))
-</pre>
--->
+<a href="http://www.gnu.org/software/kawa/">Kawa</a>.
+(Check out the
+<a href="http://www.gnu.org/software/kawa/Getting-Kawa.html">development version using Subversion</a>.)
+<p>
+A more sophisticated implementation of the <code>$string$</code> macro
+which maps to a single <code>format</code> call is
+at the time of writing
+in <a href="http://sourceware.org/viewvc/kawa/trunk/kawa/lib/syntax.scm?view=co">syntax.scm</a>.
+
+
 <h2>Test suite</h2>
+
+There is a test suite in the
+<a href="http://sourceware.org/viewvc/kawa/trunk/testsuite/srfi-109-test.scm?view=co">Kawa source tree</a>.
+There are also <a href="http://sourceware.org/viewvc/kawa/trunk/testsuite/bad-srfi-109.scm?view=co">tests of mal-formed literals</a>.
 
 <h1>Copyright</h1>
 <p>
-Copyright (C) Per Bothner 2012</p>
+Copyright (C) Per Bothner 2013</p>
 <p>
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
