@@ -48,6 +48,7 @@ subscribe to the list.  You can access previous messages via
 	Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-108/srfi-108.html?rev=1.1">2012/11/03</a></li>
        <li>Revision: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-108/srfi-108.html?rev=1.2">2013/02/04</a></li>
        <li>Revision: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-108/srfi-108.html?rev=1.3">2013/03/27</a></li>
+       <li>Revision: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-108/srfi-108.html?rev=1.4">2013/04/19</a></li>
       <li>Draft: 2012/11/10-2013/01/10</li>
 </ul>
 
@@ -60,8 +61,8 @@ and then expressions and literal text parameters.
 The tag can be though of as a class name, and the expression and
 literal text are arguments to an object constructor call.
 The reader translates <code>&amp;<var>tag</var>{...}</code> to a list
-<code>$(construct$:<var>tag</var> ...)</code>,
-where <code>construct$:<var>tag</var></code>
+<code>($construct$:<var>tag</var> ...)</code>,
+where <code>$construct$:<var>tag</var></code>
 is normally bound to a predefined macro.
 <p>
 This propsal depends on
@@ -118,8 +119,8 @@ Escaped expressions can be written thus:
 &amp;URI{http://&amp;[example-host]/}
 </pre>
 <p>
-Note the use of <code class="literal">&amp;</code>
-for two different purposes: The top-level quasi-literal,
+Note that <code class="literal">&amp;</code>
+is used both to introduce the top-level quasi-literal,
 and as an escape character before the unquoted expression.
 <p>
 The above example is read as:
@@ -246,7 +247,7 @@ is syntatic sugar for:
 </pre>
 <p>
 This nesting of markup motivates using
-same escape character for both top-level and enclosed forms.
+the same escape character for both top-level and enclosed forms.
 
 <h2>Translation to list form</h2>
 <p>
@@ -311,29 +312,7 @@ as a function, instead of a macro.
 </ol>
 <h3>Translating enclosed expressions</h3>
 <p>
-An earlier draft specified that translating an exclosed expression sequence:
-<pre>
-&amp;foo{s&amp;[exp1 exp2]t}
-</pre>
-would use a <code>$unquote$</code> macro to indicate the expressions:
-<pre>
-($construct$:foo "s" ($unquote$ exp1 exp2) "t")
-</pre>
-This scores well on information-preservation, but poorly
-on implementation-ease.  This is because you can't write a default
-(library) implementation of <code>$unquote$</code> as a function <em>or</em>
-macro in a way that <q>splices</q> the expressions into the
-<code>$construct$:foo</code> invocation.
-We could implement <code>$unquote$</code> as an identity function,
-if there was a separate <code>$unquote$</code> for each expression:
-<pre>
-($construct$:foo "s" ($unquote$ exp1) ($unquote$ exp2) "t")
-</pre>
-However, this does lose information about how many <code>&amp;[...]</code>-delimiters there were - which might (in rare situations) matter.
-Also, we need some convention to distinquish prefix arguments
-from other enclosed expressions.
-<p>
-The select translation uses a pair of special symbols
+The translation uses a pair of special symbols
 to mark the start and end of the enclosed expressions:
 <pre>
 ($construct$:foo "s" $&lt;&lt;$ exp1 exp2 $&gt;&gt;$ "t")
@@ -354,8 +333,7 @@ then the example is equivalent to the call:
 <p>
 When you do a more complex translation, you may have to write a macro,
 and dealing with <code>$&lt;&lt;$</code> and <code>$&gt;&gt;$</code>
-may be sligtly harder to write than
-if the translation used <code>$unquote$</code>.
+is not completely trivial,
 Still, this seems a reasonable tradeoff; we later provide
 a helper macro <code>define-simple-constructor</code> to
 simplify some common cases.
@@ -370,6 +348,28 @@ because these translate differently:
 ($construct$:foo "_" ($construct:bar "b") "_")
 ($construct$:foo "_" $&lt;&lt;$ ($construct:bar "b") $&gt;&gt;$ "_")
 </pre>
+<p>
+An earlier draft specified that translating an exclosed expression sequence:
+<pre>
+&amp;foo{s&amp;[exp1 exp2]t}
+</pre>
+would use a <code>$unquote$</code> macro to indicate the expressions:
+<pre>
+($construct$:foo "s" ($unquote$ exp1 exp2) "t")
+</pre>
+This scores well on information-preservation, but poorly
+on implementation-ease.  This is because you can't write a default
+(library) implementation of <code>$unquote$</code> as a function <em>or</em>
+macro in a way that <q>splices</q> the expressions into the
+<code>$construct$:foo</code> invocation.
+We could implement <code>$unquote$</code> as an identity function,
+if there was a separate <code>$unquote$</code> for each expression:
+<pre>
+($construct$:foo "s" ($unquote$ exp1) ($unquote$ exp2) "t")
+</pre>
+However, this does lose information about how many <code>&amp;[...]</code>-delimiters there were - which might (in rare situations) matter.
+Also, we would need some convention to distinquish prefix arguments
+from other enclosed expressions.
 
 <h2>Extra text features</h2>
 <p>
@@ -449,11 +449,13 @@ and because of security concerns), but could be supported in an
 implementation that has programmable read-tables.
 
 <h2 id="delimiter-options">Discussion: Delimiter options</h2>
-<p>There are various choices for delimiter characters in place of <code class="literal">&amp;</code>, and in this section we'll discuss some possibilities.
-It is reasonable to consider both SRFI-108 (this specifiction) and
-<a href="../srfi-109/srfi-109.html">SRFI-109 (extended string quasi-literals)</a> in conjunction with each other.
-(This discussion refers to the non-terminals defined
-in the syntax specifications of both SRFI-108 and SRFI-109.)
+This specification uses <code class="literal">&amp;</code> as
+marker/delimiter character.
+Alternative marker characters were also considered, and this mostly-historical
+section explains why we chose <code class="literal">&amp;</code>.
+The discussion also considers <a href="../srfi-109/srfi-109.html">SRFI-109 (extended string quasi-literals)</a>, and refers to
+the non-terminals defined in the syntax specifications
+of both SRFI-108 and SRFI-109.
 <p>
 First let us focus on the escape character in <var><a href="#named-literal-part-def">named-literal-part</a></var> and
 <var><a href="../srfi-109/srfi-109.html#string-literal-part-def">string-literal-part</a></var>.
@@ -566,10 +568,11 @@ Java-style annotations</a>.)
 <p>
 Using <code class="literal">&amp;</code> as the start character
 may cause compatibility problems, since <code class="literal">&amp;</code>
-is a valid &lt;initial&gt; character in standard Scheme, thus
+is a valid <var class="non-terminal">&lt;initial&gt;</var> character in standard Scheme, thus
 it might be difficult to disambiguate from an identifier.
-However, starting an identifier with <code class="literal">&amp;</code>
-is likely to be rare.  The sequence  <code class="literal">&amp;</code>
+Some R6RS-based naming conventions use such names for
+record types or exception types.
+The sequence  <code class="literal">&amp;</code>
 followed by a name followed by brackets or braces is effectively
 non-conflicting:  In a Scheme that defines brackets as equivalent
 to parentheses, the following is techically well-defined:
@@ -586,7 +589,7 @@ reading to:
 <pre>
 ($construct$:name $&lt;&lt;$ form1 form2 $&gt;&gt;$)
 </pre>
-That is why this specifiction requires a braces-delimited
+That is why this specification requires a braces-delimited
 named-literal-part, even when the latter is empty.
 <p>
 <b>Starting quasi-literals with # and a dispatch character:</b>
