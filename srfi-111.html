@@ -34,15 +34,16 @@ subscribe to the list.  You can access previous messages via
 <ul>
       <li>Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-111/srfi-111.html?rev=1.1">2013/04/14</a></li>
       <li>Draft: 2013/04/25-2013/06/24</li>
+      <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-111/srfi-111.html?rev=1.2">2013/5/18</a></li>
     </ul>
 
 <H1>Abstract</H1>
 
-<p>Boxes are objects with a single mutable state. Several Schemes have something like it, sometimes called <i>cells</i>.  A constructor, predicate, accessor, and mutator are provided, as well as lexical syntax.</p>
+<p>Boxes are objects with a single mutable state. Several Schemes have something like it, sometimes called <i>cells</i>.  A constructor, predicate, accessor, and mutator are provided.</p>
 
 <H1>Issues</H1>
 
-<p>None for this draft.</p>
+<p>None in this draft.</p>
 
 <H1>Rationale</H1>
 
@@ -52,7 +53,7 @@ subscribe to the list.  You can access previous messages via
 
 <p>Boxes are also useful for providing an extra level of indirection, allowing more than one body of code or data structure to share a reference, or pointer, to an object.  In this way, if any procedure mutates the box in any of the data structures, all procedures will immediately "see" the new value in all data structures containing it.</p>
 
-<p>Some Schemes, notably Chicken, provide <i>immutable boxes</i>, which look like boxes to <code>box?</code> and <code>unbox</code> but which cannot be mutated.  They are not considered useful enough to be part of this SRFI.  If they are provided nevertheless, the recommended constructor name is <code>immutable-box</code>.</p>
+<p>Racket and Chicken provide <i>immutable boxes</i>, which look like boxes to <code>box?</code> and <code>unbox</code> but which cannot be mutated.  They are not considered useful enough to be part of this SRFI.  If they are provided nevertheless, the recommended constructor name is <code>immutable-box</code>.</p>
 
 <p>The following table specifies the procedure names used by the Scheme implementations that provide boxes:</p>
 
@@ -66,7 +67,7 @@ subscribe to the list.  You can access previous messages via
 
 <p>Note that Chicken also supports the procedure names defined by this SRFI in addition to its native API.  Although the native API uses the standard naming pattern, for the purposes of this SRFI the unanimous voice of Racket, Gambit, SISC, and Chez is considered more significant.</p>
 
-<p>Racket, Gambit, SISC, Chez, and Chicken all support the lexical syntax of this SRFI.  MIT Scheme and Scheme48/scsh do not provide a lexical syntax.</p>
+<p>Racket, Gambit, SISC, Chez, and Chicken all support the lexical syntax <code>#&amp;</code><i>datum</i> to create a literal box (immutable in Racket, mutable in the other implementations).  However, this SRFI does not.  Incorporating a specifically mutable object into code makes it hard for an implementation to separate compile-time and run-time reliably, and it's not clear that providing them in data files provides enough benefit, as the box has to be located by tree-walking in any case.  MIT Scheme and Scheme48/scsh do not provide a lexical syntax.</p>
 
 <p>The features specified in the autoboxing section of specification are based on those specified by RnRS for promises, which are analogous to immutable boxes except that their value is specified by code instead of data.</p>
 
@@ -74,7 +75,7 @@ subscribe to the list.  You can access previous messages via
 
 <h2>Procedures</h2>
 
-<p>The following procedures implement the box type (which is disjoint from all other Scheme types), and are exported by the <code>(scheme boxes)</code> and <code>(srfi xxx)</code> libraries.  In R6RS systems, the latter library name is replaced by <code>(srfi :xxx)</code>.</p>
+<p>The following procedures implement the box type (which is disjoint from all other Scheme types), and are exported by the <code>(scheme boxes)</code> and <code>(srfi 111)</code> libraries.  In R6RS systems, the latter library name is replaced by <code>(srfi :111)</code>.</p>
 
 <p><code>(box <i>value</i>)</code></p>
 
@@ -92,11 +93,7 @@ subscribe to the list.  You can access previous messages via
 
 <p>Mutator.  Changes <i>box</i> to hold <i>value</i>.</p>
 
-<h2>Lexical syntax</h2>
-
-<p><code>#&amp;<i>datum</i></code></p>
-
-<p>This lexical syntax represents a literal box whose initial value is <i>datum</i>.  It is implementation-defined whether the resulting box is mutable or not, but it is recommended that it be mutable.</p>
+<p></p>
 
 <H1>Implementation</H1>
 
@@ -162,6 +159,8 @@ subscribe to the list.  You can access previous messages via
     (and (%true-pair? x) (not (box? x)))))
 </pre>
 
+<p>Note that these implementations do not support the lexical syntax.</p>
+
 <h2>Autoboxing (optional)</h2>
 
 <p>The following provisions of this SRFI are optional:</p>
@@ -203,7 +202,7 @@ DEALINGS IN THE SOFTWARE.</p>
              Mike Sperber</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Thu Apr 25 18:28:10 MST 2013
+Last modified: Wed May 22 08:51:51 MST 2013
 <!-- hhmts end -->
   </body>
 </html>
