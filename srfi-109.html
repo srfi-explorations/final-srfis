@@ -47,6 +47,7 @@ subscribe to the list.  You can access previous messages via
       <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-109/srfi-109.html?rev=1.2">2013/02/04</a></li>
       <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-109/srfi-109.html?rev=1.3">2013/03/26</a></li>
       <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-109/srfi-109.html?rev=1.5">2013/04/19</a></li>
+      <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-109/srfi-109.html?rev=1.6">2013/05/25</a></li>
       <li>Draft: 2012/11/10-2013/01/10</li>
 </ul>
 
@@ -123,7 +124,7 @@ See the discussion
 <a href="../srfi-108/srfi-108.html#delimiter-options">SRFI-108 (delimiter options)</a>.
 
 <h2>Template processing</h2>
-
+<p>
 Going one step further, a
 <a href="http://en.wikipedia.org/wiki/Template_processor">template processor</a>
 has many uses.
@@ -155,14 +156,14 @@ for them to be different.
 You can of course easily add extra newline characters beyond those in
 the literal:
 <pre>
-&amp{a&newline;b} &#x027F9 "a\nb"
+&amp;{a&amp;newline;b} &#x027F9; "a\nb"
 </pre>
 <p>
 Conversely, the <dfn>line-continuation marker</dfn>
 <code class="literal">&amp;-</code> is used to suppress a newline:
 <pre>
 &amp;{abc&amp;-
-  def} &#x027F9 "abc  def"
+  def} &#x027F9; "abc  def"
 </pre>
 <p>The marker also suppresses any <i>intraline whitespace</i> between
 the <code class="literal">&amp;-</code> and the newline,
@@ -218,6 +219,7 @@ the closing brace is in the first column, then write it like this:
    &amp;|This last line is followed by a final newline.
 })
 </pre>
+<p>
 When the text is nested such that writing the closing brace should not
 be in the left column, then you can use an extra indentation marker,
 like this:
@@ -273,13 +275,14 @@ included whitespace makes that clear.
 <p>For long strings it may be useful to embed comments, even
 though this is redundant since it could be done using enclosed expressions:
 <pre>
-&{preamble &amp;[#|ignore this part|#] postamble}
+&amp;{preamble &amp;[#|ignore this part|#] postamble}
 </pre>
 <p>
 However, this seems clumsy, so this specification has a comment syntax:
 <pre>
 &amp;{preamble &amp;#|ignore this part|# postamble}
 </pre>
+<p>
 For example for line numbers:
 <pre>
 (display (string-upcase &amp;{
@@ -309,18 +312,19 @@ be confusing, but we assume numeric character escapes will be rare.-->
 <p>
 You can also use the pre-defined XML entity names:
 <pre>
-&amp;{&amp;amp; &amp;lt; &amp;gt; &amp;quot; &amp;apos;} &#x027F9 "&amp; &lt; &gt; \&quot; &apos;"
+&amp;{&amp;amp; &amp;lt; &amp;gt; &amp;quot; &amp;apos;} &#x027F9; "&amp; &lt; &gt; \&quot; &apos;"
 </pre>
 <p>
 In addition, <code>&amp;lbrace;</code> <code>&amp;rbrace;</code>
 can be used for left and right curly brace:
 <pre>
-&amp;{&amp;rbrace;_&amp;lbrace;}  &#x027F9 "}_{"
+&amp;{&amp;rbrace;_&amp;lbrace;}  &#x027F9; "}_{"
 </pre>
+<p>
 Note that these are only needed for unbalanced braces:
 <pre>
-&amp{A left brace '{' followed by a right brace '}' is ok.}
-  &#x027F9 "A left brace '{' followed by a right brace '}' is ok."
+&amp;{A left brace '{' followed by a right brace '}' is ok.}
+  &#x027F9; "A left brace '{' followed by a right brace '}' is ok."
 </pre>
 <p>
 An implementation <em>must</em> support the character names <code>amp</code>,
@@ -332,8 +336,9 @@ An implementation <em>should</em> support
 are not required to).  For example:
 <pre>
 &amp;{L&amp;aelig;rdals&amp;oslash;yri}
-  &#x027F9 "L&#xe6;rdals&#xf8;yri"
+  &#x027F9; "L&#xe6;rdals&#xf8;yri"
 </pre>
+<p>
 An implementation <em>should</em> also support the standard
 R7RS character names <code>null</code>, <code>alarm</code>,
 <code>backspace</code>, <code>tab</code>, <code>newline</code>,
@@ -349,7 +354,7 @@ to the variable reference <code>$entity$:<var>name</var></code>.
 Therefore user-defined entity names are possible:
 <pre>
 (define $entity$:crnl "\r\n")
-&amp;{&amp;crnl;} &#x027F9 "\r\n"
+&amp;{&amp;crnl;} &#x027F9; "\r\n"
 </pre>
 <p>
 <!--
@@ -367,7 +372,7 @@ but instead one could write:
 This section discusses some ideas that seem worthwhile,
 but need more thought, so are deferred for now.
 
-<h3>Special characters</h3>
+<h3 id="special-characters">Special characters</h3>
 <p>
 Only the characters <code>'{'</code>, <code>'}'</code>, and
 <code>'&amp;'</code> are reserved and thus need special escaping.
@@ -382,15 +387,15 @@ used in Scheme, so it may not be worth adding as a special case.
 It might convenient to support standard string single-character slash
 escapes in some form,  For example:
 <pre>
-&amp;{Hello!&amp;\r&amp;\n} &#x027F9 "Hello\r\n"
+&amp;{Hello!&amp;\r&amp;\n} &#x027F9; "Hello\r\n"
 </pre>
 <p>
 Maybe not really needed, since one could just write:
 <pre>
-&amp;{Hello&amp["\r\n"]}
+&amp;{Hello&amp;["\r\n"]}
 </pre>
 
-<h3>Formatting</h3>
+<h3 id="formatting">Formatting</h3>
 <p>
 Many Scheme implementations use <a href="http://srfi.schemers.org/srfi-48/srfi-48.html"><code>format</code></a> for
 finer-grained control of the output.  A problem with <code>format</code>
@@ -414,6 +419,7 @@ The reader would map this to:
 <pre>
 &amp;{The response was &amp;%.2f(* 100.0 (/ responses total))%.}
 </pre>
+<p>
 This would be read as:
 <pre>
 ($string$ "The response was " ($sprintf$ "%.2f" (* 100.0 (/ responses total))) "%.")
@@ -433,6 +439,7 @@ followed by a <var>key</var>:
 <pre>
 &amp;^hello{Hello!}
 </pre>
+<p>
 Here the key is the string <code>hello</code>.  At runtime this key
 is combined with the <q>current language</q> to produce a translated string.
 If no translation is found, then the string in the literal <code>Hello!</code>
@@ -454,12 +461,12 @@ These are primarily useful for localizing messages,
 since one might want change argument order when translating
 from one language to another.  Consider this warning message:
 <pre>
-&amp^{['&amp;[partition]' has only &amp;[avail] bytes free.}
+&amp;^{['&amp;[partition]' has only &amp;[avail] bytes free.}
 </pre>
 <p>
 A translation might want to re-order the arguments, as if it were:
 <pre>
-&amp^{Only &amp;[avail] bytes free on '&amp;[partition]'.}
+&amp;^{Only &amp;[avail] bytes free on '&amp;[partition]'.}
 </pre>
 <p>
 That could be done if the translation database provides
@@ -552,7 +559,7 @@ When standalone, this is implemented as:
 </pre>
 -->
 
-<h3>User-defined end token</h3>
+<h3 id="user-defined-end-token">User-defined end token</h3>
 <p>
 Many languages, including the Bourne shell,
 allow for a a user-defined end token.
@@ -565,6 +572,34 @@ one two three
 uno dos tres
 }!END-TEXT)
 </pre>
+
+<h3 id="splicing">Splicing of lists and vectors</h3>
+<p>
+Sometimes you want to insert all the values of a vector or list
+in an enclosed-part.
+I.e. you want to <q>splice</q> the elements of the list/vector
+into the result string.  This is similar to
+the splicing of a list in quasi-quotation.  It seems reasonable
+to use the same prefix character <code class="literal">@</code>.
+Thus:
+<pre>
+(define exp (list e1 e1 ... en))
+&amp;{_&amp;[@exp]_}
+</pre>
+<p>
+should be equivalent to:
+<pre>
+&amp;{_&amp;[e1 e2 ... en]_}
+</pre>
+<p>
+This can be implemented using the <code class="literal">~{</code>
+<code class="literal">~}</code> iteration format specifiers from
+Common Lisp, if the implementations supports those:
+<pre>
+&amp;{_&amp;~{~a~}[exp]_}
+</pre>
+
+
 
 <!--
 <h2>Translation to S-expressions</h2>
@@ -605,7 +640,7 @@ matters if we support format specifiers that re-order the arguments
   | <var>extended-string-literal</var>
 </pre>
 <pre>
-<var class="non-terminal-def" id="extended-string-literal-def">extended-string-literal</var> ::= <code class="literal">&{</code> <var class="non-terminal">initial-ignored</var>? <var>string-literal-part</var><sup>*</sup> <code class="literal">}</code>
+<var class="non-terminal-def" id="extended-string-literal-def">extended-string-literal</var> ::= <code class="literal">&amp;{</code> <var class="non-terminal">initial-ignored</var>? <var>string-literal-part</var><sup>*</sup> <code class="literal">}</code>
 <var class="non-terminal-def" id="string-literal-part-def">string-literal-part</var> ::=
     <i>any character except </i><code>&amp;</code><i>, </i><code>{</code> <i>or</i> <code>}</code>
   | <code class="literal">{</code> <var class="non-terminal">string-literal-part</var><sup>*</sup> <code class="literal">}</code>
@@ -626,7 +661,7 @@ matters if we support format specifiers that re-order the arguments
   | <code class="literal">&amp;</code> <var class="non-terminal">nested-comment</var>
   | <code class="literal">&amp;-</code> <var class="non-terminal">intraline-linespace</var> <var class="non-terminal">line-ending</var>
 <var class="non-terminal-def">enclosed-part</var> ::=
-    <code class="literal">&amp;</code> <var class="non-terminal">enclosed-modifier</var> <code class="literal">{</code> <var>expression<sup>*</sup></var> <code class="literal">}</code>
+    <code class="literal">&amp;</code> <var class="non-terminal">enclosed-modifier</var> <code class="literal">[</code> <var>expression<sup>*</sup></var> <code class="literal">]</code>
   | <code class="literal">&amp;</code> <var class="non-terminal">enclosed-modifier</var> <code class="literal">(</code> <var>expression</var><sup>+</sup> <code class="literal">)</code>
 </pre>
 <pre>
@@ -671,7 +706,7 @@ or No (i.e. letters, combining marks, and numbers only)."
 the middle dot (which cannot be initial)"
 -->
 <p>
-The following are defined by R7RS: <var class="non-terminal">nested-comment</var>,
+The following are defined by R6RS: <var class="non-terminal">nested-comment</var>,
 <var class="non-terminal">intraline-whitespace</var>,
 <var class="non-terminal">line-ending</var>,
 <var class="non-terminal">letter</var>,
@@ -680,6 +715,7 @@ and <var class="non-terminal">hex-digit</var>.
 <pre>
 <var class="non-terminal-def" id="enclosed-modifier-def">enclosed-modifier</var> ::= <i>empty</i>
 </pre>
+<p>
 An <var class="non-terminal">enclosed-modifier</var> is normally empty:
 However, implementations or future extensions may support non-empty modifiers.
 For example, Kawa supports both <code>format</code>-style
@@ -757,18 +793,18 @@ Translations for the other segment kinds are straight-forward:
    &#x27fe; <code class="literal">$entity$:</code><var class="non-terminal">ename</var>
 <b>TrContent[</b><code class="literal">&amp;(</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">)</code><b>]</b>
    &#x27fe;  <code class="literal">$&lt;&lt;$ (</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">) $&gt;&gt;$</code>
-<b>TrContent[</b><code class="literal">&amp;[</code></code> <var class="non-terminal">expression</var><sup>*</sup> <code class="literal">]</code><b>]</b>
+<b>TrContent[</b><code class="literal">&amp;[</code> <var class="non-terminal">expression</var><sup>*</sup> <code class="literal">]</code><b>]</b>
    &#x27fe;  <code class="literal">$&lt;&lt;$</code> <var class="non-terminal">expression</var><sup>*</sup> <code class="literal">$&gt;&gt;$</code>
 </pre>
 <p>The following are optional and/or for a future specification:
 <pre>
 <b>TrContent[</b><code class="literal">&amp;~</code> <var class="non-terminal">format</var> <code class="literal">(</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">)</code><b>]</b>
    &#x27fe;  <code class="literal">($format$ "</code> <var class="non-terminal">format</var> <code class="literal">" (</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">))</code>
-<b>TrContent[</b><code class="literal">&amp;~</code> <var class="non-terminal">format</var> <code class="literal">[</code></code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">]</code><b>]</b>
+<b>TrContent[</b><code class="literal">&amp;~</code> <var class="non-terminal">format</var> <code class="literal">[</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">]</code><b>]</b>
    &#x27fe;  <code class="literal">($format$ "</code><var class="non-terminal">format</var><code class="literal">"</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">)</code>
 <b>TrContent[</b><code class="literal">&amp;%</code> <var class="non-terminal">format</var> <code class="literal">(</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">)</code><b>]</b>
    &#x27fe;  <code class="literal">($sprintf$ "</code> <var class="non-terminal">format</var> <code class="literal">" (</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">))</code>
-<b>TrContent[</b><code class="literal">&amp;%</code> <var class="non-terminal">format</var> <code class="literal">[</code></code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">]</code><b>]</b>
+<b>TrContent[</b><code class="literal">&amp;%</code> <var class="non-terminal">format</var> <code class="literal">[</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">]</code><b>]</b>
    &#x27fe;  <code class="literal">($sprintf$ "</code><var class="non-terminal">format</var><code class="literal">"</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">)</code>
 </pre>
 
@@ -784,7 +820,9 @@ A basic implementation could be:
 (define ($string$ . args)
   (let ((port (open-output-string)))
     (for-each
-     (lambda (arg) (display arg port))
+     (lambda (arg)
+       (if (and (not (eq? arg $&lt;&lt;$)) (not (eq? arg $&gt;&gt;$)))
+           (display arg port)))
      args)
     (get-output-string port)))
 </pre>
@@ -795,7 +833,8 @@ are constant then an implementation is allowed to constant-fold
 the expression to a string literal.
 <p>
 In addition <code>$&lt;&lt;$</code> <code>$&gt;&gt;$</code> are
-constant unique zero-length strings.  These bindings
+bound to unique objects, distinct from each other or other objects
+(as determinted by <code>eq?</code>).  These bindings
 should preferbly be non-assignable if an implementation has
 a mechanism for that (for example using identifier macros).
 <pre>
@@ -803,10 +842,9 @@ a mechanism for that (for example using identifier macros).
 (define $&gt;&gt;$ (make-string 0))
 </pre>
 <p>
-Note that R6RS and R7RS allows <code>eq?</code> to return <code>#t</code>
+Note that R6RS and R7RS-draft allows <code>eq?</code> to return <code>#t</code>
 for distinct calls to <code>(make-string 0)</code>.
-A hypothetical implementation
-that does so needs to initialize <code>$&lt;&lt;$</code>
+A implementation that does so needs to initialize <code>$&lt;&lt;$</code>
 and <code>$&gt;&gt;$</code> some other way.
 <p>
 If <code>$format$</code> is supported, a minimal implementation is:
@@ -815,8 +853,6 @@ If <code>$format$</code> is supported, a minimal implementation is:
   (syntax-rules ()
     (($format$ fmt arg ...)
      (format #f fmt arg ...))))
-</pre>
-
 </pre>
 
 <h1>Implementation</h1>
