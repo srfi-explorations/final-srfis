@@ -49,6 +49,7 @@ subscribe to the list.  You can access previous messages via
        <li>Revision: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-108/srfi-108.html?rev=1.2">2013/02/04</a></li>
        <li>Revision: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-108/srfi-108.html?rev=1.3">2013/03/27</a></li>
        <li>Revision: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-108/srfi-108.html?rev=1.4">2013/04/19</a></li>
+       <li>Revision: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-108/srfi-108.html?rev=1.5">2013/05/25</a></li>
       <li>Draft: 2012/11/10-2013/01/10</li>
 </ul>
 
@@ -76,7 +77,7 @@ It also shares quite of bit of syntax with
 <p>
 When adding new datatypes it is useful to add new literals of that type,
 or at least a compact readable notation for creating instances.
-<a "http://srfi.schemers.org/srfi-10/srfi-10.html">SRFI-10</a> provided
+<a href="http://srfi.schemers.org/srfi-10/srfi-10.html">SRFI-10</a> provided
 one solution.  Here is an example, which assumes a URI
 type for representing encoded Uniform Resource Identifiers (URIs - or
 generalized URLs):
@@ -128,7 +129,7 @@ The above example is read as:
 ($construct$:URI "http://" $&lt;&lt;$ example-host $&gt;&gt;$ "/")
 </pre>
 The symbols <code>$&lt;&lt;$</code> and <code>$&gt;&gt;$</code> are special
-<q>marker</q> symbols whose pre-defined value is the empty string.
+<q>marker</q> symbols bound to unique values.
 Their use allows the implementation of <code>$construct$:URI</code>
 to tell if content is part of the literal text or from an
 enclosed expression - which is sometimes useful to know.
@@ -341,7 +342,7 @@ simplify some common cases.
 Note this convention lets us distinguish these cases (if you care):
 <pre>
 &amp;foo{_&amp;bar{b}_}
-&amp;foo{_&[&amp;bar{b}]_}
+&amp;foo{_&amp;[&amp;bar{b}]_}
 </pre>
 because these translate differently:
 <pre>
@@ -439,7 +440,17 @@ so it maybe unwise to mandate such behavior.
 We should probably wait for more experience.
 -->
 
-<h2>Read-time literals</h2>
+<h2>Possible extensions</h2>
+<p>
+This section discusses some ideas that seem worthwhile,
+but need more thought, so are deferred for now.
+<p>
+In addition to those mentioned below, consider also
+<a href="../srfi-109/srfi-109.html#special-characters">special characters</a>,
+<a href="../srfi-109/srfi-109.html#formatting">formatting</a>,
+and <a href="../srfi-109/srfi-109.html#user-defined-end-token">user-defined end token</a> from SRFI-109.
+
+<h3>Read-time literals</h3>
 <p>
 A possible extension is to support SRFI-10 style read-time literals
 in certain restricted cases,
@@ -447,6 +458,38 @@ when all the expressions are literal, and the transformers are available
 to the reader.  This should probably not be the default (for consistency
 and because of security concerns), but could be supported in an
 implementation that has programmable read-tables.
+
+<h3>Splicing of lists and vectors</h3>
+As in <a href="../srfi-109/srfi-109.html#splicing">SRFI-109</a>
+you sometimes you want to insert all the values of a vector or list
+in an enclosed-part.  When the result is a string you can convert
+each element to a string, and concatenate the strings.
+When working with named constructors, you want each element to be
+an argument to the constructor function.  For example:
+<pre>
+(define args (list e1 e1 ... en))
+&amp;foo[@args]
+</pre>
+The reader could convert the latter to:
+<pre>
+($construct$:foo ($splice$ args) $>>$)
+</pre>
+Assuming <code>$construct$:foo</code> is bound to a <code>make-foo</code> function,
+we want this to be equivalent to:
+<pre>
+(apply make-foo args)
+</pre>
+<p>
+Expecting each <code>$construct$:foo</code>
+implementation to desugar the <code>$splice$</code> forms is unfriendly,
+but it could be handled by <code>define-simple-constructor</code>.
+This seems easy enough when the implementation rewrites to a function call,
+since we can handle the splicing by writing to an <code>apply</code> call.
+It gets trickier when macros are involved.
+<p>
+Handling splicing seems cleaner if the Scheme compiler handles
+splicing natively - i.e. as a general feature of function application.
+This seems worth exploring, but is obviously beyond the scope of this SRFI.
 
 <h2 id="delimiter-options">Discussion: Delimiter options</h2>
 This specification uses <code class="literal">&amp;</code> as
@@ -641,10 +684,24 @@ compatible with Scribble anyway, so that shouldn't be deciding.
 <var class="non-terminal-def" id="extended-datum-literal-def">extended-datum-literal</var> ::=
     <var class="non-terminal">extended-datum-body</var>
 <var class="non-terminal-def" id="extended-datum-body-def">extended-datum-body</var> ::=
-    <code class="literal">&amp;</code> <var class="non-terminal">cname</var> <code class="literal">{</code> <var class="non-terminal">initial-ignored</var>? <var>named-literal-part</var><sup>*</sup></var> <code class="literal">}</code>
+    <code class="literal">&amp;</code> <var class="non-terminal">cname</var> <code class="literal">{</code> <var class="non-terminal">initial-ignored</var><sup>?</sup> <var>named-literal-part</var><sup>*</sup> <code class="literal">}</code>
   | <code class="literal">&amp;</code> <var class="non-terminal">cname</var> <code class="literal">[</code> <var>expression</var><sup>*</sup> <code class="literal">]{</code> <var class="non-terminal">initial-ignored</var>? <var>named-literal-part</var><sup>*</sup> <code class="literal">}</code>
 <var class="non-terminal-def">cname</var> ::= <var class="non-terminal">tagname</var>
 </pre>
+<p>
+An implementation <em>may</em> allow leaving out the braces if empty, i.e.:
+<pre>
+<var class="non-terminal-def">extended-datum-body</var> ::= <i>... as above ...</i>
+    | <code class="literal">&amp;</code> <var class="non-terminal">cname</var> <code class="literal">[</code> <var>expression</var><sup>*</sup> <code class="literal">]</code>
+</pre>
+<p>
+However, note that accordingly to R6RS <code class="literal">&amp;foo[abc]</code> should
+be read as the symbol <code class="literal">&amp;foo</code> followed by a
+list <code class="literal">[abc]</code> - i.e. as if it were
+<code class="literal">&amp;foo (abc)</code>.
+Implementations may handle this ambiguity differently,
+so portable programs should not leave out the empty braces.
+
 <p>
 For the definition and discussion of <var class="non-terminal">tagname</var> see
 <a href="../srfi-109/srfi-109.html#tagname-def">SRFI-109 (tagname)</a>.
@@ -680,8 +737,8 @@ except for the support for a nested <var class="non-terminal">extended-datum-bod
   | <code class="literal">~</code> <var class="non-terminal">format-specifier-after-tilde</var>
   | <code class="literal">%</code> <var class="non-terminal">format-specifier-after-percent</var>
 <var class="non-terminal-def">enclosed-part</var> ::=
-    <code class="literal">&amp;</code> <var class="non-terminal">enclosed-modifier</var> <code class="literal">{</code> <var>expression<sup>+</sup></var> </var> <code class="literal">}</code>
-  | <code class="literal">&amp;</code> <var class="non-terminal">enclosed-modifier</var> <code class="literal">(</code><var>expression</var><sup>+</sup></var> <code class="literal">)</code>
+    <code class="literal">&amp;</code> <var class="non-terminal">enclosed-modifier</var> <code class="literal">[</code> <var>expression<sup>*</sup></var> <code class="literal">]</code>
+  | <code class="literal">&amp;</code> <var class="non-terminal">enclosed-modifier</var> <code class="literal">(</code> <var>expression</var><sup>+</sup> <code class="literal">)</code>
 </pre>
 <p>
 An <var class="non-terminal">enclosed-modifier</var> is normally empty,
