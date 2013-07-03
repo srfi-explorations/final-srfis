@@ -17,9 +17,7 @@ John Cowan
 
 <H1>Status</H1>
 
-This SRFI is currently in ``draft'' status.
-
-To see an explanation of
+This SRFI is currently in ``final'' status.  To see an explanation of
 each status that a SRFI can hold, see <a
 href="http://srfi.schemers.org/srfi-process.html">here</a>.
 
@@ -29,17 +27,22 @@ To provide input on this SRFI, please
 <a href="../srfi-list-subscribe.html">instructions here</a> to
 subscribe to the list.  You can access previous messages via
 <a href="mail-archive/maillist.html">the archive of the mailing list</a>.
+You can access
+post-finalization messages via
+<a href="http://srfi.schemers.org/srfi-111/post-mail-archive/maillist.html">
+the archive of the mailing list</a>.
 </p>
 
 <ul>
       <li>Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-111/srfi-111.html?rev=1.1">2013/04/14</a></li>
       <li>Draft: 2013/04/25-2013/06/24</li>
       <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-111/srfi-111.html?rev=1.2">2013/5/18</a></li>
+      <li>Final: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-111/srfi-111.html?rev=1.3">2013/5/18</a></li>
     </ul>
 
 <H1>Abstract</H1>
 
-<p>Boxes are objects with a single mutable state. Several Schemes have something like it, sometimes called <i>cells</i>.  A constructor, predicate, accessor, and mutator are provided.</p>
+<p>Boxes are objects with a single mutable state. Several Schemes have them, sometimes called <i>cells</i>.  A constructor, predicate, accessor, and mutator are provided.</p>
 
 <H1>Issues</H1>
 
@@ -75,7 +78,7 @@ subscribe to the list.  You can access previous messages via
 
 <h2>Procedures</h2>
 
-<p>The following procedures implement the box type (which is disjoint from all other Scheme types), and are exported by the <code>(scheme boxes)</code> and <code>(srfi 111)</code> libraries.  In R6RS systems, the latter library name is replaced by <code>(srfi :111)</code>.</p>
+<p>The following procedures implement the box type (which is disjoint from all other Scheme types), and are exported by the <code>(srfi 111)</code> library (or <code>(srfi :111)</code> on R6RS).</p>
 
 <p><code>(box <i>value</i>)</code></p>
 
@@ -93,6 +96,8 @@ subscribe to the list.  You can access previous messages via
 
 <p>Mutator.  Changes <i>box</i> to hold <i>value</i>.</p>
 
+<p>The behavior of boxes with the equivalence predicates <code>eq?</code>, <code>eqv?</code>, and <code>equal?</code> is the same as if they were implemented with records.  That is, two boxes are both <code>eq?</code> and <code>eqv?</code> iff they are the product of the same call to <code>box</code> and not otherwise, and while they must be <code>equal?</code> if they are <code>eqv?</code>, the converse is implementation-dependent.</p>
+
 <p></p>
 
 <H1>Implementation</H1>
@@ -100,7 +105,7 @@ subscribe to the list.  You can access previous messages via
 <p>Here is a definition as an R7RS library:</p>
 
 <pre>
-(define-library (scheme boxes)
+(define-library (srfi 111)
   (import (scheme base))
   (export box box? unbox set-box!)
   
@@ -116,7 +121,7 @@ subscribe to the list.  You can access previous messages via
 <p>Here is a translation into R6RS Scheme:</p>
 
 <pre>
-(library (scheme boxes)
+(library (srfi :111)
   (export box box? unbox set-box!)
   (import (rnrs base) (rnrs records syntactic))
   
@@ -202,7 +207,7 @@ DEALINGS IN THE SOFTWARE.</p>
              Mike Sperber</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Wed May 22 08:51:51 MST 2013
+Last modified: Wed Jul  3 09:04:14 MST 2013
 <!-- hhmts end -->
   </body>
 </html>
