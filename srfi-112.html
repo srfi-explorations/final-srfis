@@ -34,6 +34,7 @@ subscribe to the list.  You can access previous messages via
 
 <ul>
       <li>Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-112/srfi-112.html?rev=1.1">2013/05/04</a></li>
+      <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-112/srfi-112.html?rev=1.2">2013/05/04</a></li>
       <li>Draft: 2013/05/05-2013/07/05</li>
     </ul>
 
@@ -45,8 +46,10 @@ subscribe to the list.  You can access previous messages via
     <p>The feature symbols of the R7RS-small <code>cond-expand</code> syntax provide the ability to conditionally compile code based on particular properties of an implementation that it sees fit to publish.  The <code>features</code> procedure, which returns the list of feature symbols of the implementation, provides run-time access to the same set of properties. Assuming that Rhinoceros Scheme provides the feature symbol <code>rhinoceros</code> but not <code>diplodocus</code> and Diplodocus Scheme does the opposite, programs can portably ask "Is this Rhinoceros Scheme or Diplodocus Scheme?" and behave differently  at run time based on the answer.  Similarly, a program can ask "Does this implementation have exact complex numbers?" by checking for the presence of the <code>exact-complex</code> feature symbol in the result of calling <code>features</code>.</p>
     <p>However, a program using just the <code>features</code> procedure cannot report to its user "I am executing on X Scheme" for every value of X, because it does not know which symbol in the feature list represents the implementation name, nor does it have a comprehensive list of implementation names.  Similarly, there are other properties that the feature list may allow testing for but not reporting on, such as the underlying OS, the C memory model, and the CPU architecture.  For the sake of logging and debugging, it is necessary or at least extremely useful to provide a standard way for Scheme applications, as well as Scheme users at the REPL, to report these things.  In the Common Lisp world, bugs are often reported in a REPL transcript beginning with a call to <code>lisp-implementation-version</code>.</p>
     <h2>Specification</h2>
-    <p>The following procedures take no arguments and return either a string, or <code>#f</code> if the implementation cannot provide an appropriate and relevant result.  It is an error to mutate the returned string.  The procedures in this proposal are in the <code>(scheme inquiry)</code> and <code>(srfi 112)</code> libraries (or <code>(srfi :112)</code> on R6RS).</p>
-    <p>They are procedures rather than variables against the possibility that a Scheme process might migrate from machine to machine. This need not happen in a distributed environment; consider, for example, dumping a core image file containing a compiler and then shipping it to another site.</p>
+    <p>The following procedures take no arguments and return either a string, or <code>#f</code> if the implementation cannot provide an appropriate and relevant result.  It is an error to mutate the returned string.  The procedures in this proposal are in the <code>(srfi 112)</code> library (or <code>(srfi :112)</code> on R6RS).</p>
+    <p>Because users are expected to use the values of these procedures for reporting rather than testing, no attempt is made to standardize the string values they return</p>
+    <p>Procedures are provided rather than strings against the possibility that a Scheme process might migrate from machine to machine. This need not happen only in a distributed environment; consider, for example, dumping a core image file containing a compiler and then shipping it to another site.</p>
+    <p>Posix and Common Lisp equivalents or near-equivalents are provided.  On Windows, some of this information is available using the <code>GetSystemInfo</code> and <i>GetComputerName</i> APIs.</p>
     <p>
       <code>(implementation-name)</code>
     </p>
@@ -78,7 +81,7 @@ subscribe to the list.  You can access previous messages via
     <p>Note: Analogues to the Common Lisp <code>machine-version</code>, <code>short-site-name</code>, and <code>long-site-name</code> are not provided.  They are inconsistently implemented and of doubtful utility.</p>
     <h2>Implementation</h2>
     <p>The implementation of this SRFI is inherently system-dependent.  The version shown below is for an imaginary Scheme implementation, and is in R5RS style.  Trivial wrappers will convert it to an R6RS or R7RS library.</p>
-    <p>Some of the information can be derived from the <code>uname()</code> system call, which is provided by the Posix standard.  The exact Scheme interface to <code>uname</code> is highly system-dependent.  In Chicken, the <code>system-information</code> procedure returns a list of five strings representing the five components of the Posix <code>utsname</code> structure.  In Gauche, the same procedure is called <code>sys-uname</code>.  In Guile and Sizzle, it is called <code>uname</code>, and returns a vector rather than a list; Sizzle places it in the module <code>(core posix)</code>.  In Scheme48, there are five separate procedures in the <code>posix</code> structure named <code>os-name</code>, <code>os-node-name</code>, <code>os-release-name</code>, <code>os-version-name</code>, and <code>machine-name</code>.  In scsh, the <tt>uname</tt> procedure returns a record whose fields have the same names as the Scheme48 procedures; their accessors are named <tt>uname:os-name</tt>, etc.  The version below uses the Guile convention.</p>
+    <p>Some of the information can be derived from the <code>uname()</code> system call, which is provided by the Posix standard.  (Some of the same information is available on Win32 using <code>GetSystemInfo</code> and <code>GetComputerNameA</code>.)  The exact Scheme interface to <code>uname</code> is highly system-dependent.  In Chicken, the <code>system-information</code> procedure returns a list of five strings representing the five components of the Posix <code>utsname</code> structure.  In Gauche, the same procedure is called <code>sys-uname</code>.  In Guile and Sizzle, it is called <code>uname</code>, and returns a vector rather than a list; Sizzle places it in the module <code>(core posix)</code>.  In Scheme48, there are five separate procedures in the <code>posix</code> structure named <code>os-name</code>, <code>os-node-name</code>, <code>os-release-name</code>, <code>os-version-name</code>, and <code>machine-name</code>.  In scsh, the <tt>uname</tt> procedure returns a record whose fields have the same names as the Scheme48 procedures; their accessors are named <tt>uname:os-name</tt>, etc.  The version below uses the Guile convention.</p>
     <pre>
     (define (implementation-name) "Fantastic Scheme")
     
@@ -126,7 +129,7 @@ DEALINGS IN THE SOFTWARE.</p>
              Mike Sperber</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Sun May  5 07:38:55 MST 2013
+Last modified: Wed Jul  3 08:59:17 MST 2013
 <!-- hhmts end -->
   </body>
 </html>
