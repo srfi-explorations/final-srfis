@@ -59,8 +59,10 @@ subscribe to the list.  You can access previous messages via
       <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-106/srfi-106.html?rev=1.2">2012/10/09</a></li>
       <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-106/srfi-106.html?rev=1.3">2012/10/13</a></li>
       <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-106/srfi-106.html?rev=1.4">2013/06/23</a></li>
+      <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-106/srfi-106.html?rev=1.5">2013/07/05</a></li>
       <li>Draft: 2012/10/07-2012/12/07</li>
 </ul>
+
 <H1>Abstract</H1>
 
 This document specifies basic socket interfaces.
@@ -68,9 +70,9 @@ This document specifies basic socket interfaces.
 <H1>Rationale</H1>
 
 <p>
-Many Scheme implementation have its own socket APIs however there are no
+Many Scheme implementations have its own socket APIs however there are no
 portable way to write socket program. Therefore programmers need to provide
-implementation dependent layer for their program.
+implementation dependent layer for their programs.
 </p>
 
 <p>
@@ -108,7 +110,8 @@ Names defined in this document:
   <dt>Port conversion</dt>
   <dd>
     <pre>
-      <a href="#socket-port">socket-port</a>
+      <a href="#socket-input-port">socket-input-port</a>
+      <a href="#socket-input-port">socket-output-port</a>
     </pre>
   </dd>
 
@@ -127,7 +130,7 @@ Names defined in this document:
       <a href="#message-type">message-type</a> <a href="#shutdown-method">shutdown-method</a>
 
       <a href="#socket-merge-flags">socket-merge-flags</a>
-      <a href="#socket-parge-flags">socket-parge-flags</a>
+      <a href="#socket-purge-flags">socket-purge-flags</a>
     </pre>
   </dd>
 
@@ -303,24 +306,30 @@ Names defined in this document:
     <div>
       Closes a socket.
     </div>
+    <div>
+      The procedure should not shutdown the given socket. To shutdown a socket,
+      <code>socket-shutdown</code> should be called explicitly.
+    </div>
   </dd>
 </dl>
 
 <h3>Port conversion</h3>
 <dl>
   <dt class="proc-def">
-    <a name="socket-port" class="proc-name">socket-port</a>
-    socket [close-socket?] -&gt; binary-input/output-port
+    <a name="socket-input-port" class="proc-name">socket-input-port</a>
+    socket -&gt; binary-input-port
+  </dt>
+  <dt class="proc-def">
+    <a name="socket-output-port" class="proc-name">socket-output-port</a>
+    socket -&gt; binary-output-port
   </dt>
   <dd class="proc-desc">
     <div>
-      Returns a fresh binary input/output port associated with a
-      <var>socket</var>.      
+      Returns a fresh binary input and output port associated with a
+      <var>socket</var>, respectively.
     </div>
     <div>
-      If the optional argument <var>close-socket?</var> is not #f then
-      when port is closed the underlying socket will be also closed.<br />
-      The default value is #f.
+      The port should not close underlying socket when it's closing.
     </div>
   </dd>
 </dl>
@@ -474,7 +483,7 @@ Names defined in this document:
     Merges given <var>flags</var> and returns a new flag.
   </dd>
   <dt class="proc-def">
-    <a name="socket-parge-flags" class="proc-name">socket-parge-flags</a>
+    <a name="socket-purge-flags" class="proc-name">socket-purge-flags</a>
     base-flag flags ... -&gt; new-flags
   </dt>
   <dd class="proc-desc">
@@ -638,17 +647,13 @@ These are some of conditions raised when networking error occurs.
             ((#xA) #t) ;; newline
             ((#xD) (loop (get-u8 bin))) ;; carriage return
             (else (put-u8 out b) (loop (get-u8 bin))))))))
-  (let ((addr (socket-accept echo-server-socket)))
-    (call-with-socket
-     addr
-     (lambda (sock)
-       (let ((p (socket-port sock)))
-         (call-with-port
-          p
-          (lambda (p)
-            (let lp2 ((r (get-line-from-binary-port p)))
-              (put-bytevector p (string-&gt;utf8 (string-append r "\r\n"))
-              (lp2 (get-line-from-binary-port p))))))))))
+  (call-with-socket (socket-accept echo-server-socket)
+    (lambda (sock)
+      (let ((in (socket-input-port sock))
+            (out (socket-output-port sock)))
+        (let lp2 ((r (get-line-from-binary-port in)))
+          (put-bytevector out (string-&lt;utf8 (string-append r "\r\n")))
+          (lp2 (get-line-from-binary-port in)))))))
 (server-run)
 
 ;; simple echo client
@@ -669,8 +674,11 @@ The following implementation is written in R6RS.
 <pre>
 (library (srfi :106 socket)
     (export make-client-socket make-server-socket
-            socket? socket-port call-with-socket
-            socket-merge-flags socket-parge-flags
+            socket? 
+            (rename (socket-port socket-input-port)
+                    (socket-port socket-output-port))
+            call-with-socket
+            socket-merge-flags socket-purge-flags
             socket-accept socket-send socket-recv socket-shutdown socket-close
             *af-unspec* *af-inet* *af-inet6*
             *sock-stream* *sock-dgram*
@@ -680,7 +688,7 @@ The following implementation is written in R6RS.
             *shut-rd* *shut-wr* *shut-rdwr*
             address-family socket-domain address-info
             ip-protocol message-type shutdown-method)
-    (import (rnrs) (rename (socket impl) (socket-port %socket-port)))
+    (import (rnrs) (except (socket impl) socket-port))
 
   (define %address-family `((inet    ,*af-inet*)
                             (inet6   ,*af-inet6*)
@@ -761,19 +769,17 @@ The following implementation is written in R6RS.
       ((_ methods ...)
        (%proper-method '(methods ...)))))
 
-  (define (socket-port socket . close?)
+  (define (socket-port socket)
     (define (read! bv start count)
       (let ((r (socket-recv socket count)))
-	(bytevector-copy! r 0 bv start (bytevector-length r))
-	(bytevector-length r)))
+        (bytevector-copy! r 0 bv start (bytevector-length r))
+        (bytevector-length r)))
     (define (write! bv start count)
       (let ((buf (make-bytevector count)))
-	(bytevector-copy! bv start buf 0 count)
-	(socket-send socket buf)))
-    (if (or (null? close?) (not (car close?)))
-	(make-custom-binary-input/output-port 
-	 "socket-port" read! write! #f #f #f)
-	(%socket-port socket)))
+        (bytevector-copy! bv start buf 0 count)
+        (socket-send socket buf)))
+    (make-custom-binary-input/output-port 
+         "socket-port" read! write! #f #f #f))
 
   )
 </pre>
@@ -786,7 +792,7 @@ The following implementation is written in R6RS.
     (export make-client-socket make-server-socket
             socket? socket-port call-with-socket
             (rename (bitwise-ior socket-merge-flags)
-                    (bitwise-xor socket-parge-flags))
+                    (bitwise-xor socket-purge-flags))
             socket-accept socket-send socket-recv socket-shutdown socket-close
             (rename (AF_UNSPEC *af-unspec*)
                     (AF_INET   *af-inet*)
@@ -831,7 +837,7 @@ The following implementation is written in R6RS.
     (export make-client-socket make-server-socket
             socket? socket-port call-with-socket
             (rename (bitwise-ior socket-merge-flags)
-                    (bitwise-xor socket-parge-flags))
+                    (bitwise-xor socket-purge-flags))
             socket-accept socket-send socket-recv socket-shutdown socket-close
             (rename (AF_UNSPEC *af-unspec*)
                     (AF_INET   *af-inet*)
@@ -866,7 +872,7 @@ The following implementation is written in R6RS.
     (export make-client-socket make-server-socket
             socket? socket-port call-with-socket
             (rename (bitwise-ior socket-merge-flags)
-                    (bitwise-xor socket-parge-flags))
+                    (bitwise-xor socket-purge-flags))
             socket-accept socket-send socket-recv socket-shutdown socket-close
             (rename (AF_UNSPEC *af-unspec*)
                     (AF_INET   *af-inet*)
@@ -1011,7 +1017,7 @@ DEALINGS IN THE SOFTWARE.
     <address>Author: <a href="mailto:ktakashi@ymail.com">Takashi Kato</a></address>
 <!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
 <!-- hhmts start -->
-Last modified: Sun Jun 23 15:14:45 MST 2013
+Last modified: Fri Jul  5 14:04:28 MST 2013
 <!-- hhmts end -->
   </body>
 </html>
