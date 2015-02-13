@@ -29,8 +29,9 @@ subscribe to the list.  You can access previous messages via
     <li>Received: <a
     href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-120/srfi-120.html?rev=1.1">2015/01/27</a></li>
       <li>Draft: 2015/02/03-2015/04/03</li>
+    <li>Revised: <a
+    href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-120/srfi-120.html?rev=1.1">2015/02/13</a></li>
 </ul>
-
 
     <h1> Abstract</h1>
     <p>This SRFI defines interfaces to handle timer processes.</p>
@@ -75,9 +76,12 @@ specifies when the task will be started. It can be either time object or
 non negative integer. If the <em>when</em> is a time object, then the task is
 scheduled on that time. If the <em>when</em> is an integer, then the task is
 scheduled on passed number milliseconds later.</p>
-    <p>If the optional argument <em>period</em> is given and if it's a positive number,
-then the given task is scheduled as periodical task. The number is interpreted
-as milliseconds.</p>
+    <p>If the optional argument <em>period</em> is given, which must be either a time 
+object which type is <code>time-duration</code> or an integer, then the given task 
+is scheduled as periodical task. If <em>period</em> is a time object, then the 
+duration is simply added to calculated <em>when</em> after the execution. If it
+is an integer, then it is interpreted as milliseconds and added to calculated
+<em>when</em> as well.</p>
     <p>The executing order of the same timing tasks are not defined.</p>
     <p>The procedure returns timer id which is an integer.</p>
     <p>
