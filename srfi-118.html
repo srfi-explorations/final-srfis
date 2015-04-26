@@ -44,6 +44,7 @@ subscribe to the list.  You can access previous messages via
     <li>Received: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-118/srfi-118.html?rev=1.1">2014/12/20</a></li>
       <li>Draft: 2014/12/20-2015/02/20</li>
     <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-118/srfi-118.html?rev=1.2">2015/02/15</a></li>
+    <li>Revised: <a href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-118/srfi-118.html?rev=1.3">2015/04/18</a></li>
 </ul>
 
 
@@ -52,8 +53,8 @@ subscribe to the list.  You can access previous messages via
 Scheme specifies mutable fixed-length strings.
 We add two procedures <code>string-append!</code> and
 <code>string-replace!</code> which allow the size of the string to change.
-We also require that standard Scheme procedures that return mutable strings
-(such as <code>make-string</code>) return variable-size strings.
+We also require that the standard Scheme procedures <code>make-string</code>
+and <code>string-copy</code> return variable-size strings.
  
 </p><h1>Rationale</h1>
 <p>
@@ -131,7 +132,7 @@ The <code>string-append!</code> procedure extends <var>string</var> by
 appending each <var>value</var> (in order) to the end of <var>string</var>.
 A <var>value</var> can be a character or a string.
 </p><p>
-The following example show to to process a string using
+The following example shows how to process a string using
 <code>string-for-each</code> and incrementally <q>building</q> a result string
 using <code>string-append!</code>:</p>
 <pre>(define (translate-space-to-newline str)
@@ -146,6 +147,8 @@ using <code>string-append!</code>:</p>
      str)
     result))
 </pre>
+<p>There is no requirement that this procedure execute in constant time,
+even amortised (i.e. average) constant time.
 <p><em>Usage note:</em> Compare with using string ports:</p>
 <pre>(define (translate-space-to-newline str)
   (let ((out (open-output-string)))
@@ -166,7 +169,7 @@ more efficient on some implementations, due to lower overhead,
 but that depends on the strategy used by <code>string-append!</code>
 when the allocated buffer is too small.
 The <code>string-append!</code> function is most useful when
-using (reading) a string a interleaved with growing it,
+using (reading) a string is interleaved with growing it,
 or when also using <code>string-replace!</code>.
 </blockquote>
 
@@ -196,6 +199,11 @@ When <var>value</var> is a string then
 <p>
 The implementation is trivial, assuming there is some indirection
 between the string object header and the actual stored characters.
+Whenever the character buffer is full, it needs to be replaced with
+a bigger buffer.  If the size of the new buffer is a
+fixed multiple of the size of the old buffer then
+ <code>string-append!</code> has amortized constant execution time.
+(The multiple 1.5 <a href="http://stackoverflow.com/questions/1100311/what-is-the-ideal-growth-rate-for-a-dynamically-allocated-array">seems a good choice</a>.)
 </p><p>
 If you have cheap Smalltalk-style <code>becomes:</code> (which is admittedly
 unlikely these days) then you can use that when you need to grow a string
