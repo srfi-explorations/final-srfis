@@ -31,6 +31,8 @@ subscribe to the list.  You can access previous messages via
       <li>Draft: 2015/02/03-2015/04/03</li>
     <li>Revised: <a
     href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-120/srfi-120.html?rev=1.1">2015/02/13</a></li>
+    <li>Revised: <a
+    href="http://srfi.schemers.org/cgi-bin/viewcvs.cgi/*checkout*/srfi/srfi-120/srfi-120.html?rev=1.2">2015/04/24</a></li>
 </ul>
 
     <h1> Abstract</h1>
@@ -44,62 +46,62 @@ Scheme implementations support SRFI-18 nor POSIX thread model. Some of the
 implementations even don't expose mutex. So it is nice to have the interface
 to handle timer to hide underlying implementation.</p>
     <h1> Specification</h1>
-    <p>
-      <code>(make-timer [error-handler])</code>
-    </p>
-    <p>Creates a timer object. The optional argument <em>error-handler</em> must be a
-procedure which accepts one argument. If it is given and when a timer
-task raises an error, then the handler will be invoked and timer will
-continue if the <em>error-handler</em> wouldn't raise an error. Otherwise
+    <h2>(make-timer [error-handler])</h2>
+    <p>Creates and starts a timer object. The optional argument <em>error-handler</em> 
+must be a procedure which accepts one argument. If it is given and when 
+a timer task raises an error, then the handler will be invoked and timer
+will continue if the <em>error-handler</em> wouldn't raise an error. Otherwise
 whenever an error is raised, timer stops and preserves the error.
-The error is raised when <code>timer-stop!</code> procedure is called.</p>
-    <p>
-      <code>(timer? obj)</code>
-    </p>
+The error is raised when <code>timer-cancel!</code> procedure is called.</p>
+    <p>Two timers should run in separate context, means whenever timer A is 
+executing a task, timer B should not be disturbed executing a task by 
+timer A's execution.</p>
+    <h2>(timer? obj)</h2>
     <p>Returns <code>#t</code> if given <em>obj</em> is a timer object, otherwise <code>#f</code>.</p>
-    <p>
-      <code>(timer-start! timer)</code>
-    </p>
-    <p>Starts the given <em>timer</em>. Timer won't do any task unless it's started.
-If one or more tasks are scheduled before the timer is started and
-the scheduled time is passed, then timer invokes the tasks.</p>
-    <p>
-      <code>(timer-stop! timer)</code>
-    </p>
+    <h2>(timer-cancel! timer)</h2>
     <p>Stops the given <em>timer</em>. The procedure raises the preserved error if there
 is. Once a timer is stopped, it will never be able to start again.</p>
-    <p>
-      <code>(timer-schedule! timer thunk when [period])</code>
-    </p>
+    <h2>(timer-schedule! timer thunk when [period])</h2>
     <p>Schedules the given <em>thunk</em> as the given <em>timer</em>'s task. The <em>when</em> argument
-specifies when the task will be started. It can be either time object or
-non negative integer. If the <em>when</em> is a time object, then the task is
-scheduled on that time. If the <em>when</em> is an integer, then the task is
-scheduled on passed number milliseconds later.</p>
-    <p>If the optional argument <em>period</em> is given, which must be either a time 
-object which type is <code>time-duration</code> or an integer, then the given task 
-is scheduled as periodical task. If <em>period</em> is a time object, then the 
-duration is simply added to calculated <em>when</em> after the execution. If it
-is an integer, then it is interpreted as milliseconds and added to calculated
-<em>when</em> as well.</p>
+specifies when the task will be started. It can be either timer delta object or
+non negative integer. The task is scheduled on the time when the given <em>when</em>
+passed from the procedure is called. The <em>task</em> is executed on the dynamic 
+environment where the <em>timer</em> is created.</p>
+    <p>If the optional argument <em>period</em> is given, which must be either timer delta
+object or an integer, then the given task is scheduled as periodical task.
+The next task is scheduled by adding <em>when</em> and <em>period</em>. If the <em>period</em> 
+or <em>when</em> is an integer, then it is interpreted as milliseconds.</p>
+    <p>The procedure returns timer id which is a readable datum such as an integer.</p>
     <p>The executing order of the same timing tasks are not defined.</p>
-    <p>The procedure returns timer id which is an integer.</p>
-    <p>
-      <code>(timer-reschedule! timer id when [period])</code>
-    </p>
+    <p>A task should be able to cancel or reschedule other tasks. But it should
+not be able to cancel or reschedule itself.</p>
+    <p>If a task is rescheduled whenever it's executed, the timer doesn't stop its
+execution. It is rescheduled but the current execution will be continued.</p>
+    <h2>(timer-reschedule! timer id when [period])</h2>
     <p>Reschedules the task associated to the given <em>id</em> on the given <em>timer</em>.
 The <em>when</em> and <em>period</em> arguments are the same as <code>timer-schedule!</code>.</p>
     <p>Thus to cancel the periodical task, you can specify 0 as <em>period</em> argument.</p>
     <p>The procedure returns given <em>id</em>.</p>
-    <p>
-      <code>(timer-remove! timer id)</code>
-    </p>
+    <h2>(timer-task-remove! timer id)</h2>
     <p>Removes the task associated to the given <em>id</em> on the given <em>timer</em>. It
 returns <code>#t</code> if a task is removed, otherwise <code>#f</code>.</p>
-    <p>
-      <code>(timer-exists? timer id)</code>
-    </p>
+    <h2>(timer-task-exists? timer id)</h2>
     <p>Returns <code>#t</code> if a task associated to the given <em>id</em> exists, otherwise <code>#f</code>.</p>
+    <h2>(make-timer-delta n unit)</h2>
+    <p>Creates a timer delta object. <em>n</em> must be an integer and <em>unit</em> must be
+a symbol which represents the time unit. Implementations must support
+the following units:</p>
+    <ul>
+      <li><code>h</code> : hour</li>
+      <li><code>m</code> : minute</li>
+      <li><code>s</code> : second</li>
+      <li><code>ms</code> : millisecond</li>
+      <li><code>us</code> : microsecond</li>
+      <li><code>ns</code> : nanosecond</li>
+    </ul>
+    <p>And may support other unit.</p>
+    <h2>(timer-delta? obj)</h2>
+    <p>Returns <code>#t</code> if given <em>obj</em> is a timer delta object, otherwise <code>#f</code>.</p>
     <h1> Implementation</h1>
     <p>The <a href="timer.tar.gz">sample implementation</a> of this SRFI depends on the 
 following SRFIs:</p>
