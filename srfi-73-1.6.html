@@ -1,0 +1,513 @@
+  <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+  <head>
+    <title>SRFI 73: Exact Infinities</title>
+  </head>
+
+  <body>
+
+<H1>Title</H1>
+
+Exact Infinities
+
+<H1>Author</H1>
+
+Chongkai Zhu
+
+<p>
+This SRFI is currently in ``withdrawn'' status. To see an explanation of each
+status that a SRFI can hold, see
+<A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+To
+provide input on this SRFI, please <CODE>
+<A HREF="mailto:srfi-73@srfi.schemers.org">mailto:srfi-73@srfi.schemers.org</A></CODE>.
+See <A HREF="../../srfi-list-subscribe.html">instructions
+here</A> to subscribe to the list. You can access previous messages via
+<A HREF="http://srfi.schemers.org/srfi-73/mail-archive/maillist.html">the
+archive of the mailing list</A>.
+You can access
+post-withdrawal messages via
+<a href="http://srfi.schemers.org/srfi-73/post-mail-archive/maillist.html">
+the archive of the mailing list</a>.
+</p>
+<UL>
+  <LI>Received: <a href="srfi-73-1.2.html">2005/06/19</a></LI>
+  <LI>Revised: <a href="srfi-73-1.3.html">2005/06/21</a></LI>
+  <LI>Withdrawn: <a href="srfi-73-1.6.html">2005/11/30</a></LI>
+  <li>Draft: 2005/06/19 - 2005/08/17</li>
+</UL>
+  
+<H1>Abstract</H1>Many Scheme implementations support exact arbitrary-precision 
+integer arithmetic as well as exact rational number computation. This SRFI 
+extends the rational numbers of R5RS by adding two rational infinities (1/0, 
+-1/0).
+<P>With infinities added to the number system we find that division by zero 
+"works". It lets initialization of variables precede bounds checks and gives 
+flexibility in placement of those checks.</P>
+<H1>Issues</H1>
+<P><B>SRFI-70 compatible</B></P>
+<P>Actually this SRFI was inspired by SRFI-70 (inexact infinities). I once 
+discussed exact infinities in SRFI-70 mail list with Aubrey Jaffer, but he 
+didn't intend to include exact infinities in SRFI-70. So here I define them as 
+another SRFI. For no ambiguity, in the rationale and specification part I will 
+use #e1/0 for rational infinity and #i1/0 for inexact infinity. Since SRFI-70 is 
+still in draft status, I think we should work together to make SRFI-70 and this 
+SRFI to be compatible to each other. In the current specification part, I leave 
+many "..." to indicate this part should be defined in SRFI-70, or, leave 
+unchanged as in R5RS. Nearly all changes on R5RS are orthogonal to SRFI-70, with 
+the only exception that I define infinite? instead of finite?.</P>
+<P>Finally, I have to say that the semantics of infinities in SRFI-70 and this 
+SRFI is different. According to SRFI-70:</P>
+<P>"The interpretation of real infinities is that #i1/0 represents real numbers 
+greater than can be encoded by finite inexacts in the implementation (&gt; 
+179.76931348623158e306 for IEEE-754 64-bit flonums) and that #i-1/0 represents 
+numbers less than can be encoded by finite inexacts in the implementation (&lt; 
+-179.76931348623158e306 for IEEE-754 64-bit flonums)."</P>
+<P>The interpretation of rational infinities here is that they are exact, 
+rational numbers with denominator 0.</P>
+<P><B>Should there be a #e0/0?</B></P>
+<P>SRFI-70 defines an optional #i0/0. Should I also define an (optional) 
+#e0/0?</P>
+<H1>Rationale</H1>
+<P>The exact rational operations of addition, subtraction, multiplication, and 
+division, plus a variety of other useful operations (comparison, reading, 
+writing) form a useful suite of routines and is defined in Scheme spec. The 
+construction of these programs depends on the availability of arbitrary 
+precision integer arithmetic.</P>
+<P>This SRFI extend the rational numbers of R5RS by adding two rational 
+infinities (#e1/0, #e-1/0). These infinities arise as the result of exact 
+division by 0.</P>
+<P>There are two rationales for adding exact infinity: aesthetic and 
+utilitarian. Aesthetically, having exact infinites allows one level of 
+calculation (<TT>exact division by 0</TT>) to be executed before bounds 
+checking, just as SRFI-70 has inexact infinites to enable <TT>inexact division 
+by 0</TT>. A Scheme with only inexact infinity but no exact infinity is also not 
+aesthetically satisfied. Another rationale is utility. For example, interval 
+arithmetic may need rational infinity.</P>
+<P>Because there are both positive infinity and negative infinity, we are forced 
+to have two zeroes: positive 0 and negative -0. Among other reasons for 
+preferring it, this model is more suited to transcendental functions allowing 
+one to describe branch cuts more specifically. (The idea "-0" comes from Richard 
+J. Fateman, see the reference for details.)</P>
+<P>For any operation that involves both exact (infinity) and inexact numbers, it 
+is a common arithmetic that all exact numbers will first be coerced into inexact 
+and then the computation continues. So in this SRFI I will not concern on 
+inexact numbers.</P>
+<H1>Specification</H1>
+<P>(Based on R5RS. "..." means this part should be defined same as SRFI-70)</P>
+<P><B>6.2.4 Syntax of numerical constants</B></P>
+<P><FONT color=#ff0000><B>...</B></FONT></P>
+<P><FONT color=#ff0000>Negative exact infinity is written "#e-1/0". Positive 
+exact infinity is written "#e1/0" or "#e+1/0". The positive exact zero is 
+written "0" or "+0". The negative exact zero is written "-0".</FONT></P>
+<P><FONT color=#ff0000>...</FONT></P>
+<H3>6.2.5 Numerical operations</H3>
+<P>The reader is referred to section <A 
+href="http://srfi.schemers.org/srfi-70/srfi-70.html#1.3.3">1.3.3 Entry 
+format</A> for a summary of the naming conventions used to specify restrictions 
+on the types of arguments to numerical routines. </P>
+<P>The examples used in this section assume that any numerical constant written 
+using an exact notation is indeed represented as an exact number. Some examples 
+also assume that certain numerical constants written using an inexact notation 
+can be represented without loss of accuracy; the inexact constants were chosen 
+so that this is likely to be true in implementations that use flonums to 
+represent inexact numbers. </P>
+<P>　</P>
+<DL>
+  <DT><U>procedure:</U> <B>number?</B> <I>obj</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>complex?</B> <I>obj</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>real?</B> <I>obj</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>rational?</B> <I>obj</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>integer?</B> <I>obj</I> 
+  <DD>These numerical type predicates can be applied to any kind of argument, 
+  including non-numbers. They return <TT>#t</TT> if the object is of the named 
+  type, and otherwise they return <TT>#f</TT>. In general, if a type predicate 
+  is true of a number then all higher type predicates are also true of that 
+  number. Consequently, if a type predicate is false of a number, then all lower 
+  type predicates are also false of that number. 
+  <P>If <VAR>z</VAR> is an inexact complex number, then <SAMP>`(real? 
+  <VAR>z</VAR>)'</SAMP> is true if and only if <SAMP>`(zero? (imag-part 
+  <VAR>z</VAR>))'</SAMP> is true. If <VAR>x</VAR> is an inexact real number, 
+  then <SAMP>`(integer? <VAR>x</VAR>)'</SAMP> is true if and only if </P><PRE>    <FONT color=red>(and (not (infinite? </FONT><VAR><FONT color=red>x</FONT></VAR><FONT color=red>)) (= </FONT><VAR>x</VAR> (round <VAR>x</VAR><FONT color=red>)))</FONT>
+</PRE><PRE>(complex? 3+4i)                        ==&gt;  #t
+(complex? 3)                           ==&gt;  #t
+(real? 3)                              ==&gt;  #t
+(real? -2.5+0.0i)                      ==&gt;  #t
+(real? #e1e10)                         ==&gt;  #t
+(rational? 6/10)                       ==&gt;  #t
+(rational? 6/3)                        ==&gt;  #t
+(integer? 3+0i)                        ==&gt;  #t
+(integer? 3.0)                         ==&gt;  #t
+(integer? 8/4)                         ==&gt;  #t
+<FONT color=red>(complex? #e1/0)                       ==&gt;  #t</FONT>
+<FONT color=red>(real? #e-1/0)                         ==&gt;  #t</FONT>
+<FONT color=red>(rational? #e1/0)                      ==&gt;  #</FONT><FONT color=#ff0000>t</FONT>
+<FONT color=red>(integer? #e-1/0)                      ==&gt;  #f</FONT>
+</PRE>
+  <BLOCKQUOTE>
+    <P><EM>Note:</EM> The behavior of these type predicates on inexact numbers 
+    is unreliable, <STRIKE>since</STRIKE> <FONT color=red>because </FONT>any 
+    inaccuracy may affect the result. </P></BLOCKQUOTE>
+  <BLOCKQUOTE>
+    <P><EM>Note:</EM> In many implementations the <CODE>rational?</CODE> 
+    procedure will be the same as <CODE>real?</CODE>, and the 
+    <CODE>complex?</CODE> procedure will be the same as <CODE>number?</CODE>, 
+    but unusual implementations may be able to represent some irrational numbers 
+    exactly or may extend the number system to support some kind of non-complex 
+    numbers. </P></BLOCKQUOTE></DD></DL>
+<P>　</P>
+<DL>
+  <DT><U>procedure:</U> <B>exact?</B> <I><VAR>z</VAR></I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>inexact?</B> <I><VAR>z</VAR></I> 
+  <DD>These numerical predicates provide tests for the exactness of a quantity. 
+  For any Scheme number, precisely one of these predicates is true. <PRE><FONT color=red>(exact? #e1/0)               ==&gt;  #t</FONT>
+</PRE></DD></DL>
+<DL>
+  <DT><U>procedure:</U> <B>=</B> <I>z1 z2 z3 ...</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>&lt;</B> <I>x1 x2 x3 ...</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>&gt;</B> <I>x1 x2 x3 ...</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>&lt;=</B> <I>x1 x2 x3 ...</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>&gt;=</B> <I>x1 x2 x3 ...</I> 
+  <DD>These procedures return <TT>#t</TT> if their arguments are (respectively): 
+  equal, monotonically increasing, monotonically decreasing, monotonically 
+  nondecreasing, or monotonically nonincreasing. <PRE><FONT color=red>(= #e1/0 #e1/0)                 ==&gt;  #t</FONT>
+<FONT color=red>(= #e-1/0 #e1/0)                ==&gt;  #f</FONT>
+<FONT color=red>(= #e-1/0 #e-1/0)               ==&gt;  #t</FONT>
+<FONT color=red>(= #i1/0 #e1/0)                 ==&gt;  #t</FONT>
+<FONT color=red>(= #e-1/0 #i-1/0)               ==&gt;  #t
+(= 0 -0)                        ==&gt;  #</FONT><font color="#FF0000">f</font></PRE>
+  <P><FONT color=red>For any finite positive number </FONT><VAR><FONT 
+  color=red>x</FONT></VAR><FONT color=red>:</FONT> </P><PRE><FONT color=red>(&lt; #e-1/0 -</FONT><VAR><FONT color=red>x</FONT></VAR><FONT color=red> -0 0 x 1/0))       ==&gt;  #t</FONT></PRE>
+  <P>These predicates are required to be transitive. </P>
+  <BLOCKQUOTE>
+    <P><EM>Note:</EM> The traditional implementations of these predicates in 
+    Lisp-like languages are not transitive. </P></BLOCKQUOTE>
+  <BLOCKQUOTE>
+    <P><EM>Note:</EM> While it is not an error to compare inexact numbers using 
+    these predicates, the results may be unreliable because a small inaccuracy 
+    may affect the result; this is especially true of <CODE>=</CODE> and 
+    <CODE>zero?</CODE>. When in doubt, consult a numerical analyst. 
+  </P></BLOCKQUOTE></DD></DL>
+<P>　</P>
+<DL>
+  <DT><FONT color=#ff0000><U>library procedure:</U> </FONT><B><FONT 
+  color=red>infinite?</FONT></B><FONT color=#ff0000> </FONT><I><VAR><FONT 
+  color=red>z</FONT></VAR></I><FONT color=#ff0000> </FONT>
+  <DD>　 
+  <DT><U>library procedure:</U> <B>zero?</B> <I><VAR>z</VAR></I> 
+  <DD>　 
+  <DT><U>library procedure:</U> <B>positive?</B> <I><VAR>x</VAR></I> 
+  <DD>　 
+  <DT><U>library procedure:</U> <B>negative?</B> <I><VAR>x</VAR></I> 
+  <DD>　 
+  <DT><U>library procedure:</U> <B>odd?</B> <VAR>n</VAR> 
+  <DD>　 
+  <DT><U>library procedure:</U> <B>even?</B> <VAR>n</VAR> 
+  <DD>These numerical predicates test a number for a particular property, 
+  returning <TT>#t</TT> or <TT>#f</TT>. See note above. <PRE><FONT color=red>(positive? #e1/0)             ==&gt;  #t</FONT>
+<FONT color=red>(negative? #e-1/0)            ==&gt;  #t</FONT>
+<FONT color=red>(infinite? #e-1/0)            ==&gt;  #t</FONT>
+<FONT color=red>(infinite? #e0/0)             ==&gt;  #t</FONT>
+<FONT color=red>(positive? 0)                 ==&gt;  #f
+(negative? -0)                ==&gt;  #f
+(zero? 0)                     ==&gt;  #t
+(zero? -0)                    ==&gt;  #t</FONT></PRE></DD></DL>
+<P>　</P>
+<DL>
+  <DT><U>library procedure:</U> <B>max</B> <I>x1 x2 ...</I> 
+  <DD>　 
+  <DT><U>library procedure:</U> <B>min</B> <I>x1 x2 ...</I> 
+  <DD>These procedures return the maximum or minimum of their arguments. <PRE>(max 3 4)                              ==&gt;  4    ; exact
+(max 3.9 4)                            ==&gt;  4.0  ; inexact
+</PRE>
+  <P><FONT color=red>For any finite exact number </FONT><VAR><FONT color=red>x, 
+  </FONT></VAR><FONT color=red>any finite inexact number <VAR>y</VAR>:</FONT> 
+  </P><PRE><FONT color=red>(max #e1/0 </FONT><VAR><FONT color=red>x</FONT></VAR><FONT color=red>)                            ==&gt;  #e1/0</FONT>
+<FONT color=red>(max #e1/0 <VAR>y</VAR>)                            ==&gt;  #i1/0</FONT>
+</PRE>
+  <BLOCKQUOTE>
+    <P><EM>Note:</EM> If any argument is inexact, then the result will also be 
+    inexact (unless the procedure can prove that the inaccuracy is not large 
+    enough to affect the result, which is possible only in unusual 
+    implementations). If <SAMP>`min'</SAMP> or <SAMP>`max'</SAMP> is used to 
+    compare numbers of mixed exactness, and the numerical value of the result 
+    cannot be represented as an inexact number without loss of accuracy, then 
+    the procedure may report a violation of an implementation restriction. 
+  </P></BLOCKQUOTE></DD></DL>
+<P>　</P>
+<DL>
+  <DT><U>procedure:</U> <B>+</B> <I>z1 ...</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>*</B> <I>z1 ...</I> 
+  <DD>These procedures return the sum or product of their arguments. <PRE>(+ 3 4)                                ==&gt;  7
+(+ 3)                                  ==&gt;  3
+(+)                                    ==&gt;  0
+<FONT color=red>(+ #e1/0 #e1/0)                        ==&gt;  #e1/0</FONT>
+<FONT color=red>(+ #e1/0 #e-1/0)                       ==&gt;  #i0/0, or raise an error if the Scheme implementation doesn't support #i0/0
+(+ 0 -0)                               ==&gt;  0</FONT>
+<FONT color=red>(+ 0 0)                                ==&gt;  0</FONT>
+<FONT color=red>(+ -0 -0)                              ==&gt;  -0</FONT>
+
+(* 4)                                  ==&gt;  4
+(*)                                    ==&gt;  1
+<FONT color=red>(* 5 #e1/0)                            ==&gt;  #e1/0</FONT>
+<FONT color=red>(* -5 #e1/0)                           ==&gt;  #e-1/0</FONT>
+<FONT color=red>(* #e1/0 #e1/0)                        ==&gt;  #e1/0</FONT>
+<FONT color=red>(* #e1/0 #e-1/0)                       ==&gt;  #e-1/0</FONT>
+<FONT color=red>(* 0 #e1/0)                            ==&gt;  #i0/0, or raise an error if the Scheme implementation doesn't support #i0/0
+(* 0 -0)                               ==&gt;  -0</FONT>
+<FONT color=red>(* 0 2)                                ==&gt;  0</FONT>
+<FONT color=red>(* -0 -2)                              ==&gt;  0</FONT>
+<FONT color=red>(* -0 2)                               ==&gt;  -0
+(* 0 #e1/0)                            ==&gt;  #i0/0, or raise an error if the Scheme implementation doesn't support #i0/0
+</FONT></PRE>
+  <P><FONT color=red>For any finite exact number </FONT><VAR><FONT 
+  color=red>z</FONT></VAR><FONT color=red>:</FONT> </P><PRE><FONT color=red>(+ #e1/0 </FONT><VAR><FONT color=red>z</FONT></VAR><FONT color=red>)                            ==&gt;  #e1/0</FONT>
+<FONT color=red>(+ #e-1/0 </FONT><VAR><FONT color=red>z</FONT></VAR><FONT color=red>)                           ==&gt;  #e-1/0</FONT>
+</PRE></DD></DL>
+<P>　</P>
+<DL>
+  <DT><U>procedure:</U> <B>-</B> <I>z1 z2</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>-</B> <I><VAR>z</VAR></I> 
+  <DD>　 
+  <DT><U>optional procedure:</U> <B>-</B> <I>z1 z2 ...</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>/</B> <I>z1 z2</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>/</B> <I><VAR>z</VAR></I> 
+  <DD>　 
+  <DT><U>optional procedure:</U> <B>/</B> <I>z1 z2 ...</I> 
+  <DD>With one argument, these procedures return the additive or multiplicative 
+  inverse of their argument. 
+  <P><FONT color=#ff0000>With two or more arguments: </FONT></P>
+  <P><FONT color=#ff0000>(- z1 . z2)&nbsp;&nbsp; =&gt;&nbsp;&nbsp; (apply + z1 
+  (map - z2))<BR>(/ z1 . z2)&nbsp;&nbsp; =&gt;&nbsp;&nbsp; (apply * z1 (map / 
+  z2))</FONT></P><PRE><FONT color=red>(- 0)                                  ==&gt;  -0</FONT>
+<FONT color=red>(- -0)                                 ==&gt;  0</FONT>
+<FONT color=red>(- #e1/0)                              ==&gt;  #e-1/0</FONT>
+<FONT color=red>(- #-e1/0)                             ==&gt;  #e1/0</FONT>
+(- 3)                                  ==&gt;  -3
+
+<FONT color=red>(/ 0)                                  ==&gt;  #e1/0</FONT>
+<FONT color=red>(/ -0)                                 ==&gt;  #e-1/0</FONT>
+<FONT color=red>(/ #e1/0)                              ==&gt;  0</FONT>
+<FONT color=red>(/ #e-1/0)                             ==&gt;  -0</FONT>
+(/ 3)                                  ==&gt;  1/3</PRE></DD></DL>
+<P>　</P>
+<DL>
+  <DT><U>library procedure:</U> <B>abs</B> <I>x</I> 
+  <DD><SAMP>`Abs'</SAMP> returns the absolute value of its argument. <PRE>(abs -7)                               ==&gt;  7
+<FONT color=red>(abs #e-1/0)                           ==&gt;  #e1/0
+(abs -0)                               ==&gt;  0
+</FONT></PRE></DD></DL>
+<DL>
+  <DT><FONT color=#ff0000>...</FONT> </DT></DL>
+<DL>
+  <DT><U>procedure:</U> <B>numerator</B> <I><VAR>q</VAR></I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>denominator</B> <I><VAR>q</VAR></I> 
+  <DD>These procedures return the numerator or denominator of their argument; 
+  the result is computed as if the argument was represented as a fraction in 
+  lowest terms. The denominator is always positive <FONT color=#ff0000>or 
+  zero</FONT>. The denominator of 0 is defined to be 1. <PRE><TT>(numerator (/ 6 4))                    ==&gt;  3
+(denominator (/ 6 4))                  ==&gt;  2
+(denominator
+  (exact-&gt;inexact (/ 6 4)))            ==&gt; 2.0
+<FONT color=#ff0000>(numerator</FONT> <FONT color=#ff0000>#e1/0)                      ==&gt;  1
+(numerator</FONT> <FONT color=#ff0000>#e-1/0)                     ==&gt;  -1
+(denominator #e1/0)                    ==&gt;  </FONT></TT><FONT color=#ff0000>0</FONT>
+<TT><FONT color=#ff0000>(denominator #e-1/0)                   ==&gt;  </FONT></TT><FONT color=#ff0000>0</FONT>
+</PRE></DD></DL>
+<P>　</P>
+<DL>
+  <DT><U>procedure:</U> <B>floor</B> <I>x</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>ceiling</B> <I>x</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>truncate</B> <I>x</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>round</B> <I>x</I> 
+  <DD>These procedures return integers. <SAMP>`Floor'</SAMP> returns the largest 
+  integer not larger than <VAR>x</VAR>. <SAMP>`Ceiling'</SAMP> returns the 
+  smallest integer not smaller than <VAR>x</VAR>. <SAMP>`Truncate'</SAMP> 
+  returns the integer closest to <VAR>x</VAR> whose absolute value is not larger 
+  than the absolute value of <VAR>x</VAR>. <SAMP>`Round'</SAMP> returns the 
+  closest integer to <VAR>x</VAR>, rounding to even when <VAR>x</VAR> is halfway 
+  between two integers. 
+  <BLOCKQUOTE>
+    <P><EM>Rationale:</EM> <SAMP>`Round'</SAMP> rounds to even for consistency 
+    with the default rounding mode specified by the IEEE floating point 
+    standard. </P></BLOCKQUOTE>
+  <BLOCKQUOTE>
+    <P><EM>Note:</EM> If the argument to one of these procedures is inexact, 
+    then the result will also be inexact. If an exact value is needed, the 
+    result should be passed to the <SAMP>`inexact-&gt;exact'</SAMP> procedure. 
+    </P></BLOCKQUOTE><PRE>(floor -4.3)                           ==&gt;  -5.0
+(ceiling -4.3)                         ==&gt;  -4.0
+(truncate -4.3)                        ==&gt;  -4.0
+(round -4.3)                           ==&gt;  -4.0
+
+(floor 3.5)                            ==&gt;  3.0
+(ceiling 3.5)                          ==&gt;  4.0
+(truncate 3.5)                         ==&gt;  3.0
+(round 3.5)                            ==&gt;  4.0  ; inexact
+
+(round 7/2)                            ==&gt;  4    ; exact
+(round 7)                              ==&gt;  7
+
+<FONT color=red>(floor #e1/0)                          ==&gt;  #e1/0</FONT>
+<FONT color=red>(ceiling #e-1/0)                       ==&gt;  #e-1/0</FONT>
+</PRE></DD></DL>
+<P><FONT color=#ff0000>...</FONT></P>
+<DT><U>procedure:</U> <B>exact-&gt;inexact</B> <I><VAR>z</VAR></I> 
+<DD>　 
+<DT><U>procedure:</U> <B>inexact-&gt;exact</B> <I><VAR>z</VAR></I> 
+<DD><SAMP>`Exact-&gt;inexact'</SAMP> returns an inexact representation of 
+<VAR>z</VAR>. The value returned is the inexact number that is numerically 
+closest to the argument. If an exact argument has no reasonably close inexact 
+equivalent, then a violation of an implementation restriction may be reported. 
+<P><SAMP>`Inexact-&gt;exact'</SAMP> returns an exact representation of 
+<VAR>z</VAR>. The value returned is the exact number that is numerically closest 
+to the argument. If an inexact argument has no reasonably close exact 
+equivalent, then a violation of an implementation restriction may be reported. 
+</P>
+<P>These procedures implement the natural one-to-one correspondence between 
+exact and inexact integers throughout an implementation-dependent range. See 
+section <A href="http://srfi.schemers.org/srfi-70/srfi-70.html#6.2.3">6.2.3 
+Implementation restrictions</A>.<BR><PRE><FONT color=red>(exact-&gt;inexact #e1/0)                  ==&gt;  #i1/0
+(inexact-&gt;exact #i1/0)                  ==&gt;  #e1/0</FONT></PRE>
+<H3>6.2.6 Numerical input and output</H3>
+<P>　</P>
+<P>　</P>
+<DL>
+  <DT><U>procedure:</U> <B>number-&gt;string</B> <I>z</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>number-&gt;string</B> <I>z radix</I> 
+  <DD><VAR>Radix</VAR> must be an exact integer, either 2, 8, 10, or 16. If 
+  omitted, <VAR>radix</VAR> defaults to 10. The procedure 
+  <SAMP>`number-&gt;string'</SAMP> takes a number and a radix and returns as a 
+  string an external representation of the given number in the given radix such 
+  that <PRE><TT>(let ((number <VAR>number</VAR>)
+      (radix <VAR>radix</VAR>))
+  (eqv? number
+        (string-&gt;number (number-&gt;string number
+                                        radix)
+                        radix)))
+</TT>
+</PRE>
+  <P>is true. It is an error if no possible result makes this expression true. 
+  </P>
+  <P>If <VAR>z</VAR> is inexact, the radix is 10, and the above expression can 
+  be satisfied by a result that contains a decimal point, then the result 
+  contains a decimal point and is expressed using the minimum number of digits 
+  (exclusive of exponent and trailing zeroes) needed to make the above 
+  expression true <A 
+  href="http://srfi.schemers.org/srfi-70/r5rs_13.html#BIB3">[howtoprint]</A>, <A 
+  href="http://srfi.schemers.org/srfi-70/r5rs_13.html#BIB5">[howtoread]</A>; 
+  otherwise the format of the result is unspecified. </P>
+  <P>The result returned by <SAMP>`number-&gt;string'</SAMP> never contains an 
+  explicit radix prefix. </P>
+  <BLOCKQUOTE>
+    <P><EM>Note:</EM> The error case can occur only when <VAR>z</VAR> is not a 
+    complex number or is a complex number with a non-rational real or imaginary 
+    part. </P></BLOCKQUOTE>
+  <BLOCKQUOTE>
+    <P><EM>Rationale:</EM> If <VAR>z</VAR> is an inexact number represented 
+    using flonums, and the radix is 10, then the above expression is normally 
+    satisfied by a result containing a decimal point. The unspecified case 
+    allows for infinities, NaNs, and non-flonum representations. 
+  </P></BLOCKQUOTE></DD></DL>
+<P>　</P>
+<DL>
+  <DT><U>procedure:</U> <B>string-&gt;number</B> <I>string</I> 
+  <DD>　 
+  <DT><U>procedure:</U> <B>string-&gt;number</B> <I>string radix</I> 
+  <DD>Returns a number of the maximally precise representation expressed by the 
+  given <VAR>string</VAR>. <VAR>Radix</VAR> must be an exact integer, either 2, 
+  8, 10, or 16. If supplied, <VAR>radix</VAR> is a default radix that may be 
+  overridden by an explicit radix prefix in <VAR>string</VAR> (e.g. 
+  <TT>"#o177"</TT>). If <VAR>radix</VAR> is not supplied, then the default radix 
+  is 10. If <VAR>string</VAR> is not a syntactically valid notation for a 
+  number, then <SAMP>`string-&gt;number'</SAMP> returns <TT>#f</TT>. <PRE><TT>(string-&gt;number "100")                 ==&gt;  100
+(string-&gt;number "100" 16)              ==&gt;  256
+(string-&gt;number "1e2")                 ==&gt;  100.0
+(string-&gt;number "15##")                ==&gt;  1500.0
+<FONT color=red>(string-&gt;number "#e1/0")               ==&gt;  #e1/0</FONT>
+<FONT color=red>(string-&gt;number "#e-1/0")              ==&gt;  #e-1/0</FONT>
+</TT>
+</PRE>
+  <BLOCKQUOTE>
+    <P><EM>Note:</EM> The domain of <SAMP>`string-&gt;number'</SAMP> may be 
+    restricted by implementations in the following ways. 
+    <SAMP>`String-&gt;number'</SAMP> is permitted to return <TT>#f</TT> whenever 
+    <VAR>string</VAR> contains an explicit radix prefix. If all numbers 
+    supported by an implementation are real, then 
+    <SAMP>`string-&gt;number'</SAMP> is permitted to return <TT>#f</TT> whenever 
+    <VAR>string</VAR> uses the polar or rectangular notations for complex 
+    numbers. If all numbers are integers, then <SAMP>`string-&gt;number'</SAMP> 
+    may return <TT>#f</TT> whenever the fractional notation is used. If all 
+    numbers are exact, then <SAMP>`string-&gt;number'</SAMP> may return 
+    <TT>#f</TT> whenever an exponent marker or explicit exactness prefix is 
+    used, or if a <TT>#</TT> appears in place of a digit. If all inexact numbers 
+    are integers, then <SAMP>`string-&gt;number'</SAMP> may return <TT>#f</TT> 
+    whenever a decimal point is used.</P></BLOCKQUOTE></DD></DL>
+<H1>Implementation</H1>
+<P>Here is my <a href="exact.scm">implementation</a>, which is based on a Scheme implementation that 
+supports arbitrary-big integer arithmetic as well as exact rational number 
+computation. To avoid confusion with identifies in base-Scheme, all procedures 
+defined in this SRFI (except infinite?) and prefixed with "my" or "my-". This 
+reference implementation also requires SRFI-9, SRFI-13, SRFI-16, and 
+SRFI-23.</P>
+<P><B>Examples:</B></P>
+<P>&gt; (exact-&gt;string (my-max (string-&gt;exact 
+"-1/2")<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+(string-&gt;exact "-1"))) ;(max -1/2 -1)<BR>"-1/2"<BR>&gt; (exact-&gt;string 
+(my+ (string-&gt;exact 
+"-1/2")<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+(string-&gt;exact 
+"1/3")<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+(string-&gt;exact "0")))<BR>"-1/6"<BR>&gt; (exact-&gt;string (my* 
+(string-&gt;exact 
+"-0")<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+(string-&gt;exact "0")))<BR>"-0"<BR>&gt; (exact-&gt;string (my- 
+(string-&gt;exact 
+"0")<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+(string-&gt;exact "1/0")))<BR>"-1/0"</P>
+<H1>References</H1>
+<UL>
+  <LI><A href="http://srfi.schemers.org/srfi-70/">SRFI 70: Numerics with 
+  Infinities</A> by Aubrey Jaffer 
+  <LI><A href="http://www.cs.berkeley.edu/~fateman/papers/extrat.ps">Computation 
+  with the Extended Rational Numbers and an Application to Interval 
+  Arithmetic</A> by Richard J. Fateman </LI></UL>
+<H1>Copyright</H1>Copyright (C) Chongkai Zhu (2005). All Rights Reserved. 
+<P>Permission is hereby granted, free of charge, to any person obtaining a copy 
+of this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of 
+the Software, and to permit persons to whom the Software is furnished to do so, 
+subject to the following conditions: 
+<P>The above copyright notice and this permission notice shall be included in 
+all copies or substantial portions of the Software. 
+<P>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS 
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER 
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
+
+<HR>
+
+<ADDRESS>Author: Chongkai Zhu</ADDRESS>
+<ADDRESS>Editors: <A href="mailto:srfi-editors@srfi.schemers.org">Mike 
+Sperber</A></ADDRESS></DD></BODY></HTML>
