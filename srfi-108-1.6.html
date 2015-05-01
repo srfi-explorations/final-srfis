@@ -1,0 +1,848 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>SRFI 108: Named quasi-literal constructors</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+  div.title h1 { font-size: small; color: blue }
+  div.title { font-size: xx-large; color: blue; font-weight: bold }
+  h1 { font-size: x-large; color: blue }
+  h2 { font-size: large; color: blue }
+  h3 { font-size: medium; font-weight: bold }
+  /* So var inside pre gets same font as var in paragraphs. */
+  var { font-family: monospace; }
+  em.non-terminal { }
+  em.non-termina-def { }
+  code.literal { font-style: normal }
+  code.literal:before { content: "“" }
+  code.literal:after { content: "”" }
+  </style>
+  </head>
+
+<body>
+<div class="title">
+<H1>Title</H1>
+Named quasi-literal constructors
+</div>
+
+<H1>Author</H1>
+<p>Per Bothner
+<code><a href="mailto:per@bothner.com">&lt;per@bothner.com&gt;</a></code></p>
+
+<h1 id="status">Status</h1>
+<p>
+This SRFI is currently in ``final'' status.  To see an explanation of
+each status that a SRFI can hold, see <a
+href="http://srfi.schemers.org/srfi-process.html">here</a>.
+
+To provide input on this SRFI, please
+<a href="mailto:srfi minus 108 at srfi dot schemers dot org">mail to
+<code>&lt;srfi minus 108 at srfi dot schemers dot org&gt;</code></a>.  See
+<a href="../../srfi-list-subscribe.html">instructions here</a> to
+subscribe to the list.  You can access previous messages via
+<a href="mail-archive/maillist.html">the archive of the mailing list</a>.
+You can access
+post-finalization messages via
+<a href="http://srfi.schemers.org/srfi-108/post-mail-archive/maillist.html">
+the archive of the mailing list</a>.
+</p>
+
+<ul>
+      <li>
+	Received: <a href="srfi-108-1.1.html">2012/11/03</a></li>
+       <li>Revision: <a href="srfi-108-1.2.html">2013/02/04</a></li>
+       <li>Revision: <a href="srfi-108-1.3.html">2013/03/27</a></li>
+       <li>Revision: <a href="srfi-108-1.4.html">2013/04/19</a></li>
+       <li>Revision: <a href="srfi-108-1.5.html">2013/05/25</a></li>
+       <li>Finalized: <a href="srfi-108-1.6.html">2013/06/21</a></li>
+      <li>Draft: 2012/11/10-2013/01/10</li>
+</ul>
+
+<H1>Abstract</H1>
+<p>
+This specifies an extensible reader syntax for
+named value constructors.
+A reader prefix is followed by a <q>tag</q> (an identifier),
+and then expressions and literal text parameters.
+The tag can be though of as a class name, and the expression and
+literal text are arguments to an object constructor call.
+The reader translates <code>&amp;<var>tag</var>{...}</code> to a list
+<code>($construct$:<var>tag</var> ...)</code>,
+where <code>$construct$:<var>tag</var></code>
+is normally bound to a predefined macro.
+<p>
+This propsal depends on
+<a href="../srfi-109/srfi-109.html">SRFI-109 (extended string quasi-literals)</a> (in spite of having a lower number).
+It also shares quite of bit of syntax with
+<a href="../srfi-107/srfi-107.html">SRFI-107 (XML reader syntax)</a>.
+
+<h1>Rationale</h1>
+
+<h2>Named (quasi-)literals</h2>
+<p>
+When adding new datatypes it is useful to add new literals of that type,
+or at least a compact readable notation for creating instances.
+<a href="http://srfi.schemers.org/srfi-10/srfi-10.html">SRFI-10</a> provided
+one solution.  Here is an example, which assumes a URI
+type for representing encoded Uniform Resource Identifiers (URIs - or
+generalized URLs):
+<pre>
+#,(URI "http://example.com/")
+</pre>
+<p>
+SRFI-10 has a number of problems.  One issue
+is that SRFI-10 conflicts with <code>syntax-case</code> and R6RS.
+More fundamentally SRFI-10 resolves the <q>tag</q> name to a
+constructor function at read time, which requires managing those
+names using a distinct mechanism.  It seems better to use normal
+scope rules (including library import) to manage this mapping.
+The reader is also responsible for calling the constructor,
+which means the format handled by <code>read</code> is extensible,
+which is good, but you have to be careful about the security
+implications, making sure only <q>safe</q> constructor functions are called.
+Finally, SRFI-10 doesn't integrate with quasi-quotation,
+and some of us find its syntax a bit ugly.
+<p>
+Instead, this SRFI proposes:
+<pre>
+&amp;URI{http://example.com/}
+</pre>
+<p>
+The Scheme reader translates this to:
+<pre>
+($construct$:URI "http://example.com/")
+</pre>
+The programmer must provide or import a macro or procedure definition
+of <code>$construct$:URI</code> that creates a URI value.
+<p>
+As related prior art, Caml p4 has an interesting
+<a href="http://caml.inria.fr/pub/docs/tutorial-camlp4/tutorial004.html">quotation system</a>.
+<h2>Enclosed unquoted expressions</h2>
+The arguments to the object initializer aren't always constant.
+Escaped expressions can be written thus:
+<pre>
+(define example-host "example.com")
+&amp;URI{http://&amp;[example-host]/}
+</pre>
+<p>
+Note that <code class="literal">&amp;</code>
+is used both to introduce the top-level quasi-literal,
+and as an escape character before the unquoted expression.
+<p>
+The above example is read as:
+<pre>
+($construct$:URI "http://" $&lt;&lt;$ example-host $&gt;&gt;$ "/")
+</pre>
+The symbols <code>$&lt;&lt;$</code> and <code>$&gt;&gt;$</code> are special
+<q>marker</q> symbols bound to unique values.
+Their use allows the implementation of <code>$construct$:URI</code>
+to tell if content is part of the literal text or from an
+enclosed expression - which is sometimes useful to know.
+<p>
+Note that enclosed expressions are commonly strings but not always.
+This example executes an SQL query with a numeric parameter:
+<pre>
+&amp;sql{select * from employees where salary &gt; &amp;[min-salary]}
+</pre>
+Even when the parameter is a string, simple string pasting
+may be wrong - or dangerous:
+Consider:
+<pre>
+&amp;sql{select * from employees where name = '&amp;[my-name]'}
+</pre>
+<p>
+Consider what happens if <var>name</var> is constructed by a malicious
+user and has the value: <code class="literal">smith' or ''='</code>.  In that case the effective condition
+would be:
+<pre>
+name = 'smith' or ''=''
+</pre>
+This evaluates to true so it would retrieve all <code>employees</code>.
+The use of <code>$&lt;&lt;$</code> and <code>$&gt;&gt;$</code>
+enables the <code>$construct$:sql</code> implementation
+to do the necessary escaping of special characters in text
+resulting from an evaluated expression.
+<!--
+<p>
+An example with enclosed expressions:
+<pre>
+&amp;cname{abc&amp;[exp1]def&amp;[exp2 exp3]ghi}
+</pre>
+is translated by the reader to:
+<pre>
+($construct$:cname "abc" $&lt;&lt;$ exp1 $&gt;&gt;$ "def" $&lt;&lt;$ exp2 exp3 $&gt;&gt;$ "ghi")
+</pre>
+-->
+<!--
+<p>The name <code>extended-syntax-handler</code> is resolved
+in the normal lexical scope, and thus can be defined in a library.
+The default binding <code>extended-syntax-handler</code>
+is <code>extended-syntax-handler-default</code>,
+which is partly implementation-defined (see later ???).
+-->
+
+<h2>Initial arguments</h2>
+It is convenient to directly support initial unquoted expressions.
+Instead of:
+<pre>
+&amp;cname{&amp;[exp1 exp2]text}
+</pre>
+you can write:
+<pre>
+&amp;cname[exp1 exp2]{text}
+</pre>
+<p>These are almost the same, but there is conceptual
+difference: The latter variant is typically used for options
+or XML-style attributes. The former variant
+is used to list <q>components</q> of the result object,
+or <q>children</q> in the XML sense.
+Initial expressions can be used for keyword arguments - or
+general non-string arguments.
+Here is an example (converted from the Scribble documentation):
+<pre>
+&amp;elem[style: 'italic]{Yummy!}
+</pre>
+<p>
+Consider objects that are normally constructed from a string representation.
+In that case one might want to concatenate the non-initial enclosed
+expressions along with the literal text to yield the string,
+while using initial arguments for keywords or non-string arguments.
+Therefore the <code>$construct$:cname</code> implementation
+needs to be able to unambiguously select the initial arguments.
+To do this, the first example in this section is read as
+<pre>
+($construct$:cname $&lt;&lt;$ exp1 exp2 $&gt;&gt;$ "text")
+</pre>
+while the second is read as:
+<pre>
+($construct$:cname exp1 exp2 $&gt;&gt;$ "text")
+</pre>
+i.e. without the initial <code class="literal">$&lt;&lt;$</code> symbol.
+Commonly both expressions will evaluate to
+the same value, but that is not required.
+
+<h2>Document processing</h2>
+
+One intended application for this extension is document markup.
+The <a href="http://docs.racket-lang.org/scribble/">Scribble</a> system
+defines a syntax used for writing documents, though it has
+other uses.  It is a kind of template
+processor with embedded expression in the Racket Scheme dialect.
+The general Racket syntax for an embedded expression is:
+<pre>
+@<var>cmd</var>[<var>datum</var> ...]{<var>text-body</var>}
+</pre>
+This SRFI uses <code class="literal">&amp;</code> instead of <code class="literal">@</code>, to
+be compatible with XML-literals, and also because the proposed syntax
+is similar but not fully compatible with Scribble.
+Non-compatible cases include <code>@{foo bar}</code>
+which Scribble reads as <code>("foo bar")</code>,
+while SRFI-109 instead defines this as the string
+<code>"foo bar"</code>.
+<p>
+Markup is commonly nested, which suggests that a
+<code class="literal">&amp;</code> in text can be used
+as an abbreviated <var class="nonterminal"><a href="#extended-datum-literal-def">extended-datum-literal</a></var>.
+Specifically:
+<pre>
+&amp;name1[exps]{abc&amp;name2[exps]{klm}xyz}
+</pre>
+is syntatic sugar for:
+<pre>
+&amp;name1[exps]{abc&amp;[&amp;name2[exps]{klm}]xyz}
+</pre>
+<p>
+This nesting of markup motivates using
+the same escape character for both top-level and enclosed forms.
+
+<h2>Translation to list form</h2>
+<p>
+As shown, the Scheme reader translates a named quasi-literal to a list,
+which is then subject to regular macro-expansion and evaluation:
+<pre>
+&amp;tag{...}
+</pre>
+is read as if it were:
+<pre>
+($construct$:tag ...)
+</pre>
+One can see this mapping by quoting the form:
+<pre>
+'&amp;tag{...} &#x027F9; ($construct$:tag ...)
+</pre>
+<p>
+The choice of the translation <code>$construct$:tag</code>
+is somewhat arbitrary.  We want it to be easy for programmers
+to write, to be readable, and thus not excessively verbose.
+We want the symbol to include the actual <code>tag</code> as part of the name,
+but using just <code>tag</code> by itself is likely to lead to
+awkward name clashes.  (Of course it is perfectly
+reasonable to implement <code>$construct$:tag</code> using
+a <code>tag</code> function.)
+Using colon to delimit the <code>tag</code> part seems
+readable and clean.  Note there may be some complication
+in a Scheme variant that uses colon as a package or
+namespace separator, as for example Kawa does.  However,
+the problem is easily solved (at least in Kawa) by defining
+<code>$construct$</code> as a predefined namespace prefix.
+<p>
+When specifying this translation we have two semi-conflicting goals:
+<ol>
+<li>
+<em>Information-preservation</em>:
+The structure and important properties of the quasi-literal
+surface syntax should be preserved in the list form,
+so sophisticated macros have the information they need.
+For example a macro may want to distingish literal content text
+from a string literal in an enclosed expression.
+One reason might to support <code>format</code>-specifiers.
+In that case literal content text should get treated as part
+of the format string, while a string literal in an enclosed expression
+would be a value argument to <code>format</code> (possibly with a
+default format specifier in the format string), which matters
+if argument re-positioning is supported.
+Another example: The XML data model distinguishes text nodes
+from atomic string values: literal text would evaluate to
+text nodes, while enclosed string values are atomic values.
+Finally, we may want to distinguish initial arguments.
+For example, one might want to enforce a rule that
+keyword arguments are only allowed in initial arguments.
+<li>
+<em>Implementation-ease</em> (in the sense being easy to
+write simple expanders):
+We want it to be easy to write expanders when we don't care about
+these distinctions.
+It should be trivial to write a <code>$construct$:tag</code>.
+It should be possible to define <code>$construct$:tag</code>
+as a function, instead of a macro.
+</ol>
+<h3>Translating enclosed expressions</h3>
+<p>
+The translation uses a pair of special symbols
+to mark the start and end of the enclosed expressions:
+<pre>
+($construct$:foo "s" $&lt;&lt;$ exp1 exp2 $&gt;&gt;$ "t")
+</pre>
+<p>
+This translation scores highly on information-preservation.
+It also scores highly on implementation-ease in the simple case
+where we can just ignore which expressions are enclosed and which
+are literal.  For example
+if <code>$construct$:foo</code> is defined in the simplest way possible:
+<pre>
+(define $construct$:foo make-foo)
+</pre>
+then the example is equivalent to the call:
+<pre>
+(make-foo "s" "" exp1 exp2 "" "t")
+</pre>
+<p>
+When you do a more complex translation, you may have to write a macro,
+and dealing with <code>$&lt;&lt;$</code> and <code>$&gt;&gt;$</code>
+is not completely trivial,
+Still, this seems a reasonable tradeoff; we later provide
+a helper macro <code>define-simple-constructor</code> to
+simplify some common cases.
+<p>
+Note this convention lets us distinguish these cases (if you care):
+<pre>
+&amp;foo{_&amp;bar{b}_}
+&amp;foo{_&amp;[&amp;bar{b}]_}
+</pre>
+because these translate differently:
+<pre>
+($construct$:foo "_" ($construct:bar "b") "_")
+($construct$:foo "_" $&lt;&lt;$ ($construct:bar "b") $&gt;&gt;$ "_")
+</pre>
+<p>
+An earlier draft specified that translating an exclosed expression sequence:
+<pre>
+&amp;foo{s&amp;[exp1 exp2]t}
+</pre>
+would use a <code>$unquote$</code> macro to indicate the expressions:
+<pre>
+($construct$:foo "s" ($unquote$ exp1 exp2) "t")
+</pre>
+This scores well on information-preservation, but poorly
+on implementation-ease.  This is because you can't write a default
+(library) implementation of <code>$unquote$</code> as a function <em>or</em>
+macro in a way that <q>splices</q> the expressions into the
+<code>$construct$:foo</code> invocation.
+We could implement <code>$unquote$</code> as an identity function,
+if there was a separate <code>$unquote$</code> for each expression:
+<pre>
+($construct$:foo "s" ($unquote$ exp1) ($unquote$ exp2) "t")
+</pre>
+However, this does lose information about how many <code>&amp;[...]</code>-delimiters there were - which might (in rare situations) matter.
+Also, we would need some convention to distinquish prefix arguments
+from other enclosed expressions.
+
+<h2>Extra text features</h2>
+<p>
+Because we use the same escape prefix <code class="literal">&amp;</code>
+as in 
+<a href="../srfi-109/srfi-109.html">SRFI-109 (extended string quasi-literals)</a> it is make sense to allow the same convenience features:
+<ul>
+<li>
+XML-style character names (e.g. <code>&amp;lbrace;</code>);
+<li>
+XML-style character references (e.g. <code>&amp;#27;&amp;#x1B;</code>);
+<li>
+line-continuation (using <code>&amp;-</code>);
+<li>
+indentation handling (using <code>&amp;|</code>);
+<li>
+comments (using <code>&amp;#|comment|#</code>); and
+<li>(optionally) format specifiers (as in <code>&amp;~,2f[balance-due]</code>).
+</ul>
+See the syntax specification below for details, and
+see 
+<a href="../srfi-109/srfi-109.html">SRFI-109</a>
+for examples and motivation.
+
+<h2>Resolving to constructor</h2>
+<p>
+The reader creates <code>$construct$:<var>cname</var></code> invocations,
+so the application or library programmer must provide a
+definition of <code>$construct$:<var>cname</var></code>.
+It seems useful to provide some utilility functions or syntax
+to simplify these.  As a start, this specification proposes:
+<pre>
+(define-simple-constructor <var>cname</var> <var>cname-maker</var> [<var>str-maker</var>])
+</pre>
+This has the effect that:
+<pre>
+&amp;<var>cname</var>[<var>init-arg</var> ...]{<var>text</var>}
+</pre>
+after being read as:
+<pre>
+($construct$:<var>cname</var> [<var>init-arg</var> ... $>>$] <var>text-arg</var> ...)
+</pre>
+gets evaluated as:
+<pre>
+(<var>cname-maker</var> <var>init-arg</var> ... (<var>str-maker</var> <var>text-arg</var> ...))
+</pre>
+<p>
+The default for <code><var>str-maker</var></code> is <code>$string$</code>,
+as specified in SRFI-109.
+This combines
+all the non-prefix arguments and treat them as a string quasi-literal.
+That is makes it easy to implement:
+<pre>
+&amp;cname[init-exp ...]{abc&amp;[infix-exp1]def&amp;[infix-exp2]...xyz}
+</pre>
+as if it were a call to some specified <code><var>cname-maker</var></code> function thus:
+<pre>
+(<var>cname-maker</var> init-exp ... &amp;{abc&amp;[infix-exp1]def&amp;[infix-exp2]...xyz})
+</pre>
+<!--
+<p>
+If there is no definition of <code>$construct$:<var>tag</var></code>,
+but there is a definition of (plain) <code><var>tag</var></code>,
+should we allow an implemention use the latter to implement
+the former?  Doing so may be difficult for some implementations,
+so it maybe unwise to mandate such behavior.
+We should probably wait for more experience.
+-->
+
+<h2>Possible extensions</h2>
+<p>
+This section discusses some ideas that seem worthwhile,
+but need more thought, so are deferred for now.
+<p>
+In addition to those mentioned below, consider also
+<a href="../srfi-109/srfi-109.html#special-characters">special characters</a>,
+<a href="../srfi-109/srfi-109.html#formatting">formatting</a>,
+and <a href="../srfi-109/srfi-109.html#user-defined-end-token">user-defined end token</a> from SRFI-109.
+
+<h3>Read-time literals</h3>
+<p>
+A possible extension is to support SRFI-10 style read-time literals
+in certain restricted cases,
+when all the expressions are literal, and the transformers are available
+to the reader.  This should probably not be the default (for consistency
+and because of security concerns), but could be supported in an
+implementation that has programmable read-tables.
+
+<h3>Splicing of lists and vectors</h3>
+As in <a href="../srfi-109/srfi-109.html#splicing">SRFI-109</a>
+you sometimes you want to insert all the values of a vector or list
+in an enclosed-part.  When the result is a string you can convert
+each element to a string, and concatenate the strings.
+When working with named constructors, you want each element to be
+an argument to the constructor function.  For example:
+<pre>
+(define args (list e1 e1 ... en))
+&amp;foo[@args]
+</pre>
+The reader could convert the latter to:
+<pre>
+($construct$:foo ($splice$ args) $>>$)
+</pre>
+Assuming <code>$construct$:foo</code> is bound to a <code>make-foo</code> function,
+we want this to be equivalent to:
+<pre>
+(apply make-foo args)
+</pre>
+<p>
+Expecting each <code>$construct$:foo</code>
+implementation to desugar the <code>$splice$</code> forms is unfriendly,
+but it could be handled by <code>define-simple-constructor</code>.
+This seems easy enough when the implementation rewrites to a function call,
+since we can handle the splicing by writing to an <code>apply</code> call.
+It gets trickier when macros are involved.
+<p>
+Handling splicing seems cleaner if the Scheme compiler handles
+splicing natively - i.e. as a general feature of function application.
+This seems worth exploring, but is obviously beyond the scope of this SRFI.
+
+<h2 id="delimiter-options">Discussion: Delimiter options</h2>
+This specification uses <code class="literal">&amp;</code> as
+marker/delimiter character.
+Alternative marker characters were also considered, and this mostly-historical
+section explains why we chose <code class="literal">&amp;</code>.
+The discussion also considers <a href="../srfi-109/srfi-109.html">SRFI-109 (extended string quasi-literals)</a>, and refers to
+the non-terminals defined in the syntax specifications
+of both SRFI-108 and SRFI-109.
+<p>
+First let us focus on the escape character in <var><a href="#named-literal-part-def">named-literal-part</a></var> and
+<var><a href="../srfi-109/srfi-109.html#string-literal-part-def">string-literal-part</a></var>.
+After that we will look at characters to use to indicate the start
+of a top-level <var><a href="../srfi-109/srfi-109.html#extended-string-literal-def">extended-string-literal</a></var> and
+<var><a href="#extended-datum-literal-def">extended-datum-literal</a></var>.
+<p><b>Different or same escape characters in literal-text?</b>
+There are multiple different escape character roles:
+first we have escapes in <var><a href="../srfi-109/srfi-109.html#string-literal-part-def">string-literal-part</a></var>.
+Then in a <var><a href="#named-literal-part-def">named-literal-part</a></var> we have escaped
+strings and characters (same as in <var>string-literal-part</var>),
+plus we have nested <var><a href="#extended-datum-body-def">extended-datum-body</a></var>.
+For the latter we prefer a single escape character for both uses,
+to avoid a proliferation of escape characters.
+Also, for consistency it seems better to use the same
+escape character and syntax for string and character
+escapes in both <var>string-literal-part</var>
+and  <var>named-literal-part</var>.
+The conclusion seems to be we should use the same escape character in all
+roles (at least within a literal-part).
+As to which character to use,
+the most plausible choices seem to be <code class="literal">&amp;</code>,
+<code class="literal">@</code>, or  <code class="literal">\</code>.
+<p>
+<b>Use <code>&amp;</code> as escape character:</b>
+Using <code class="literal">&amp;</code> is compatible with
+XML, HTML, SGML, and also "XML literals" embedded in programming
+languages, including <a href="../srfi-107/srfi-107.html">SRFI-107 (XML reader syntax)</a>.
+<p><b>Use <code>\</code> as escape character:</b>
+Using <code class="literal">\</code> is of course
+compatible with standard Scheme string literals.  Backslash has also
+been used for as an escape in many languages, for string literals,
+regular expressions, shells, TeX, and more.
+If using <code class="literal">\</code> as an escape for
+<a href="../srfi-109/srfi-109.html">SRFI-109</a> strings, it would be tempting to enhance standard
+string literals with some of the same features, such as enclosed
+expressions.  However, traditional C-style single-letter escapes,
+such as <code class="literal">\n</code> cause a problem:
+You either don't allow them in the literal-part of this specification
+(in which case the latter is not a super-set of standard string escapes),
+or you need some non-letter prefix character
+in front of a <var class="non-terminal">cname</var>, which is tedious.
+<p>
+<b>Use <code>@</code> as escape character:</b>
+Using <code class="literal">@</code> as the escape character
+goes back to Scribe, TexInfo, and Scribble.  These are all markup
+languages, not programming languages.  However, Scribble allows nested
+Racket Scheme expression, and
+(if you select the <code>at-exp</code> Racket parser)
+you can also nest Scribble nested in a top-level Scheme program.
+<p><b>Braces vs brackets:</b>
+The specification uses <code>{</code>curly braces<code>}</code>
+for quoted (literal) text, and uses <code>[</code>square brackes<code>]</code>
+to delimit unquoted expressions.
+This is <q>compatible</q> with Scribble;
+<a href="http://brl.sourceforge.net/brl_toc.html">BRL</a>'s use of square
+brackets; <a href="http://www.tcl.tk/about/language.html">Tcl</a>'s use
+of brackets and braces.
+On the other hand, <a href="http://www.javafxcookbook.com/home/working-with-strings">JavaFX Script</a> used <code>{</code>curly braces<code>}</code> for
+escaped expressions.  So did Kawa's
+<a href="http://per.bothner.com/blog/2010/XML-literals/">XML literals</a>.
+(However Kawa XML literals can support both brackets as well
+as braces as a depecated alternative.)
+<p><b>Use braces only:</b>
+Another option is instead of a single escape character we just use
+brackets to enclose expressions, without a prefix character, as in:
+<pre>
+&amp;{Here is the average: [(/ sum count)].}
+</pre>
+Special characters can be expressed using standard Scheme character
+or string literals.  It is not clear how one would handle a
+nested <var class="non-terminal"><a href="#extended-datum-body-def">extended-datum-body</a></var>.
+Special features, like format specifier, and line-paste escapes
+are also difficult to express.
+<p><b>Use implicit concatenation instead of enclosed expressions:</b>
+Finally, it is possible to not have any support for expression
+escapes, but instead have a more compact format for concatenation.
+For example a string literal right next to an expression, with no
+space in between, could be defined as concatenation.  Thus:
+<pre>
+"Here is the average: "(/ sum count)"."
+</pre>
+This is pretty fragile (in terms of unintended whitespace for example)
+though using different start and end string delimiters (for example
+square brackets) helps:
+<pre>
+{Here is the average: }(/ sum count){.}
+</pre>
+<p><b>Single character to start quasi-literals:</b>
+Next, when it comes to the the Scheme expression level,
+we need an unambiguous
+character or sequence of character to mark the start of a quasi-literal.
+If we use a single character, it makes sense for that character
+to match the literal-part escape character,
+since it easies nested <var>named-literal-part</var> forms.
+<p>
+Using <code class="literal">\</code> as the start character
+does not appear to conflict with (draft-)R7RS, but it would be
+a conflict for many Scheme implementations that use
+<code class="literal">\</code> as a <q>single-escape character</q>
+as in Common Lisp.
+<p>
+Using <code class="literal">@</code> as the start character
+does not seem to conflict with standard Scheme, because
+it is not a valid identifier-start character.  However, it
+might conflict with implementation extensions.
+(For example Kawa uses <code class="literal">@</code>
+to <a href="http://www.gnu.org/software/kawa/Annotations.html">name
+Java-style annotations</a>.)
+<p>
+Using <code class="literal">&amp;</code> as the start character
+may cause compatibility problems, since <code class="literal">&amp;</code>
+is a valid <var class="non-terminal">&lt;initial&gt;</var> character in standard Scheme, thus
+it might be difficult to disambiguate from an identifier.
+Some R6RS-based naming conventions use such names for
+record types or exception types.
+The sequence  <code class="literal">&amp;</code>
+followed by a name followed by brackets or braces is effectively
+non-conflicting:  In a Scheme that defines brackets as equivalent
+to parentheses, the following is techically well-defined:
+<pre>
+&amp;name[form1 form2]
+</pre>
+as it could be read as two datum items:
+<pre>
+&amp;name (form1 form2)
+</pre>
+<p>
+If such as Scheme were to implement this SRFI, it would change that
+reading to:
+<pre>
+($construct$:name $&lt;&lt;$ form1 form2 $&gt;&gt;$)
+</pre>
+That is why this specification requires a braces-delimited
+named-literal-part, even when the latter is empty.
+<p>
+<b>Starting quasi-literals with # and a dispatch character:</b>
+Starting quasi-literals with <code class="literal">#\</code>
+conflicts with character literals.
+Neither <code class="literal">#&amp;</code> or
+<code class="literal">#@</code> appear problematic.
+However, starting a string literal such as <code>#&amp;{text}</code>
+with 3 delimiter characters is rather ugly and easily mistyped.
+<!--
+<p><b>Recommendation:</b>
+Either:
+<ul>
+<li><q>XML style</q>, as in <span style="border: thin solid red">red</span>
+examples, and most of the write-up; or:
+<li><q>Scribble style</q>, as in <span style="border: thin solid green">green</span>
+examples.  However, <b>note</b> that while I call this <q>Scribble style</q>
+what I recommend is only Scribble-compatible to a limited extent.
+Most importantly:
+<pre>
+@{text}
+</pre>
+is (in this family of proposals) used for string quasi-literals,
+and evaluates to a string.  I think this is a much more useful
+result than in Scribble.
+Also, quoted forms yield different results that in Scribble.
+<p>
+Using <code>@</code> is escape character still leaves open
+when to uses braces and when to use brackets.
+I would prefer to use curly braces for enclosed expressions and
+square brackets for literal-parts, mainly because it is compatible
+with <a href="../srfi-107/srfi-107.html">SRFI-107 (XML reader syntax)</a> as currently implemented in Kawa.
+However, Scibble uses it the other way round - but
+<var>extended-datum-literal</var> will be only approximately
+compatible with Scribble anyway, so that shouldn't be deciding.
+</ul>
+-->
+
+<h1>Specification</h1>
+
+<div>
+<h2>Syntax</h2>
+<pre>
+<var>expression</var> ::= ...
+  | <var>extended-datum-literal</var>
+</pre>
+
+<pre>
+<var class="non-terminal-def" id="extended-datum-literal-def">extended-datum-literal</var> ::=
+    <var class="non-terminal">extended-datum-body</var>
+<var class="non-terminal-def" id="extended-datum-body-def">extended-datum-body</var> ::=
+    <code class="literal">&amp;</code> <var class="non-terminal">cname</var> <code class="literal">{</code> <var class="non-terminal">initial-ignored</var><sup>?</sup> <var>named-literal-part</var><sup>*</sup> <code class="literal">}</code>
+  | <code class="literal">&amp;</code> <var class="non-terminal">cname</var> <code class="literal">[</code> <var>expression</var><sup>*</sup> <code class="literal">]{</code> <var class="non-terminal">initial-ignored</var>? <var>named-literal-part</var><sup>*</sup> <code class="literal">}</code>
+<var class="non-terminal-def">cname</var> ::= <var class="non-terminal">tagname</var>
+</pre>
+<p>
+An implementation <em>may</em> allow leaving out the braces if empty, i.e.:
+<pre>
+<var class="non-terminal-def">extended-datum-body</var> ::= <i>... as above ...</i>
+    | <code class="literal">&amp;</code> <var class="non-terminal">cname</var> <code class="literal">[</code> <var>expression</var><sup>*</sup> <code class="literal">]</code>
+</pre>
+<p>
+However, note that accordingly to R6RS <code class="literal">&amp;foo[abc]</code> should
+be read as the symbol <code class="literal">&amp;foo</code> followed by a
+list <code class="literal">[abc]</code> - i.e. as if it were
+<code class="literal">&amp;foo (abc)</code>.
+Implementations may handle this ambiguity differently,
+so portable programs should not leave out the empty braces.
+
+<p>
+For the definition and discussion of <var class="non-terminal">tagname</var> see
+<a href="../srfi-109/srfi-109.html#tagname-def">SRFI-109 (tagname)</a>.
+<!-- as <var class="non-terminal">NCName</var>;see discussion there.-->
+<p>
+The non-terminal <var>named-literal-part</var> is the same as <var>string-literal-part</var> in <a href="../srfi-109/srfi-109.html">SRFI-109 (extended string quasi-literals)</a>,
+except for the support for a nested <var class="non-terminal">extended-datum-body</var>.
+<pre>
+<var class="non-terminal-def" id="named-literal-part-def">named-literal-part</var> ::=
+    <i>any character except </i><code>&amp;</code><i>, </i><code>{</code> <i>or</i> <code>}</code>
+  | <code class="literal">{</code> <var class="non-terminal">named-literal-part</var><sup>+</sup> <code class="literal">}</code>
+  | <var class="non-terminal">char-ref</var>
+  | <var class="non-terminal">entity-ref</var>
+  | <var class="non-terminal">special-escape</var>
+  | <var>enclosed-part</var>
+  | <var class="non-terminal">extended-datum-body</var>
+</pre>
+<p>The remaining non-terminals match those of
+<a href="../srfi-109/srfi-109.html">SRFI-109 (extended string quasi-literals)</a>.
+<pre>
+<var class="non-terminal-def">initial-ignored</var> ::=
+    <var class="non-terminal">intraline-whitespace</var> <var class="non-terminal">line-ending</var> <var class="non-terminal">intraline-whitespace</var> <code class="literal">&amp;|</code>
+<var class="non-terminal-def">special-escape</var> ::=
+    <var class="non-terminal">intraline-whitespace</var> <code class="literal">&amp;|</code>
+  | <code class="literal">&amp;</code> <var class="non-terminal">nested-comment</var>
+  | <code class="literal">&amp;-</code> <var class="non-terminal">intraline-linespace</var> <var class="non-terminal">line-ending</var>
+<var class="non-terminal-def">char-ref</var> ::=
+    <code class="literal">&amp;#</code> <var class="non-terminal">digit<sup>+</sup></var> <code class="literal">;</code>
+  | <code class="literal">&amp;#x</code> <var class="non-terminal">hex-digit<sup>+</sup></var> <code class="literal">;</code>
+<var class="non-terminal-def">entity-ref</var> ::=
+    <code class="literal">&amp;</code> <var class="non-terminal">char-or-entity-name</var> <code class="literal">;</code>
+<var class="non-terminal-def">opt-format-specifier</var> ::= <i>empty</i>
+  | <code class="literal">~</code> <var class="non-terminal">format-specifier-after-tilde</var>
+  | <code class="literal">%</code> <var class="non-terminal">format-specifier-after-percent</var>
+<var class="non-terminal-def">enclosed-part</var> ::=
+    <code class="literal">&amp;</code> <var class="non-terminal">enclosed-modifier</var> <code class="literal">[</code> <var>expression<sup>*</sup></var> <code class="literal">]</code>
+  | <code class="literal">&amp;</code> <var class="non-terminal">enclosed-modifier</var> <code class="literal">(</code> <var>expression</var><sup>+</sup> <code class="literal">)</code>
+</pre>
+<p>
+An <var class="non-terminal">enclosed-modifier</var> is normally empty,
+but implementations may support extensions (for example format specifiers);
+see discussion in <a href="../srfi-109/srfi-109.html#enclosed-modifier-def">SRFI-109</a>.
+<pre>
+<var class="non-terminal-def">enclosed-modifier</var> ::= <i>empty</i>
+</pre>
+</div>
+The following are defined by R7RS: <var class="non-terminal">nested-comment</var>,
+<var class="non-terminal">intraline-whitespace</var>,
+<var class="non-terminal">line-ending</var>,
+<var class="non-terminal">digit</var>,
+and <var class="non-terminal">hex-digit</var>.
+
+<h2>Translation</h2>
+<p>The general form:
+<pre>
+&amp;name[exp1 ... expN]{part1...partM}
+</pre>
+is translated by the reader to:
+<pre>
+($construct$:name exp1 ... expN $&gt;&gt;$ tpart1 ... tpartM)
+</pre>
+More precisely:
+<div>
+<pre>
+<b>Tr[</b><code class="literal">&amp;</code><var class="non-terminal">name</var> <code class="literal">[</code> <var class="non-terminal">expression</var>* <code class="literal">]{</code> <var class="non-terminal">initial-ignored</var>? <var class="non-terminal">content-piece</var>* <code class="literal">}</code><b>]</b>
+   &#x27fe; <code class="literal">($construct$:</code><var class="non-terminal">name</var> <var class="non-terminal">expression</var>* <code class="literal">$&gt;&gt;$</code> <b>TrContent[</b>content-piece<b>]</b>* <code class="literal">)</code>
+<b>Tr[</b><code class="literal">&amp;</code><var class="non-terminal">name</var> <code class="literal">{</code> <var class="non-terminal">initial-ignored</var>? <var class="non-terminal">content-piece</var>* <code class="literal">}</code><b>]</b>
+   &#x27fe; <code class="literal">($construct$:</code><var class="non-terminal">name</var> <b>TrContent[</b>content-piece<b>]</b>* <code class="literal">)</code>
+</pre>
+<p><code><b>TrContent</b></code> is as in <a href="../srfi-109/srfi-109.html#specification-translation">SRFI-109</a>, except we add this rule:
+<pre>
+<b>TrContent[</b><var class="non-terminal">extended-datum-body</var><b>]</b>
+  &#x27fe; <b>Tr[</b><var class="non-terminal">extended-datum-body</var><b>]</b>
+</pre>
+</div>
+
+<h2>Definitions</h2>
+<p>
+<pre>
+(define-simple-constructor <var>cname</var> <var>cname-maker</var> [<var>str-maker</var>])
+</pre>
+The default for <code><var>str-maker</var></code> is <code>$string$</code>,
+as specified in
+<a href="../srfi-109/srfi-109.html#specification-translation">SRFI-109</a>.
+This provides a syntax binding for <code>$construct$:<var>cname</var></code>
+such that
+<pre>
+($construct$:<var>cname</var> [<var>init-arg</var> ... $>>$] <var>text-arg</var> ...)
+</pre>
+gets evaluated as:
+<pre>
+(<var>cname-maker</var> <var>init-arg</var> ... (<var>str-maker</var> <var>text-arg</var> ...))
+</pre>
+<p>
+<code>$&lt;&lt;$</code> and <code>$&gt;&gt;$</code>
+are bound to unique zero-length strings, as in SRFI-109.
+
+<h1>Implementation</h1>
+
+<p>
+Since this specification changes the reader format, and there
+is no standard Scheme way to do that, there is no portable implementation.
+However, this specification is being implemented in
+<a href="http://www.gnu.org/software/kawa/">Kawa</a>.
+(Check out the
+<a href="http://www.gnu.org/software/kawa/Getting-Kawa.html">development version using Subversion</a>.)
+
+<h2>Test suite</h2>
+There is a
+<a href="http://sourceware.org/viewvc/kawa/trunk/testsuite/srfi-108-test.scm?view=co">test suite in the Kawa source tree</a>.
+
+<h1>Copyright</h1>
+<p>
+Copyright (C) Per Bothner 2013</p>
+<p>
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:</p>
+<p>
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.</p>
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
+<hr />
+<address>Author: <a href="mailto:per@bothner.com">Per Bothner</a></address>
+<address>Editor: <a href="mailto:srfi-editors at srfi dot schemers dot org">
+             Mike Sperber</a></address>
+</body>
+</html>
