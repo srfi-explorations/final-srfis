@@ -1,0 +1,639 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+  <HEAD>
+    <title>SRFI 60: Bit-Twiddling</title>
+  </HEAD>
+
+  <BODY>
+
+<H1>Title</H1>
+
+Bit-Twiddling
+
+<H1>Author</H1>
+
+Aubrey Jaffer
+
+<H1>Status</H1> 
+
+This SRFI is currently in ``draft'' status. To see an explanation of each
+status that a SRFI can hold, see <A
+href="http://srfi.schemers.org/srfi-process.html">here</A>. It will remain
+in draft status until 2005/03/03, or as amended. To provide input on this
+SRFI, please <CODE><A
+href="mailto:srfi-60@srfi.schemers.org">mailto:srfi-60@srfi.schemers.org</A></CODE>.
+See <A
+href="../../srfi-list-subscribe.html">instructions
+here</A> to subscribe to the list. You can access previous messages via <A
+href="http://srfi.schemers.org/srfi-60/mail-archive/maillist.html">the
+archive of the mailing list</A>.  
+<P> 
+<UL>
+  <LI>Received: <A href="srfi-60-1.1.html">2005/01/03</A></LI>
+  <LI>Draft: 2005/01/03 - 2005/03/03</LI>
+  <LI>Revised: <A href="srfi-60-1.2.html">2005/01/10</A></LI>
+  <LI>Revised: <A href="srfi-60-1.4.html">2005/01/27</A></LI>
+</UL>
+
+<H1>Abstract</H1>
+
+Treating integers as two's-complement strings of bits is an arcane but
+important domain of computer science.  It is used for:
+
+<UL>
+<LI>hashing;
+
+<LI>Galois-field[2] calculations of error-detecting and
+    error-correcting codes;
+
+<LI>cryptography and ciphers;
+
+<LI>pseudo-random number generation;
+
+<LI>register-transfer-level modeling of digital logic designs;
+
+<LI>Fast-Fourier transforms;
+
+<LI>packing and unpacking numbers in persistant data structures;
+
+<LI>space-filling curves with applications to dimension reduction and
+    sparse multi-dimensional database indexes; and
+
+<LI>generating approximate seed values for root-finders and
+    transcendental function algorithms.
+
+</UL>
+<P>
+
+<H1>Rationale</H1>
+
+This proposal describes the
+<A HREF="http://swiss.csail.mit.edu/~jaffer/SLIB">SLIB</A> module
+<A HREF="http://swiss.csail.mit.edu/~jaffer/slib_5.html#SEC88"><TT>logical</TT></A>,
+which has been used for those purposes listed above.
+<P>
+The discussions of the withdrawn
+<A HREF="http://srfi.schemers.org/srfi-33/">SRFI-33: "Integer
+Bitwise-operation Library"</A> seemed to founder on consistency of
+procedure names and arity; and on perceived competition with the
+boolean arrays of SRFI-47.
+<P>
+I have implemented both logical number operations and boolean arrays;
+and have not been conflicted as to their application.  I used boolean
+arrays to construct very fast indexes for database tables having
+millions of records.  To avoid running out of RAM, creation of megabit
+arrays should be explicit; so the boolean array procedures put their
+results into a passed array.  In contrast, these procedures are purely
+functional.
+<P>
+
+<H3>Bits and Complements</H3>
+
+A bit-index in these descriptions is nonnegative with the least
+significant bit at index 0.
+<P>
+The reference implementation is written using only Scheme integer
+operations.  Thus the only exposure of the underlying representation
+is in the ranges of fixnums.
+<P>
+The <DFN>complement</DFN> describes the representation of negative
+integers.  With one's-complement fixnums, the range of integers is
+-(2<SUP><I>n</I></SUP>) to 2<SUP><I>n</I></SUP>, and there are two
+possible representations of 0.  With two's-complement fixnums, the
+range of integers is -(2<SUP><I>n</I></SUP>+1) to
+2<SUP><I>n</I></SUP>.
+<P>
+Since we treat integers as having two's-complement negations,
+the two's-complement of an integer is its negation.
+The one's-complement of an integer is computed by lognot:
+
+<PRE>
+(define (lognot n) (- -1 n))
+</PRE>
+<P>
+
+
+<H3>Bitwise Operations and Integer Properties</H3>
+
+The <TT>logior</TT>, <TT>logxor</TT>, <TT>logand</TT>,
+<TT>lognot</TT>, <TT>logtest</TT>, <TT>logbit?</TT> (logbitp),
+<TT>ash</TT>, <TT>logcount</TT>, and <TT>integer-length</TT>
+procedures are from Common-Lisp.  <TT>Logior</TT>, <TT>logxor</TT>,
+and <TT>logand</TT> have been extended to accept any arity.
+Opportunities to use an <I>n</I>-ary version of <TT>logtest</TT> have
+not been frequent enough to justify its extension.
+<P>
+In the <DFN>Bitwise Operations</DFN>, rather than striving for
+orthogonal completeness, I have concentrated on a nearly minimal set
+of bitwise logical functions sufficient to support the uses listed
+above.
+<P>
+Although any two of <TT>logior</TT>, <TT>logxor</TT>, and
+<TT>logand</TT> (in combination with <TT>lognot</TT>) are sufficient
+to generate all the two-input logic functions, having these three
+means that any nontrivial two-input logical function can be
+synthesized using just one of these two-input primaries with zero or
+one calls to <TT>lognot</TT>.
+<P>
+<TT>bitwise-if</TT> is what SRFI-33 calls <TT>bitwise-merge</TT>.
+<P>
+The SRFI-33 aliases: <TT>bitwise-ior</TT>, <TT>bitwise-xor</TT>,
+<TT>bitwise-and</TT>, <TT>bitwise-not</TT>, and <TT>bit-count</TT> are
+also provided.
+<P>
+<TT>log2-binary-factors</TT> is a useful function which is simple but
+non-obvious:
+
+<PRE>
+(define (log2-binary-factors n)
+  (+ -1 (integer-length (logand n (- n)))))
+</PRE>
+
+<H3>Bit Within Word and Field of Bits</H3>
+
+The <DFN>Bit Within Word</DFN> and <DFN>Field of Bits</DFN> procedures
+are used for modeling digital logic and accessing binary data
+structures in software.
+<P>
+I have changed to <TT>copy-bit-field</TT> argument order to be
+consistent with the other <DFN>Field of Bits</DFN> procedures: the
+<VAR>start</VAR> and <VAR>end</VAR> index arguments are last.
+This makes them analogous to the argument order to <TT>substring</TT>
+and SRFI-47 arrays, which took their cue from <TT>substring</TT>.
+<P>
+These <VAR>start</VAR> and <VAR>end</VAR> index arguments are not
+compatible with SRFI-33's <VAR>size</VAR> and <VAR>position</VAR>
+arguments (occurring first) in its <TT>bit-field</TT> procedures.
+Both define <TT>copy-bit-field</TT>; the arguments and purposes being
+incompatible.
+<P>
+A procedure in slib/logical.scm, <TT>logical:rotate</TT>, rotated a
+given number of low-order bits by a given number of bits.  This
+function was quite servicable, but I could not name it adequately.  I
+have replaced it with <TT>rotate-bit-field</TT> with the addition of a
+<VAR>start</VAR> argument.  This new function rotates a given field
+(from positions <VAR>start</VAR> to <VAR>end</VAR>) within an integer;
+leaving the rest unchanged.
+<P>
+Another problematic name was <TT>logical:ones</TT>, which generated an
+integer with the least significant <VAR>k</VAR> bits set.  Calls to
+<TT>bit-field</TT> could have replaced its uses .  But the definition
+was so short that I just replaced its uses with:
+
+<PRE>
+(lognot (ash -1 <VAR>k</VAR>))
+</PRE>
+<P>
+The <TT>bit-reverse</TT> procedure was then the only one which took a
+<VAR>width</VAR> argument.  So I replaced it with
+<TT>reverse-bit-field</TT>.
+<P>
+The <DFN>Lamination</DFN> and <DFN>Gray-code</DFN> functions were
+moved to
+<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/*checkout*/slib/slib/phil-spc.scm?rev=HEAD&amp;content-type=text/vnd.viewcvs-markup">slib/phil-spc.scm</A>
+<P>
+
+<H3>Bits as Booleans</H3>
+
+<DFN>Bits as Booleans</DFN> provides the procedures to convert between
+integers and lists of booleans.  There is no comparable facility in
+SRFI-33.
+<P>
+
+
+<H1>Specification</H1>
+
+
+
+<H3><A NAME="SEC97">Bitwise Operations</A></H3>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>logand</B> <I>n1 ...</I>
+<DD><A NAME="IDX487"></A>
+<DT><U>Function:</U> <B>bitwise-and</B> <I>n1 ...</I>
+<DD><A NAME="IDX488"></A>
+Returns the integer which is the bit-wise AND of the integer
+arguments.
+
+
+<P>
+Example:
+
+<PRE>
+(number-&#62;string (logand #b1100 #b1010) 2)
+    => "1000"
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>logior</B> <I>n1 ...</I>
+<DD><A NAME="IDX489"></A>
+<DT><U>Function:</U> <B>bitwise-ior</B> <I>n1 ...</I>
+<DD><A NAME="IDX490"></A>
+Returns the integer which is the bit-wise OR of the integer arguments.
+
+
+<P>
+Example:
+
+<PRE>
+(number-&#62;string (logior #b1100 #b1010) 2)
+    => "1110"
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>logxor</B> <I>n1 ...</I>
+<DD><A NAME="IDX491"></A>
+<DT><U>Function:</U> <B>bitwise-xor</B> <I>n1 ...</I>
+<DD><A NAME="IDX492"></A>
+Returns the integer which is the bit-wise XOR of the integer
+arguments.
+
+
+<P>
+Example:
+
+<PRE>
+(number-&#62;string (logxor #b1100 #b1010) 2)
+    => "110"
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>lognot</B> <I>n</I>
+<DD><A NAME="IDX493"></A>
+<DT><U>Function:</U> <B>bitwise-not</B> <I>n</I>
+<DD><A NAME="IDX494"></A>
+Returns the integer which is the two's-complement of the integer argument.
+
+
+<P>
+Example:
+
+<PRE>
+(number-&#62;string (lognot #b10000000) 2)
+    => "-10000001"
+(number-&#62;string (lognot #b0) 2)
+    => "-1"
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>bitwise-if</B> <I>mask n0 n1</I>
+<DD><A NAME="IDX495"></A>
+Returns an integer composed of some bits from integer <VAR>n0</VAR> and some
+from integer <VAR>n1</VAR>.  A bit of the result is taken from <VAR>n0</VAR> if the
+corresponding bit of integer <VAR>mask</VAR> is 1 and from <VAR>n1</VAR> if that bit
+of <VAR>mask</VAR> is 0.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>logtest</B> <I>j k</I>
+<DD><A NAME="IDX496"></A>
+
+<PRE>
+(logtest j k) == (not (zero? (logand j k)))
+
+(logtest #b0100 #b1011) => #f
+(logtest #b0100 #b0111) => #t
+</PRE>
+
+</DL>
+
+
+
+<H3><A NAME="SEC98">Integer Properties</A></H3>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>logcount</B> <I>n</I>
+<DD><A NAME="IDX497"></A>
+<DT><U>Function:</U> <B>bit-count</B> <I>n</I>
+<DD><A NAME="IDX498"></A>
+Returns the number of bits in integer <VAR>n</VAR>.  If integer is positive,
+the 1-bits in its binary representation are counted.  If negative, the
+0-bits in its two's-complement binary representation are counted.  If 0,
+0 is returned.
+
+
+<P>
+Example:
+
+<PRE>
+(logcount #b10101010)
+    => 4
+(logcount 0)
+    => 0
+(logcount -2)
+    => 1
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>integer-length</B> <I>n</I>
+<DD><A NAME="IDX499"></A>
+Returns the number of bits neccessary to represent <VAR>n</VAR>.
+
+
+<P>
+Example:
+
+<PRE>
+(integer-length #b10101010)
+    => 8
+(integer-length 0)
+    => 0
+(integer-length #b1111)
+    => 4
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>log2-binary-factors</B> <I>n</I>
+<DD><A NAME="IDX500"></A>
+Returns the number of factors of two of integer <VAR>n</VAR>.  This value
+is also the bit-index of the least-significant <SAMP>`1'</SAMP> bit in
+<VAR>n</VAR>.
+
+
+
+<PRE>
+(require 'printf)
+(do ((idx 0 (+ 1 idx)))
+      ((&#62; idx 16))
+    (printf "%s(%3d) ==&#62; %-5d %s(%2d) ==&#62; %-5d\n"
+            'log2-binary-factors
+            (- idx) (log2-binary-factors (- idx))
+            'log2-binary-factors
+            idx (log2-binary-factors idx)))
+-|
+log2-binary-factors(  0) ==&#62; -1    log2-binary-factors( 0) ==&#62; -1   
+log2-binary-factors( -1) ==&#62; 0     log2-binary-factors( 1) ==&#62; 0    
+log2-binary-factors( -2) ==&#62; 1     log2-binary-factors( 2) ==&#62; 1    
+log2-binary-factors( -3) ==&#62; 0     log2-binary-factors( 3) ==&#62; 0    
+log2-binary-factors( -4) ==&#62; 2     log2-binary-factors( 4) ==&#62; 2    
+log2-binary-factors( -5) ==&#62; 0     log2-binary-factors( 5) ==&#62; 0    
+log2-binary-factors( -6) ==&#62; 1     log2-binary-factors( 6) ==&#62; 1    
+log2-binary-factors( -7) ==&#62; 0     log2-binary-factors( 7) ==&#62; 0    
+log2-binary-factors( -8) ==&#62; 3     log2-binary-factors( 8) ==&#62; 3    
+log2-binary-factors( -9) ==&#62; 0     log2-binary-factors( 9) ==&#62; 0    
+log2-binary-factors(-10) ==&#62; 1     log2-binary-factors(10) ==&#62; 1    
+log2-binary-factors(-11) ==&#62; 0     log2-binary-factors(11) ==&#62; 0    
+log2-binary-factors(-12) ==&#62; 2     log2-binary-factors(12) ==&#62; 2    
+log2-binary-factors(-13) ==&#62; 0     log2-binary-factors(13) ==&#62; 0    
+log2-binary-factors(-14) ==&#62; 1     log2-binary-factors(14) ==&#62; 1    
+log2-binary-factors(-15) ==&#62; 0     log2-binary-factors(15) ==&#62; 0    
+log2-binary-factors(-16) ==&#62; 4     log2-binary-factors(16) ==&#62; 4    
+</PRE>
+
+</DL>
+
+
+
+<H3><A NAME="SEC99">Bit Within Word</A></H3>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>logbit?</B> <I>index n</I>
+<DD><A NAME="IDX501"></A>
+<DT><U>Function:</U> <B>bit-set?</B> <I>index n</I>
+<DD><A NAME="IDX502"></A>
+
+<PRE>
+(logbit? index n) == (logtest (expt 2 index) n)
+
+(logbit? 0 #b1101) => #t
+(logbit? 1 #b1101) => #f
+(logbit? 2 #b1101) => #t
+(logbit? 3 #b1101) => #t
+(logbit? 4 #b1101) => #f
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>copy-bit</B> <I>index from bit</I>
+<DD><A NAME="IDX503"></A>
+Returns an integer the same as <VAR>from</VAR> except in the <VAR>index</VAR>th bit,
+which is 1 if <VAR>bit</VAR> is <CODE>#t</CODE> and 0 if <VAR>bit</VAR> is <CODE>#f</CODE>.
+
+
+<P>
+Example:
+
+<PRE>
+(number-&#62;string (copy-bit 0 0 #t) 2)       => "1"
+(number-&#62;string (copy-bit 2 0 #t) 2)       => "100"
+(number-&#62;string (copy-bit 2 #b1111 #f) 2)  => "1011"
+</PRE>
+
+</DL>
+
+
+
+<H3><A NAME="SEC100">Field of Bits</A></H3>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>bit-field</B> <I>n start end</I>
+<DD><A NAME="IDX504"></A>
+Returns the integer composed of the <VAR>start</VAR> (inclusive) through
+<VAR>end</VAR> (exclusive) bits of <VAR>n</VAR>.  The <VAR>start</VAR>th bit becomes
+the 0-th bit in the result.
+
+
+<P>
+Example:
+
+<PRE>
+(number-&#62;string (bit-field #b1101101010 0 4) 2)
+    => "1010"
+(number-&#62;string (bit-field #b1101101010 4 9) 2)
+    => "10110"
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>copy-bit-field</B> <I>to from start end</I>
+<DD><A NAME="IDX505"></A>
+Returns an integer the same as <VAR>to</VAR> except possibly in the
+<VAR>start</VAR> (inclusive) through <VAR>end</VAR> (exclusive) bits, which are
+the same as those of <VAR>from</VAR>.  The 0-th bit of <VAR>from</VAR> becomes the
+<VAR>start</VAR>th bit of the result.
+
+
+<P>
+Example:
+
+<PRE>
+(number-&#62;string (copy-bit-field #b1101101010 0 0 4) 2)
+    => "1101100000"
+(number-&#62;string (copy-bit-field #b1101101010 -1 0 4) 2)
+    => "1101101111"
+(number-&#62;string (copy-bit-field #b110100100010000 -1 5 9) 2)
+    => "110100111110000"
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>ash</B> <I>n count</I>
+<DD><A NAME="IDX506"></A>
+<DT><U>Function:</U> <B>arithmetic-shift</B> <I>n count</I>
+<DD><A NAME="IDX507"></A>
+Returns an integer equivalent to
+<CODE>(inexact-&#62;exact (floor (* <VAR>n</VAR> (expt 2 <VAR>count</VAR>))))</CODE>.
+
+
+<P>
+Example:
+
+<PRE>
+(number-&#62;string (ash #b1 3) 2)
+    => "1000"
+(number-&#62;string (ash #b1010 -1) 2)
+    => "101"
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>rotate-bit-field</B> <I>n count start end</I>
+<DD><A NAME="IDX508"></A>
+Returns <VAR>n</VAR> with the bit-field from <VAR>start</VAR> to <VAR>end</VAR>
+cyclically permuted by <VAR>count</VAR> bits towards high-order.
+
+
+<P>
+Example:
+
+<PRE>
+(number-&#62;string (rotate-bit-field #b0100 3 0 4) 2)
+    => "10"
+(number-&#62;string (rotate-bit-field #b0100 -1 0 4) 2)
+    => "10"
+(number-&#62;string (rotate-bit-field #b110100100010000 -1 5 9) 2)
+    => "110100010010000"
+(number-&#62;string (rotate-bit-field #b110100100010000 1 5 9) 2)
+    => "110100000110000"
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>reverse-bit-field</B> <I>n start end</I>
+<DD><A NAME="IDX509"></A>
+Returns <VAR>n</VAR> with the order of bits <VAR>start</VAR> to <VAR>end</VAR>
+reversed.
+
+
+
+<PRE>
+(number-&#62;string (reverse-bit-field #xa7 0 8) 16)
+    => "e5"
+</PRE>
+
+</DL>
+
+
+
+<H3><A NAME="SEC101">Bits as Booleans</A></H3>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>integer-&#62;list</B> <I>k len</I>
+<DD><A NAME="IDX510"></A>
+<DT><U>Function:</U> <B>integer-&#62;list</B> <I>k</I>
+<DD><A NAME="IDX511"></A>
+<CODE>integer-&#62;list</CODE> returns a list of <VAR>len</VAR> booleans corresponding
+to each bit of the given integer.  #t is coded for each 1; #f for 0.
+The <VAR>len</VAR> argument defaults to <CODE>(integer-length <VAR>k</VAR>)</CODE>.
+
+
+<P>
+<DT><U>Function:</U> <B>list-&#62;integer</B> <I>list</I>
+<DD><A NAME="IDX512"></A>
+<CODE>list-&#62;integer</CODE> returns an integer formed from the booleans in the
+list <VAR>list</VAR>, which must be a list of booleans.  A 1 bit is coded for
+each #t; a 0 bit for #f.
+
+
+<P>
+<CODE>integer-&#62;list</CODE> and <CODE>list-&#62;integer</CODE> are inverses so far as
+<CODE>equal?</CODE> is concerned.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>booleans-&#62;integer</B> <I>bool1 ...</I>
+<DD><A NAME="IDX513"></A>
+Returns the integer coded by the <VAR>bool1</VAR> ... arguments.
+</DL>
+
+
+
+<H1>Implementation</H1>
+
+<A HREF="http://savannah.gnu.org/cgi-bin/viewcvs/*checkout*/slib/slib/logical.scm?rev=HEAD&amp;content-type=text/vnd.viewcvs-markup">slib/logical.scm</A>
+implements the bit-twiddling procedures for R4RS or R5RS compliant
+Scheme implementations.
+<P>
+
+<H1>Copyright</H1>
+Copyright (C) Aubrey Jaffer (2004, 2005). All Rights Reserved.
+<P>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<P>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<P>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+
+    <HR>
+    <ADDRESS>Editor: <A HREF="mailto:srfi-editors@srfi.schemers.org">David Van Horn</A></ADDRESS>
+<!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
+<!-- hhmts start -->
+Last modified: Thu Jan 27 09:24:05 EST 2005
+<!-- hhmts end -->
+  </BODY>
+</HTML>
