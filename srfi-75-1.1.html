@@ -1,0 +1,660 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN""http://www.w3.org/TR/REC-html40/loose.dtd">
+<html><head><title>SRFI 75: R6RS Unicode data</title></head>
+<body>
+
+<H1>Title</H1>
+
+R6RS Unicode data
+
+<H1>Authors</H1>
+
+Matthew Flatt and Marc Feeley
+
+<H1>Status</H1>
+
+<blockquote style="background-color: #e8e8e8;">
+<p>
+   This SRFI is being submitted by members of the Scheme Language
+   Editor's Committee as part of the R6RS Scheme standardization
+   process.  The purpose of such ``R6RS SRFIs'' is to inform the
+   Scheme community of features and design ideas under consideration
+   by the editors and to allow the community to give the editors some
+   direct feedback that will be considered during the design process.
+</p>
+<p>
+   At the end of the discussion period, this SRFI will be withdrawn.
+   When the R6RS specification is finalized, the SRFI may be revised
+   to conform to the R6RS specification and then resubmitted with the
+   intent to finalize it.  This procedure aims to avoid the situation
+   where this SRFI is inconsistent with R6RS.  An inconsistency
+   between R6RS and this SRFI could confuse some users.  Moreover it
+   could pose implementation problems for R6RS compliant Scheme
+   systems that aim to support this SRFI.  Note that departures from
+   the SRFI specification by the Scheme Language Editor's Committee
+   may occur due to other design constraints, such as design
+   consistency with other features that are not under discussion as
+   SRFIs.
+</p>
+</blockquote>
+
+This SRFI is currently in ``draft'' status. To see an explanation of each
+status that a SRFI can hold, see
+<a HREF="http://srfi.schemers.org/srfi-process.html">here</a>.
+It will remain in draft status until 2005/09/08, or as amended. To
+provide input on this SRFI, please <CODE>
+<a HREF="mailto:srfi-75@srfi.schemers.org">mailto:srfi-75@srfi.schemers.org</a></CODE>.
+See <a HREF="../../srfi-list-subscribe.html">instructions
+here</a> to subscribe to the list. You can access previous messages via
+<a HREF="http://srfi.schemers.org/srfi-75/mail-archive/maillist.html">the
+archive of the mailing list</a>.
+<p>
+<ul>
+  <li>Received: <a href="srfi-75-1.1.html">2005/07/11</a></li>
+  <li>Draft: 2005/07/12 - 2005/09/08</li>
+</ul>
+
+<h1>Abstract</h1>
+
+<p>
+
+Unicode is a widespread universal character code that supports most of
+the world's (natural) languages.  The extensions to Scheme specified
+in this SRFI concern the support of Unicode in Scheme's character,
+string and symbol datatypes.  This SRFI does not (fully) specify how
+I/O of Unicode data is performed or how Scheme source code is encoded
+in files.  These aspects are left for other SRFIs to specify.
+
+</p>
+
+<h1>Issues</h1>
+
+<ul>
+
+ <li> The extension of symbol syntax to include all non-whitespace
+      characters above Unicode 127 may be too liberal. At the same
+      time, it does not extend the set of symbols to include sensible
+      ASCII combinations, such as <code>-&gt;</code>. Finally, it may
+      not be necessary to place symbols in one-to-one correspondence
+      (which motivates the new explicitly-quoted syntax for symbol
+      literals).
+
+ <li> C and many other languages (including some Scheme
+      implementations) support octal notation within strings and
+      characters. Octal notation is not included in this draft because
+      the notation seems no longer as popular as other formats (with
+      the notable exception of <code>\0</code>), and the
+      variable-width encoding is potentially confusing.
+
+ <li> This draft includes both <code>#\newline</code> and
+      <code>#\linefeed</code> as character constants. The former is
+      compatible with R5RS, but the latter is arguably preferable.
+      Maybe we should pick one.
+
+ <li> The syntax for numerical scalar values in character and string
+      literals --- using \x, \u, and \U --- avoids the variable-length
+      encoding of C's \x, but it's an ad hoc mixture of various
+      standards. Another possibility would be to use a delimited
+      Scheme number within a string, as in Gambit.
+
+ <li> Here strings might be generalized as in Perl, where multiple
+      #<< can appear on a line, and the completing of each follows
+      in later lines:
+
+<pre>
+        (string-append #&lt;&lt;ONE #&lt;&lt;TWO)
+        a b c
+        d e f
+        ONE
+        g h i
+        j k l
+        TWO
+        =&gt; "a b c\nd e fg h i\nj k l"
+</pre>
+
+ <li> The <code>\&lt;newline&gt;&lt;intraline-whitespace&gt;</code> may not be necessary.
+      Meanwhile, unescaped newlines perhaps should be prohibited in strings.
+
+ <li> The current draft provides no locale-specific operations on
+      strings. Probably it belongs in another standard, but a few
+      placeholders might be useful here.
+
+</ul>
+
+<h1>Rationale</h1>
+
+<p>
+
+The manipulation of text is a fundamental information processing task.
+Increasingly it is important for software to process text in a variety
+of natural languages, possibly multiple languages in the same
+document.  The Unicode standard specifies how the textual data of most
+of the world's languages is represented and handled.  Several
+operating systems, programming languages, libraries, and software
+tools have now embraced the Unicode standard.  Adding Unicode support
+to Scheme, as specified by this SRFI, will allow
+
+<ul>
+  <li> multilingual text processing
+  <li> internationalization (adaptation of software to the
+       linguistic preference of its users)
+  <li> improved interoperability with operating systems, programming
+       languages, libraries, and software tools that support Unicode
+  <li> improved portability of programs between R6RS Scheme
+       implementations
+</ul>
+
+<h2>Unicode Background</h2>
+
+<p>
+<a href="http://www.unicode.org/">Unicode</a>
+defines a standard mapping between sequences of <strong>code
+points</strong> (integers in the range 0 to #x10FFFF in the latest
+version of the standard) and human-readable ``characters.'' More
+precisely, Unicode distinguishes between <strong>glyphs</strong>,
+which are printed for humans to read, and <strong>characters</strong>,
+which are abstract entities that map to glyphs (sometimes in a way
+that's sensitive to surrounding characters). Furthermore, different
+sequences of code points sometimes correspond to the same
+character. The relationships among code points, characters, and glyphs
+are subtle and complex.
+</p>
+
+<p>
+Despite this complexity, most things that a literate human would call
+a ``character'' can be represented by a single code point in Unicode
+(though there may exist code-point sequences that represent that same
+character). For example, Roman letters, Cyrillic letters, Hebrew
+consonants, and most Chinese characters fall into this category. Thus,
+the ``code point'' approximation of ``character'' works well for many
+purposes. It is thus appropriate to define Scheme characters as Unicode
+<strong>scalar values</strong>, which includes all code points except
+those designated as <strong>surrogates</strong>.  A surrogate is a code
+point in the range #xd800 to #xdfff that is used in pairs in the UTF-16
+encoding to encode a <strong>supplementary character</strong> (whose
+code is in the range #x10000 to #x10ffff).
+</p>
+
+<h2>String and Symbol Literals</h2>
+
+<p>
+Many programming languages use a lexical syntax for strings that is
+similar to the one used by the C language.  In particular, Java has
+extended C's notation for Unicode.  Adopting a similar syntax for
+Scheme has the advantage of making it easier to learn and remember,
+particularly by programmers accustomed to other languages.
+</p>
+
+<p> R5RS specifies that the escape sequences <code>\\</code> and
+<code>\"</code> can be used in string literals to denote the backslash
+and doublequote characters respectively.  This SRFI introduces new
+escape sequences so that any Scheme string can be expressed using the
+ASCII subset of Unicode. Also, most C string literals have the same
+meaning as a Scheme string literal.</p>
+
+<p>This SRFI also extends the lexical syntax of symbols, and it puts
+symbols in one-to-one correspondence with immutable strings. In the
+revised lexical syntax, most Unicode characters can be used directly
+as symbol characters. Furthermore, an explicitly quoted from for
+symbols supports an arbitrary sequence of characters in a symbol
+literal.</p>
+
+<h2>Locales</h2>
+
+<p>Besides printing and reading characters, humans also compare
+character strings, and humans perform operations such as changing
+characters to uppercase. To make programs geographically portable,
+humans must agree to compare or upcase characters consistently, at
+least in certain contexts. The Unicode standard provides such standard
+case mappings on scalar values.</p>
+
+<p>In other contexts, global agreement is unnecessary, and the user's
+culture should determine a string operation, such as when sorting a
+list of file names, perhaps case-insensitively. A locale captures
+information about a user's culture-specific interpretation of
+character sequences. In particular, a locale determines how strings
+are sorted, how a lowercase character is converted to an uppercase
+character, and how strings are compared without regard to case.</p>
+
+<p>String operations such as <code>string-ci=?</code> are <b>not</b>
+sensitive to the current locale, because they should be portable. A
+future SRFI might define operations like
+<code>string-locale-ci=?</code> to produce results that are consistent
+with the current locale as determined by an implementation.</p>
+
+<h2>Not Addressed in this SRFI</h2>
+
+This SRFI does not address locales, and it does not address encoding
+issues, such as how a sequence of bytes in a file is to be decoded
+into a sequence of characters, or how a filesystem path is encoded as
+a string.
+
+<h1>Specification</h1>
+
+<!-- ---------------------------------------------------------- -->
+
+<h2>Types</h2>
+
+This SRFI extends or re-defines the standard types <b>character</b>, <b>string</b>,
+and <b>symbol</b>.
+
+<h3>Character Type</h3>
+
+<p> The Scheme character type corresponds to the set of Unicode scalar
+values.  Specifically, each character corresponds to a number in the
+range [0, #xd7ff] union [#xe000, #x10ffff], and properties of the
+character are as defined for the corresponding Unicode scalar value.</p>
+
+<p> The <code>integer-&gt;char</code> procedure takes a Unicode scalar
+value as an exact integer, it and produces the corresponding
+character. The <code>char-&gt;integer</code> procedure takes a
+character and produces the corresponding scalar value. It is an error
+to call <code>integer-&gt;char</code> with an integer that is not in
+the range [0, #xd7ff] union [#xe000, #x10ffff].</p>
+
+<p>Examples:
+<pre>
+      (integer-&gt;char 32) =&gt; #\space
+      (char-&gt;integer (integer-&gt;char 5000)) =&gt; 5000
+      (integer-&gt;char #xd800) =&gt; *error*
+</pre>
+</p>
+
+<h3>String Type</h3>
+
+<p>
+Like in R5RS, a Scheme string is a fixed-length array of Scheme
+characters.  The procedure call <code>(string-ref <i>str</i>
+<i>i</i>)</code> returns the Scheme character at index
+<code><i>i</i></code> in the string <code><i>str</code></i>.  The
+procedure call <code>(string-set!
+<i>str</i> <i>i</i> <i>char</i>)</code> stores the Scheme character
+<code><i>char</i></code> at index <code><i>i</i></code> in the string
+<code><i>str</i></code>, and an unspecified value is returned.
+</p>
+
+<h3>Symbol Type</h3>
+
+<p> A symbol is defined by a sequence of characters. The
+<code>string-&gt;symbol</code> procedure works on any string, and
+<code>symbol-&gt;string</code> works on any symbol.  </p>
+
+
+<!-- ---------------------------------------------------------- -->
+
+<h2>Lexical Syntax</h2>
+
+The Syntax of Scheme is defined in terms of characters, not bytes, and
+remains largely unchanged with the refined definition of character.
+This SRFI defines and extends only the lexical syntax of characters,
+strings, and symbols.
+
+<h3>Character Lexical Syntax</h3>
+
+<p>
+R5RS specifies two lexical syntaxes for characters: named characters,
+e.g. <code>#\space</code>, and plain characters, e.g. <code>#\[</code>.
+For consistency with the escape sequences of strings and symbols, the
+following set of named characters is defined by this SRFI:
+</p>
+
+<ul>
+  <li> <code>#\nul</code> : Unicode 0
+  <li> <code>#\alarm</code> : Unicode 7
+  <li> <code>#\backspace</code> : Unicode 8
+  <li> <code>#\tab</code> : Unicode 9
+  <li> <code>#\linefeed</code> : Unicode 10
+  <li> <code>#\newline</code> : Unicode 10 (as in R5RS)
+  <li> <code>#\vtab</code> : Unicode 11
+  <li> <code>#\page</code> : Unicode 12
+  <li> <code>#\return</code> : Unicode 13
+  <li> <code>#\esc</code> : Unicode 27
+  <li> <code>#\space</code> : Unicode 32 (as in R5RS)
+  <li> <code>#\rubout</code> : Unicode 127
+</ul>
+
+Note that the linefeed character has two external representations:
+<code>#\linefeed</code> and <code>#\newline</code>.
+
+<p>
+To allow denoting any Unicode character using the ASCII subset of
+Unicode and for consistency with the string escape sequences, this
+SRFI specifies these escape character syntaxes:
+
+<ul>
+  <li> <code>#\x&lt;x&gt;&lt;x&gt;</code> : where <code>&lt;x&gt;</code> is a hexadecimal digit and the sequence of two 
+       <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #xff
+  <li> <code>#\u&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;</code> : where <code>&lt;x&gt;</code> is a hexadecimal digit and the 
+       sequence of four <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #xffff excluding the range [#xd800, #xdfff]
+  <li> <code>#\U&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;</code> : where <code>&lt;x&gt;</code> is 
+       a hexadecimal digit and the sequence of eight <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #x10ffff 
+       excluding the range [#xd800, #xdfff]; the range restriction implies that the first two <code>&lt;x&gt;</code>s
+       are <code>0</code>
+</ul>
+
+<p>
+All character syntaxes are case-sensitive, except that
+<code>&lt;x&gt;</code> can be an uppercase or lowercase hexadecimal
+digit. Unlike R5RS, every character datum must be followed by a
+delimiter. </p>
+
+<p>Examples:
+<pre>
+  #\xFF       ; Unicode 255
+  #\u03BB     ; Unicode 955
+  #\U00006587 ; Unicode 25991
+  #\&#955;         ; Unicode 955
+
+  #\u006587   ; <i>parse error</i>
+  #\&#955;x        ; <i>parse error</i>
+  #\alarmx    ; <i>parse error</i>
+  #\alarm x   ; Unicode 7 followed by x
+  #\Alarm     ; <i>parse error</i>
+  #\alert     ; <i>parse error</i>
+  #\xFF       ; Unicode 255
+  #\xff       ; Unicode 255
+  #\x ff      ; Unicode 120 followed by ff
+  #\x(ff)     ; Unicode 120 followed by a parenthesized ff
+  #\(x)       ; <i>parse error</i>
+  #\((x)      ; Unicode 40 followed by a parenthesized x
+</pre>
+
+<h3>String Lexical Syntax</h3>
+
+A string can be written in either of two forms: using R5RS-style 
+ double quotes, or using a new here-string style.
+
+<h4>Quoted Strings</h4>
+
+As in R5RS, a string datum can be enclosed between double quotes ("),
+ where a backslash adjusts the meaning of a character within the
+ double quotes. The set of escape sequences is as follows:
+
+<ul>
+  <li> <code>\a</code> : alarm, Unicode 7
+  <li> <code>\b</code> : backspace, Unicode 8
+  <li> <code>\t</code> : tab, Unicode 9
+  <li> <code>\n</code> : linefeed, Unicode 10
+  <li> <code>\v</code> : vertical tab, Unicode 11
+  <li> <code>\f</code> : formfeed, Unicode 12
+  <li> <code>\r</code> : return, Unicode 13
+  <li> <code>\"</code> : doublequote, Unicode 34
+  <li> <code>\'</code> : quote, Unicode 39
+  <li> <code>\?</code> : question mark, Unicode 63
+  <li> <code>\\</code> : backslash, Unicode 92
+  <li> <code>\|</code> : vertical bar, Unicode 124
+  <li> <code>\&lt;newline&gt;&lt;intraline-whitespace&gt;</code> : nothing,
+       where <code>&lt;newline&gt;</code> is Unicode 10,
+       and <code>&lt;intraline-whitespace&gt;</code> is a sequence of non-newline whitescape characters
+       (where whitespace is defined in <a href="http://srfi.schemers.org/srfi-14/">SRFI-14</a>)
+  <li> <code>\&lt;space&gt;</code> : space, Unicode 32, where <code>&lt;space&gt;</code> is the character Unicode 32 (useful for
+       terminating the previous escape sequence before continuing with whitespace)
+  <li> <code>\x&lt;x&gt;&lt;x&gt;</code> : where <code>&lt;x&gt;</code> is a hexadecimal digit and the sequence of two <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #xff
+  <li> <code>\u&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;</code> : where <code>&lt;x&gt;</code> is a hexadecimal digit and the sequence of four <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #xffff excluding the range [#xd800, #xdfff]
+  <li> <code>\U&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;</code> : where <code>&lt;x&gt;</code> 
+       is a hexadecimal digit 
+       and the sequence of eight <code>&lt;x&gt;</code>s forms a hexadecimal number between 0 and #x10ffff excluding the range 
+       [#xd800, #xdfff]; the range restriction implies that the first two <code>&lt;x&gt;</code>s
+       are <code>0</code>
+</ul>
+
+These escape sequences are case-sensitive, except that
+<code>&lt;x&gt;</code> can be an uppercase or lowercase hexadecimal
+digit.
+
+
+<p>
+Any other character in a string after a backslash is an error.  Any
+character outside of an escape sequence and not a doublequote stands
+for itself in the string literal.  For example the single-character string
+ <code>"&lambda;"</code> (double quote, a lowercase lambda,
+double quote) denotes the same string literal as
+<code>"\u03bb"</code>.
+</p>
+
+<p> Note that the meaning of
+<code>\u&lt;x&gt;&lt;x&gt;&lt;x&gt;&lt;x&gt;</code> is slightly
+different in Java, because Java handles this escape sequence in the
+escape-processing phase, which can be viewed as preprocessing that
+precedes lexical analysis.  </p>
+
+<h4>Here Strings</h4>
+
+<p> <b>Here strings</b> are a new syntax for denoting string literals
+that eliminates the quoting problem inherent in the traditional string
+syntax.  The sequence <code>#&lt;&lt;</code> marks the start of a here
+string.  The part of the line after the <code>#&lt;&lt;</code> up to
+and including the newline character (Unicode 10) is the <i>key</i>.
+The first line afterward that matches the key marks the end of the
+here string.  The string contains all the characters between the start
+key and the end key, with the exception of the newline before the end
+key. The end key can be terminated by an end-of-file instead of a
+newline.
+
+<p>Example:</p>
+
+<pre>
+      #&lt;&lt;THE-END
+      printf("hello\n");
+      THE-END
+        =&gt; "printf(\"hello\\n\");"
+      
+      #&lt;&lt;THE-END
+      printf("hello\n");
+      
+      THE-END
+        =&gt; "printf(\"hello\\n\");\n"
+</pre>
+
+
+<p>
+Here strings are particularly useful to include verbatim the text of
+some other document, that has its own syntax that might conflict with
+the traditional Scheme string syntax, for example a source code
+fragment or a TeX document.
+</p>
+
+<p>The here string syntax of this SRFI is based on the line-delimited
+here strings of Scsh (see <a
+href="http://www.scsh.net/docu/html/man.html">Scsh Reference
+Manual</a>), which in turn resemble ``here documents'' in shells
+such as bash and csh.
+
+
+<h3>Symbol Lexical Syntax</h3>
+
+<p>The syntax of symbols extends R5RS in three ways.:
+<ul>
+
+ <li> Symbols are case-sensitive.
+
+ <li> Where R5RS allows a <code>&lt;letter&gt;</code>, this SRFI allows
+      any character whose scalar value is greater than 127 and that is
+      not considered whitescape according to <a
+      href="http://srfi.schemers.org/srfi-14/">SRFI-14</a>.
+
+ <li> A vertical bar (|) begins a quoted symbol.  Like the
+      double-quote character for strings, the vertical-bar character
+      indicates both the start and end of a symbol.  The characters between
+      the two vertical bars denote the symbol's constituent
+      characters, and it is parsed as for strings, including the
+      treatment of escape sequences. Unlike strings, double-quote
+      characters that are part of the symbol need not be escaped,
+      whereas vertical-bar characters in the symbol must be escaped.
+
+</ul>
+
+<p>Examples:
+</p>
+
+<pre>
+      'Hello =&gt; Hello
+
+      '&lambda; =&gt; &lambda;
+
+      '|Hello| =&gt; Hello
+
+      (symbol-&gt;string '|a "b\" \|c\| \n|) =&gt; "a \"b\" |c| \n"
+</pre>
+
+
+<!-- ---------------------------------------- -->
+
+<h2>Procedures</h2>
+
+This SRFI defines and extends procedures for characters and strings.
+
+<h3>Character Procedures</h3>
+
+<p>Character-comparison procedures are defined as follows:
+<pre>
+   ;; char-comparator itself is not part of this SRFI; it is
+   ;; used only to define other procedures
+   (define (char-comparator num-comp)
+     (lambda (a-char b-char)
+       (num-comp (char-&gt;integer a-char) (char-&gt;integer b-char))))
+
+   (define char=? (char-comparator =))
+   (define char&lt;? (char-comparator &lt;))
+   (define char&gt;? (char-comparator &gt;))
+   (define char&lt;=? (char-comparator &lt;=))
+   (define char&gt;=? (char-comparator &gt;=))
+</pre>
+
+<p>Unicode defines locale-independent mappings from scalar values to
+scalar values for upcase, downcase, and titlecase operations. (These
+mappings can be extracted from <a
+href="http://www.unicode.org/Public/UNIDATA/UnicodeData.txt">UnicodeData.txt</a>
+from the Unicode Consortium.) The following Scheme procedures map
+characters consistent with the Unicode specification: <ul> <li>
+<code>char-upcase</code> <li> <code>char-downcase</code> <li>
+<code>char-titlecase</code> </ul>
+
+<p>Case-insensitive character-comparison procedures are defined as
+follows:
+<pre>
+   ;; char-ci-comparator itself is not part of this SRFI; it is
+   ;; used only to define other procedures
+   (define (char-ci-comparator cs-comp)
+     (lambda (a-char b-char)
+       (cs-comp (char-downcase a-char) (char-downcase b-char))))
+
+   (define char-ci=? (char-ci-comparator char=?))
+   (define char-ci&lt;? (char-ci-comparator char&lt;?))
+   (define char-ci&gt;? (char-ci-comparator char&gt;?))
+   (define char-ci&lt;=? (char-ci-comparator char&lt;=?))
+   (define char-ci&gt;=? (char-ci-comparator char&gt;=?))
+</pre>
+Programmers should recognize that these procedures may not produce
+ results that an end-user would consider sensible with a particular
+ locale. This SRFI defines no locale-sensitive comparisons for characters.
+
+<p>The following predicates are as defined by <a
+ href="http://srfi.schemers.org/srfi-14/">SRFI-14</a>:
+<ul>
+ <li> <code>char-alphabetic?</code>
+ <li> <code>char-lower-case?</code>
+ <li> <code>char-upper-case?</code>
+ <li> <code>char-title-case?</code>
+ <li> <code>char-numeric?</code>
+ <li> <code>char-symbolic?</code>
+ <li> <code>char-punctuation?</code>
+ <li> <code>char-graphic?</code>
+ <li> <code>char-whitespace?</code>
+ <li> <code>char-blank?</code>
+ <li> <code>char-iso-control?</code>
+</ul>
+
+<h3>String Procedures</h3>
+
+<p>The following string procedures are defined as in R5RS, which means
+that they are defined by pointwise operation on the string's
+characters:
+<ul>
+ <li> <code>string&lt;?</code>
+ <li> <code>string&gt;?</code>
+ <li> <code>string=?</code>
+ <li> <code>string&lt;=?</code>
+ <li> <code>string&gt;=?</code>
+ <li> <code>string-ci&lt;?</code>
+ <li> <code>string-ci&gt;?</code>
+ <li> <code>string-ci=?</code>
+ <li> <code>string-ci&lt;=?</code>
+ <li> <code>string-ci&gt;=?</code>
+</ul>
+Programmers should recognize that these procedures may not produce
+ results that an end-user would consider sensible with a particular
+ locale. This SRFI defines no locale-sensitive comparisons for strings.
+
+
+<h1>Reference Implementation</h1>
+
+<p> MzScheme version 299.100 and up implements the character and
+string operations described in this SRFI. A portable implementation
+using R5RS Scheme (to implement a distinct character type) will
+accompany the next draft of this SRFI.</p>
+
+<p> The file <a href="r6rs-reader.ss">r6rs-reader.ss</a> implements a
+MzScheme-specific reader for the character, string, and symbol syntax
+described in this SRFI. This reader uses readtable support from
+MzScheme 299.103 and up. It does not fully restrict unquoted symbols
+to the syntax of R5RS; for example, <code>-&gt;</code> is parsed as a
+symbol. The reference reader does, however, disable MzScheme's
+backslash escape for symbols (making an unquoted backslash
+illegal).
+The file <a href="r6rs-reader.ss">r6rs-reader-test.ss</a>
+contains a test suite.
+</p>
+
+<h1>Acknowledgements</h1>
+
+<p>
+This SRFI was written in consultation with the full set of R6RS
+editors: Will Clinger, Kent Dybvig, Marc Feeley, Matthew Flatt, Manuel Serrano,
+Michael Sperber, and Anton van Straaten.
+</p>
+
+<h1>References</h1>
+
+<ul>
+
+  <li> <a href="http://www.unicode.org/">The Unicode Consortium</a>
+    publishes the Unicode standard and several Unicode related
+    documents on their web page.
+
+  <li> <i>Unicode Demystified</i> by Richard Gillam, Addison-Wesley
+    Professional, 2002.
+
+  <li> <cite><a href="http://www.scsh.net/docu/html/man.html">Scsh
+   Reference Manual</a></cite> by Olin Shivers, Brian D. Carlstrom,
+   Martin Gasbichler, and Mike Sperber, 2004.</ul>
+
+<h1>Copyright</h1>
+
+Copyright (C) Matthew Flatt and Marc Feeley (2005). All Rights Reserved. 
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+<p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+<hr>
+
+<address>
+  Editor: <a href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a>
+</address>
+
+</body>
+</html>
