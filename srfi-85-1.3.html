@@ -1,0 +1,675 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html40/loose.dtd">
+<html><head>
+<title>SRFI 85: Recursive Equivalence Predicates</title>
+</head>
+<body>
+
+<H1>Title</H1>
+
+Recursive Equivalence Predicates
+
+<H1>Authors</H1>
+
+William D Clinger
+
+<H1>Status</H1>
+
+This SRFI is currently in ``withdrawn'' status. To see an explanation of each
+status that a SRFI can hold, see
+<a HREF="http://srfi.schemers.org/srfi-process.html">here</a>.
+To provide input on this SRFI, please <CODE>
+<a HREF="mailto:srfi-85@srfi.schemers.org">mailto:srfi-85@srfi.schemers.org</a></CODE>.
+See <a HREF="../../srfi-list-subscribe.html">instructions
+here</a> to subscribe to the list. You can access the discussion via
+<a HREF="http://srfi.schemers.org/srfi-85/mail-archive/maillist.html">the
+archive of the mailing list</a>.
+You can access
+post-finalization messages via
+<a href="http://srfi.schemers.org/srfi-85/post-mail-archive/maillist.html">
+the archive of the mailing list</a>.
+
+<UL>
+<LI>Received: <a href="srfi-85-1.2.html">2006/03/09</a>
+<LI>Draft: 2006/03/09 - 2006/05/04
+<LI>Withdrawn: <a href="srfi-85-1.3.html">2006/10/21</a></li>
+</UL>
+
+<h1>Table of contents</h1>
+
+    <ul>
+      <li><a href="#Abstract">Abstract</a></li>
+      <li><a href="#Issues">Issues</a></li>
+      <li><a href="#Rationale">Rationale</a></li>
+      <li><a href="#Specification">Specification</a>
+      <li><a href="#ReferenceImplementation">Reference Implementation</a></li>
+      <li><a href="#References">References</a></li>
+      <li><a href="#Acknowledgements">Acknowledgements</a></li>
+      <li><a href="#Copyright">Copyright</a></li>
+    </ul>
+
+
+<h1><a name="Abstract">Abstract</a></h1>
+
+<p>
+This SRFI defines two related equivalence predicates that are
+recursive, not just partial recursive: they terminate on all
+arguments.
+One of these predicates, <code>equiv?</code>, is consistent
+with the <code>equal?</code> procedure described in the R5RS:
+Whenever <code>equal?</code> terminates, <code>equiv?</code>
+returns the same value as <code>equal?</code>.
+</p>
+
+<h1><a name="Issues">Issues</a></h1>
+
+<ul>
+<li>
+  Should <code>dag-equiv?</code> be allowed or required
+  to use <code>eq?</code> instead of <code>eqv?</code>
+  when comparing leaf nodes?
+<li>
+  The R5RS does not provide a mechanism or means for representing
+  arbitrary finite functions (tables) that look up their results
+  in amortized constant time.
+</ul>
+
+<h1><a name="Rationale">Rationale</a></h1>
+
+<p>
+No one equivalence predicate is right for all purposes,
+but some general-purpose equivalence predicates are more
+natural than others.  For R5RS Scheme, three of the more
+natural notions of equivalence are:
+<ol>
+<li><var>x</var> and <var>y</var> are equivalent
+    if and only if they cannot be distinguished using any
+    finite number of calls to R5RS procedures.
+    (This is <code>eq?</code>, more or less, but R5RS
+    <code>eq?</code> is ad hoc because it may
+    distinguish values that would not be distinguishable
+    without <code>eq?</code>.)
+<li><var>x</var> and <var>y</var> are equivalent
+    if and only if they cannot be distinguished using any
+    finite number of calls to R5RS procedures excluding
+    <code>eq?</code>, <code>eqv?</code>, and procedures
+    defined using <code>eq?</code> and <code>eqv?</code>.
+    (This is <code>eqv?</code>, more or less.)
+<li><var>x</var> and <var>y</var> are equivalent
+    if and only if they cannot be distinguished using any
+    finite number of calls to R5RS procedures excluding
+    <code>eq?</code>, <code>eqv?</code>, side-effecting
+    procedures, and procedures defined using those
+    procedures.
+    (This is the <code>equiv?</code> predicate described
+    in this SRFI, more or less.)
+</ol>
+
+<p>
+The <code>equal?</code> procedure of R5RS attempts to
+compute the last notion above by comparing the contents
+of pairs, vectors, and strings recursively, but may fail
+to terminate if its arguments are circular data structures.
+Its possible non-termination limits its usefulness.
+In the established jargon of recursive function theory,
+<code>equal?</code> is partial recursive but not recursive.
+</p>
+
+<p>
+The <code>equiv?</code> predicate of this SRFI is the
+natural recursive totalization of <code>equal?</code>.
+Whenever <code>equal?</code> terminates, <code>equiv?</code>
+returns the same value as <code>equal?</code>.
+In general, <code>equiv?</code> returns <code>#t</code> if and
+only if the (possibly infinite) unfoldings of its arguments into
+regular trees are equal as ordered trees.  This is equivalent to
+determining whether the arguments are equivalent when interpreted
+as deterministic finite automata.
+</p>
+
+<p>
+The other predicate described by this SRFI,
+<code>dag-equiv?</code>, returns <code>#t</code> if and only if
+its arguments are equal when interpreted as directed acyclic
+graphs.  If <code>(dag-equiv? <var>x</var> <var>y</var>)</code>
+returns <code>#t</code>, then so will
+<code>(equiv? <var>x</var> <var>y</var>)</code>.  The converse
+is not true, however, because <code>dag-equiv?</code> pays
+attention to the pattern of shared substructures, which
+<code>equiv?</code> ignores.
+</p>
+
+<p>
+Roughly speaking, two objects are <code>equiv?</code> if they
+would look the same when drawn as (possibly infinite) trees.
+Two objects are <code>dag-equiv?</code> if they would look
+the same when drawn as DAGs.
+</p>
+
+<p>
+The <code>equiv?</code> predicate can be computed in
+O(<var>mn</var>) time and O(<var>n</var>) space, where
+<var>n</var> is the number of objects used to represent the
+larger argument and <var>m</var> is the length of the longest
+vector within that argument.
+The <code>dag-equiv?</code> predicate can also be computed in
+O(<var>mn</var>) time and O(<var>n</var>) space, where
+<var>n</var> and <var>m</var> are defined in the same way
+but for the smaller argument.
+</p>
+
+<p>
+Unfortunately, the O(<var>mn</var>) time complexity is achieved
+under the assumption of amortized constant-time lookup for
+finite functions that map pairs and vectors to finite sets or
+integers.  The R5RS does not provide any mechanism or means
+by which this can be accomplished, but some implementations
+of Scheme provide hash tables that serve the purpose.
+</p>
+
+<h1><a name="Specification">Specification</a></h1>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>equiv?</CODE> <var>obj1</var> <var>obj2</var>
+<DT><U>procedure:</U> <CODE>dag-equiv?</CODE> <var>obj1</var> <var>obj2</var>
+<DD>
+
+<p>
+These are total predicates defined on arbitrary objects.
+The <code>equiv?</code> predicate returns <code>#t</code> if and
+only if the (possibly infinite) unfoldings of its arguments into
+regular trees are equal as ordered trees.
+The <code>dag-equiv?</code> predicate returns <code>#t</code>
+if and only if its arguments are equal when interpreted as
+directed acyclic graphs.
+</p>
+
+<p>
+Both <code>equiv?</code> and <code>dag-equiv?</code>
+<ul>
+<li>treat pairs and vectors as nodes with outgoing edges;
+<li>use <code>string=?</code> to compare strings;
+<li>use <code>eqv?</code> to compare other leaf nodes.
+</ul>
+The <code>dag-equiv?</code> predicate uses <code>eq?</code>
+(not <code>eqv?</code>) to detect sharing.
+
+<pre>
+    (equiv? '() '())                                ==>  #t
+    (equiv? (vector 34.5 34.5) '#(34.5 34.5))       ==>  #t
+    (dag-equiv? (vector 34.5 34.5) '#(34.5 34.5))   ==>  <var>unspecified</var>
+    (dag-equiv? (vector 'abc 'abc) '#(abc abc))     ==>  #t
+
+    (let* ((x (list 'a))
+           (y (list 'a))
+           (z (list x y)))
+      (list (equiv? z (list y x))
+            (dag-equiv? z (list y x))
+            (equiv? z (list x x))
+            (dag-equiv? z (list x x))))             ==>  (#t #t #t #f)
+
+    (let ((x (list 'a 'b 'c 'a))
+          (y (list 'a 'b 'c 'a 'b 'c 'a)))
+      (set-cdr! (list-tail x 2) x)
+      (set-cdr! (list-tail y 5) y)
+      (list
+       (equiv? x x)
+       (dag-equiv? x x)
+       (equiv? x y)
+       (dag-equiv? x y)
+       (equiv? (list x y 'a) (list y x 'b))))       ==>  (#t #t #t #f #f)
+</pre>
+
+</DD>
+</DL>
+
+
+<H1><a name="ReferenceImplementation">Reference Implementation</a></H1>
+
+<pre>
+;;; Copyright 2006 William D Clinger.
+;;;
+;;; EQUIV? and DAG-EQUIV?
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Uses SRFI 69 (basic hash tables).  Uses only:
+;;;
+;;; make-hash-table
+;;; hash-table-ref/default
+;;; hash-table-set!
+;;;
+;;; Only one argument is passed to make-hash-table, and that
+;;; argument is always the eq? procedure.
+;;;
+;;; The reference implementation of SRFI 69 contains several
+;;; bugs that prevent it from working out of the box.
+;;; The three definitions that follow this comment provide
+;;; a portable implementation of the tiny fragment of SRFI 69
+;;; needed to test EQUIV? and DAG-EQUIV?, but will make the
+;;; algorithms run in quadratic time instead of linear.
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (make-hash-table . args)
+  (list 'hash-table-for-eq?))
+
+(define (hash-table-ref/default t x default)
+  (let ((probe (assq x (cdr t))))
+    (if probe
+        (cdr probe)
+        default)))
+
+(define (hash-table-set! t x value)
+  (let ((probe (assq x (cdr t))))
+    (if probe
+        (set-cdr! probe value)
+        (set-cdr! t (cons (cons x value) (cdr t))))
+    #t))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; EQUIV?
+;;;
+;;; EQUIV? is a version of EQUAL? that terminates on all arguments.
+;;;
+;;; The basic idea of the algorithm is presented in
+;;;
+;;; J E Hopcroft and R M Karp.  A Linear Algorithm for
+;;; Testing Equivalence of Finite Automata.
+;;; Cornell University Technical Report 71-114,
+;;; December 1971.
+;;; http://techreports.library.cornell.edu:8081/Dienst/UI/1.0/Display/cul.cs/TR71-114
+;;;
+;;; The algorithm uses FIND and MERGE operations, which
+;;; roughly correspond to done? and equate! in the code below.
+;;; The algorithm maintains a stack of comparisons to do,
+;;; and a set of equivalences that would be implied by the
+;;; comparisons yet to be done.
+;;;
+;;; When comparing objects x and y whose equality cannot be
+;;; determined without recursion, the algorithm pushes all
+;;; the recursive subgoals onto the stack, and merges the
+;;; equivalence classes for x and y.  If any of the subgoals
+;;; involve comparing x and y, the algorithm will notice
+;;; that they are in the same equivalence class and will
+;;; avoid circularity by assuming x and y are equal.
+;;; If all of the subgoals succeed, then x and y really are
+;;; equal, so the algorithm is correct.
+;;;
+;;; If the hash tables give amortized constant-time lookup on
+;;; object identity, then this algorithm could be made to run
+;;; in O(n) time, where n is the number of nodes in the larger
+;;; of the two structures being compared.
+;;;
+;;; If implemented in portable R5RS Scheme, the algorithm
+;;; should still run in O(n^2) time, or close to it.
+;;;
+;;; This implementation uses two techniques to reduce the
+;;; cost of the algorithm for common special cases:
+;;;
+;;; It starts out by trying the traditional recursive algorithm
+;;; to bounded depth.
+;;; It handles easy cases specially.
+
+; How long should we try the traditional recursive algorithm
+; before switching to the terminating algorithm?
+
+(define equiv:bound-on-recursion 1000000)
+
+(define (equiv? x y)
+
+  ; The traditional recursive algorithm, with bounded recursion.
+  ; Returns #f or an exact integer n.
+  ; If n > 0, then x and y are equal and the comparison involved
+  ; bound - n recursive calls.
+  ; If n <= 0, then the algorithm terminated before
+  ; it could determine whether x and y are equal.
+
+  (define (equal? x y bound)
+    (cond ((eq? x y)
+           bound)
+          ((<= bound 0)
+           bound)
+          ((and (pair? x) (pair? y))
+           (if (eq? (car x) (car y))
+               (equal? (cdr x) (cdr y) (- bound 1))
+               (let ((result (equal? (cdr x) (cdr y) (- bound 1))))
+                 (if result
+                     (equal? (car x) (car y) result)
+                     #f))))
+          ((and (vector? x) (vector? y))
+           (let ((nx (vector-length x))
+                 (ny (vector-length y)))
+             (if (= nx ny)
+                 (let loop ((i 0)
+                            (bound (- bound 1)))
+                   (if (< i nx)
+                       (let ((result (equal? (vector-ref x i)
+                                             (vector-ref y i)
+                                             bound)))
+                         (if result
+                             (loop (+ i 1) result)
+                             #f))
+                       bound))
+                 #f)))
+          ((and (string? x) (string? y))
+           (if (string=? x y) bound #f))
+          ((eqv? x y)
+           bound)
+          (else #f)))
+
+  ; Returns #t iff x and y would have the same (possibly infinite)
+  ; printed representation.  Always terminates.
+
+  (define (equiv? x y)
+    (let ((done (initial-equivalences)))
+
+      ; done is a hash table that maps objects to their
+      ; equivalence classes.
+      ;
+      ; Algorithmic invariant:  If all of the comparisons that
+      ; are in progress (pushed onto the control stack) come out
+      ; equal, then all of the equivalences in done are correct.
+      ;
+      ; Invariant of this implementation:  The equivalence classes
+      ; omit easy cases, which are defined as cases in which eqv?
+      ; always returns the correct answer.  The equivalence classes
+      ; also omit strings, because strings can be compared without
+      ; risk of circularity.
+      ;
+      ; Invariant of this prototype:  The equivalence classes include
+      ; only pairs and vectors.  If records or other things are to be
+      ; compared recursively, then they should be added to done.
+      ;
+      ; Without constant-time lookups, it is important to keep
+      ; done as small as possible.  This implementation takes
+      ; advantage of several common cases for which it is not
+      ; necessary to keep track of a node's equivalence class.
+
+      (define (equiv? x y)
+        ;(step x y done)
+        (cond ((eqv? x y)
+               #t)
+              ((and (pair? x) (pair? y))
+               (let ((x1 (car x))
+                     (y1 (car y))
+                     (x2 (cdr x))
+                     (y2 (cdr y)))
+                 (cond ((done? x y done)
+                        #t)
+                       ((eqv? x1 y1)
+                        (equate! x y done)
+                        (equiv? x2 y2))
+                       ((eqv? x2 y2)
+                        (equate! x y done)
+                        (equiv? x1 y1))
+                       ((easy? x1 y1)
+                        #f)
+                       ((easy? x2 y2)
+                        #f)
+                       (else
+                        (equate! x y done)
+                        (and (equiv? x1 y1)
+                             (equiv? x2 y2))))))
+              ((and (vector? x) (vector? y))
+               (let ((n (vector-length x)))
+                 (if (= n (vector-length y))
+                     (if (done? x y done)
+                         #t
+                         (begin (equate! x y done)
+                                (vector-equiv? x y n 0)))
+                     #f)))
+              ((and (string? x) (string? y))
+               (string=? x y))
+              (else #f)))
+
+      ; Like equiv? above, except x and y are known to be vectors,
+      ; n is the length of both, and i is the first index that has
+      ; not yet been pushed onto the todo set.
+    
+      (define (vector-equiv? x y n i)
+        (if (< i n)
+            (let ((xi (vector-ref x i))
+                  (yi (vector-ref y i)))
+              (if (easy? xi yi)
+                  (if (eqv? xi yi)
+                      (vector-equiv? x y n (+ i 1))
+                      #f)
+                  (and (equiv? xi yi)
+                       (vector-equiv? x y n (+ i 1)))))
+            #t))
+
+      (equiv? x y)))
+
+  ; A comparison is easy if eqv? returns the right answer.
+
+  (define (easy? x y)
+    (cond ((eqv? x y)
+           #t)
+          ((pair? x)
+           (not (pair? y)))
+          ((pair? y)
+           #t)
+          ((vector? x)
+           (not (vector? y)))
+          ((vector? y)
+           #t)
+          ((not (string? x))
+           #t)
+          ((not (string? y))
+           #t)
+          (else #f)))
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;
+  ; Tables mapping objects to their equivalence classes.
+  ;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  ; FIXME:  Equivalence classes are represented as lists,
+  ; which means they can't be merged in constant time.
+
+  (define (initial-equivalences)
+    (make-hash-table eq?))
+
+  ; Are x and y equivalent according to the table?
+
+  (define (done? x y table)
+    (memq x (hash-table-ref/default table y '())))
+
+  ; Merge the equivalence classes of x and y in the table,
+  ; and return the table.  Changes the table.
+
+  (define (equate! x y table)
+    (let ((xclass (hash-table-ref/default table x '()))
+          (yclass (hash-table-ref/default table y '())))
+      (cond ((and (null? xclass) (null? yclass))
+             (let ((class (list x y)))
+               (hash-table-set! table x class)
+               (hash-table-set! table y class)))
+            ((null? xclass)
+             (let ((class0 (cons x (cdr yclass))))
+               (set-cdr! yclass class0)
+               (hash-table-set! table x yclass)))
+            ((null? yclass)
+             (let ((class0 (cons y (cdr xclass))))
+               (set-cdr! xclass class0)
+               (hash-table-set! table y xclass)))
+            ((eq? xclass yclass)
+             #t)
+            ((memq x yclass)
+             #t)
+            (else
+             (let ((class0 (append (cdr xclass) yclass)))
+               (set-cdr! xclass class0)
+               (set-car! yclass (car xclass))
+               (set-cdr! yclass class0)))))
+    table)
+
+  (let ((result (equal? x y equiv:bound-on-recursion)))
+    (if result
+        (if (> result 0)
+            #t
+            (equiv? x y))
+        #f)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; DAG-EQUIV?
+;;;
+;;; Returns #t iff its arguments are EQUIV? and also have the
+;;; same pattern of shared substructure.
+;;; 
+;;; Algorithm:  Traverse both arguments simultaneously in some
+;;; canonical way.  Maintain two hash tables, one for each
+;;; argument.  Count the number of distinct (in the sense of
+;;; eq?) objects that have been encountered so far in one of
+;;; the arguments.  (The count for the other argument must be
+;;; the same.)  When a node is encountered that has not been
+;;; seen before, increment the count and associate the node
+;;; with that serial number in the appropriate hash table.
+;;; The corresponding node in the other argument must also
+;;; be new to the traversal.  If so, associate it with the
+;;; same serial number in the other hash table.  If not,
+;;; return #f.
+;;;
+;;; When a node is encountered that has been seen before,
+;;; the corresponding node in the other argument must also
+;;; have been seen before and have the same serial number.
+;;; If so, return #t.  If not, return #f.
+;;;
+;;; If the hash tables provide amortized constant-time lookup on
+;;; object identity, then this algorithm will run in O(n) time,
+;;; where n is the number of distinct nodes in the smaller of
+;;; the two structures being compared.
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (dag-equiv? x y)
+
+  ; The number of distinct nodes seen so far.
+
+  (define counter 0)
+
+  ; Hash tables mapping nodes to serial numbers.
+
+  (define xnodes (make-hash-table eq?))
+  (define ynodes (make-hash-table eq?))
+
+  (let ()
+
+    ; Returns #t iff x and y have the same graph structure.
+
+    (define (iso? x y)
+      (cond ((eq? x y)
+             (same-serial-number? x y))
+            ((or (seen-previously? x xnodes)
+                 (seen-previously? y ynodes))
+             (same-serial-number? x y))
+            ((and (pair? x) (pair? y))
+             (record-serial-numbers! x y)
+             (and (iso? (car x) (car y))
+                  (iso? (cdr x) (cdr y))))
+            ((and (vector? x) (vector? y))
+             (record-serial-numbers! x y)
+             (let ((nx (vector-length x))
+                   (ny (vector-length y)))
+               (if (= nx ny)
+                   (let loop ((i 0))
+                     (if (< i nx)
+                         (and (iso? (vector-ref x i)
+                                    (vector-ref y i))
+                              (loop (+ i 1)))
+                         #t))
+                   #f)))
+            ((and (string? x) (string? y))
+             (record-serial-numbers! x y)
+             (string=? x y))
+            (else
+             (record-serial-numbers! x y)
+             (eqv? x y))))
+
+    ; Returns #t iff the object appears in the hash table.
+
+    (define (seen-previously? obj nodes)
+      (hash-table-ref/default nodes obj #f))
+
+    ; Returns #t iff x and y have the same serial number.
+    ; If neither x nor y have been assigned a serial number,
+    ; then their serial number is the current value of the
+    ; counter.  In that case, the counter is incremented,
+    ; and both x and y are entered into the hash tables.
+
+    (define (same-serial-number? x y)
+      (let ((xid (hash-table-ref/default xnodes x #f))
+            (yid (hash-table-ref/default ynodes y #f)))
+        (cond ((and xid yid)
+               (= xid yid))
+              ((or xid yid)
+               #f)
+              (else
+               (record-serial-numbers! x y)
+               #t))))
+  
+    ; Increments the counter, and records its new value
+    ; as the serial number for both arguments.
+    ; Precondition:  Neither argument has a serial number.
+
+    (define (record-serial-numbers! x y)
+      (set! counter (+ counter 1))
+      (hash-table-set! xnodes x counter)
+      (hash-table-set! ynodes y counter))
+
+    (iso? x y)))
+</pre>
+
+<h1><a name="References">References</a></h1>
+
+<ul>
+<li>J E Hopcroft and R M Karp.
+    <cite><a href="http://techreports.library.cornell.edu:8081/Dienst/UI/1.0/Display/cul.cs/TR71-114">A Linear Algorithm
+    for Testing Equivalence of Finite Automata.</a></cite>
+    Cornell University Technical Report 71-114, December 1971.
+</ul>
+
+
+<h1><a name="Acknowledgements">Acknowledgements</a></h1>
+
+<p>
+Kent Dybvig suggested the <code>dag-equiv?</code> predicate.
+</p>
+
+
+<h1><a name="Copyright">Copyright</a></h1>
+
+<p>
+Copyright (C) 2006 William D Clinger. All Rights Reserved. 
+</p>
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+</p>
+<p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+</p>
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+</p>
+
+    <hr>
+    <address>Editor: <a
+    href="mailto:srfi-editors@srfi.schemers.org">Mike Sperber</a></address>
+
+</body></html>
