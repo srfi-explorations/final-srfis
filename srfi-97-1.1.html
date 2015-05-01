@@ -1,0 +1,586 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html><head>
+<title>SRFI 97: SRFI Libraries</title>
+<style type="text/css">
+body { 
+   width: 7in;
+   margin: 30pt;
+}
+.authorsnote {
+   font-style: italic;
+}
+thead {
+   font-variant: small-caps;
+}
+</style>
+</head>
+<body>
+
+<H1>Title</H1>
+
+SRFI Libraries
+
+<H1>Author</H1>
+
+David Van Horn
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status.  To see an explanation of
+each status that a SRFI can hold, see <A
+HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+
+To provide input on this SRFI, please 
+<A HREF="mailto:srfi-97 at srfi dot schemers dot org">mail to
+<code>&lt;srfi minus 97 at srfi dot schemers dot org&gt;</code></A>.  See 
+<A HREF="../../srfi-list-subscribe.html">instructions here</A> to subscribe to
+the list.  You can access previous messages via 
+<A HREF="mail-archive/maillist.html">the archive of the mailing list</A>.
+
+
+<P><UL>
+
+<LI>Received: 2008/03/25</LI>
+<LI>Draft: 2008/03/25 - 2008/05/24</LI>
+</UL>
+
+<H1>Abstract</H1>
+
+<p>Over the past ten years, numerous libraries have been specified via
+the Scheme Requests for Implementation process.  Yet until the recent
+ratification of the Revised<sup>6</sup> Report on the Algorithmic
+Language Scheme, there has been no standardized way of distributing or
+relying upon library code.  Now that such a library system exists,
+there is a real need to organize these existing SRFI libraries so that
+they can be portably referenced.</p>
+
+<p>This SRFI is designed to facilitate the writing and distribution of
+code that relies on SRFI libraries.  It identifies a subset of
+existing SRFIs that specify features amenable to provision (and
+possibly implementation) as libraries (SRFI Libraries) and proposes a
+naming convention for this subset so that these libraries may be
+referred to by name or by number.  Moreover, portable R<sup>6</sup>RS reference
+implementations and test suites are provided, where possible, for the
+SRFI Libraries.</p>
+
+<h1>Issues</h1>
+
+<ul>
+<li>Some authors have already specified the names that should be used
+(e.g., list-lib for SRFI 1 and vector-lib for SRFI 43) for Schemes with
+a library system, however these names are not used here.  SRFI 41
+Streams is the only SRFI to specify an R<sup>6</sup>RS library and therefore it
+specifies its library names.  These names are not used here.  In both
+cases, a consistent naming scheme is used which happens to differ from
+the author's originally chosen names.  (Note that most
+implementations, which do have some kind of library system, do not
+follow the author recommendations for names in existing SRFIs.)</li>
+
+<li>This SRFI uses <code>(srfi <em>N</em>)</code>, but this is not
+allowed in R<sup>6</sup>RS, even though it is consistent with the
+R<sup>6</sup>RS recommendation that library names be suitable as part
+of file names (indeed, numbers are used in the versioning component of
+library names).  So if there is a consensus that this <em>should</em>
+be the way to reference SRFIs, I'm willing to make a de facto
+extension of R<sup>6</sup>RS that allows for this.  Other alternatives
+include <code>(srfi-<em>N</em>)</code>, which is non-hierarchical and
+thus violates the recommendations of R<sup>6</sup>RS on choosing
+library names and may cause some ugliness when systems map names to a
+file system location and all the srfis appear in the root directory.
+Other options include <code>(srfi nN *)</code>, <code>(org
+schemers srfi-N *)</code>, <code>(srfis srfi-N *)</code>, etc.  All of
+these are, in my opinion, ugly hacks around R<sup>6</sup>RS
+limitations.</li>
+
+<li>Some SRFIs are omitted on the grounds that they alter the
+semantics of standard Scheme bindings (e.g., SRFI 70, Numbers).  It is
+possible that these SRFIs could be provided as libraries that
+effectively supersede <code>(rnrs base)</code> by exporting the same
+bindings as <code>(rnrs base)</code>, but with the altered semantics.
+Combining several such SRFIs would not work as intended, but it may be
+a sensible alternative to omission.  On the other hand, this might be
+seen as a perversion of the original author's intent that these
+semantics really be the semantics of the standard bindings.</li>
+
+<li>Some SRFIs are omitted on the grounds that they alter or extend
+the lexical syntax of Scheme programs, which cannot be provided by an
+R<sup>6</sup>RS library (see next issue).  However, extensions to
+lexical syntax could be part of a SRFI library so long as that library
+(or some other library) also exports procedures that implement the
+extended syntax.  In other words, extensions to the lexical syntax of
+the standard read and write procedures cannot be part of a SRFI
+library, but nonstandard read and write procedures are okay.  SRFI 38
+does this.  Should this approach be adopted in general?</li>
+
+<li>R6RS allows for lexical extension via <code>#!&lt;identifier&gt;</code>
+lexemes.  Should this SRFI incorporate those SRFIs that are excluded
+for extending the lexical syntax and define the appropriate
+<code>#!srfi-N</code> lexeme?</li>
+
+<li>Some omitted SRFIs may be implemented as libraries
+(eg. Conditions), but have been omitted because they are subsumed by
+R<sup>6</sup>RS, or are don't make much sense without other SRFIs which cannot be
+implemented as libraries (such as Exception Handling for Programs).
+Should these SRFIs be included?</li>
+
+<li>Is SRFI 44, Collections, really a SRFI Library?  It's more of a
+meta-SRFI than a library.</li>
+
+<li>SRFI 4, Homogeneous numeric vector datatypes, has a substantial
+library component but also modifies the lexical syntax of the
+language.  Should it be considered a SRFI Library?</li>
+
+<li>Should export levels be specified?</li>
+
+<li>Withdrawn SRFIs are not considered here. Should they be?</li>
+
+<li>Versioning information is not included in the library naming
+scheme.  This SRFI does not specify the meaning of importing SRFI
+libraries declared with versioning information.</li>
+
+<li>ERR<sup>5</sup>RS: My hope is that this SRFI carries over without issue to
+ERR<sup>5</sup>RS.  But someone who knows more about the library system of ERR<sup>5</sup>RS
+will have to evaluate this.</li>
+
+<li>See the "author's notes", marked in the text by <span class="authorsnote">italics</span>.</li>
+</ul>
+
+<h1>Rationale</h1>
+
+<p>With the advent of R<sup>6</sup>RS, it has become possible to write and
+distribute portable Scheme code as libraries.  However, there is no
+agreed upon way to refer to SRFI libraries, leaving implementors to
+create their own conventions thus thwarting portability of code which
+relies on SRFIs.  So there is an immediate and obvious need for
+standardized SRFI library names.</p>
+
+<p>Moreover, there is a clear need to reexamine the existing body of
+SRFI libraries and to come to a consensus on how to resolve issues, if
+any, that arise under the latest Scheme standards.</p>
+
+<p>Finally, because the library system of R<sup>6</sup>RS facilitates
+the distribution of portable libraries, this SRFI will provide
+portable reference implementations and test suites for SRFI libraries,
+where possible.  Again, this facilitates distribution of portable code
+that relies on SRFIs and can greatly benefit Scheme systems with
+minimal or no support for SRFIs.</p>
+
+<h1>Specification</h1>
+
+<p>This specification includes a list of library names for existing
+SRFIs that specify libraries.  These names are assigned according to a
+naming convention given below. 
+
+
+</p>
+
+<p>Although R<sup>6</sup>RS's notion of a library is the one used here, this SRFI
+attempts to minimize assumptions made about a Scheme systems
+conformance to R<sup>6</sup>RS so that systems may support SRFI Libraries without
+necessarily supporting all of R<sup>6</sup>RS.</p>
+
+<h2>Referencing SRFI Libraries</h2>
+
+<p>
+A SRFI library reference has the following form,
+
+<blockquote>
+<code>(srfi <em>&lt;uinteger 10&gt;</em> <em>&lt;identifier&gt;</em> ...)</code>,
+</blockquote>
+
+where <code><em>&lt;identifier&gt;</em></code> is one of the included
+SRFI library names defined below, and <code><em>&lt;uinteger
+10&gt;</em></code> is one of the included SRFI numerals given below.
+The non-terminals <code>&lt;uinteger 10&gt;</code> and
+<code>&lt;identifier&gt;</code> are defined as given in R<sup>6</sup>RS <a
+href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-7.html#node_chap_4">Chapter
+4, Lexical syntax</a>.</p>
+
+<p class="discussionnote">
+<em>Discussion:</em> According to R<sup>6</sup>RS, library references consist
+only of identifiers, so this naming scheme does not strictly conform
+to R<sup>6</sup>RS, however this is a moderate and reasonable extension to
+request that allows SRFI Libraries to remain <em>hierarchical</em>,
+consistent with the precedent of the R<sup>6</sup>RS Standard Libraries.</p>
+
+A SRFI Library can be referenced by number, as in
+<blockquote>
+<code>(srfi 1)</code>,
+</blockquote>
+or equivalently using the library's name, as in
+<blockquote>
+<code>(srfi 1 lists)</code>.
+</blockquote>
+</p>
+
+<p class="discussionnote">
+<em>Discussion:</em>
+Even though the latter uses a library name, the SRFI number must still
+be supplied.  This is done to ensure <em>fairness</em> and
+<em>uniqueness</em>&mdash;a SRFI should not be able to prevent other
+SRFIs from using the same name, but at the same time, SRFI library
+references should remain unambiguous.
+</p>
+
+<p class="discussionnote">
+<em>Discussion:</em> Since the number-only naming scheme ensures both
+<em>uniqueness</em> and <em>fairness</em>, the named-library scheme is
+redundant, but it is included to make library imports more readable.
+Although the same could be achieved via a comment, comments are not
+checked.  The named-library scheme can thus be used to increase the
+likelihood that the correct library is imported.
+</p>
+
+<p>The remaining identifier subforms are used to name sublibraries
+within a SRFI Library.  For example, SRFI 41, Streams, defines
+<code>primitive</code> and <code>derived</code> libraries within the
+<code>streams</code> library.  These can be referenced as
+<blockquote>
+<code>(srfi 41 streams primitive)</code>,<br/>
+<code>(srfi 41 streams derived)</code>.
+</blockquote>
+</p>
+
+
+
+<h2>Naming convention</h2>
+
+<p>Libraries that define datatypes are typically pluralized (e.g.,
+<code>arrays</code>, <code>basic-string-ports</code>).  Libraries that
+provide new expression forms are named by the name of their new form
+(e.g., <code>let-values</code>, <code>rec</code>,
+<code>and-let*</code>).  Libraries that define a single procedure (or
+that have a primary procedure) are given the name of the procedure
+(e.g., <code>error</code>, <code>cat</code>).  Libraries that provide a
+large API of syntaxes and values are named in a descriptive manner
+derived from their title (e.g., <code>lightweight-testing</code>,
+<code>real-time-multithreading</code>).  This naming
+convention is consistent with the names chosen in the R<sup>6</sup>RS
+Standard Libraries.</p>
+
+<p class="discussionnote"> <em>Discussion:</em> There is opportunity
+for grouping related SRFIs together.  For example, SRFI 28, Basic
+Format Strings, and SRFI 48, Intermediate Format Strings, could be
+grouped into a common <code>format</code> library with
+<code>simple</code> and <code>intermediate</code> components.  This
+has been avoided, preferring instead to follow a <em>one SRFI, one
+(top-level) library</em> convention.  Although within a single SRFI,
+several sub-libraries can be defined, thus achieving grouping.  This
+simplifies the naming convention and prevents the need for a naming
+authority which decides what shall and shall not be grouped together.
+Instead, grouping must be achieved by the SRFI process, as it should.
+</p>
+
+<h2>Included SRFIs</h2>
+
+<p>The criterion for inclusion in the set of SRFI Libraries is that
+the finalized SRFI only specify a set of bindings which can be
+provided as a library.  SRFI Libraries need not be implementable as an
+R<sup>6</sup>RS library, but they must specify an interface which could be used
+<em>as if it were</em>.  This means, for example, that lexical syntax
+extensions cannot be a part of a SRFI Library.  SRFIs that specify
+global semantic changes to Scheme also cannot be SRFI Libraries.  For
+example, a Lazy Scheme SRFI or a SRFI that fixed order of evaluation
+in procedure application could not be a SRFI Library because these
+features cannot be provided as a set of bindings.</p>
+
+<p>Some SRFIs specify alternative semantics to standard Scheme
+bindings.  In some cases, such as SRFI 5's <code>let</code>, it's
+clear that making the alternative binding for <code>let</code>
+available as a library binding is desirable.  Authors that wish to
+use SRFI 5's <code>let</code>, rather than R<sup>6</sup>RS's <code>let</code>,
+simply import the SRFI 5 binding and exclude the R<sup>6</sup>RS binding for
+<code>let</code> (or rename to avoid the clash).</p>
+
+<p>Other SRFIs, however, define alternative bindings that are intended
+to be used throughout a Scheme system.  For example, SRFI 63's
+<code>equal?</code> and most of SRFI 70, Numbers, are defined like this.
+But if the author intends for these bindings to <em>replace</em> the
+standard bindings, then there is no way of making this feature
+available as a library, so the SRFI cannot be a SRFI Library.
+</p>
+
+<p>The approach taken in this SRFI is that a SRFI is excluded as a
+SRFI Library if it explicitly states the binding is to replace the
+standard one.  For example, SRFI 70, Numbers, is excluded because it
+explicitly revises the text of R<sup>5</sup>RS, thus intending to make
+a global semantic change to the language which cannot be provided as a
+library.  On the other hand, SRFI 63, Homogeneous and Heterogeneous
+Arrays, is included and provides a binding for <code>equal?</code>
+because the SRFI 63 document does not explicitly state this should
+replace the standard <code>equal?</code> binding.</p>
+
+<p>The following SRFI library names are defined:</p>
+
+<table>
+<thead><tr><td>SRFI</td><td>Library names</td><td>Title</td></tr></thead>
+
+<tr><td>1</td><td>lists</td><td>List Library</td></tr>
+<tr><td>2</td><td>and-let*</td><td>AND-LET*: an AND with local bindings, a guarded LET* special form</td></tr>
+<!--
+<tr><td>4</td><td>homogeneous-numeric-vectors</td><td>Homogeneous numeric vector datatypes</td></tr>
+-->
+<tr><td>5</td><td>let</td><td>A compatible let form with signatures and rest arguments</td></tr>
+<tr><td>6</td><td>basic-string-ports</td><td>Basic String Ports</td></tr>
+<tr><td>8</td><td>receive</td><td><code>receive</code>: Binding to multiple values</td></tr>
+<tr><td>9</td><td>records</td><td>Defining Record Types</td></tr>
+<tr><td>11</td><td>let-values</td><td>Syntax for receiving multiple values</td></tr>
+<tr><td>13</td><td>strings</td><td>String Libraries</td></tr>
+<tr><td>14</td><td>char-sets</td><td>Character-Set Library</td></tr>
+<tr><td>16</td><td>case-lambda</td><td>Syntax for procedures of variable arity</td></tr>
+<tr><td>17</td><td>generalized-set!</td><td>Generalized set!</td></tr>
+<tr><td>18</td><td>multithreading</td><td>Multithreading support</td></tr>
+<tr><td>19</td><td>time</td><td>Time Data Types and Procedures</td></tr>
+<tr><td>21</td><td>real-time-multithreading</td><td>Real-time multithreading support</td></tr>
+<tr><td>23</td><td>error</td><td>Error reporting mechanism</td></tr>
+<tr><td>25</td><td>multi-dimensional-arrays</td><td>Multi-dimensional Array Primitives</td></tr>
+<tr><td>26</td><td>cut</td><td>Notation for Specializing Parameters without Currying</td></tr>
+<tr><td>27</td><td>random-bits</td><td>Sources of Random Bits</td></tr>
+<tr><td>28</td><td>basic-format-strings</td><td>Basic Format Strings</td></tr>
+<tr><td>29</td><td>localization</td><td>Localization</td></tr>
+<tr><td>31</td><td>rec</td><td>A special form for recursive evaluation</td></tr>
+<tr><td>38</td><td>with-shared-structure</td><td>External Representation for Data With Shared Structure</td></tr>
+<tr><td>39</td><td>parameters</td><td>Parameter objects</td></tr>
+<tr><td>41</td><td>streams, streams primitive, streams derived</td><td>Streams</td></tr>
+<tr><td>42</td><td>eager-comprehensions</td><td>Eager Comprehensions</td></tr>
+<tr><td>43</td><td>vectors</td><td>Vector Library</td></tr>
+<tr><td>44</td><td>collections</td><td>Collections</td></tr>
+<tr><td>45</td><td>lazy</td><td>Primitives for expressing iterative lazy algorithms</td></tr>
+<tr><td>46</td><td>syntax-rules</td><td>Basic Syntax-rules Extensions</td></tr>
+<tr><td>47</td><td>arrays</td><td>Array</td></tr>
+<tr><td>48</td><td>intermediate-format-strings</td><td>Intermediate Format Strings</td></tr>
+<tr><td>51</td><td>rest-values</td><td>Handling rest list</td></tr>
+<tr><td>54</td><td>cat</td><td>Formatting</td></tr>
+<tr><td>57</td><td>records</td><td>Records</td></tr>
+<tr><td>59</td><td>vicinities</td><td>Vicinity</td></tr>
+<tr><td>60</td><td>integer-bits</td><td>Integers as Bits</td></tr>
+<tr><td>61</td><td>cond</td><td>A more general <code>cond</code> clause</td></tr>
+<tr><td>63</td><td>arrays</td><td>Homogeneous and Heterogeneous Arrays </td></tr>
+<tr><td>64</td><td>testing</td><td>A Scheme API for test suites</td></tr>
+<tr><td>66</td><td>octet-vectors</td><td>Octet Vectors</td></tr>
+<tr><td>67</td><td>compare-procedures</td><td>Compare Procedures</td></tr>
+<tr><td>69</td><td>basic-hash-tables</td><td>Basic hash tables</td></tr>
+<tr><td>71</td><td>let</td><td><code>LET</code>-syntax for multiple values</td></tr>
+<tr><td>74</td><td>blobs</td><td>Octet-Addressed Binary Blocks</td></tr>
+<tr><td>78</td><td>lightweight-testing</td><td>Lightweight testing</td></tr>
+<tr><td>86</td><td>mu-and-nu</td><td>MU and NU simulating VALUES &amp; CALL-WITH-VALUES, and their related LET-syntax</td></tr>
+<tr><td>87</td><td>case</td><td>=> in case clauses</td></tr>
+<tr><td>95</td><td>sorting-and-merging</td><td>Sorting and Merging</td></tr>
+</table>
+
+
+<h2>Omitted SRFIs</h2>
+
+<p>
+SRFIs are not libraries, they are requests for <em>features</em>.
+Thus, several SRFIs specify features which cannot be provided as a
+library and those SRFIs are intentionally omitted here.  For example,
+SRFIs which specify extensions to concrete syntax or extensions to the
+semantics of top-level programs cannot be provided as libraries and
+are therefore omitted from this SRFI.  The following table lists
+omitted (finalized) SRFIs and the reason for their omission.<p>
+
+<table>
+<thead>
+<tr><td>SRFI</td><td>Title</td><td>Reason for omission</td></tr>
+</thead>
+
+<tr><td>0</td><td>Feature-based conditional expansion construct</td><td>Modifies semantics of top-level programs.</td></tr>
+<tr><td>4</td><td>Homogeneous numeric vector datatypes</td><td>Modifies lexical syntax.</td></tr>
+<tr><td>7</td><td>Feature-based program configuration language</td><td>Defines a configuration language distinct from Scheme.</td></tr>
+<tr><td>10</td><td><code>#,</code> external form</td><td>Modifies lexical syntax.</td></tr>
+<tr><td>22</td><td>Running Scheme Scripts on Unix</td><td>Does not specify a library.</td></tr>
+<tr><td>30</td><td>Nested Multi-line Comments</td><td>Modifies lexical syntax (subsumed by R<sup>6</sup>RS).</td></tr>
+<tr><td>34</td><td>Exception Handling for Programs</td><td>Subsumed by R<sup>6</sup>RS.</td></tr>
+<tr><td>36</td><td>I/O Conditions</td><td>Subsumed by R<sup>6</sup>RS.</td></tr>
+<tr><td>37</td><td>args-fold: a program argument processor</td><td>Does not specify a library.</td></tr>
+<tr><td>41</td><td>A Library of Streams</td><td>Deprecated by SRFI 41, Streams.</td></tr>
+<tr><td>49</td><td>Indentation-sensitive syntax</td><td>Modifies lexical syntax.</td></tr>
+<tr><td>55</td><td><code>require-extension</code></td><td>Modifies semantics of top-level programs.</td></tr>
+<tr><td>58</td><td>Array Notation</td><td>Modifies lexical syntax.</td></tr>
+<tr><td>62</td><td>S-expression comments</td><td>Modifies lexical syntax (subsumed by R<sup>6</sup>RS).</td></tr>
+<tr><td>70</td><td>Numbers</td><td>Modifies standard semantics for number system.</td></tr>
+<tr><td>72</td><td>Hygienic macros</td><td>Modifies macro expansion semantics.</td></tr>
+<tr><td>88</td><td>Keyword objects</td><td>Modifies lexical syntax.</td></tr>
+<tr><td>89</td><td>Optional positional and named
+parameters</td><td>Modifies syntax and semantics of application, which
+cannot be provided by a library.  Dependent on lexical syntax modification (SRFI 88).</td></tr>
+<tr><td>90</td><td>Extensible hash table constructor</td><td>Dependent on lexical syntax modification (SRFI 88).</td></tr>
+<tr><td>94</td><td>Type-Restricted Numerical Functions</td><td>Dependent on number system modification (SRFI 70).</td></tr>
+</table>
+
+<h2>Existing SRFIs and R<sup>6</sup>RS</h2>
+
+<p>This section addresses any issues relevant to each existing SRFI's
+use and implementation in an R<sup>6</sup>RS Scheme system.  These issues should
+be addressed and resolved by general agreement so that SRFI Libraries
+are consistent across implementations wherever possible.</p>
+
+<p class="authorsnote">
+I have identified only a small number of issues, outlined below.
+Surely, there are further issues, so please send mail to the
+discussion list if you know of others.
+</p>
+
+
+<ul>
+
+<li>SRFI 9, Defining Record Types, and R<sup>6</sup>RS Records.  What relation
+should SRFI 9 records have with R<sup>6</sup>RS records?  For example, does
+<code>record?</code> hold of SRFI 9 record values?  Are SRFI 9 records
+opaque?  Is the type name bound to a rtd?</li>
+
+<li>SRFI 42, Eager Comprehensions, defines <em>qualifiers</em>, which
+are used as macro keyword literals, and some of these conflict with
+names provided by <code>(rnrs base)</code>.  Should anything be
+specified about these keywords (eg, should this library provide
+bindings?, the same bindings as in <code>(rnrs base)</code>?,
+etc.)?</li>
+
+<li>SRFI 74, Octet-Addressed Binary Blocks, blobs and R<sup>6</sup>RS
+bytevectors are conceptually the same.  Should <code>(bytevector?
+b)</code> imply <code>(blob?  b)</code> and vice versa?  This is the
+case in reference implementation.</li> 
+
+</ul>
+
+
+
+
+
+
+
+<h2>Future SRFIs</h2>
+
+<p>Authors of future SRFIs that specify libraries may choose names as
+they please, but they are encouraged to use library names following
+the naming convention of this SRFI.  If names are chosen that are not
+compatible with the referencing scheme given here, authors should
+specify alternative names that can be used to refer to the library
+consistent with this specification.
+
+<p>SRFI 41, Streams, for example, specifies that its libraries are
+named by <code>(streams)</code>, <code>(streams primitive)</code>, and
+<code>(streams derived)</code>, but according to this SRFI, they must
+also be named with the prefix <code>(srfi 41 *)</code>.
+
+
+
+<h2>Relation to SRFIs 0 and 7</h2>
+
+<p>Both SRFI 0, Feature-based conditional expansion construct, and
+SRFI 7, Feature-based program configuration language, use <em>feature
+identifiers</em> of the form <code>srfi-N</code>, with the expectation
+"that features will eventually be assigned meaningful names (aliases)
+by the SRFI editors to make reading and writing code less tedious than
+when using <code>srfi-N</code> feature identifiers."</p>
+
+<p>It is recommended that implementations which support SRFIs 0 or 7
+use the SRFI names defined here as aliases.  SRFI feature identifiers
+are constructed by interpolating library references with
+"<code>-</code>".  For example, the feature identifier for SRFI 1,
+List Library, is <code>srfi-1</code>, or equivalently,
+<code>srfi-1-lists</code>.  Feature identifiers for sub-libraries are
+constructed in the same way, so for example the feature identifier for
+the streams primitive library is
+<code>srfi-41-streams-primitive</code>.
+</p>
+
+<h1>Implementation</h1>
+
+
+
+<p class="authorsnote">To be provided later in the discussion period.</p>
+
+<h1>Acknowledgments</h1>
+
+<p>Code for the reference implementation is drawn from the SRFI
+reference implementations, Gauche, Guile, Larceny, PLT Scheme, Scheme
+48, and SLIB.  For discussions, I thank Will Clinger, Aziz Ghuloum,
+Dave Herman, Olin Shivers, Andre van Tonder, and my fellow SRFI
+editors.  During the development of this SRFI, all of the library
+infrastructure was built using the van Tonder implementation of
+R<sup>6</sup>RS Libraries and Macros, which has proved to be quite a
+useful tool in writing portable Scheme code.  It was later tested on
+Ikarus, Larceny, and PLT Scheme.</p>
+
+<h1>References</h1>
+
+<dl>
+     <dt class="ref">Revised<sup>6</sup> Report on the Algorithmic Language Scheme</dt>
+     <dd>Michael Sperber, <em>et al.</em> (Editors)<br/>
+         <a href="http://www.r6rs.org/">http://www.r6rs.org/</a>
+     </dd>
+
+     <dt class="ref">R<sup>6</sup>RS Libraries and Macros</dt>
+     <dd>Andre van Tonder<br/>
+         <a href="http://www.het.brown.edu/people/andre/macros/">http://www.het.brown.edu/people/andre/macros/</a>
+      </dd>
+
+      <dt class="ref">R<sup>6</sup>RS Libraries and syntax-case system</dt>
+      <dd>Abdulaziz Ghuloum and Kent Dybvig<br/>
+          <a href="http://www.cs.indiana.edu/~aghuloum/r6rs-libraries/">http://www.cs.indiana.edu/~aghuloum/r6rs-libraries/</a>
+      </dd>
+
+      <dt class="ref">Teach Yourself Scheme in Fixnum Days</dt>
+      <dd>Dorai Sitaram<br/>
+          <a href="http://www.ccs.neu.edu/home/dorai/t-y-scheme/t-y-scheme.html">http://www.ccs.neu.edu/home/dorai/t-y-scheme/t-y-scheme.html</a></dd>
+
+      <dt class="ref">A proposal for an Extended R<sup>5</sup>RS Scheme</dt>       
+      <dd>William Clinger, <em>et al.</em><br/>
+          <a href="http://scheme-punks.cyber-rush.org/wiki/index.php?title=ERR5RS:Charter">http://scheme-punks.cyber-rush.org/wiki/index.php?title=ERR5RS:Charter</a></dd>
+
+      <dt class="ref">Ikarus Scheme</dt>
+      <dd><a href="http://www.cs.indiana.edu/~aghuloum/ikarus/">http://www.cs.indiana.edu/~aghuloum/ikarus/</a></dd>
+
+      <dt class="ref">Larceny</dt>
+      <dd><a href="http://www.ccs.neu.edu/home/will/Larceny/">http://www.ccs.neu.edu/home/will/Larceny/</a></dd>
+
+      <dt class="ref">PLT Scheme</dt>
+      <dd><a href="http://plt-scheme.org/">http://plt-scheme.org/<a></dd>
+
+      <dt class="ref">Scheme 48</dt>
+      <dd><a href="http://s48.org/">http://s48.org/</a></dd>
+
+</dl>
+
+<!--
+Brief discussion on r6rs-discuss:
+http://lists.r6rs.org/pipermail/r6rs-discuss/2006-September/thread.html#51
+http://lists.r6rs.org/pipermail/r6rs-discuss/2006-October/thread.html#216 
+
+
+Ikarus Scheme User's Guide, Feb 2, 2008
+http://www.cs.indiana.edu/~aghuloum/ikarus/ikarus-scheme-users-guide.pdf
+
+Ikarus Scheme SRFIs for R<sup>6</sup>RS
+https://code.launchpad.net/~ikarus-srfi-team/ikarus-libraries/srfi
+-->
+
+
+
+<h1>Copyright</h1>
+Copyright (C) David Van Horn 2008. All Rights Reserved.
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+</p><p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+</p><p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. REMEMBER, THERE IS NO SCHEME UNDERGROUND.  IN NO
+EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
+THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+    </p><hr>
+    <address>Editor: <a href="mailto:srfi minus editors at srfi dot schemers dot org">Donovan Kolby</a></address>
+  </body></html>
