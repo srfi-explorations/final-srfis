@@ -1,0 +1,527 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+  <HEAD>
+    <title>SRFI 58: Array Notation</title>
+  </HEAD>
+
+  <BODY>
+
+<H1>Title</H1>
+
+Array Notation
+
+<H1>Author</H1>
+
+Aubrey Jaffer
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status. To see an explanation of each
+status that a SRFI can hold, see <A
+href="http://srfi.schemers.org/srfi-process.html">here</A>. It will remain
+in draft status until 2005/02/27, or as amended. To provide input on this
+SRFI, please <CODE><A
+HREF="mailto:srfi-58@srfi.schemers.org">mailto:srfi-58@srfi.schemers.org</A></CODE>.
+See <A
+href="../../srfi-list-subscribe.html">instructions
+here</A> to subscribe to the list. You can access previous messages via <A
+href="http://srfi.schemers.org/srfi-58/mail-archive/maillist.html">the
+archive of the mailing list</A>.
+<P>
+<UL>
+  <LI>Received: <A href="srfi-58-1.2.html">2004/11/26</A></LI>
+  <LI>Draft: 2004/11/26 - 2005/01/24</LI>
+  <LI>Revised: <A href="srfi-58-1.4.html">2004/12/31</A></LI>
+  <LI>Revised: <A href="srfi-58-1.5.html">2005/01/02</A></LI>
+  <LI>Revised: <A href="srfi-58-1.6.html">2005/01/03</A></LI>
+  <LI>Revised: <A href="srfi-58-1.7.html">2005/01/05</A></LI>
+  <LI>Revised: <A href="srfi-58-1.7.html">2005/01/05</A></LI>
+  <LI>Revised: <A href="srfi-58-1.8.html">2005/01/07</A></LI>
+  <LI>Revised: <A href="srfi-58-1.10.html">2005/01/17</A></LI>
+  <LI>Draft extended: 2005/01/27 - 2005/02/27</LI>
+  <LI>Revised: <A href="srfi-58-1.11.html">2005/01/27</A></LI>
+</UL>
+
+<H1>Abstract</H1>
+
+<A HREF="http://srfi.schemers.org/srfi-47/srfi-47.html">SRFI-47</A>
+and its successor
+<A HREF="http://srfi.schemers.org/srfi-63/srfi-63.html">SRFI-63</A>
+provide both homogeneous numeric and heterogeneous multidimensional
+arrays which subsume Scheme vectors.  The notation presented here
+builds upon Common-Lisp array sytnax to represent heterogeneous
+arrays; and introduces a new Scheme-based notation for denoting
+homogeneous numeric arrays.
+<P>
+
+<H1>Issues</H1>
+
+<!-- <TABLE ALIGN=CENTER BORDER=1> -->
+<!-- <CAPTION>Original Proposal</CAPTION> -->
+<!-- <TR><TH>prototype<BR>procedure -->
+<!--     <TH>exactness -->
+<!--     <TH>element type -->
+<!--     <TD ALIGN=CENTER><B>prefix</B><BR>(rank = <I>n</I>) -->
+<!-- <TR><TD><CODE>vector</CODE><TD>       <TD>any                               <TD><CODE>#<i>n</i>A   </CODE> -->
+<!-- <TR><TD><CODE>ac64  </CODE><TD>inexact<TD>IEEE 64.bit floating point complex<TD><CODE>#<i>n</i>Ac64</CODE> -->
+<!-- <TR><TD><CODE>ac32  </CODE><TD>inexact<TD>IEEE 32.bit floating point complex<TD><CODE>#<i>n</i>Ac32</CODE> -->
+<!-- <TR><TD><CODE>ar64  </CODE><TD>inexact<TD>IEEE 64.bit floating point real   <TD><CODE>#<i>n</i>Ar64</CODE> -->
+<!-- <TR><TD><CODE>ar32  </CODE><TD>inexact<TD>IEEE 32.bit floating point real   <TD><CODE>#<i>n</i>Ar32</CODE> -->
+<!-- <TR><TD><CODE>as64  </CODE><TD>exact  <TD>64.bit integer                    <TD><CODE>#<i>n</i>As64</CODE> -->
+<!-- <TR><TD><CODE>as32  </CODE><TD>exact  <TD>32.bit integer                    <TD><CODE>#<i>n</i>As32</CODE> -->
+<!-- <TR><TD><CODE>as16  </CODE><TD>exact  <TD>16.bit integer                    <TD><CODE>#<i>n</i>As16</CODE> -->
+<!-- <TR><TD><CODE>as8   </CODE><TD>exact  <TD>8.bit integer                     <TD><CODE>#<i>n</i>As8 </CODE> -->
+<!-- <TR><TD><CODE>au64  </CODE><TD>exact  <TD>64.bit nonnegative integer        <TD><CODE>#<i>n</i>Au64</CODE> -->
+<!-- <TR><TD><CODE>au32  </CODE><TD>exact  <TD>32.bit nonnegative integer        <TD><CODE>#<i>n</i>Au32</CODE> -->
+<!-- <TR><TD><CODE>au16  </CODE><TD>exact  <TD>16.bit nonnegative integer        <TD><CODE>#<i>n</i>Au16</CODE> -->
+<!-- <TR><TD><CODE>au8   </CODE><TD>exact  <TD>8.bit nonnegative integer         <TD><CODE>#<i>n</i>Au8 </CODE> -->
+<!-- <TR><TD><CODE>string</CODE><TD>       <TD>char                              <TD><CODE>#<i>n</i>A\  </CODE> -->
+<!-- <TR><TD><CODE>at1   </CODE><TD>       <TD>bool                              <TD><CODE>#<i>n</i>At  </CODE> -->
+<!-- </TABLE> -->
+<!-- <P> -->
+
+<UL>
+<!-- <LI>The original proposal allowed the "<CODE>1</CODE>" in the -->
+<!--     "<CODE>#1A</CODE>" prefix to be elided.  That exception has been -->
+<!--     removed. -->
+<!-- <P> -->
+<!-- <LI>In discussions on the -->
+
+<!-- <A HREF="http://srfi.schemers.org/srfi-58/mail-archive/threads.html"> -->
+<!-- SRFI-58 mailing list</A>, the abbreviations for the original uniform -->
+<!-- array types were criticized for being cryptic.  Abbreviations for -->
+<!-- <DFN>signed</DFN> and <DFN>unsigned</DFN> were used, even though those -->
+<!-- terms are absent from R4RS and R5RS! -->
+<!-- <P> -->
+<!-- Type names from Scheme foreign-function and foreign-data interfaces -->
+<!-- were suggested; but these names are confusing or even misleading to -->
+<!-- those unfamiliar with C or Java. -->
+<!-- <P> -->
+<!-- The Scheme reports are amply descriptive using their succinct -->
+<!-- vocabulary; so I rewrote this SRFI to use Scheme terminology. -->
+<!-- <P> -->
+<!-- The results in <A HREF="#Table-1">Table-1</A> are compact, mnemonic, -->
+<!-- and do not reach outside of the Scheme language, except for <B>Z</B> -->
+<!-- for the integers. -->
+<!-- <P> -->
+
+<LI>Common Lisp has a compact notation for rank 1 boolean arrays:
+    "<CODE>#*</CODE>" followed by a sequence of ones and zeros;
+    "<CODE>1</CODE>" for "<CODE>#t</CODE>", "<CODE>0</CODE>" for
+    "<CODE>#f</CODE>".  Common-Lisp's bit-array accessor functions
+    return "<CODE>1</CODE>" and "<CODE>0</CODE>"; but <A
+    HREF="http://srfi.schemers.org/srfi-47/srfi-47.html">SRFI-47</A>'s
+    "<CODE>array-ref</CODE>" returns "<CODE>#t</CODE>" or "<CODE>#f</CODE>".
+    I don't think that difference invalidates this notation for
+    Scheme, but others may.
+<P>
+</UL>
+
+<H1>Rationale</H1>
+
+<UL>
+  <LI>
+  Vectors, which are rank 1 arrays, have a notation allowing them to
+  be read and written by the procedures read and write.  Vectors which
+  are written, then read are EQUAL?  to the originals.<P>
+
+  <LI>
+  A write-read invariant notation for other arrays would allow them to
+  be easily saved and restored by programs.<P>
+
+  <LI>
+  A read notation for arrays would allow literal arrays to be coded
+  directly in programs.<P>
+
+  <LI>
+  The syntax for heterogeneous array constants,
+  "<CODE>#<VAR>n</VAR>A</CODE>" followed by the list-decomposition of
+  the array, is the same as the Common-Lisp read-syntax for arrays.<P>
+
+<!--   Why Common-Lisp array syntax?  Per Bothner answers: -->
+<!--   <UL> -->
+<!--   <LI>It's terse.<P> -->
+<!--   <LI>It's stylistically consistent with vector notation:<BR> -->
+<!--       "<CODE>#(a b c)</CODE>" can be viewed as short-hand for "<CODE>#1a(a b c)</CODE>".<P> -->
+<!--   <LI>It doesn't require me to write an extra noise keyword.<P> -->
+<!--   <LI>It's prior art.<P> -->
+<!--   </UL> -->
+
+  <LI>
+  In Common Lisp, <CODE>#<VAR>n</VAR>(v<SUB>1</SUB> v<SUB>2</SUB>
+  ... v<SUB>k</SUB>)</CODE> creates a vector of size N, with the final
+  value, v<SUB>k</SUB>, repeated (N - K) times. It's an error if (K >
+  N) or if (K = 0 and N > 0).  Examples:
+
+<PRE>
+#5(1 2) ==> #(1 2 2 2 2)
+#2(1 2) ==> #(1 2)
+#0()    ==> #()
+#1(1 2) ==> error: too many values
+#5()    ==> error: no values for non-empty array
+</PRE>
+
+  <LI>
+  PLT Scheme adds two extensions: If (K = 0), the vector is filled
+  with 0, and if (K > N) the reader raises a specific exception.
+
+</UL>
+<P>
+The rank and dimension of the literal array can be specified several
+ways.
+<UL>
+
+<LI>the rank as a integer between <CODE>#</CODE> and <CODE>A</CODE>;
+
+<LI>the dimensions as integers joined with <CODE>*</CODE> after
+<CODE>A</CODE>; or
+
+<LI>the dimensions as integers joined with <CODE>*</CODE> after
+<CODE>#</CODE>.
+
+</UL>
+<P>
+Both rank and dimensions can be supplied on opposite sides of
+<CODE>A</CODE>.
+<P>
+<H2>Homogeneous Numeric Arrays</H2>
+
+<A HREF="http://srfi.schemers.org/srfi-63/srfi-63.html">SRFI-63</A>
+introduces homogeneous arrays.  This SRFI introduces denotations for
+homogeneous arrays following the rank and/or dimensions; and separated
+from them by a colon (<CODE>:</CODE>).
+<P>
+The names of the array-prototype-procedures of
+<A HREF="http://srfi.schemers.org/srfi-63/srfi-63.html">SRFI-63</A>
+and aliases for the array-prototype-procedures of
+<A HREF="http://srfi.schemers.org/srfi-47/srfi-47.html">SRFI-47</A>
+match these type denotations with <CODE>A</CODE> prepended.  Having
+the array-prototype-procedure names match the array type denotations
+reduces the memory load for users.
+<P>
+All implementations must accept all the type denotations, but need not
+implement all the homogeneous array types.  Those homogeneous types
+which an implementation doesn't support it stores in next best
+homogeneous array type, defaulting to heterogeneous arrays in the
+worst case.  The rules for casting unsupported types are given in
+<A HREF="http://srfi.schemers.org/srfi-63/srfi-63.html#Prototype Procedures">SRFI-63</A>.
+<P>
+
+<H1>Specification</H1>
+
+<H2>Syntax</H2>
+
+The syntax for arrays is a prefix according to the type and rank of
+the array followed by the <DFN>list-decomposition</DFN> of an array.
+The prefix must be immediately followed by a delimiter.
+<!-- The rank digit `<I>n</I>' is optional for rank 1 arrays. -->
+Upper and lower case forms of a letter are not distinguished in the
+prefix characters.
+<P>
+By <DFN>list-decomposition</DFN> is meant rank nestings of lists of
+the elements where the most nested list has length equal to the last
+dimension of the array and at top level has length equal to the first
+dimension of the array.  Vectors may substitute for lists at any
+nesting depth.
+<P>
+Rank 0 arrays have one element; that element appears after the prefix
+(perhaps with intervening whitespace) with no additional parenthesis.
+<P>
+Rank 1 character arrays which are not subarrays are
+<CODE>write</CODE>n as Scheme strings; <CODE>display</CODE> treats
+rank 1 character arrays which are not subarrays identically with
+strings.
+<P>
+Rank 1 heterogeneous arrays which are not subarrays
+<CODE>write</CODE> and <CODE>display</CODE> as Scheme vectors.
+<P>
+The prefix syntax is:
+<PRE>
+  array-prefix :: rank `A' [ dimensions ] [ `:' type-specifier ] |
+                       [ `A' ] dimensions [ `:' type-specifier ]
+
+  dimensions :: dimension | dimensions `*' dimension
+
+  dimension :: nonnegative-integer
+
+  rank :: nonnegative-integer
+
+  type-specifier :: `flo' { `C' | `R' } flowidth `b' |
+                    `fix' { `Z' | `N' } fixwidth `b' |
+                    `flo' `Q' decwidth `d'
+
+  flowidth :: `16' | `32' | `64' | `128'
+
+  fixwidth :: `8' | `16' | `32' | `64'
+
+  decwidth :: `32' | `64' | `128'
+</PRE>
+
+<P>
+<A NAME=Table-1></A>
+<TABLE ALIGN=CENTER BORDER=1>
+<TR><TH>prototype<BR>procedure
+    <TH>exactness
+    <TH>element type
+    <TH>type<BR>specifier
+<TR><TD><CODE>vector   </CODE><TD>        <TD>any                          <TD><CODE>        </CODE>
+<TR><TD><CODE>A:floC128b</CODE><TD>inexact<TD>128.bit binary flonum complex<TD><CODE>floC128b</CODE>
+<TR><TD><CODE>A:floC64b </CODE><TD>inexact<TD>64.bit binary flonum complex <TD><CODE>floC64b </CODE>
+<TR><TD><CODE>A:floC32b </CODE><TD>inexact<TD>32.bit binary flonum complex <TD><CODE>floC32b </CODE>
+<TR><TD><CODE>A:floC16b </CODE><TD>inexact<TD>16.bit binary flonum complex <TD><CODE>floC16b </CODE>
+<TR><TD><CODE>A:floR128b</CODE><TD>inexact<TD>128.bit binary flonum real   <TD><CODE>floR128b</CODE>
+<TR><TD><CODE>A:floR64b </CODE><TD>inexact<TD>64.bit binary flonum real    <TD><CODE>floR64b </CODE>
+<TR><TD><CODE>A:floR32b </CODE><TD>inexact<TD>32.bit binary flonum real    <TD><CODE>floR32b </CODE>
+<TR><TD><CODE>A:floR16b </CODE><TD>inexact<TD>16.bit binary flonum real    <TD><CODE>floR16b </CODE>
+<TR>
+<TR><TD><CODE>A:floQ128d</CODE><TD>exact<TD>128.bit decimal flonum rational<TD><CODE>floQ128d</CODE>
+<TR><TD><CODE>A:floQ64d </CODE><TD>exact<TD>64.bit decimal flonum rational <TD><CODE>floQ64d </CODE>
+<TR><TD><CODE>A:floQ32d </CODE><TD>exact<TD>32.bit decimal flonum rational <TD><CODE>floQ32d </CODE>
+<TR>
+<TR><TD><CODE>A:fixZ64b</CODE><TD>exact<TD>64.bit binary fixnum            <TD><CODE>fixZ64b </CODE>
+<TR><TD><CODE>A:fixZ32b</CODE><TD>exact<TD>32.bit binary fixnum            <TD><CODE>fixZ32b </CODE>
+<TR><TD><CODE>A:fixZ16b</CODE><TD>exact<TD>16.bit binary fixnum            <TD><CODE>fixZ16b </CODE>
+<TR><TD><CODE>A:fixZ8b </CODE><TD>exact<TD>8.bit  binary fixnum            <TD><CODE>fixZ8b  </CODE>
+<TR><TD><CODE>A:fixN64b</CODE><TD>exact<TD>64.bit nonnegative binary fixnum<TD><CODE>fixN64b </CODE>
+<TR><TD><CODE>A:fixN32b</CODE><TD>exact<TD>32.bit nonnegative binary fixnum<TD><CODE>fixN32b </CODE>
+<TR><TD><CODE>A:fixN16b</CODE><TD>exact<TD>16.bit nonnegative binary fixnum<TD><CODE>fixN16b </CODE>
+<TR><TD><CODE>A:fixN8b </CODE><TD>exact<TD>8.bit  nonnegative binary fixnum<TD><CODE>fixN8b  </CODE>
+<TR><TD><CODE>A:bool   </CODE><TD>     <TD>boolean                         <TD><CODE>bool    </CODE>
+<TR><TD><CODE>string   </CODE><TD>     <TD>char                            <TD><CODE>char    </CODE>
+</TABLE>
+<P>
+A two-by-three array of nonnegative 16.bit integers can be written
+several ways:
+
+<PRE>
+#2A:fixN16b((0 1 2) (3 5 4))
+#2A2*3:fixN16b((0 1 2) (3 5 4))
+#A2*3:fixN16b((0 1 2) (3 5 4))
+#2*3:fixN16b((0 1 2) (3 5 4))
+</PRE>
+<P>
+Note that these are external representations of an array, not
+expressions evaluating to arrays.  Like vector constants, array
+constants should be quoted:
+
+<PRE>
+'#2a:FIXN16b((0 1 2) (3 5 4))
+               ==> #2A:fixN16b((0 1 2) (3 5 4))
+</PRE>
+<P>
+Rank 0 arrays:
+<PRE>
+#0a sym
+#0A:floR32b 237.0
+</PRE>
+<P>
+Empty arrays:
+<PRE>
+#A0*2()
+#A2*0(() ())
+#A2*0*3(() ())
+#A2*3*0((() () ()) (() () ()))
+</PRE>
+<P>
+
+<H2>Semantics</H2>
+
+<PRE>
+(array-dimensions '#2A:fixN16b((0 1 2) (3 5 4))) ==> (2 3)
+</PRE>
+<P>
+An equivalent array could have been created by
+<PRE>
+(define ra (make-array (A:fixN16b) 2 3))
+(array-set! ra 0 0 0)
+(array-set! ra 1 0 1)
+(array-set! ra 2 0 2)
+(array-set! ra 3 1 0)
+(array-set! ra 5 1 1)
+(array-set! ra 4 1 2)
+ra             ==> #2A:fixN32b((0 1 2) (3 5 4))
+</PRE>
+<P>
+In this example, the uniform type returned is wider than requested due
+to implementation restrictions.
+<P>
+It is an error for the rank specified in array syntax to be different
+from the number of dimensions when they are explicitly given.
+<P>
+Literal array constants are immutable objects.  It is an error to
+attempt to store a new value into a location that is denoted by an
+immutable object.
+<P>
+The following equivalences will be defined to alias <A
+HREF="http://srfi.schemers.org/srfi-47/srfi-47.html">SRFI-47</A> names to
+the new ones.  <A
+HREF="http://srfi.schemers.org/srfi-63/srfi-63.html">SRFI-63</A>, which
+supersedes <A
+HREF="http://srfi.schemers.org/srfi-47/srfi-47.html">SRFI-47</A>, already
+defines these array-prototype-procedures.
+<PRE>
+;; flonums
+(define A:floC128b ac64)
+(define A:floC64b ac64)
+(define A:floC32b ac32)
+(define A:floC16b ac32)
+(define A:floR128b ar64)
+(define A:floR64b ar64)
+(define A:floR32b ar32)
+(define A:floR16b ar32)
+;; decimal flonums
+(define A:floQ128d ar64)
+(define A:floQ64d ar64)
+(define A:floQ32d ar32)
+;; fixnums
+(define A:fixZ64b as64)
+(define A:fixZ32b as32)
+(define A:fixZ16b as16)
+(define A:fixZ8b  as8)
+(define A:fixN64b au64)
+(define A:fixN32b au32)
+(define A:fixN16b au16)
+(define A:fixN8b  au8)
+(define A:bool    at1)
+</PRE>
+<P>
+
+<H1>Implementation</H1>
+
+The following code from the
+
+<A HREF="http://swiss.csail.mit.edu/~jaffer/SCM">SCM</A>
+implementation ("Init5d9.scm") implements array read-syntax.
+<CODE>read:sharp</CODE> is called from <CODE>read</CODE> when a
+<CODE>#\#</CODE> is read.  Its first argument is the character after
+<CODE>#\#</CODE>; the second argument is the input port; the third
+argument is the procedure to call for recursive reading.
+<P>
+<CODE>list-&gt;uniform-array</CODE> converts the list-decomposition
+returned by <CODE>read</CODE> into the uniform array of the specified
+type (or the next larger compatible type).
+<P>
+<PRE>
+;;; Read integer up to first non-digit
+(define (read:try-number port . ic)
+  (define chr0 (char-&gt;integer #\0))
+  (let loop ((arg (and (not (null? ic)) (- (char-&gt;integer (car ic)) chr0))))
+    (let ((c (peek-char port)))
+      (cond ((eof-object? c) #f)
+            ((char-numeric? c)
+             (loop (+ (* 10 (or arg 0))
+                      (- (char-&gt;integer (read-char port)) chr0))))
+            (else arg)))))
+
+(define (read-array-type port)
+  (define (bomb pc wid)
+    (error 'array 'syntax? (symbol-append "#" rank "A" pc wid)))
+  (case (char-downcase (peek-char port))
+    ((#\:) (read-char port)
+     (let ((typ (let loop ((arg '()))
+                  (if (= 4 (length arg))
+                      (string-&gt;symbol (list-&gt;string (reverse arg)))
+                      (let ((c (read-char port)))
+                        (and (not (eof-object? c))
+                             (loop (cons (char-downcase c) arg))))))))
+       (define wid (and typ (not (eq? 'bool typ)) (read:try-number port)))
+       (define (check-suffix chrs)
+         (define chr (read-char port))
+         (if (and (char? chr) (not (memv (char-downcase chr) chrs)))
+             (error 'array-type? (symbol-append ":" typ wid chr))))
+       (define prot (assq typ '((floC (128 . +64.0i)
+                                      (64  . +64.0i)
+                                      (32  . +32.0i)
+                                      (16  . +32.0i))
+                                (floR (128 . 64.0)
+                                      (64  . 64.0)
+                                      (32  . 32.0)
+                                      (16  . 32.0))
+                                (fixZ (64 . -64)
+                                      (32 . -32)
+                                      (16 . -16)
+                                      (8  . -8))
+                                (fixN (64 . 64)
+                                      (32 . 32)
+                                      (16 . 16)
+                                      (8  . 8))
+                                (char . #\a)
+                                (bool . #t))))
+       (if prot (set! prot (cdr prot)))
+       (cond ((pair? prot)
+              (set! prot (assv wid (cdr prot)))
+              (if (pair? prot) (set! prot (cdr prot)))
+              (if wid (check-suffix (if (and (inexact? prot) (real? prot))
+                                        '(#\b #\d)
+                                        '(#\b)))))
+             (prot)
+             (else (check-suffix '())))
+       prot))
+    (else #f)))
+
+;;; We come into read:array with number or #f for RANK.
+(define (read:array rank dims port reader) ;ignore reader
+  (let loop ((dims dims))
+    (define dim (read:try-number port))
+    (if dim
+        (loop (cons dim dims))
+        (case (peek-char port)
+          ((#\*) (read-char port) (loop dims))
+	  ((#\:)
+	   (let ((typ (read-array-type port)))
+	     (list-&gt;uniform-array (or rank (length dims)) typ (read port))))
+          (else
+	   (list-&gt;uniform-array (or rank (length dims)) #f (read port)))))))
+
+(define (read:sharp c port read)
+  (case c
+    ((#\a #\A) (read:array #f '() port read))
+    ((#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9)
+     (let* ((num (read:try-number port c))
+            (chr (peek-char port)))
+       (case chr
+         ((#\a #\A) (read-char port)
+          (read:array num '() port read))
+         ((#\*) (read-char port)
+          (read:array #f (list num) port read))
+         (else
+          (read:array 1 (list num) port read)))))
+    (else (error "unknown # object" c))))
+</PRE>
+<P>
+
+<H1>Copyright</H1>
+Copyright (C) Aubrey Jaffer (2004, 2005). All Rights Reserved.
+<P>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<P>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<P>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+
+    <HR>
+    <ADDRESS>Editor: <A HREF="mailto:srfi-editors@srfi.schemers.org">David Van Horn</A></ADDRESS>
+<!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
+<!-- hhmts start -->
+Last modified: Thu Jan 27 09:19:24 EST 2005
+<!-- hhmts end -->
+  </BODY>
+</HTML>
