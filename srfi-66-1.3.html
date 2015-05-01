@@ -1,0 +1,183 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN""http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<body>
+<head>
+<title>SRFI 66: Byte Vectors</title>
+</head>
+
+<body>
+<H1>Title</H1>
+
+Byte Vectors
+
+<H1>Authors</H1>
+
+Michael Sperber
+
+<H1>Status</H1>
+
+This SRFI is currently in ``draft'' status. To see an explanation of each
+status that a SRFI can hold, see
+<A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+It will remain in draft status until 2005/05/09, or as amended. To
+provide input on this SRFI, please <CODE>
+<A HREF="mailto:srfi-66@srfi.schemers.org">mailto:srfi-66@srfi.schemers.org</A></CODE>.
+See <A HREF="../../srfi-list-subscribe.html">instructions
+here</A> to subscribe to the list. You can access previous messages via
+<A HREF="http://srfi.schemers.org/srfi-66/mail-archive/maillist.html">the
+archive of the mailing list</A>.
+<P>
+<UL>
+  <LI>Received: 2005/03/11</LI>
+</UL>
+
+<h1>Abstract</h1>
+
+<p>This SRFI defines a set of procedures for creating, accesing, and
+manipulating uniform vectors of bytes.</p>
+
+<h1>Rationale</h1>
+
+<p>A number of applications deal with sequences of bytes, most prominently
+interfaces to C and I/O.  Vectors are typically too space-costly and too
+slow to work well in these circumstance.  This justifies having a separate
+type for byte vectors.</p>
+
+<p>This SRFI is related to <a href="http://srfi.schemers.org/srfi-4/">SRFI
+4</a> (Homogeneous numeric vector datatypes), which also provides vectors
+of bytes. However, the extension described here does not require any
+extensions to the syntax of the underlying Scheme
+system.</p>
+
+<h1>Specification</h1>
+
+<p>The interface described here is identical to that offered by the
+<code>byte-vectors</code> structure in Scheme 48.</p>
+
+<p>Byte vectors are objects of a new type.  This type may or may not be
+disjoint from the type of regular vectors.</p>
+
+<p>As with vectors, the length of a byte vector is the number of elements
+it contains.  This number is fixed.  A valid index into a byte vector is
+an exact, non-negative integer.  The first element of a byte vector has
+index 0, the last element has an index one less than the length of the
+vector.</p>
+
+<dl>
+
+<dt><code>(byte-vector?  </code><var>obj</var><code>)</code></dt>
+
+<dd><p>Returns <code>#t</code> if <var>obj</var> is a vector, otherwise
+returns <code>#f</code>.  Analogous to <code>vector?</code>.</p></dd>
+
+<dt><code>(make-byte-vector </code><var>k</var>
+<var>fill</var><code>)</code></dt>
+
+<dd><p>Returns a newly allocated byte vector of size <var>k</var>
+elements.  Each element is initialized to <var>fill</var>.
+<var>Fill</var> must be an exact integer in the range [0,255].  Analogous
+to <code>make-byte-vector</code>.</p></dd>
+
+<dt><code>(byte-vector </code><var>byte</var> ...<code>)</code></dt>
+
+<dd><p>Returns a newly allocated byte vector whose elements contain the
+given arguments, which must all be exact integers in the range [0,255].
+Analogous to
+<code>byte-vector</code>.
+</p></dd>
+
+<dt><code>(byte-vector-length
+</code><var>byte-vector</var><code>)</code></dt>
+
+<dd><p>Returns the number of elements in <var>byte-vector</var> as an
+exact integer.  Analogous to <code>vector-length</code>.</p></dd>
+
+<dt><code>(byte-vector-ref </code><var>byte-vector</var>
+<var>k</var><code>)</code></dt>
+
+<dd><p><var>k</var> must be a valid index of <var>byte-vector</var>.
+<code>Byte-vector-ref</code> returns the contents of element <var>k</var>
+of <var>byte-vector</var>.  Analogous to <code>vector-ref</code>.</p></dd>
+
+<dt><code>(byte-vector-set!  </code><var>byte-vector</var> <var>k</var>
+<var>byte</var><code>)</code></dt>
+
+<dd><p><var>k</var> must be a valid index of <var>byte-vector</var>.
+<code>Byte-vector-set!</code> stores <var>byte</var> in element
+<var>k</var> of <var>byte-vector</var>.  The number of return values and
+the return values is unspecified.  However, the number of return values is
+such that it is accepted by a continuation created by <code>begin</code>.
+Analogous to <code>vector-ref</code>.</p></dd>
+
+</dl>
+
+<h1>Reference Implementation</h1>
+
+<p>This reference implementation makes use of <a
+href="http://srfi.schemers.org/srfi-9/">SRFI 9</a> (Defining Record Types)
+and <a href="http://srfi.schemers.org/srfi-23/">SRFI 23</a> (Error
+reporting mechanism).</p>
+
+<pre>
+(define-record-type :byte-vector (really-make-byte-vector elements)
+  byte-vector?  (elements byte-vector-elements))
+
+(define (ensure-byte thing)
+  (if (not (and (integer? thing)
+		(exact? thing)
+		(&gt;= thing 0)
+		(&lt;= thing 255)))
+      (error &quot;not a byte&quot; thing)))
+
+(define (make-byte-vector k fill)
+  (ensure-byte fill)
+  (really-make-byte-vector (make-vector k fill)))
+
+(define (byte-vector . bytes)
+  (for-each ensure-byte bytes)
+  (really-make-byte-vector (apply vector bytes)))
+
+(define (byte-vector-length byte-vector)
+  (vector-length (byte-vector-elements byte-vector)))
+
+(define (byte-vector-ref byte-vector k)
+  (vector-ref (byte-vector-elements byte-vector) k))
+
+(define (byte-vector-set! byte-vector k byte)
+  (ensure-byte byte)
+  (vector-set! (byte-vector-elements byte-vector) k byte))
+</pre>
+
+<h1>References</h1>
+
+<ul>
+<li>The &quot;Byte Vectors&quot; section of <i>The Incomplete Scheme 48
+Reference Manual</i> available from <a href="http://www.s48.org/">this
+page</a>.</li>
+</ul>
+
+<H1>Copyright</H1> Copyright (C) Michael Sperber
+(2005). All Rights Reserved.
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+<p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+    <hr>
+    <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">David Van Horn</a></address>
+</body>
+</html>
