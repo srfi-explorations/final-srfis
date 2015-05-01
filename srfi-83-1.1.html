@@ -1,0 +1,707 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<title>SRFI 83: R6RS Library Syntax</title>
+</head>
+<body>
+<H1>Title</H1>
+
+R6RS Library Syntax
+
+<H1>Authors</H1>
+
+Matthew Flatt and Kent Dybvig
+
+<h1>Status</h1>
+
+
+<blockquote style="background-color: #e8e8e8;">
+<p>
+   This SRFI is being submitted by members of the Scheme Language
+   Editor's Committee as part of the R6RS Scheme standardization
+   process.  The purpose of such ``R6RS SRFIs'' is to inform the
+   Scheme community of features and design ideas under consideration
+   by the editors and to allow the community to give the editors some
+   direct feedback that will be considered during the design process.
+</p>
+<p>
+   At the end of the discussion period, this SRFI will be withdrawn.
+   When the R6RS specification is finalized, the SRFI may be revised
+   to conform to the R6RS specification and then resubmitted with the
+   intent to finalize it.  This procedure aims to avoid the situation
+   where this SRFI is inconsistent with R6RS.  An inconsistency
+   between R6RS and this SRFI could confuse some users.  Moreover it
+   could pose implementation problems for R6RS compliant Scheme
+   systems that aim to support this SRFI.  Note that departures from
+   the SRFI specification by the Scheme Language Editor's Committee
+   may occur due to other design constraints, such as design
+   consistency with other features that are not under discussion as
+   SRFIs.
+</p>
+</blockquote>
+
+This SRFI is currently in ``draft'' status. To see an explanation of each
+status that a SRFI can hold, see
+<a HREF="http://srfi.schemers.org/srfi-process.html">here</a>.
+It will remain in draft status until 2006/01/29, or as amended. To
+export input on this SRFI, please <CODE>
+<a HREF="mailto:srfi-83@srfi.schemers.org">mailto:srfi-83@srfi.schemers.org</a></CODE>.
+See <a HREF="../../srfi-list-subscribe.html">instructions
+here</a> to subscribe to the list. You can access previous messages via
+<a HREF="http://srfi.schemers.org/srfi-83/mail-archive/maillist.html">the
+archive of the mailing list</a>.
+<p>
+<ul>
+  <li>Received: <a href="srfi-83-1.1.html">2005/10/31</a></li>
+  <li>Draft: 2005/11/30-2006/01/29</li>
+</ul>
+
+<!-- ABSTRACT -->
+
+<h1>Abstract</h1>
+
+<p>The module system presented here is designed to let programmers
+share libraries, i.e., code that is intended to be incorporated into
+larger programs, and especially into programs that use library code
+from multiple sources. The module system supports macro definitions
+within modules, allows macro exports, and distinguishes the phases in
+which definitions and imports are needed. This SRFI defines a standard
+notation for libraries, a semantics for library expansion and
+execution, and a simple format for sharing libraries.</p>
+
+<!-- ISSUES -->
+
+<h1>Issues</h1>
+
+<ul>
+
+ <li> <p>The <code>import</code> and <code>export</code> forms could
+      be allowed in macro expansions. In that case, the exports and imports
+      of a module can be determined only by macro-expanding the
+      module.</p>
+
+ <li> <p>Better support for records may be useful, possibly through a
+      <code>co-export</code> form:
+      <code>(co-export&nbsp;&lt;co-spec&gt;*)</code>, where
+      <code>&lt;co-spec&gt;</code> contains an identifier defined or
+      imported into a library followed by a list of other identifiers
+      defined or imported into the library:</p>
+
+<pre>
+ &lt;co-spec&gt; = (&lt;identifier&gt; &lt;identifier&gt;*)
+</pre>
+
+      <p>The meaning of a <code>&lt;co-spec&gt;</code> is that if the
+      first identifier becomes exported, either through
+      <code>export</code> or <code>co-export</code>, then the
+      remaining identifiers are also exported.  Similarly, if the
+      first identifier is indirectly exported through
+      <code>indirect-export</code> or <code>co-export</code>, then
+      then remaining identifiers are indirectly exported.</p>
+
+      <p>To be useful for managing records, probably
+      <code>co-export</code> must be allowed in macro expansions. In
+      that case, the full exports of a module can be determined only
+      by macro-expanding the module.</p>
+
+ <li> <p>Instead of having the programmer declare import phases with
+       <code>(for .... expand)</code>, etc., phases could be inferred
+       from uses of the imported identifiers. In that case,
+       determining the phase of an import would require macro-expanding
+       the module body.</p>
+
+ <li> <p>The specification for library references should probably
+      include versioning. Without any change to the SRFI, we could say
+      that a version is part of a library's name in the universal
+      namespace, in which case every library reference selects a
+      specific version. A better system would allow specifications
+      such as "major version N, minor version of M or later", etc. In
+      this case, a <code>&lt;lib-path&gt;</code> must be resolved to a
+      specific library name (including the version) based on the
+      available versions.</p>
+
+</ul>
+
+<!-- RATIONALE -->
+
+<h1>Rationale</h1>
+
+<p>This standard addresses the following specific goals:</p>
+<ul>
+
+ <li> <b>Separate compilation and analysis</b>; no two libraries have
+   to be compiled at the same time (i.e., the meanings of two
+   libraries cannot depend on each other cyclically, and compilation of two
+   different libraries cannot rely on state shared across
+   compilations), and significant program analysis does not require a
+   whole program.
+
+ <li> <b>Independent compilation/analysis of unrelated libraries</b>,
+   where ``unrelated'' means that neither depends on the other through
+   a transitive closure of imports.
+
+ <li> <b>Explicit declaration of dependencies</b>, so that the meaning
+   of each identifier is clear at compile time, and so that there is
+   no ambiguity about whether a library needs to be executed for
+   another library's compile time and/or run time.
+
+ <li> <b>Namespace management</b>, so that different library producers are
+   unlikely to define the same top-level name.
+
+</ul>
+
+<p>It does not address the following:</p>
+
+<ul>
+
+ <li> Mutually dependent libraries.
+
+ <li> Separation of library interface from library implementation.
+
+ <li> Code outside of a library (e.g., <code>5</code> by itself as a
+      program).
+
+ <li> Local modules and local imports.
+
+</ul>
+
+<!-- SPECIFICATION -->
+
+<h1>Specification</h1>
+
+<h2>Library Form</h2>
+
+<p>A library declaration contains the following elements:</p>
+<ul>
+
+ <li> a name for the library (possibly relative) within the universal
+      space of library names
+
+ <li> a list of import dependencies (including a distinguished "language"
+      import), where each dependency specifies the following:
+      <ul>
+      <li>the imported library's name
+      <li>the relevant phase: run time or expand time
+      <li>the subset of the library's exports to make available within the 
+          importing library, and the local names to use within the importing library
+          for each of the library's exports
+      </ul>
+
+ <li> a list of exports, which name a subset of the library's imports
+      and definitions
+
+ <li> a sequence of variable definitions, macro definitions,
+      indirect export declarations, and expressions;
+      indirect export declarations name unexported identifiers that
+      might appear in a locally defined macro's expansion.</ul>
+
+<!-- Library Form Syntax -->
+
+<a name="syntax"></a><h3>Library Form Syntax</h3>
+
+<p>A library definition is written with the
+<code>library</code> form:</p>
+
+<pre>
+   (library &lt;lib-path&gt; &lt;language&gt;
+     &lt;body&gt;)
+</pre>
+
+<p>The syntax of <code>&lt;body&gt;</code> depends on the
+specific <code>&lt;language&gt;</code>. An implementation may allow a
+reference to another library as a <code>&lt;language&gt;</code>, but
+this SRFI defines only the behavior when <code>&lt;language&gt;</code>
+is <code>"scheme://r6rs"</code>. Future standards may define the meaning of other
+<code>&lt;language&gt;</code> forms, but it is expected that <code>&lt;body&gt;</code>
+will follow Scheme's lexical conventions, so that <code>read</code> can process
+any <code>library</code> declaration.</p>
+
+<table width="80%" align="center" bgcolor="#999999"><tr><td>
+Example:
+<pre>
+  (library "hello" "scheme://r6rs"
+    (display "Hello World")
+    (newline))
+
+</pre>
+</td></tr></table>
+
+<p>For <code>"scheme://r6rs"</code> as <code>&lt;language&gt;</code>, the
+grammar of <code>&lt;body&gt;</code> is as follows:</p>
+
+<pre>
+ &lt;body&gt; = &lt;impexp-form&gt;* &lt;comdef-form&gt;*
+
+ &lt;impexp-form&gt; = (import &lt;import-spec&gt;*)
+               | (export &lt;export-spec&gt;*)
+
+ &lt;comdef-form&gt; = &lt;command or definition&gt;
+               | (indirect-export &lt;indirect-spec&gt;*)
+               | (begin &lt;comdef-form&gt;*)
+               | &lt;derived-comdef&gt;
+</pre>
+
+<p>The <code>import</code> form imports bindings into the library, and
+the <code>export</code> form exports bindings from the library. A
+<code>&lt;command or definition&gt;</code> introduces a local
+definition or executes an expression for its side-effects, and the
+grammar for <code>&lt;command or definition&gt;</code> is the same as
+in R5RS. No identifier can be imported multiple times, defined
+multiple times, or both defined and imported.  The
+<code>indirect-export</code> form declares that certain macros might
+expand to uses of certain unexported bindings.</p> A
+<code>&lt;derived-comdef&gt;</code> is a macro call that expands into
+a <code>&lt;comdef&gt;</code>.
+
+<p>An <code>&lt;import-spec&gt;</code> imports bindings for
+use at a specific <b>phase</b>:</p>
+
+<pre>
+ &lt;import-spec&gt; = &lt;import-set&gt;
+               | (for &lt;import-set&gt; &lt;import-phase&gt;*)
+ &lt;import-phase&gt; = run
+                | expand
+</pre>
+
+<p>An unadorned <code>&lt;import-set&gt;</code> imports for run
+ time. A <code>for</code> form imports for either run time, expansion
+ time, or both. The listed <code>&lt;import-phase&gt;</code>s must
+ be distinct.</p>
+
+<p>An <code>&lt;export-spec&gt;</code> is merely an
+<code>&lt;export-set&gt;</code>:</p>
+
+<pre>
+ &lt;export-spec&gt; = &lt;export-set&gt;
+</pre>
+
+<p>An <code>&lt;indirect-spec&gt;</code> contains an identifier for a
+macro defined in this library followed by a list of other identifiers
+that are defined within this library:</p>
+
+<pre>
+ &lt;indirect-spec&gt; = (&lt;identifier&gt; &lt;identifier&gt;*)
+</pre>
+
+<p>The meaning of an <code>&lt;indirect-spec&gt;</code> is that the
+expansion of a macro bound to the first identifier can contain
+references to the remaining identifiers. If the first identifier is
+exported from the library, then the other identifiers are potentially
+accessible outside the library. If an identifier is not exported and
+not indirectly exported with an exported macro, then accessing the
+identifier from outside the library signals an error. (If access is
+possible at all, then it is only possible through a macro whose
+expansion is inconsistent with the declaration of indirect exports.) If
+the first <code>&lt;identifier&gt;</code> in an
+<code>&lt;indirect-spec&gt;</code> is not defined as a macro within
+the library, or if any of the other <code>&lt;identifiers&gt;</code>s
+is not defined within the library, then an error is signalled.</p>
+
+<p>An <code>&lt;import-set&gt;</code> names a set of bindings from
+another library, and gives them local names for the importing
+libraries:
+</p>
+<pre>
+  &lt;import-set&gt; = &lt;lib-path&gt;
+               | (only &lt;<i>X</i>-set&gt; &lt;identifier&gt;*)
+               | (except &lt;<i>X</i>-set&gt; &lt;identifier&gt;*)
+               | (add-prefix &lt;<i>X</i>-set&gt; &lt;identifier&gt;)
+               | (rename &lt;<i>X</i>-set&gt; (&lt;identifier&gt; &lt;identifier&gt;)*)
+</pre>
+
+<p>The ultimate <code>&lt;lib-path&gt;</code> names the exports of a
+   particular library. Initially, the internal names for the imports are the same
+   as the external names from the exporting library, and forms such as
+   <code>add-prefix</code> and <code>rename</code> adjust the internal
+   set of internal names. More specifically: </p>
+<ul>
+
+ <li> The <code>only</code> form produces a subset of the bindings
+      from another <code>&lt;<i>X</i>-set&gt;</code>, including only
+      the listed internal (external) <code>&lt;identifier&gt;</code>s;
+      if any of the included <code>&lt;identifier&gt;</code>s is not
+      in <code>&lt;<i>X</i>-set&gt;</code>, an error is reported.
+
+ <li> The <code>except</code> form produces a subset of the bindings
+      from another <code>&lt;<i>X</i>-set&gt;</code>, including all but
+      the listed internal (external) <code>&lt;identifier&gt;</code>s;
+      if any of the excluded <code>&lt;identifier&gt;</code>s is not
+      in <code>&lt;<i>X</i>-set&gt;</code>, an error is reported.
+
+ <li> The <code>add-prefix</code> adds a prefix to each internal
+      (external) name from another <code>&lt;<i>X</i>-set&gt;</code>.
+
+ <li> The <code>rename</code> form, for each pair of identifiers 
+       <code>(&lt;identifier&gt; &lt;identifier&gt;)</code>, removes a binding from the set from
+       <code>&lt;<i>X</i>-set&gt;</code>, and adds it back with a
+       different internal (external) name. The first
+       <code>identifier</code> is the original internal (external)
+       name, and the second <code>identifier</code> is the new
+       internal (external) name. If the original name is not in
+       <code>&lt;<i>X</i>-set&gt;</code>, or if the new name is
+       already in <code>&lt;<i>X</i>-set&gt;</code>, an error is
+       reported.
+
+</ul>
+
+<p>An <code>&lt;export-set&gt;</code> names a set of imported and locally
+defined bindings, and gives them external names for exporting:</p>
+
+<pre>
+ &lt;export-set&gt; = &lt;identifier&gt;
+              | (rename (&lt;identifier&gt; &lt;identifier&gt;)*)
+
+</pre>
+
+<p>In an <code>&lt;export-set&gt;</code>, an
+   <code>&lt;identifier&gt;</code> names a single binding defined
+   within the library or imported, where the
+   external name for the export is the same as the name of
+   the binding within the library. A <code>rename</code> set exports the binding
+   named by the first <code>&lt;identifier&gt;</code> in each pair, using
+   the second <code>&lt;identifier&gt;</code> as the external
+   name.</p>
+
+<table width="80%" align="center" bgcolor="#999999"><tr><td>
+Examples for various <code>&lt;import-spec&gt;</code>s 
+  and <code>&lt;export-spec&gt;</code>s:
+<pre>
+  (library "stack" "scheme://r6rs"
+    (export make push! pop! empty!)
+
+    (define (make) (list '()))
+    (define (push! s v) (set-car! s (cons v (car s))))
+    (define (pop! s) (let ([v (caar s)])
+                       (set-car! s (cdar s))
+                       v))
+    (define (empty! s) (set-car! s '())))
+
+
+  (library "balloons" "scheme://r6rs"
+    (export make push pop)
+
+    (define (make w h) (cons w h))
+    (define (push b amt) (cons (- (car b) amt) (+ (cdr b) amt)))
+    (define (pop b) (display "Boom! ") 
+                    (display (* (car b) (cdr b))) 
+                    (newline)))
+
+
+  (library "party" "scheme://r6rs"
+    (import (only "stack" make push! pop!) ; not empty!
+            (add-prefix "balloons" balloon:))
+    ;; Total exports: make, push, 
+    ;;                push!,
+    ;;                make-party,
+    ;;                pop!, pop-again!
+    (export (rename (balloon:make make)
+	            (balloon:push push))
+	    push!
+	    make-party
+	    (rename (party-pop! pop!)))
+
+    ;; Creates a party as a stack of balloons, starting with
+    ;;  two balloons
+    (define (make-party)
+      (let ([s (make)]) ; from stack
+        (push! s (balloon:make 10 10))
+        (push! s (balloon:make 12 9))
+        s))
+    (define (party-pop! p)
+      (balloon:pop (pop! p))))
+
+
+    (library "main" "scheme://r6rs"
+      (import "party")
+
+      (define p (make-party))
+      (pop! p)        ; displays "Boom! 108"
+      (push! p (push (make 5 5) 1))
+      (pop! p))       ; displays "Boom! 24"
+
+</pre>
+</td></tr></table>
+
+<table width="80%" align="center" bgcolor="#999999"><tr><td>
+Examples for macros and phases:
+<pre>
+  (library "helper" "scheme://r6rs"
+    (export find-dup)
+
+    (define (find-dup l)
+      (and (pair? l)
+           (let loop ((rest (cdr l)))
+             (cond
+              [(null? rest) (find-dup (cdr l))]
+              [(bound-identifier=? (car l) (car rest)) (car rest)]
+              [else (loop (cdr rest))])))))
+
+
+  (library "let-values" "scheme://r6rs"
+    (import (for "helper" expand))
+    (export let-values)
+
+    (define-syntax let-values
+      (lambda (stx)
+        (syntax-case stx ()
+          [(_ [(id ...) expr] body0 body ...)
+           (not (find-dup (syntax-object->list (syntax (id ...)))))
+           (syntax (call-with-values (lambda () expr) 
+                                     (lambda (id ...) body0 body ...)))]))))
+
+
+  (library "let-div" "scheme://r6rs"
+    (import "let-values")
+    (export let-div)
+
+    (indirect-export (let-div quotient+remainder))
+    (define (quotient+remainder n d)
+      ;; recompute, for now...
+      (values (quotient n d) (remainder n d)))
+    (define-syntax let-div
+      (syntax-rules ()
+       [(_ n d (q r) body0 body ...)
+        (let-values [(q r) (quotient+remainder n d)]
+          body0 body ...)])))
+
+</pre>
+</td></tr></table>
+
+
+<!-- Library Macro Expansion -->
+
+<a name="expand"></a><h3>Library Macro Expansion</h3>
+
+<p>For each <code>import</code> form, all imported bindings are
+available for processing of
+<code>&lt;comdef-form&gt;</code>s. Variables and macros imported into
+the expand-time phase with <code>(for ....  expand)</code> are
+available for use within macro definitions. More precisely, libraries
+imported for run time must be <b>visited</b> (see <a
+href="#semantics">Library Semantics</a>) if they have not been visited
+already, and libraries imported for expand time with <code>(for ....
+expand)</code> must be <b>invoked</b> (see <a
+href="#semantics">Library Semantics</a>) if they have not been invoked
+already.</p>
+
+<p>To discover macro definitions within the library,
+<code>&lt;comdef-form&gt;</code>s are partially expanded first to
+last; expansion proceeds only far enough to determine whether it is a
+definition, <code>begin</code> form, or something else. If the
+<code>&lt;comdef-form&gt;</code> is a macro definition, then the macro
+becomes available for use in expanding later
+<code>&lt;comdef-form&gt;</code>s. If the
+<code>&lt;comdef-form&gt;</code> is a <code>begin</code> form, the
+content forms are sliced into the library top-level in place of the
+<code>begin</code> form, and partial expansion proceeds with the newly
+spliced forms.</p>
+
+<p>After all macro definitions have been discovered, macro expansion
+resumes for each <code>&lt;comdef-form&gt;</code>,
+using all discovered macros. In this way, macros defined later can be
+used to generate non-definition <code>&lt;comdef-form&gt;</code>s or
+used on the right-hand side of definition
+<code>&lt;comdef-form&gt;</code>s. An error is signalled if expansion
+of a <code>&lt;comdef-form&gt;</code> produces a definition in this
+second phase (i.e., expansion requires a macro defined later in the
+library to produce a definition form).
+
+<p>Macro expansion obeys lexical scope in the sense that if a macro
+expansion introduces a identifier that is bound in the context of the
+macro definition, it refers to the binding in the environment of the
+macro-definition library, not in the environment of the expansion.</p>
+
+<p>An error is signalled if a macro expands to an
+<code>&lt;impexp-form&gt;</code>; all imports and exports must be
+apparent before macro expansion, and they must appear before any
+<code>&lt;comdef-form&gt;</code>. A <code>indirect-export</code> form,
+in contrast, can appear in a macro expansion.</p>
+
+<p>To avoid ambiguity, no local
+identifier can be imported or defined multiple times.</p>
+
+<!-- Library Semantics -->
+
+<a name="semantics"></a><h3>Library Semantics</h3>
+
+<p>Since a library contains a sequence of definitions and expressions, a
+library can be used as an application. Alternately, a Scheme program
+standard (not part of this SRFI) may refer to libraries to be executed
+as part of the program. In either case, executing the library must
+imply executing any library that it imports.</p>
+
+<p>More formally, we define library execution in terms of
+<b>invoking</b> libraries. To execute a library, invoke it at phase
+0.</p>
+
+<p>To <b>invoke</b> a library at phase <i>N</i>:</p>
+<ul>
+
+ <li> Invoke at phase <i>N</i> any library that is imported by this
+ library for run time, and that is not yet invoked at phase <i>N</i>.
+
+ <li> Evaluate all variable definitions and top-level expressions
+ within the library. (Macro definitions are not evaluated.)
+
+</ul>
+<p>
+The order in which imported libraries are invoked is not defined,
+but imported libraries must be invoked before the library's definitions
+and top-level expressions are evaluated.
+</p>
+
+<p>As noted in <a href="#expand">Library Macro Expansion</a>,
+compiling a library implies <b>visiting</b> some libraries that it
+imports, as well as invoking others. Specifically, compiling a library
+requires the same action as visiting the library at phase 0.</p>
+
+<p>To <b>visit</b> a library at phase <i>N</i>:</p>
+<ul>
+
+ <li> Visit at phase <i>N</i> any library that is imported by this
+ library for run time, and that is not yet visited at phase <i>N</i>.
+
+ <li> Invoke at phase <i>N</i>+1 any library that is imported by this
+ library <code>for .... expand</code>, and that is not yet invoked at phase
+ <i>N</i>+1.
+
+ <li> Evaluate all syntax definitions within the library. (Top-level
+ expressions are not evaluated, and the right-hand sides of variable
+ definitions are not evaluated.)
+
+</ul>
+<p>
+The order in which imported libraries are visited and invoked is not defined,
+but imported libraries must be visited and invoked before the library's 
+syntax definitions are evaluated.
+</p>
+
+<p>
+An error is signalled if an identifier is used out of its declared phase(s).
+</p>
+
+<!-- Library References -->
+
+<h2>Library References</h2>
+
+<p>A library refers to another library through a
+<code>&lt;lib-path&gt;</code>. Conceptually, a
+<code>&lt;lib-path&gt;</code> is a name within a universal
+space. Library names in the universe are arranged in a tree, so that a
+<code>&lt;lib-path&gt;</code> can be relative, much like a filesystem
+path or URL.</p>
+
+<p>A <code>&lt;lib-path&gt;</code> is therefore represented by a
+hierarchical URI string (see RFC 2396) or a symbol shortcut (defined
+below). The URI scheme ``scheme'' should be used to refer to libraries
+that are released by the Scheme community at large, in much the same
+way that a Java package name is used. For example,
+<code>"scheme://acme.com/wiley/quicksort"</code> might refer to a
+quicksort library that is distributed by Wiley at Acme. If Wiley's
+quicksort library contains the <code>&lt;lib-path&gt;</code>
+<code>"utils"</code>, it can be expanded as
+<code>"scheme://acme.com/wiley/utils"</code>.</p>
+
+<p>The URI <code>"scheme://r6rs"</code> must be supported by every
+implementation, and it must export all bindings in R5RS, plus
+<code>import</code>, <code>export</code>, and
+<code>indirect-export</code>. URIs starting with
+<code>"scheme://r<i>N</i>rs"</code> and
+<code>"scheme://srfi-<i>N</i>"</code> are reserved for definition by
+standards processes.
+
+<p>The way that URIs for library references are mapped to
+<code>library</code> declarations is
+implementation-specific. Implementations might, for example, interpret
+a ``http'' URI as a reference to library within a UTF-8-encoded
+package on the web. The resolution of a relative
+<code>&lt;lib-path&gt;</code> for a library name (as in the examples
+of <a href="#syntax">Library Form Syntax</a>) is also
+implementation-dependent, but by convention, sequences of declarations
+with relative names (again, as in ) are all relative to the same
+(unspecified) absolute name.</p>
+
+<!-- Eval, Load, and REPL -->
+
+<h2>Eval, Load, and the Read-Eval-Print Loop</h2>
+
+<p>This SRFI defines no interaction between <code>library</code> and
+the <code>eval</code> and <code>load</code> procedures. Programmers
+should not expect that an <code>eval</code> or <code>load</code> that
+appears with a <code>library</code> body either references or extends
+the definitions within the <code>library</code>.</p>
+
+<p>This SRFI also does not require that implementations support a mode
+to evaluate <code>library</code> forms interactively. An
+implementation's native module form might be completely different from
+<code>library</code>, and the implementation may simply supply a tool
+to translate packaged libraries into the implementation's native
+format.</p>
+
+<!-- REFERENCE IMPLEMENTATION -->
+
+<h1>Reference Implementation</h1>
+
+<p>A reference implementation for PLT Scheme 299.200 supports
+<code>library</code> forms in the MzScheme REPL, and also a way to install a
+set of <code>library</code> declarations into the usual PLT Scheme
+module space (by splitting the <code>library</code> sequence into
+separate files, adding <code>#reader(lib "library.ss" "r6rs")</code>
+to the top of each file).</p>
+
+<h1>Acknowledgments</h1>
+
+<p>
+This SRFI was written in consultation with the full set of R6RS
+editors: Will Clinger, Kent Dybvig, Marc Feeley, Matthew Flatt, Manuel Serrano,
+Michael Sperber, and Anton van Straaten.
+</p>
+
+<h1>References</h1>
+
+<p>See <a href="http://www.readscheme.org/">www.readscheme.org</a> for
+   an extensive list of references to work on modules. The following
+   are the most immediate influences on this SRFI:</p>
+
+<ul>
+
+  <li> Waddell and Dybvig, "Extending the Scope of Syntactic Abstraction", POPL 1999.
+
+  <li> Flatt, "Composable and Compilable Macros: You Want it When?", ICFP 2002.
+
+  <li> Kelsey and Rees, "Modules" in <cite>The Incomplete Scheme48 Reference Manual for release 0.57</cite>, 2001.
+
+</ul>
+
+<h1>Copyright</h1>
+
+Copyright (C) Matthew Flatt and Kent Dybvig (2005). All Rights Reserved. 
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+<p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+<hr>
+
+<address>
+  Editor: <a href="mailto:srfi-editors@srfi.schemers.org">David Van Horn</a>
+</address>
+
+</body>
+</html>
+<!--  LocalWords:  SRFI FIXME NUM Dybvig SRFIs
+ -->
