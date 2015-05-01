@@ -1,0 +1,194 @@
+#!r6rs  ;; Required by PLT Scheme.
+
+;; Requires Xitomatl revision at least 194.
+;; Usually, this is run with a "searched directory" as the current directory.
+
+#|
+Usage: rename-old-style directory rename-command delete-command
+
+Rename old-style .sls and .SYS.sls to .r6rs-lib and .SYS-r6rs-lib.
+Rename and normalize old-style UTF-8 encoding to code-point encoding.
+Ask to remove PLT-style versions.
+Ask to rename implicit "main" files to non-implicit.
+Ask to rename directories which may need normalizing.
+Ask to delete or rename symbolic links.
+
+Examples:
+  rename-old-style a-collection mv rm
+  rename-old-style a-collection "bzr mv" "bzr rm"
+  rename-old-style a-collection "echo rename" "echo delete"
+
+Arguments:
+  directory:
+    A directory containing library-file names to process.
+    It may be renamed itself, its contents may be renamed, and it
+    is recursively descended to maybe rename in its sub-directories.
+  rename-command:
+    A shell command prefix which renames files.  It must take two
+    arguments: the old file name and the new file name.
+  delete-command:
+    A shell command prefix which deletes files.  It must take one
+    argument: the file name to delete.
+|#
+
+(import
+  (rnrs)
+  (only (srfi :104 library-files-utilities)
+        library-name->file-name)
+  (only (xitomatl enumerators)
+        fold/enumerator)
+  (only (xitomatl file-system base)
+        directory-walk-enumerator
+        file-regular? file-directory?)
+  (only (xitomatl file-system paths)
+        path-join)
+  (only (xitomatl irregex)
+        irregex)
+  (only (xitomatl common)
+        system fprintf)
+  (only (xitomatl lists)
+        intersperse)
+  (only (xitomatl match)
+        match))
+
+(define transcoder (make-transcoder (utf-8-codec) 'none 'raise))
+
+(define (decode-string s)
+  (define encoded-u8-prefix #\%)
+  (define (hex? c) (or (char<=? #\0 c #\9) (char<=? #\A c #\F) (char<=? #\a c #\f)))
+  (define (hex->u8 x y) (string->number (string x y) 16))
+  (let loop ((l (string->list s)) (a '()))
+    (if (null? l)
+      (apply string-append (reverse a))
+      (if (char=? (car l) encoded-u8-prefix)
+        (let decode ((l l) (u8s '()))
+          (if (and (pair? l)
+                   (char=? (car l) encoded-u8-prefix))
+            (and (pair? (cdr l))
+                 (pair? (cddr l))
+                 (let ((x (cadr l)) (y (caddr l)))
+                   (and (hex? x) (hex? y)
+                        (decode (cdddr l) (cons (hex->u8 x y) u8s)))))
+            (loop l (cons (bytevector->string
+                           (u8-list->bytevector (reverse u8s))
+                           transcoder)
+                          a))))
+        (loop (cdr l) (cons (string (car l)) a))))))
+
+(define (encode-string s)
+  (let ((fn (library-name->file-name (list (string->symbol s)) "e")))
+    (substring fn 0 (- (string-length fn) 2))))
+
+(define (normalize s)
+  (let ((d (decode-string s)))
+    (if d (encode-string d) s)))
+
+(define implicit-component "main")
+
+(define (prompt fmt . args)
+  (let loop ()
+    (apply fprintf (current-error-port)
+           (string-append fmt " [yes/no] ")
+           args)
+    (flush-output-port (current-error-port))
+    (let ((ans (get-line (current-input-port))))
+      (or (string-ci=? "yes" ans)
+          (if (string-ci=? "no" ans) #F (loop))))))
+
+(define (shell cmd . args)
+  (system (apply string-append (intersperse (cons cmd args) " "))))
+
+(define sls-rx
+  (irregex
+   '(: ($ (**? 1 #F any))               ;; library name last part
+       (? ($ (+ #\- (+ (/ #\0 #\9)))))  ;; PLT-style version
+       (? #\. ($ (+ (~ #\.))))          ;; Scheme system specific
+       ".sls")))
+
+(define ext "r6rs-lib")
+
+(define (main dir rename-command delete-command)
+  (define (rename-dir)
+    (define norm (normalize dir))
+    (if (and (not (string=? dir norm))
+             (prompt "Rename directory ~a ?" dir))
+      (begin (shell rename-command dir norm)
+             norm)
+      dir))
+  (fold/enumerator
+   (directory-walk-enumerator 'top-down)
+   (rename-dir)
+   (lambda (path dirs files syms)
+     (define (rename from to)
+       (shell rename-command (path-join path from) (path-join path to)))
+     (define (delete x)
+       (shell delete-command (path-join path x)))
+     (define (rename-file fn)
+       (define full (path-join path fn))
+       (match fn
+         ((:regex sls-rx name ver sys)
+          (let* ((ext (if sys (string-append sys "-" ext) ext))
+                 (append-ext (lambda (s) (string-append s "." ext)))
+                 (name (if (or (not ver)
+                               (prompt "Remove version of ~a ?" full))
+                         name
+                         (string-append name ver))))
+            (if (and (string=? implicit-component name)
+                     (prompt "Rename ~a to non-implicit?" full))
+              (shell rename-command full (append-ext path))
+              (rename fn (append-ext (normalize name))))))
+         (_ (values))))
+     (define (rename-dir dn)
+       (define norm (normalize dn))
+       (if (and (not (string=? dn norm))
+                (prompt "Rename directory ~a ?" (path-join path dn)))
+         (begin (rename dn norm)
+                norm)
+         dn))
+     (define (rename-sym sn)
+       (define full (path-join path sn))
+       (cond ((prompt "Delete symlink ~a ?" full) (delete sn))
+             ((prompt "Rename symlink ~a ?" full)
+              (cond ((file-regular? full) (rename-file sn))
+                    ((file-directory? full) (rename-dir sn))))))
+     (for-each rename-sym syms)
+     (for-each rename-file files)
+     (map rename-dir dirs))))
+
+(define (usage)
+  (fprintf (current-error-port)
+"
+Usage: rename-old-style directory rename-command delete-command
+
+Rename old-style .sls and .SYS.sls to .~a and .SYS-~a.
+Rename and normalize old-style UTF-8 encoding to code-point encoding.
+Ask to remove PLT-style versions.
+Ask to rename implicit \"main\" files to non-implicit.
+Ask to rename directories which may need normalizing.
+Ask to delete or rename symbolic links.
+
+Examples:
+  rename-old-style a-collection mv rm
+  rename-old-style a-collection \"bzr mv\" \"bzr rm\"
+  rename-old-style a-collection \"echo rename\" \"echo delete\"
+
+Arguments:
+  directory:
+    A directory containing library-file names to process.
+    It may be renamed itself, its contents may be renamed, and it
+    is recursively descended to maybe rename in its sub-directories.
+  rename-command:
+    A shell command prefix which renames files.  It must take two
+    arguments: the old file name and the new file name.
+  delete-command:
+    A shell command prefix which deletes files.  It must take one
+    argument: the file name to delete.
+
+"
+ext ext)
+  (flush-output-port (current-error-port)))
+
+(let ((args (cdr (command-line))))
+  (if (= 3 (length args))
+    (apply main args)
+    (usage)))

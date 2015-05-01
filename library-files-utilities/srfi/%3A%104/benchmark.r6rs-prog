@@ -1,0 +1,62 @@
+#!r6rs
+(import
+  (rnrs)
+  (only (srfi :104 library-files-utilities)
+        fold-find-library-file-names  ;; unofficial - uncomment export
+        searched-directories
+        recognized-extensions
+        library-file-name-info
+        find-library-file-names)
+  (only (xitomatl match)
+        match)
+  (only (xitomatl common)
+        time)
+  (only (xitomatl file-system paths)
+        path-join))
+
+(define (parse-command-line)
+  (match (cdr (command-line))
+    (("-lf" libs-file
+      "-sd" searched-dirs (... 1))
+     (values libs-file searched-dirs))
+    (x (apply assertion-violation (car (command-line))
+              "invalid command-line arguments" x))))
+
+(define (find-first-matching-library lib-name)
+  (fold-find-library-file-names lib-name
+   (lambda (searched-dir file-name)
+     (values #F (path-join searched-dir file-name)))))
+
+(define (join-and-flatten file-names)
+  (apply append
+         (map (lambda (x)
+                (map (lambda (y) (path-join (car x) y))
+                     (cdr x)))
+              file-names)))
+
+(let-values (((libs-file s-dirs)
+              (parse-command-line)))
+  (searched-directories s-dirs)
+  (recognized-extensions '("ext"))
+  (let* ((libs-file-names
+          (call-with-input-file libs-file read))
+         (libs-names
+          (map (lambda (x) (let-values (((l _) (library-file-name-info x))) l))
+               libs-file-names))
+         (found
+          (begin
+            (newline)
+            (time (for-each find-first-matching-library libs-names))
+            (newline)
+            (time (map find-library-file-names libs-names))))
+         (found
+          (apply append
+                 (map join-and-flatten found))))
+    (newline)
+    (if (equal? found
+                (apply append
+                       (map (lambda (x)
+                              (map (lambda (sd) (path-join sd x)) s-dirs))
+                            libs-file-names)))
+      (display "OK\n")
+      (display "ERROR\n"))))
