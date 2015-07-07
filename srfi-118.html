@@ -20,7 +20,7 @@
 
 <body>
 <div class="title">
-<H1>Title</H1>
+<h1>Title</h1>
 Simple adjustable-size strings
 </div>
 
@@ -193,6 +193,19 @@ storage by making sure to copy in the correct direction in such circumstances.)
 When <var>value</var> is a string then
 <code>(string-append! <var>dst</var> <var>value</var>)</code> is equivalent to
 <code>(string-replace! <var>dst</var> (string-length <var>dst</var>) (string-length <var>dst</var>) <var>value</var>)</code>.
+<p>
+<em>Note:</em>
+<a href="http://srfi.schemers.org/srfi-13/srfi-13.html">Srfi-13</a> has
+a nondestructive version, <code>string-replace</code>, which
+takes the arguments in the following order:
+
+<pre>
+  (string-replace <var>dst</var> <var>src</var> <var>dst-start</var> <var>dst-end</var> [<var>src-start</var> [<var>src-end</var>]])
+</pre>
+
+We adopt a different argument order here to be consistent with
+<code>string-copy!</code>, and existing <code>string-replace!</code>
+implementations.
 </blockquote>
 
 <h1>Implementation</h1>
