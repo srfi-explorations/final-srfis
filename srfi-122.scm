@@ -19,7 +19,7 @@
        (<code> (<a> name: name name))))
 		       
 (with-output-to-file
-    "array-srfi.html"
+    "srfi-122.html"
   (lambda()
     (html-display
      (list
