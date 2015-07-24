@@ -25,7 +25,10 @@
      (list
      (<unprotected> "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">")
      (<html>
-      (<head> (<title> "Intervals and Generalized Arrays"))
+      (<head>
+       (<title> "Intervals and Generalized Arrays")
+       (<link> href: "http://srfi.schemers.org/srfi.css"
+	       rel: "stylesheet"))
       (<body>
        (<h1> "Title")
        (<p> "Intervals and Generalized arrays")
@@ -34,23 +37,18 @@
        (<p> "Bradley J. Lucier")
        
        (<h1> "Status")
-       (<p> "This SRFI is currently in ``draft'' status. To see an
-explanation of each status that a SRFI can hold, see
-"
-	    (<a> href: "http://srfi.schemers.org/srfi-process.html" "here")".
-It will remain in draft status until 2015/XX/XX, or as amended. To
-provide input on this SRFI, please 
-"
-	    (<code> (<a> href: "mailto:srfi-XX@srfi.schemers.org"
-			 "mailto:srfi-XX@srfi.schemers.org"))
-	    "
-See "
-	    (<a> href: "http://srfi.schemers.org/srfi-list-subscribe.html" "instructions here")"
-to subscribe to the list. You can access previous messages via
-"
-	    (<a> href: "http://srfi.schemers.org/srfi-XX/mail-archive/maillist.html" "
-the archive of the mailing list")".")
-       (<ul> (<li> "Received 2015/XX/XX"))
+       (<p> "This SRFI is currently in " (<em> "draft") "status.  Here is "
+(<a> href: "http://srfi.schemers.org/srfi-process.html" "an explanation")
+"of each status that a SRFI can hold.  To
+provide input on this SRFI, please send email to "
+	    (<code> (<a> href: "mailto:srfi minus 122 at srfi dot schemers dot org"
+			 "srfi-122@" (<span> class: "nospam") "srfi.schemers.org"))
+	    ".
+To subscribe to the list, follow "
+	    (<a> href: "http://srfi.schemers.org/srfi-list-subscribe.html" "these instructions")
+".  You can access previous messages via the mailing list "
+	    (<a> href: "http://srfi-email.schemers.org/srfi-122" "archive")".")
+       (<ul> (<li> "Received: " (<a> href: "srfi-122.html" "2015/7/23")))
        
        (<h1> "Abstract")
        (<p> "This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general, and benefit from a data type
