@@ -51,7 +51,7 @@
     <p>The API of this SRFI uses keywords from SRFI-88 and the calling convention from SRFI-89 for optional and keyword arguments (although the implementation defines functions with keyword and optional arguments using DSSSL's notation, not the notation from SRFI-89).</p>
     <h1>Examples of application areas</h1>
     <ul>
-      <li>Many multi-dimensional transforms in signal processing are <i>separable</i>, in that that the multi-dimensional transform can be computed by applying one-dimensional transforms in each of the coordinate directions.  Examples of such transforms include the Fast Fourier Transform and the Fast Wavelet Transform.  Each one-dimensional subdomain of the complete domain is called a <i>pencil</i>, and the same one-dimensional transform is applied to all pencils in a given direction. This motivaties us to define the various procedures *-distinguish-one-axis.</li>
+      <li>Many multi-dimensional transforms in signal processing are <i>separable</i>, in that that the multi-dimensional transform can be computed by applying one-dimensional transforms in each of the coordinate directions.  Examples of such transforms include the Fast Fourier Transform and the Fast Wavelet Transform.  Each one-dimensional subdomain of the complete domain is called a <i>pencil</i>, and the same one-dimensional transform is applied to all pencils in a given direction. This motivates us to define the various procedures *-distinguish-one-axis.</li>
       <li>Many applications have multi-dimensional data that behave differently in different coordinate directions.  For example, one might have a time series of maps, which can be stored in a single three-dimensional array.  Or one might have one-dimensional spectral data assigned to each pixel on a map.  The data cube as a whole is considered three-dimensional <i>hyperspectral</i> data, but for processing the spectra separately one would apply a function to the spectrum at each pixel.  This corresponds to <i>currying</i> arguments in programming languages, so we include such procedures here.</li>
       <li>All arrays are <i>lazy</i> by default, in that we do not compute an array element until it is needed.  So the following code
         <pre>
@@ -542,7 +542,7 @@
     <pre>
 (lambda multi-index
   (apply f (map (lambda (g) (apply g multi-index)) (map Array-getter (cons array arrays)))))</pre>
-    <p>It is an error to call <code>Array-for-each</code> if its arguments do not safisfy these conditions.</p>
+    <p>It is an error to call <code>Array-for-each</code> if its arguments do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a name="Array-reduce">Array-reduce</a> <var>operator</var> <var>identity</var> <var>array</var></code></p>
     <p><b>Procedure: </b><code><a name="Array-reduce-serial">Array-reduce-serial</a> <var>operator</var> <var>identity</var> <var>array</var></code></p>
     <p>If <code><var>array</var></code>  is an Array then <code>Array-reduce</code> returns <code>(Interval-reduce (Array-getter <var>array</var>) <var>operator identity</var> (Array-domain <var>array</var>))</code> and <code>Array-reduce-serial</code> returns <code>(Interval-reduce-serial (Array-getter <var>array</var>) <var>operator identity</var> (Array-domain <var>array</var>))</code>.</p>
@@ -676,7 +676,7 @@
     <blockquote><code>(lambda (v m) (apply (Array-setter array) v (insert-arg-into-arg-list m outer-index index)))</code>
     </blockquote>
     <h2>Array Manipulators</h2>
-    <p>Comceptually, an array manipulator is a set of functions to manage the backing store of a Fixed-array.
+    <p>Conceptually, an array manipulator is a set of functions to manage the backing store of a Fixed-array.
       The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogenous) vector.</p>
     <h3>Procedures</h3>
     <p><b>Procedure: </b><code><a name="make-Array-manipulators">make-Array-manipulators</a> <var>getter</var> <var>setter</var> <var>checker</var> <var>maker</var> <var>length</var> <var>default</var></code></p>
@@ -687,7 +687,7 @@
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code> and  0 &lt;= <code><var>i</var></code> &lt; <code><var>n</var></code>, then <code>(<var>getter v i</var>)</code> returns the current value of the <code><var>i</var></code>'th element of <code><var>v</var></code>, and <code>(<var>checker</var> (<var>getter v i</var>)) =&gt; #t</code>.</li>
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code>,  0 &lt;= <code><var>i</var></code> &lt; <code><var>n</var></code>, and <code>(<var>checker</var> <var>val</var>) =&gt; #t</code>, then <code>(<var>setter v i val</var>)</code> sets the value of the <code><var>i</var></code>'th element of  <code><var>v</var></code> to <code><var>val</var></code>.</li>
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code> then <code>(<var>length v</var>)</code> returns <code><var>n</var></code>.</li></ul>
-    <p>If the arguments do not safisfy these conditions, then it is an error to call <code>make-Array-manipulators</code></p>
+    <p>If the arguments do not satisfy these conditions, then it is an error to call <code>make-Array-manipulators</code></p>
     <p>Note that we assume that <code><var>getter</var></code> and <code><var>setter</var></code> generally take <i>O</i>(1) time to execute.</p>
     <p><b>Procedure: </b><code><a name="Array-manipulators-getter">Array-manipulators-getter</a> <var>m</var></code></p>
     <p><b>Procedure: </b><code><a name="Array-manipulators-setter">Array-manipulators-setter</a> <var>m</var></code></p>
@@ -876,7 +876,7 @@
     <p>Thus, <code>Array-&gt;Fixed-array-serial</code> evaluates <code>(Array-getter <var>array</var>)</code> to the multi-indices in
       <code>(Array-domain <var>array</var>)</code> in lexicographical order.</p>
     <h1>Implementation</h1>
-    <p>We provide an implemenation in Gambit-C; the nonstandard techniques used
+    <p>We provide an implementation in Gambit-C; the nonstandard techniques used
       in the implementation are: DSSSL-style optional and keyword arguments; a
       unique object to indicate absent arguments; <code>define-structure</code>;
       and <code>define-macro</code>.</p>

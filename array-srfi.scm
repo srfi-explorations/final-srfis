@@ -86,7 +86,7 @@ is created, accessed, etc., via the components of  objects we call Array-manipul
 
 (<h1> "Examples of application areas")
 (<ul>
- (<li> "Many multi-dimensional transforms in signal processing are "(<i> 'separable)", in that that the multi-dimensional transform can be computed by applying one-dimensional transforms in each of the coordinate directions.  Examples of such transforms include the Fast Fourier Transform and the Fast Wavelet Transform.  Each one-dimensional subdomain of the complete domain is called a "(<i> 'pencil)", and the same one-dimensional transform is applied to all pencils in a given direction. This motivaties us to define the various procedures *-distinguish-one-axis.")
+ (<li> "Many multi-dimensional transforms in signal processing are "(<i> 'separable)", in that that the multi-dimensional transform can be computed by applying one-dimensional transforms in each of the coordinate directions.  Examples of such transforms include the Fast Fourier Transform and the Fast Wavelet Transform.  Each one-dimensional subdomain of the complete domain is called a "(<i> 'pencil)", and the same one-dimensional transform is applied to all pencils in a given direction. This motivates us to define the various procedures *-distinguish-one-axis.")
  (<li> "Many applications have multi-dimensional data that behave differently in different coordinate directions.  For example, one might have a time series of maps, which can be stored in a single three-dimensional array.  Or one might have one-dimensional spectral data assigned to each pixel on a map.  The data cube as a whole is considered three-dimensional "(<i> 'hyperspectral)" data, but for processing the spectra separately one would apply a function to the spectrum at each pixel.  This corresponds to "(<i> 'currying)" arguments in programming languages, so we include such procedures here.")
  (<li> "All arrays are "(<i> 'lazy)" by default, in that we do not compute an array element until it is needed.  So the following code"
        (<pre>
@@ -652,7 +652,7 @@ calls")
 (<pre>"
 (lambda multi-index
   (apply f (map (lambda (g) (apply g multi-index)) (map Array-getter (cons array arrays)))))")
-(<p> "It is an error to call "(<code> 'Array-for-each)" if its arguments do not safisfy these conditions.")
+(<p> "It is an error to call "(<code> 'Array-for-each)" if its arguments do not satisfy these conditions.")
 
 (format-lambda-list '(Array-reduce operator identity array))
 (format-lambda-list '(Array-reduce-serial operator identity array))
@@ -798,7 +798,7 @@ domains of the outer and inner lambdas.")
  (<code> "(lambda (v m) (apply (Array-setter array) v (insert-arg-into-arg-list m outer-index index)))"))
 
 (<h2> "Array Manipulators")
-(<p> "Comceptually, an array manipulator is a set of functions to manage the backing store of a Fixed-array.
+(<p> "Conceptually, an array manipulator is a set of functions to manage the backing store of a Fixed-array.
 The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogenous) vector.")
 (<h3> "Procedures")
 
@@ -816,7 +816,7 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
  (<li> "If "(<code>(<var> 'v))" is an object created by "
        (<code>"("(<var> "maker n value")")")
        " then "(<code> "("(<var>"length v")")")" returns "(<code>(<var> 'n))"."))
-(<p> "If the arguments do not safisfy these conditions, then it is an error to call "(<code> 'make-Array-manipulators))
+(<p> "If the arguments do not satisfy these conditions, then it is an error to call "(<code> 'make-Array-manipulators))
 (<p> "Note that we assume that "(<code>(<var> 'getter))" and "(<code>(<var> 'setter))" generally take "(<i> 'O)"(1) time to execute.")
 
 (format-lambda-list '(Array-manipulators-getter m))
@@ -1040,7 +1040,7 @@ the order in which "(<code>"(Array-getter "(<var> 'array)")")" is applied to the
 
 
 (<h1> "Implementation")
-(<p> "We provide an implemenation in Gambit-C; the nonstandard techniques used
+(<p> "We provide an implementation in Gambit-C; the nonstandard techniques used
 in the implementation are: DSSSL-style optional and keyword arguments; a
 unique object to indicate absent arguments; "(<code>"define-structure")";
 and "(<code>"define-macro")".")
