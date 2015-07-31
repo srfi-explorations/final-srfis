@@ -49,7 +49,8 @@ To subscribe to the list, follow "
 ".  You can access previous messages via the mailing list "
 	    (<a> href: "http://srfi-email.schemers.org/srfi-122" "archive")".")
        (<ul> (<li> "Received: 2015/7/23")
-             (<li> "Draft #1 published: 2015/7/27"))
+             (<li> "Draft #1 published: 2015/7/27")
+             (<li> "Draft #2 published: 2015/7/31"))
        
        (<h1> "Abstract")
        (<p> "This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general, and benefit from a data type
