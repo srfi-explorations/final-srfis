@@ -42,14 +42,14 @@
 "of each status that a SRFI can hold.  To
 provide input on this SRFI, please send email to "
 	    (<code> (<a> href: "mailto:srfi minus 122 at srfi dot schemers dot org"
-			 "srfi-122@" (<span> class: "nospam") "srfi.schemers.org"))
+			 "srfi-122@" (<span> class: "antispam" "nospam") "srfi.schemers.org"))
 	    ".
 To subscribe to the list, follow "
 	    (<a> href: "http://srfi.schemers.org/srfi-list-subscribe.html" "these instructions")
 ".  You can access previous messages via the mailing list "
 	    (<a> href: "http://srfi-email.schemers.org/srfi-122" "archive")".")
        (<ul> (<li> "Received: 2015/7/23")
-             (<li> "Draft #1 published: 2015/7/27")))
+             (<li> "Draft #1 published: 2015/7/27"))
        
        (<h1> "Abstract")
        (<p> "This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general, and benefit from a data type
@@ -166,18 +166,8 @@ computation behind the scenes, so I didn't want to name the instantiation routin
 	 (<a> href: "#Interval-for-each" "Interval-for-each")END
 	 (<a> href: "#Interval-for-each-serial" "Interval-for-each-serial")END
 	 (<a> href: "#Interval-reduce" "Interval-reduce")END
-	 (<a> href: "#Interval-reduce" "Interval-reduce-serial")".")
-   (<dt> "Dilations")
-   (<dd> (<a> href: "#Dilation" "Dilation")END
-	 (<a> href: "#Dilation?" "Dilation?")END
-	 (<a> href: "#Dilation-dimension" "Dilation-dimension")END
-	 (<a> href: "#Dilation-lower-bound" "Dilation-lower-bound")END
-	 (<a> href: "#Dilation-upper-bound" "Dilation-upper-bound")END
-	 (<a> href: "#Dilation-lower-bounds->list" "Dilation-lower-bounds->list")END
-	 (<a> href: "#Dilation-upper-bounds->list" "Dilation-upper-bounds->list")END
-	 (<a> href: "#Dilation-lower-bounds->vector" "Dilation-lower-bounds->vector")END
-	 (<a> href: "#Dilation-upper-bounds->vector" "Dilation-upper-bounds->vector")END
-	 (<a> href: "#Dilation=" "Dilation=")".")
+	 (<a> href: "#Interval-reduce-serial" "Interval-reduce-serial") END
+	 (<a> href: "#Interval-dilate" "Interval-dilate")".")
    (<dt> "Arrays")
    (<dd> (<a> href: "#Array" "Array")END
 	 (<a> href: "#Array?" "Array?")END
@@ -419,97 +409,27 @@ then "(<code> 'Interval-contains-multi-index?)" returns "(<code> #t)" if and onl
 it may assume these properties.")
 (<p> "It is an error to call "(<code> 'Interval-reduce)" or "(<code> 'Interval-reduce-serial)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'f))" do not satisfy these conditions.")
 
-(<h2> "Dilations")
-(<p> "Dilations are pairs
-of "(<i>"lower bounds")"
-(l"(<sub>"0")",...,l"(<sub>"d-1")")
-and "(<i>"upper bounds")"
-(u"(<sub>"0")",...,u"(<sub>"d-1")"), which
-are specified as multi-indices of exact integers.  The positive integer d is the "(<i>"dimension")"
-of the dilation.  Generally, dilations are used to modify intervals.")
 
-(<h3> "Procedures")
-(format-lambda-list '(Dilation lower-bounds upper-bounds))
-(<p> "Create a new dilation; "(<code> (<var>"lower-bounds"))" and "(<code> (<var>"upper-bounds"))"
-are nonempty vectors (of the same length) of exact integers.  It is an error if 
-"(<code>(<var>"lower-bounds"))" and "(<code>(<var>"upper-bounds"))" do not satisfy these conditions.")   
-
-(format-lambda-list '(Dilation? obj))
-(<p> "Returns "(<code> "#t")" if "(<code> (<var>"obj"))" is a dilation, and "(<code>"#f")" otherwise.")
-
-(format-lambda-list '(Dilation-dimension dilation))
-(<p> "If "(<code>(<var>"dilation"))" is a dilation built with ")
-(<blockquote>
- (<code>"(Dilation "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
-(<p> "then "(<code> 'Dilation-dimension)" returns "(<code>"(vector-length "(<var>"lower-bounds")")")".  It is an error to call "(<code> 'Dilation-dimension)"
-if "(<code>(<var>"dilation"))" is not a dilation.")
-
-(format-lambda-list '(Dilation-lower-bound dilation i))
-(format-lambda-list '(Dilation-upper-bound dilation i))
-(<p> "If "(<code>(<var>"dilation"))" is a dilation built with ")
-(<blockquote>
- (<code>"(Dilation "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
-(<p> "and "(<code>(<var>"i"))" is an exact integer that satisfies")
-(<blockquote>
- "0 <= "(<code>(<var>"i"))" < "(<code>"(vector-length "(<var>"lower-bounds")")")",")
-(<p> " then "(<code> 'Dilation-lower-bound)" returns
-"(<code>"(vector-ref "(<var>"lower-bounds")" "(<var>"i")")")
-"and  "(<code> 'Dilation-upper-bound)" returns
-"(<code>"(vector-ref "(<var>"upper-bounds")" "(<var>"i")")")".  It is an error to call "(<code> 'Dilation-lower-bound)"
-or "(<code> 'Dilation-upper-bound)" if "(<code>(<var>"dilation"))" and "(<code>(<var>"i"))" do not satisfy these conditions.")
-
-
-(format-lambda-list '(Dilation-lower-bounds->list dilation))
-(format-lambda-list '(Dilation-upper-bounds->list dilation))
-(<p> "If "(<code>(<var>"dilation"))" is a dilation built with ")
-(<blockquote>
- (<code>"(Dilation "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
-(<p> " then "(<code> 'Dilation-lower-bounds->list)" returns "(<code> "(vector->list "(<var>"lower-bounds")")")
-     " and   "(<code> 'Dilation-upper-bounds->list)" returns "(<code> "(vector->list "(<var>"upper-bounds")")")". It is an error to call
-"(<code> 'Dilation-lower-bounds->list)" or "(<code> 'Dilation-upper-bounds->list)" if "(<code>(<var>"dilation"))" does not satisfy these conditions.")
-
-(format-lambda-list '(Dilation-lower-bounds->vector dilation))
-(format-lambda-list '(Dilation-upper-bounds->vector dilation))
-(<p> "If "(<code>(<var>"dilation"))" is a dilation built with ")
-(<blockquote>
- (<code>"(Dilation "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
-(<p> " then "(<code> 'Dilation-lower-bounds->vector)" returns a copy of "(<code> (<var>"lower-bounds"))
-     " and  "(<code> 'Dilation-upper-bounds->vector)" returns a copy of "(<code> (<var>"upper-bounds"))". It is an error to call
-"(<code> 'Dilation-lower-bounds->vector)" or "(<code> 'Dilation-upper-bounds->vector)" if "(<code>(<var>"dilation"))" does not satisfy these conditions.")
-
-(format-lambda-list '(Dilation= dilation1 dilation2))
-(<p> "If "(<code>(<var>"dilation1"))" and "(<code>(<var>"dilation2"))" are dilations built with ")
-(<blockquote>
- (<code>"(Dilation "(<var>"lower-bounds1")" "(<var>"upper-bounds1")")"))
-(<p> "and")
-(<blockquote>
- (<code>"(Dilation "(<var>"lower-bounds2")" "(<var>"upper-bounds2")")"))
-(<p> "respectively, then "(<code> 'Dilation=)" returns")
-(<blockquote>
- (<code> "(and (equal? "(<var> 'lower-bounds1)" "(<var> 'lower-bounds2)") (equal? "(<var> 'upper-bounds1)" "(<var> 'upper-bounds2)"))"))
-(<p> "It is an error to call "(<code> 'Dilation=)" if "(<code>(<var> 'dilation1))" or "(<code>(<var> 'dilation2))" do not satisfy this condition.")
-
-(format-lambda-list '(Interval-dilate interval dilation))
+(format-lambda-list '(Interval-dilate interval lower-diffs upper-diffs))
 (<p> "If "(<code>(<var> 'interval))" is an interval with
 lower bounds l"(<sub>"0")", ..., l"(<sub>"d-1")" and
-upper bounds u"(<sub>"0")", ..., u"(<sub>"d-1")", and
- "(<code>(<var> 'dilation))" is a dilation with
-lower bounds L"(<sub>"0")", ..., L"(<sub>"d-1")" and
-upper bounds U"(<sub>"0")", ..., U"(<sub>"d-1")", then "
-(<code>"(Interval-dilate "(<var> 'interval)" "(<var> 'dilation)")")" returns a new interval with
+upper bounds u"(<sub>"0")", ..., u"(<sub>"d-1")", and "
+(<code>(<var> "lower-diffs"))" is a vector of exact integers L"(<sub>"0")", ..., L"(<sub>"d-1")" and "
+(<code>(<var> "upper-diffs"))" is a vector of exact integers U"(<sub>"0")", ..., U"(<sub>"d-1")", then "
+(<code>"Interval-dilate")" returns a new interval with
 lower bounds l"(<sub>"0")"+L"(<sub>"0")", ..., l"(<sub>"d-1")"+L"(<sub>"d-1")" and
 upper bounds u"(<sub>"0")"+U"(<sub>"0")", ..., u"(<sub>"d-1")"+U"(<sub>"d-1")", as long as this is a
 non-empty interval.  It is an error if the arguments do not satisfy these conditions.")
 (<p> "Examples:")
 (<blockquote>
  (<pre>"
-(Interval= (Interval-dilate (Interval '#(0 0) '#(100 100)) (Dilation '#(1 1) '#(1 1)))
+(Interval= (Interval-dilate (Interval '#(0 0) '#(100 100)) '#(1 1) '#(1 1))
 	   (Interval '#(1 1) '#(101 101))) => #t
-(Interval= (Interval-dilate (Interval '#(0 0) '#(100 100)) (Dilation '#(-1 -1) '#(1 1)))
+(Interval= (Interval-dilate (Interval '#(0 0) '#(100 100)) '#(-1 -1) '#(1 1))
 	   (Interval '#(-1 -1) '#(101 101))) => #t
-(Interval= (Interval-dilate (Interval '#(0 0) '#(100 100)) (Dilation '#(0 0) '#(-50 -50)))
+(Interval= (Interval-dilate (Interval '#(0 0) '#(100 100))  '#(0 0) '#(-50 -50))
 	   (Interval '#(0 0) '#(50 50))) => #t
-(Interval-dilate (Interval '#(0 0) '#(100 100)) (Dilation '#(0 0) '#(-500 -50))) => error
+(Interval-dilate (Interval '#(0 0) '#(100 100)) '#(0 0) '#(-500 -50)) => error
 "))
 
 
