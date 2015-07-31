@@ -37,6 +37,30 @@
 	    (and (pred (car list))
 		 (loop (cdr list)))))))
 
+(define (vector-every pred vec #!optional (vec2 (macro-absent-obj)) #!rest vecs)
+  
+  (define (every1 vec i)
+    (or (< i 0)
+	(and (pred (vector-ref vec i))
+	     (every1 vec (- i 1)))))
+  
+  (define (every2 vec1 vec2 i)
+    (or (< i 0)
+	(and (pred (vector-ref vec1 i) (vector-ref vec2 i))
+	     (every2 vec1 vec2 (- i 1)))))
+
+  (define (every-general vecs i)
+    (or (< i 0)
+	(and (apply pred (map (lambda (vec) (vector-ref vec i)) vecs))
+	     (every-general vecs (- i 1)))))
+
+  (cond ((eq? vec2 (macro-absent-obj))
+	 (every1 vec (- (vector-length vec) 1)))
+	((null? vecs)
+	 (every2 vec vec2 (- (vector-length vec) 1)))
+	(else
+	 (every-general (cons vec (cons vec2 vecs)) (- (vector-length vec) 1)))))
+    
 (declare (inline))
 
 ;;; An Interval is a cross product of multi-indices
@@ -63,44 +87,15 @@
 	 (error "Interval: lower-bounds and upper-bounds must be the same length: " lower-bounds upper-bounds))
 	((not (< 0 (vector-length lower-bounds)))
 	 (error "Interval: lower-bounds and upper-bounds must be nonempty vectors: " lower-bounds upper-bounds))
-	(else 
-	 (let ((lower-bounds-list (vector->list lower-bounds))
-	       (upper-bounds-list (vector->list upper-bounds)))
-	   (cond ((not (every exact-integer? lower-bounds-list))
-		  (error "Interval: All lower-bounds must be exact integers: " lower-bounds))
-		 ((not (every exact-integer? upper-bounds-list))
-		  (error "Interval: All upper-bounds must be exact integers: " upper-bounds))
-		 ((not (every (lambda (x y) (< x y)) lower-bounds-list upper-bounds-list))
-		  (error "Interval: Each lower-bound must be less than the associated upper-bound: " lower-bounds upper-bounds))
-		 (else
-		  (make-##Interval (vector-copy lower-bounds) (vector-copy upper-bounds))))))))
+	((not (vector-every exact-integer? lower-bounds))
+	 (error "Interval: All lower-bounds must be exact integers: " lower-bounds))
+	((not (vector-every exact-integer? upper-bounds))
+	 (error "Interval: All upper-bounds must be exact integers: " upper-bounds))
+	((not (vector-every (lambda (x y) (< x y)) lower-bounds upper-bounds))
+	 (error "Interval: Each lower-bound must be less than the associated upper-bound: " lower-bounds upper-bounds))
+	(else
+	 (make-##Interval (vector-copy lower-bounds) (vector-copy upper-bounds)))))
 
-
-(define-structure ##Dilation
-  lower-bounds            ;; a vector of exact integers l_0,...,l_n-1
-  upper-bounds)           ;; a vector of exact integers u_0,...,u_n-1
-
-(define (Dilation? x)
-  (##Dilation? x))
-
-(define (Dilation lower-bounds upper-bounds)
-  (cond ((not (vector? lower-bounds))
-	 (error "Dilation: lower-bounds must be a vector: " lower-bounds))
-	((not (vector? upper-bounds))
-	 (error "Dilation: upper-bounds must be a vector: " upper-bounds))
-	((not (= (vector-length lower-bounds) (vector-length upper-bounds)))
-	 (error "Dilation: lower-bounds and upper-bounds must be the same length: " lower-bounds upper-bounds))
-	((not (< 0 (vector-length lower-bounds)))
-	 (error "Dilation: lower-bounds and upper-bounds must be nonempty vectors: " lower-bounds upper-bounds))
-	(else 
-	 (let ((lower-bounds-list (vector->list lower-bounds))
-	       (upper-bounds-list (vector->list upper-bounds)))
-	   (cond ((not (every exact-integer? lower-bounds-list))
-		  (error "Dilation: All lower-bounds must be exact integers: " lower-bounds))
-		 ((not (every exact-integer? upper-bounds-list))
-		  (error "Dilation: All upper-bounds must be exact integers: " upper-bounds))
-		 (else
-		  (make-##Dilation (vector-copy lower-bounds) (vector-copy upper-bounds))))))))
 
 (declare (inline))
 
@@ -112,15 +107,6 @@
 
 (define (##Interval-upper-bound interval i)
   (vector-ref (##Interval-upper-bounds interval) i))
-
-(define (##Dilation-dimension interval)
-  (vector-length (##Dilation-lower-bounds interval)))
-
-(define (##Dilation-lower-bound interval i)
-  (vector-ref (##Dilation-lower-bounds interval) i))
-
-(define (##Dilation-upper-bound interval i)
-  (vector-ref (##Dilation-upper-bounds interval) i))
 
 (define (##make-list n v)
   (if (= n 0)
@@ -138,18 +124,6 @@
 
 (define (##Interval-upper-bounds->list interval)
   (vector->list (##Interval-upper-bounds interval)))
-
-(define (##Dilation-lower-bounds->vector interval)
-  (##vector-copy (##Dilation-lower-bounds interval)))
-
-(define (##Dilation-upper-bounds->vector interval)
-  (##vector-copy (##Dilation-upper-bounds interval)))
-
-(define (##Dilation-lower-bounds->list interval)
-  (vector->list (##Dilation-lower-bounds interval)))
-
-(define (##Dilation-upper-bounds->list interval)
-  (vector->list (##Dilation-upper-bounds interval)))
 
 (declare (not inline))
 
@@ -202,69 +176,6 @@
 	 (error "Interval-upper-bounds->list: argument is not an interval: " interval))
 	(else
 	 (##Interval-upper-bounds->list interval))))
-
-(define (Dilation-dimension interval)
-  (cond ((not (Dilation? interval))
-	 (error "Dilation-dimension: argument is not a dilation: " interval))
-	(else
-	 (##Dilation-dimension interval))))
-
-(define (Dilation-lower-bound interval i)
-  (cond ((not (Dilation? interval))
-	 (error "Dilation-lower-bound: argument is not a dilation: " interval i))
-	((not (##exact-integer? i))
-	 (error "Dilation-lower-bound: argument is not an exact integer: " interval i))
-	((not (< -1 i (##Dilation-dimension interval)))
-	 (error "Dilation-lower-bound: index is not between 0 (inclusive) and (Dilation-dimension interval) (exclusive): " interval i))
-	(else
-	 (##Dilation-lower-bound interval i))))
-
-(define (Dilation-upper-bound interval i)
-  (cond ((not (Dilation? interval))
-	 (error "Dilation-upper-bound: argument is not a dilation: " interval i))
-	((not (##exact-integer? i))
-	 (error "Dilation-upper-bound: argument is not an exact integer: " interval i))
-	((not (< -1 i (##Dilation-dimension interval)))
-	 (error "Dilation-upper-bound: index is not between 0 (inclusive) and (Dilation-dimension interval) (exclusive): " interval i))
-	(else
-	 (##Dilation-upper-bound interval i))))
-
-(define (Dilation-lower-bounds->vector interval)
-  (cond ((not (Dilation? interval))
-	 (error "Dilation-lower-bounds->vector: argument is not a dilation: " interval))
-	(else
-	 (##Dilation-lower-bounds->vector interval))))
-
-(define (Dilation-upper-bounds->vector interval)
-  (cond ((not (Dilation? interval))
-	 (error "Dilation-upper-bounds->vector: argument is not a dilation: " interval))
-	(else
-	 (##Dilation-upper-bounds->vector interval))))
-
-(define (Dilation-lower-bounds->list interval)
-  (cond ((not (Dilation? interval))
-	 (error "Dilation-lower-bounds->list: argument is not a dilation: " interval))
-	(else
-	 (##Dilation-lower-bounds->list interval))))
-
-(define (Dilation-upper-bounds->list interval)
-  (cond ((not (Dilation? interval))
-	 (error "Dilation-upper-bounds->list: argument is not a dilation: " interval))
-	(else
-	 (##Dilation-upper-bounds->list interval))))
-
-(define (##Dilation= interval1 interval2)
-  (and (equal? (##Dilation-upper-bounds interval1)
-	       (##Dilation-upper-bounds interval2))
-       (equal? (##Dilation-lower-bounds interval1)
-	       (##Dilation-lower-bounds interval2))))
-
-(define (Dilation= interval1 interval2)
-  (cond ((not (and (Dilation? interval1)
-		   (Dilation? interval2)))
-	 (error "Dilation=: Not all arguments are dilations: " interval1 interval2))
-	(else
-	 (##Dilation= interval1 interval2))))
 
 (define (Interval-curry interval left-dimension)
   (cond ((not (Interval? interval))
@@ -327,18 +238,22 @@
 		      (loop (+ i 1)
 			    (+ j 1))))))))))
 
-(define (Interval-dilate interval dilation)
+(define (Interval-dilate interval lower-diffs upper-diffs)
   (cond ((not (Interval? interval))
-	 (error "Interval-dilate: first argument is not an interval: " interval dilation))
-	((not (Dilation? dilation))
-	 (error "Interval-dilate: second argument is not a dilation: " interval dilation))
-	((not (= (##Interval-dimension interval) (##Dilation-dimension dilation)))
-	 (error "Interval-dilate: the two arguments must have the same dimension: " interval dilation))
+	 (error "Interval-dilate: first argument is not an interval: " interval lower-diffs upper-diffs))
+	((not (vector? lower-diffs))
+	 (error "Interval-dilate: second argument must be a vector: " interval lower-diffs upper-diffs))
+	((not (vector? upper-diffs))
+	 (error "Interval-dilate: third argument must be a vector: " interval lower-diffs upper-diffs))
+	((not (= (vector-length lower-diffs) (vector-length upper-diffs)))
+	 (error "Interval-dilate: The second and third arguments must have the same length: " interval lower-diffs upper-diffs))
+	((not (= (##Interval-dimension interval) (vector-length lower-diffs)))
+	 (error "Interval-dilate: The second and third arguments must have the same length as the dimension of the first argument: " interval lower-diffs upper-diffs))
 	(else
-	 (let* ((interval-lower-bounds (##Interval-lower-bounds->vector interval))
-		(interval-upper-bounds (##Interval-upper-bounds->vector interval))
-		(dilation-lower-bounds (##Dilation-lower-bounds->vector dilation))
-		(dilation-upper-bounds (##Dilation-upper-bounds->vector dilation))
+	 (let* ((interval-lower-bounds (##Interval-lower-bounds interval))
+		(interval-upper-bounds (##Interval-upper-bounds interval))
+		(dilation-lower-bounds lower-diffs)
+		(dilation-upper-bounds upper-diffs)
 		(n (vector-length interval-lower-bounds))
 		(new-lower-bounds (make-vector n))
 		(new-upper-bounds (make-vector n)))
@@ -350,7 +265,7 @@
 						(vector-ref dilation-upper-bounds i)))
 	     (if (not (< (vector-ref new-lower-bounds i)
 			 (vector-ref new-upper-bounds i)))
-		 (error "Interval-dilate: the resulting interval is empty: " interval dilation)))))))
+		 (error "Interval-dilate: the resulting interval is empty: " interval lower-diffs upper-diffs)))))))
 
 (define (##Interval-volume interval)
   (do ((i (- (##Interval-dimension interval) 1) (- i 1))
