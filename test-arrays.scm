@@ -6,10 +6,16 @@
   `(let* (;(ignore (pretty-print ',expr))
 	  (result (call-with-current-continuation
 		   (lambda (c)
-		     (with-exception-handler
+		     (with-exception-catcher
 		      (lambda (args)
+			(cond ((error-exception? args)
+			       (c (error-exception-message args)))
+			      ;; I don't expect any of these, but it sure makes debugging easier
+			      ((unbound-global-exception? args)
+			       (unbound-global-exception-variable args))
+			      (else
+			       "piffle")))
 			
-			(c (error-exception-message args)))
 		      (lambda ()
 			,expr))))))
      (if (not (equal? result ,value))
@@ -455,178 +461,6 @@
 				  (Interval (list->vector lower)
 					    (list->vector upper)))
 	  result)))
-
-(pp "Dilation error tests")
-
-(test (Dilation 1 '#(3 4))
-      "Dilation: lower-bounds must be a vector: ")
-
-(test (Dilation '#(1 1)  3)
-      "Dilation: upper-bounds must be a vector: ")
-
-(test (Dilation '#(1 1)  '#(3))
-      "Dilation: lower-bounds and upper-bounds must be the same length: ")
-
-(test (Dilation '#()  '#())
-      "Dilation: lower-bounds and upper-bounds must be nonempty vectors: ")
-
-(test (Dilation '#(1.)  '#(1))
-      "Dilation: All lower-bounds must be exact integers: ")
-
-(test (Dilation '#(1 #f)  '#(1 2))
-      "Dilation: All lower-bounds must be exact integers: ")
-
-(test (Dilation '#(1)  '#(1.))
-      "Dilation: All upper-bounds must be exact integers: ")
-
-(test (Dilation '#(1 1)  '#(1 #f))
-      "Dilation: All upper-bounds must be exact integers: ")
-
-(pp "Dilation result tests")
-
-(test (Dilation '#(11111)  '#(11112))
-      (Dilation '#(11111) '#(11112)))
-
-(test (Dilation '#(1 2 3)  '#(4 5 6))
-      (Dilation '#(1 2 3) '#(4 5 6)))
-
-(pp "Dilation? result tests")
-
-(test (Dilation? #t)
-      #f)
-
-(test (Dilation? (Dilation '#(1 2 3) '#(4 5 6)))
-      #t)
-
-
-(pp "Dilation-dimension error tests")
-
-(test (Dilation-dimension 1)
-      "Dilation-dimension: argument is not a dilation: ")
-
-(pp "Dilation-dimension result tests")
-
-(test (Dilation-dimension (Dilation '#(1 2 3) '#(4 5 6)))
-      3)
-
-(pp "Dilation-lower-bound error tests")
-
-(test (Dilation-lower-bound 1 0)
-      "Dilation-lower-bound: argument is not a dilation: ")
-
-(test (Dilation-lower-bound (Dilation '#(1 2 3) '#(4 5 6)) #f)
-      "Dilation-lower-bound: argument is not an exact integer: ")
-
-(test (Dilation-lower-bound (Dilation '#(1 2 3) '#(4 5 6)) 1.)
-      "Dilation-lower-bound: argument is not an exact integer: ")
-
-(test (Dilation-lower-bound (Dilation '#(1 2 3) '#(4 5 6)) -1)
-      "Dilation-lower-bound: index is not between 0 (inclusive) and (Dilation-dimension interval) (exclusive): ")
-
-(test (Dilation-lower-bound (Dilation '#(1 2 3) '#(4 5 6)) 3)
-      "Dilation-lower-bound: index is not between 0 (inclusive) and (Dilation-dimension interval) (exclusive): ")
-
-(test (Dilation-lower-bound (Dilation '#(1 2 3) '#(4 5 6)) 4)
-      "Dilation-lower-bound: index is not between 0 (inclusive) and (Dilation-dimension interval) (exclusive): ")
-
-(pp "Dilation-upper-bound error tests")
-
-(test (Dilation-upper-bound 1 0)
-      "Dilation-upper-bound: argument is not a dilation: ")
-
-(test (Dilation-upper-bound (Dilation '#(1 2 3) '#(4 5 6)) #f)
-      "Dilation-upper-bound: argument is not an exact integer: ")
-
-(test (Dilation-upper-bound (Dilation '#(1 2 3) '#(4 5 6)) 1.)
-      "Dilation-upper-bound: argument is not an exact integer: ")
-
-(test (Dilation-upper-bound (Dilation '#(1 2 3) '#(4 5 6)) -1)
-      "Dilation-upper-bound: index is not between 0 (inclusive) and (Dilation-dimension interval) (exclusive): ")
-
-(test (Dilation-upper-bound (Dilation '#(1 2 3) '#(4 5 6)) 3)
-      "Dilation-upper-bound: index is not between 0 (inclusive) and (Dilation-dimension interval) (exclusive): ")
-
-(test (Dilation-upper-bound (Dilation '#(1 2 3) '#(4 5 6)) 4)
-      "Dilation-upper-bound: index is not between 0 (inclusive) and (Dilation-dimension interval) (exclusive): ")
-
-(pp "Dilation-lower-bounds->list error tests")
-
-(test (Dilation-lower-bounds->list 1)
-      "Dilation-lower-bounds->list: argument is not a dilation: ")
-
-(pp "Dilation-upper-bounds->list error tests")
-
-(test (Dilation-upper-bounds->list #f)
-      "Dilation-upper-bounds->list: argument is not a dilation: ")
-
-(pp "Dilation-lower-bound, Dilation-upper-bound, Dilation-lower-bounds->list, and Dilation-upper-bounds->list result tests")
-
-(do ((i 0 (+ i 1)))
-    ((= i tests))
-  (let* ((lower (map (lambda (x) (random 10)) (vector->list (make-vector (random 1 11)))))
-	 (upper (map (lambda (x) (+ (random 1 11) x)) lower)))
-    (let ((interval (Dilation (list->vector lower)
-			      (list->vector upper)))
-	  (offset (random (length lower))))
-      (test (Dilation-lower-bound interval offset)
-	    (list-ref lower offset))
-      (test (Dilation-upper-bound interval offset)
-	    (list-ref upper offset))
-      (test (Dilation-lower-bounds->list interval)
-	    lower)
-      (test (Dilation-upper-bounds->list interval)
-	    upper))))
-
-(pp "Dilation-lower-bounds->vector error tests")
-
-(test (Dilation-lower-bounds->vector 1)
-      "Dilation-lower-bounds->vector: argument is not a dilation: ")
-
-(pp "Dilation-upper-bounds-> error tests")
-
-(test (Dilation-upper-bounds->vector #f)
-      "Dilation-upper-bounds->vector: argument is not a dilation: ")
-
-(pp "Dilation-lower-bound, Dilation-upper-bound, Dilation-lower-bounds->vector, and Dilation-upper-bounds->vector result tests")
-
-(do ((i 0 (+ i 1)))
-    ((= i tests))
-  (let* ((lower (map (lambda (x) (random 10)) (vector->list (make-vector (random 1 11)))))
-	 (upper (map (lambda (x) (+ (random 1 11) x)) lower)))
-    (let ((interval (Dilation (list->vector lower)
-			      (list->vector upper)))
-	  (offset (random (length lower))))
-      (test (Dilation-lower-bound interval offset)
-	    (list-ref lower offset))
-      (test (Dilation-upper-bound interval offset)
-	    (list-ref upper offset))
-      (test (Dilation-lower-bounds->vector interval)
-	    (list->vector lower))
-      (test (Dilation-upper-bounds->vector interval)
-	    (list->vector upper)))))
-
-(pp "Dilation= error tests")
-
-(test (Dilation= #f (Dilation '#(1 2 3) '#(4 5 6)))
-      "Dilation=: Not all arguments are dilations: ")
-
-(test (Dilation= (Dilation '#(1 2 3) '#(4 5 6)) #f)
-      "Dilation=: Not all arguments are dilations: ")
-
-(pp "Dilation= result tests")
-
-(do ((i 0 (+ i 1)))
-    ((= i tests))
-  (let* ((lower1 (map (lambda (x) (random 2)) (vector->list (make-vector (random 1 6)))))
-	 (upper1 (map (lambda (x) (+ (random 1 3) x)) lower1))
-	 (lower2 (map (lambda (x) (random 2)) lower1))
-	 (upper2 (map (lambda (x) (+ 1 (random 1 3) x)) lower2)))
-    (test (Dilation= (Dilation (list->vector lower1)
-			       (list->vector upper1))
-		     (Dilation (list->vector lower2)
-			       (list->vector upper2)))
-	  (and (equal? lower1 lower2)                              ;; the probability of this happening is about 1/16
-	       (equal? upper1 upper2)))))
 
 (pp "Array error tests")
 
@@ -1330,19 +1164,19 @@
 
 (pp "Test code from the SRFI document")
 
-(test (Interval= (Interval-dilate (Interval '#(0 0) '#(100 100)) (Dilation '#(1 1) '#(1 1)))
+(test (Interval= (Interval-dilate (Interval '#(0 0) '#(100 100)) '#(1 1) '#(1 1))
 		 (Interval '#(1 1) '#(101 101)))
       #t)
 
-(test (Interval= (Interval-dilate (Interval '#(0 0) '#(100 100)) (Dilation '#(-1 -1) '#(1 1)))
+(test (Interval= (Interval-dilate (Interval '#(0 0) '#(100 100)) '#(-1 -1) '#(1 1))
 		 (Interval '#(-1 -1) '#(101 101)))
       #t)
 
-(test (Interval= (Interval-dilate (Interval '#(0 0) '#(100 100)) (Dilation '#(0 0) '#(-50 -50)))
+(test (Interval= (Interval-dilate (Interval '#(0 0) '#(100 100))  '#(0 0) '#(-50 -50))
 		 (Interval '#(0 0) '#(50 50)))
       #t)
 
-(test (Interval-dilate (Interval '#(0 0) '#(100 100)) (Dilation '#(0 0) '#(-500 -50)))
+(test (Interval-dilate (Interval '#(0 0) '#(100 100)) '#(0 0) '#(-500 -50))
       "Interval-dilate: the resulting interval is empty: ")
 
 (define a (Array (Interval '#(1 1) '#(11 11))
