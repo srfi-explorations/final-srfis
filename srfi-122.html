@@ -9,13 +9,12 @@
     <h1>Author</h1>
     <p>Bradley J. Lucier</p>
     <h1>Status</h1>
-    <p>This SRFI is currently in <em>draft</em>status.  Here is <a href="http://srfi.schemers.org/srfi-process.html">an explanation</a>of each status that a SRFI can hold.  To
+    <p>This SRFI is currently in <em>draft</em> status.  Here is <a href="http://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To
       provide input on this SRFI, please send email to <code><a href="mailto:srfi minus 122 at srfi dot schemers dot org">srfi-122@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.
       To subscribe to the list, follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="http://srfi-email.schemers.org/srfi-122">archive</a>.</p>
     <ul>
       <li>Received: 2015/7/23</li>
-      <li>Draft #1 published: 2015/7/27</li>
-      <li>Draft #2 published: 2015/7/31</li></ul>
+      <li>Draft #1 published: 2015/7/27</li></ul>
     <h1>Abstract</h1>
     <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general, and benefit from a data type
        called <i>intervals</i>, which encapsulate the cross product of non-empty intervals of exact integers. These intervals  specify the domain
@@ -27,22 +26,22 @@
       [l<sub>0</sub>, u<sub>0</sub>) x [l<sub>1</sub>, u<sub>1</sub>) x ... x [l<sub>d-1</sub>, u<sub>d-1</sub>) to Scheme objects.
       Thus, two things are necessary to specify an array: an interval and a mapping.</p>
     <p>Since these two things are often sufficient for certain algorithms, we introduce in this SRFI a minimal set of interfaces for dealing with such arrays.</p>
-    <p>Specifically, an Array specifies a nonempty, multi-dimensional interval, called its <i>domain</i>, and a mapping from this domain to (single) Scheme objects.  This mapping is called the <i>getter</i> of the array.</p>
+    <p>Specifically, an array specifies a nonempty, multi-dimensional interval, called its <i>domain</i>, and a mapping from this domain to (single) Scheme objects.  This mapping is called the <i>getter</i> of the array.</p>
     <p>If this mapping can be changed, the array is said to be <i>mutable</i> and the mutation is effected
-      by the array's <i>setter</i>.  We call an object of this type a Mutable-array.</p>
+      by the array's <i>setter</i>.  We call an object of this type a mutable-array.</p>
     <p>In general, we leave the implementation of arrays completely open.  They may be defined simply by closures, or
-      they may have hash tables or databases behind an implementation.  If the getter and setter functions of a Mutable-array are
+      they may have hash tables or databases behind an implementation.  If the getter and setter functions of a mutable-array are
       defined by accessing and setting elements  of a one-dimensional (heterogeneous or homogeneous) vector that are determined by a one-to-one function from
-      the domain of the Array into the integers between 0 (inclusive) and the length of the backing-store vector (exclusive),
-      the array is said to be <i>fixed</i>. A Fixed-array is an example of a Mutable-array.</p>
-    <p>Thus,  we  need the concept of an <i>indexer</i>, which is a one-to-one mapping whose domain is an Interval and whose range is
-      contained in another Interval.  Conceptually, an indexer is itself an Array that returns multiple values.  An
+      the domain of the array into the integers between 0 (inclusive) and the length of the backing-store vector (exclusive),
+      the array is said to be <i>fixed</i>. A fixed-array is an example of a mutable-array.</p>
+    <p>Thus,  we  need the concept of an <i>indexer</i>, which is a one-to-one mapping whose domain is an interval and whose range is
+      contained in another interval.  Conceptually, an indexer is itself an array that returns multiple values.  An
       important subset of indexers are affine mappings (linear mappings plus constants) from one domain to another.  We do not
-      encapsulate indexers, with their domain Interval, range Interval, and multi-valued mapping, into a distinct type.
-      While we considered the formalized use of non-affine indexers in Fixed-arrays, we restrict indexers in Fixed-arrays to be affine.
-      Thus our Fixed-arrays are very similar to <a href="#bawden">Bawden-style arrays</a>. (If you want to specify a non-affine indexer into a body, it can be done by constructing a Mutable-array.)</p>
-    <p>The backing store of a Fixed-array, which may be a heterogeneous or homogeneous vector,
-      is created, accessed, etc., via the components of  objects we call Array-manipulators.  We define their properties below.</p>
+      encapsulate indexers, with their domain interval, range interval, and multi-valued mapping, into a distinct type.
+      While we considered the formalized use of non-affine indexers in fixed-arrays, we restrict indexers in fixed-arrays to be affine.
+      Thus our fixed-arrays are very similar to <a href="#bawden">Bawden-style arrays</a>. (If you want to specify a non-affine indexer into a body, it can be done by constructing a mutable-array.)</p>
+    <p>The backing store of a fixed-array, which may be a heterogeneous or homogeneous vector,
+      is created, accessed, etc., via the components of  objects we call array-manipulators.  We define their properties below.</p>
     <p>The API of this SRFI uses keywords from SRFI-88 and the calling convention from SRFI-89 for optional and keyword arguments (although the implementation defines functions with keyword and optional arguments using DSSSL's notation, not the notation from SRFI-89).</p>
     <h1>Examples of application areas</h1>
     <ul>
@@ -51,100 +50,99 @@
       <li>All arrays are <i>lazy</i> by default, in that we do not compute an array element until it is needed.  So the following code
         <pre>
 (define (vector-field-sequence-ell-infty-ell-1-ell-2-norm p)
-  (Array-max (Array-map (lambda (p^k)
-                          (Array-average (Array-map Point-length-R^4
-                                                    (Array-extract p^k
-								   (Array-domain zero-image)))))
-                        p)))</pre>(with suitable definitions for <code>Array-max</code>, <code>Array-average</code>, and <code>Point-length-R^4</code>) computes the maximum over a number of two-dimensional arrays of the average length of four-vectors in those arrays restricted to the domain of <code>zero-image</code>, without storing all of the elements of any of the intermediate arrays together.</li></ul>
+  (array-max (array-map (lambda (p^k)
+                          (array-average (array-map Point-length-R^4
+                                                    (array-extract p^k
+								   (array-domain zero-image)))))
+                        p)))</pre>(with suitable definitions for <code>array-max</code>, <code>array-average</code>, and <code>Point-length-R^4</code>) computes the maximum over a number of two-dimensional arrays of the average length of four-vectors in those arrays restricted to the domain of <code>zero-image</code>, without storing all of the elements of any of the intermediate arrays together.</li></ul>
     <h1>Issues and Notes</h1>
     <ul>
-      <li><b>Capitalization convention. </b>This SRFI specifies an object and class system without mentioning objects and classes.  Conceptually,
-        Fixed-arrays are a subclass of Mutable-arrays, which in turn are a subclass of Arrays.  I follow Queinnec in his practice of naming classes beginning with
-        capital letters in Meroon.</li>
-      <li><b>Fixed-arrays. </b>Bawden-style arrays have their elements stored in a heterogeneous or homogeneous
+      <li><b>fixed-arrays. </b>Bawden-style arrays have their elements stored in a heterogeneous or homogeneous
         vector.  A single vector can contain the elements of
         several conceptually separate arrays.  I needed a name for this type of array implementation, and I think of the
         backing-store vector that contains the array elements as &quot;fixed&quot;, sitting somewhere out of sight.  Thus the name
-        &quot;Fixed-array&quot;.  If you can come up with a better name, good.</li>
+        &quot;fixed-array&quot;.  If you can come up with a better name, good.</li>
       <li><b>&quot;object&quot; vs. &quot;make-object&quot;. </b>I think of <code>make-vector</code>, <code>make-string</code>, etc., as low-level memory
         allocators with little computation going on behind the scenes.  Instantiating the objects of this SRFI may require non-trivial
         computation behind the scenes, so I didn't want to name the instantiation routines make-whatever.</li>
-      <li><b>Specifying intervals. </b>I couldn't, for the life of me, figure out the most &quot;natural&quot; way to specify Intervals.  Perhaps 
+      <li><b>Specifying intervals. </b>I couldn't, for the life of me, figure out the most &quot;natural&quot; way to specify intervals.  Perhaps 
         
-        <blockquote><code>(Interval lower-bounds: l0 l1 ... upper-bounds: u0 u1 ...)</code>
+        <blockquote><code>(interval lower-bounds: l0 l1 ... upper-bounds: u0 u1 ...)</code>
         </blockquote>comes closes, but it would take a lot of computation to check properly , and this isn't even a valid DSSSL argument list. 
         In the end I decided to just require the lower and upper bound arguments to be vectors.</li>
-      <li><b><code> Interval-lower-bounds-&gt;list</code>. </b>I think of this routine not as a getter (<code>Interval-lower-bounds</code> would be a getter) but as a converter, like 
-        <code>vector-&gt;list</code>.  I don't want to expose the inner storage mechanism for lower and upper bounds of Intervals, so I don't provide a getter, only these converters.</li>
-      <li><b>Indexers. </b>Both the arguments new-domain-&gt;old-domain to <code>Fixed-array-share!</code> and indexer to <code>Fixed-array</code> are conceptual arrays, 
+      <li><b><code> interval-lower-bounds-&gt;list</code>. </b>I think of this routine not as a getter (<code>interval-lower-bounds</code> would be a getter) but as a converter, like 
+        <code>vector-&gt;list</code>.  I don't want to expose the inner storage mechanism for lower and upper bounds of intervals, so I don't provide a getter, only these converters.</li>
+      <li><b>Indexers. </b>Both the arguments new-domain-&gt;old-domain to <code>fixed-array-share!</code> and indexer to <code>fixed-array</code> are conceptual arrays, 
         the first multiple-valued and the second single-valued.</li>
-      <li><b>Source of function names. </b>The function <code>Array-curry</code> gets its name from the 
-        <a href="http://en.wikipedia.org/wiki/Currying">curry operator</a> in programming---we are currying the getter of the Array and keeping careful track of the domains. 
-        Interval-curry is simply given a parallel name (although it can be thought of as currying the 
-        characteristic function of the interval,  encapsulated here as <code>Interval-contains-multi-index?</code>).  Similarly, 
-        <code>Array-distinguish-one-axis</code> makes sense for Arrays, but the parallel function for Intervals is not very natural.</li>
-      <li><b>Choice of functions on Intervals. </b>The choice of functions for both Arrays and Intervals was motivated almost solely by what I needed for Arrays.  There are 
-        natural operations on Intervals, like 
-        <blockquote><code>(Interval-cross-product interval1 interval2 ...)</code>
-        </blockquote>(the inverse of <code>Interval-curry</code>) and
-        <blockquote><code>(Interval-intersect interval1 interval2 ...)</code>
-        </blockquote> which don't seem terribly natural for Arrays.  If you could use these functions in your programs, tell me (windowing systems, etc.?).</li>
-      <li><b>No empty Intervals or Arrays. </b>Mathematically, a functions f(x) is a relation R, which is a set  of ordered pairs {(x,y)} for x in some domain set X and 
+      <li><b>Source of function names. </b>The function <code>array-curry</code> gets its name from the 
+        <a href="http://en.wikipedia.org/wiki/Currying">curry operator</a> in programming---we are currying the getter of the array and keeping careful track of the domains. 
+        interval-curry is simply given a parallel name (although it can be thought of as currying the 
+        characteristic function of the interval,  encapsulated here as <code>interval-contains-multi-index?</code>).  Similarly, 
+        <code>array-distinguish-one-axis</code> makes sense for arrays, but the parallel function for intervals is not very natural.</li>
+      <li><b>Choice of functions on intervals. </b>The choice of functions for both arrays and intervals was motivated almost solely by what I needed for arrays.  There are 
+        natural operations on intervals, like 
+        <blockquote><code>(interval-cross-product interval1 interval2 ...)</code>
+        </blockquote>(the inverse of <code>interval-curry</code>) and
+        <blockquote><code>(interval-intersect interval1 interval2 ...)</code>
+        </blockquote> which don't seem terribly natural for arrays.  If you could use these functions in your programs, tell me (windowing systems, etc.?).</li>
+      <li><b>No empty intervals or arrays. </b>Mathematically, a functions f(x) is a relation R, which is a set  of ordered pairs {(x,y)} for x in some domain set X and 
         y in some range set Y, for which (x1,y1) and (x2, y2) are in R and x1=x2 implies y1=y2.  (Here we assume that f is onto Y, in other words that Y consists precisely of
         the second coordinates of the ordered pairs in R, and &quot;=&quot; means &quot;identical&quot;, i.e., y1 and y2 are the <i>same</i> objects (in the sense of 
         <code>eq?</code>).). The only relation R where X is the empty set is the empty relation consisting 
-         of no ordered pairs at all.  Since there are no ordered pairs, there are no values in the range set Y, i.e., Y is the empty set.  So the getter of an Array with 
-        an empty interval as a domain would be able to return no values at all.  So I don't understand constructions that allow Arrays with empty Intervals as domains to return a single value.
+         of no ordered pairs at all.  Since there are no ordered pairs, there are no values in the range set Y, i.e., Y is the empty set.  So the getter of an array with 
+        an empty interval as a domain would be able to return no values at all.  So I don't understand constructions that allow arrays with empty intervals as domains to return a single value.
         Since I don't understand it, I don't allow it.</li></ul>
     <h1>Specification</h1>
     <dl>
       <dt>Intervals</dt>
-      <dd><a href="#Interval">Interval</a>,
-        <a href="#Interval?">Interval?</a>,
-        <a href="#Interval-dimension">Interval-dimension</a>,
-        <a href="#Interval-lower-bound">Interval-lower-bound</a>,
-        <a href="#Interval-upper-bound">Interval-upper-bound</a>,
-        <a href="#Interval-lower-bounds-&gt;list">Interval-lower-bounds-&gt;list</a>,
-        <a href="#Interval-upper-bounds-&gt;list">Interval-upper-bounds-&gt;list</a>,
-        <a href="#Interval-lower-bounds-&gt;vector">Interval-lower-bounds-&gt;vector</a>,
-        <a href="#Interval-upper-bounds-&gt;vector">Interval-upper-bounds-&gt;vector</a>,
-        <a href="#Interval=">Interval=</a>,
-        <a href="#Interval-volume">Interval-volume</a>,
-        <a href="#Interval-subset?">Interval-subset?</a>,
-        <a href="#Interval-contains-multi-index?">Interval-contains-multi-index?</a>,
-        <a href="#Interval-curry">Interval-curry</a>,
-        <a href="#Interval-distinguish-one-axis">Interval-distinguish-one-axis</a>,
-        <a href="#Interval-for-each">Interval-for-each</a>,
-        <a href="#Interval-for-each-serial">Interval-for-each-serial</a>,
-        <a href="#Interval-reduce">Interval-reduce</a>,
-        <a href="#Interval-reduce-serial">Interval-reduce-serial</a>,
-        <a href="#Interval-dilate">Interval-dilate</a>.</dd>
+      <dd><a href="#interval">interval</a>,
+        <a href="#interval?">interval?</a>,
+        <a href="#interval-dimension">interval-dimension</a>,
+        <a href="#interval-lower-bound">interval-lower-bound</a>,
+        <a href="#interval-upper-bound">interval-upper-bound</a>,
+        <a href="#interval-lower-bounds-&gt;list">interval-lower-bounds-&gt;list</a>,
+        <a href="#interval-upper-bounds-&gt;list">interval-upper-bounds-&gt;list</a>,
+        <a href="#interval-lower-bounds-&gt;vector">interval-lower-bounds-&gt;vector</a>,
+        <a href="#interval-upper-bounds-&gt;vector">interval-upper-bounds-&gt;vector</a>,
+        <a href="#interval=">interval=</a>,
+        <a href="#interval-volume">interval-volume</a>,
+        <a href="#interval-subset?">interval-subset?</a>,
+        <a href="#interval-contains-multi-index?">interval-contains-multi-index?</a>,
+        <a href="#interval-curry">interval-curry</a>,
+        <a href="#interval-distinguish-one-axis">interval-distinguish-one-axis</a>,
+        <a href="#interval-for-each">interval-for-each</a>,
+        <a href="#interval-for-each-serial">interval-for-each-serial</a>,
+        <a href="#interval-reduce">interval-reduce</a>,
+        <a href="#interval-reduce-serial">interval-reduce-serial</a>,
+        <a href="#interval-dilate">interval-dilate</a>.</dd>
       <dt>Arrays</dt>
-      <dd><a href="#Array">Array</a>,
-        <a href="#Array?">Array?</a>,
-        <a href="#Array-domain">Array-domain</a>,
-        <a href="#Array-getter">Array-getter</a>,
-        <a href="#Array-setter">Array-setter</a>,
-        <a href="#Array-body">Array-body</a>,
-        <a href="#Array-indexer">Array-indexer</a>,
-        <a href="#Array-manipulators">Array-manipulators</a>,
-        <a href="#Array-map">Array-map</a>,
-        <a href="#Array-curry">Array-curry</a>,
-        <a href="#Array-distinguish-one-axis">Array-distinguish-one-axis</a>,
-        <a href="#Array-for-each">Array-for-each</a>,
-        <a href="#Array-reduce">Array-reduce</a>.</dd>
+      <dd><a href="#array">array</a>,
+        <a href="#array?">array?</a>,
+        <a href="#array-domain">array-domain</a>,
+        <a href="#array-getter">array-getter</a>,
+        <a href="#array-setter">array-setter</a>,
+        <a href="#array-body">array-body</a>,
+        <a href="#array-indexer">array-indexer</a>,
+        <a href="#array-manipulators">array-manipulators</a>,
+        <a href="#array-map">array-map</a>,
+        <a href="#array-curry">array-curry</a>,
+        <a href="#array-distinguish-one-axis">array-distinguish-one-axis</a>,
+        <a href="#array-for-each">array-for-each</a>,
+        <a href="#array-for-each-serial">array-for-each-serial</a>,
+        <a href="#array-reduce">array-reduce</a>,
+        <a href="#array-reduce-serial">array-reduce-serial</a>.</dd>
       <dt>Mutable Arrays</dt>
-      <dd><a href="#Mutable-array">Mutable-array</a>,
-        <a href="#Mutable-array?">Mutable-array?</a>,
-        <a href="#Mutable-array-curry">Mutable-array-curry</a>,
-        <a href="#Mutable-array-distinguish-one-axis">Mutable-array-distinguish-one-axis</a>.</dd>
+      <dd><a href="#mutable-array">mutable-array</a>,
+        <a href="#mutable-array?">mutable-array?</a>,
+        <a href="#mutable-array-curry">mutable-array-curry</a>,
+        <a href="#mutable-array-distinguish-one-axis">mutable-array-distinguish-one-axis</a>.</dd>
       <dt>Array Manipulators</dt>
-      <dd><a href="#make-Array-manipulators">make-Array-manipulators</a>,
-        <a href="#Array-manipulators-getter">Array-manipulators-getter</a>,
-        <a href="#Array-manipulators-setter">Array-manipulators-setter</a>,
-        <a href="#Array-manipulators-maker">Array-manipulators-maker</a>,
-        <a href="#Array-manipulators-length">Array-manipulators-length</a>,
-        <a href="#Array-manipulators-default">Array-manipulators-default</a>,
+      <dd><a href="#make-array-manipulators">make-array-manipulators</a>,
+        <a href="#array-manipulators-getter">array-manipulators-getter</a>,
+        <a href="#array-manipulators-setter">array-manipulators-setter</a>,
+        <a href="#array-manipulators-maker">array-manipulators-maker</a>,
+        <a href="#array-manipulators-length">array-manipulators-length</a>,
+        <a href="#array-manipulators-default">array-manipulators-default</a>,
         <a href="#generic-array-manipulators">generic-array-manipulators</a>,
         <a href="#s8-array-manipulators">s8-array-manipulators</a>,
         <a href="#s16-array-manipulators">s16-array-manipulators</a>,
@@ -160,14 +158,14 @@
       <dt>Indexers</dt>
       <dd><a href="#indexer=">indexer=</a>.</dd>
       <dt>Fixed Arrays</dt>
-      <dd><a href="#Fixed-array-default-safe?">Fixed-array-default-safe?</a>,
-        <a href="#Fixed-array">Fixed-array</a>,
-        <a href="#Fixed-array?">Fixed-array?</a>,
-        <a href="#Fixed-array-curry">Fixed-array-curry</a>,
-        <a href="#Fixed-array-distinguish-one-axis">Fixed-array-distinguish-one-axis</a>,
-        <a href="#Array-&gt;Fixed-array">Array-&gt;Fixed-array</a>,
-        <a href="#Array-&gt;Fixed-array-serial">Array-&gt;Fixed-array-serial</a>,
-        <a href="#Fixed-array-share!">Fixed-array-share!</a>.</dd></dl>
+      <dd><a href="#fixed-array-default-safe?">fixed-array-default-safe?</a>,
+        <a href="#fixed-array">fixed-array</a>,
+        <a href="#fixed-array?">fixed-array?</a>,
+        <a href="#fixed-array-curry">fixed-array-curry</a>,
+        <a href="#fixed-array-distinguish-one-axis">fixed-array-distinguish-one-axis</a>,
+        <a href="#array-&gt;fixed-array">array-&gt;fixed-array</a>,
+        <a href="#array-&gt;fixed-array-serial">array-&gt;fixed-array-serial</a>,
+        <a href="#fixed-array-share!">fixed-array-share!</a>.</dd></dl>
     <h2>Intervals</h2>
     <p>Intervals are sets of all multi-indices
       (i<sub>0</sub>,...,i<sub>d-1</sub>)
@@ -181,7 +179,7 @@
       of the interval.  It is required that
       l<sub>0</sub>&lt;u<sub>0</sub>, ..., l<sub>d-1</sub>&lt;u<sub>d-1</sub>.</p>
     <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a name="Interval">Interval</a> <var>lower-bounds</var> <var>upper-bounds</var></code></p>
+    <p><b>Procedure: </b><code><a name="interval">interval</a> <var>lower-bounds</var> <var>upper-bounds</var></code></p>
     <p>Create a new interval; <code><var>lower-bounds</var></code> and <code><var>upper-bounds</var></code>
       are nonempty vectors (of the same length) of exact integers that satisfy</p>
     <blockquote><code> (&lt; (vector-ref <var>lower-bounds</var> i) (vector-ref <var>upper-bounds</var> i))</code>
@@ -189,82 +187,82 @@
     <p> for
       0&lt;=<code>i</code>&lt;<code>(vector-length <var>lower-bounds</var>)</code>.  It is an error if 
       <code><var>lower-bounds</var></code> and <code><var>upper-bounds</var></code> do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="Interval?">Interval?</a> <var>obj</var></code></p>
+    <p><b>Procedure: </b><code><a name="interval?">interval?</a> <var>obj</var></code></p>
     <p>Returns <code>#t</code> if <code><var>obj</var></code> is an interval, and <code>#f</code> otherwise.</p>
-    <p><b>Procedure: </b><code><a name="Interval-dimension">Interval-dimension</a> <var>interval</var></code></p>
+    <p><b>Procedure: </b><code><a name="interval-dimension">interval-dimension</a> <var>interval</var></code></p>
     <p>If <code><var>interval</var></code> is an interval built with </p>
-    <blockquote><code>(Interval <var>lower-bounds</var> <var>upper-bounds</var>)</code>
+    <blockquote><code>(interval <var>lower-bounds</var> <var>upper-bounds</var>)</code>
     </blockquote>
-    <p>then <code>Interval-dimension</code> returns <code>(vector-length <var>lower-bounds</var>)</code>.  It is an error to call <code>Interval-dimension</code>
+    <p>then <code>interval-dimension</code> returns <code>(vector-length <var>lower-bounds</var>)</code>.  It is an error to call <code>interval-dimension</code>
       if <code><var>interval</var></code> is not an interval.</p>
-    <p><b>Procedure: </b><code><a name="Interval-lower-bound">Interval-lower-bound</a> <var>interval</var> <var>i</var></code></p>
-    <p><b>Procedure: </b><code><a name="Interval-upper-bound">Interval-upper-bound</a> <var>interval</var> <var>i</var></code></p>
+    <p><b>Procedure: </b><code><a name="interval-lower-bound">interval-lower-bound</a> <var>interval</var> <var>i</var></code></p>
+    <p><b>Procedure: </b><code><a name="interval-upper-bound">interval-upper-bound</a> <var>interval</var> <var>i</var></code></p>
     <p>If <code><var>interval</var></code> is an interval built with </p>
-    <blockquote><code>(Interval <var>lower-bounds</var> <var>upper-bounds</var>)</code>
+    <blockquote><code>(interval <var>lower-bounds</var> <var>upper-bounds</var>)</code>
     </blockquote>
     <p>and <code><var>i</var></code> is an exact integer that satisfies</p>
     <blockquote>0 &lt;= <code><var>i</var></code> &lt; <code>(vector-length <var>lower-bounds</var>)</code>,
     </blockquote>
-    <p> then <code>Interval-lower-bound</code> returns
-      <code>(vector-ref <var>lower-bounds</var> <var>i</var>)</code> and <code>Interval-upper-bound</code> returns
-      <code>(vector-ref <var>upper-bounds</var> <var>i</var>)</code>.  It is an error to call <code>Interval-lower-bound</code> or <code>Interval-upper-bound</code>
+    <p> then <code>interval-lower-bound</code> returns
+      <code>(vector-ref <var>lower-bounds</var> <var>i</var>)</code> and <code>interval-upper-bound</code> returns
+      <code>(vector-ref <var>upper-bounds</var> <var>i</var>)</code>.  It is an error to call <code>interval-lower-bound</code> or <code>interval-upper-bound</code>
       if <code><var>interval</var></code> and <code><var>i</var></code> do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="Interval-lower-bounds-&gt;list">Interval-lower-bounds-&gt;list</a> <var>interval</var></code></p>
-    <p><b>Procedure: </b><code><a name="Interval-upper-bounds-&gt;list">Interval-upper-bounds-&gt;list</a> <var>interval</var></code></p>
+    <p><b>Procedure: </b><code><a name="interval-lower-bounds-&gt;list">interval-lower-bounds-&gt;list</a> <var>interval</var></code></p>
+    <p><b>Procedure: </b><code><a name="interval-upper-bounds-&gt;list">interval-upper-bounds-&gt;list</a> <var>interval</var></code></p>
     <p>If <code><var>interval</var></code> is an interval built with </p>
-    <blockquote><code>(Interval <var>lower-bounds</var> <var>upper-bounds</var>)</code>
+    <blockquote><code>(interval <var>lower-bounds</var> <var>upper-bounds</var>)</code>
     </blockquote>
-    <p> then <code>Interval-lower-bounds-&gt;list</code> returns <code>(vector-&gt;list <var>lower-bounds</var>)</code> and  <code>Interval-upper-bounds-&gt;list</code> returns <code>(vector-&gt;list <var>upper-bounds</var>)</code>. It is an error to call
-      <code>Interval-lower-bounds-&gt;list</code> or <code>Interval-upper-bounds-&gt;list</code> if <code><var>interval</var></code> does not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="Interval-lower-bounds-&gt;vector">Interval-lower-bounds-&gt;vector</a> <var>interval</var></code></p>
-    <p><b>Procedure: </b><code><a name="Interval-upper-bounds-&gt;vector">Interval-upper-bounds-&gt;vector</a> <var>interval</var></code></p>
+    <p> then <code>interval-lower-bounds-&gt;list</code> returns <code>(vector-&gt;list <var>lower-bounds</var>)</code> and  <code>interval-upper-bounds-&gt;list</code> returns <code>(vector-&gt;list <var>upper-bounds</var>)</code>. It is an error to call
+      <code>interval-lower-bounds-&gt;list</code> or <code>interval-upper-bounds-&gt;list</code> if <code><var>interval</var></code> does not satisfy these conditions.</p>
+    <p><b>Procedure: </b><code><a name="interval-lower-bounds-&gt;vector">interval-lower-bounds-&gt;vector</a> <var>interval</var></code></p>
+    <p><b>Procedure: </b><code><a name="interval-upper-bounds-&gt;vector">interval-upper-bounds-&gt;vector</a> <var>interval</var></code></p>
     <p>If <code><var>interval</var></code> is an interval built with </p>
-    <blockquote><code>(Interval <var>lower-bounds</var> <var>upper-bounds</var>)</code>
+    <blockquote><code>(interval <var>lower-bounds</var> <var>upper-bounds</var>)</code>
     </blockquote>
-    <p> then <code>Interval-lower-bounds-&gt;vector</code> returns a copy of <code><var>lower-bounds</var></code>  and <code>Interval-upper-bounds-&gt;vector</code> returns a copy of <code><var>upper-bounds</var></code>. It is an error to call
-      <code>Interval-lower-bounds-&gt;vector</code> or <code>Interval-upper-bounds-&gt;vector</code> if <code><var>interval</var></code> does not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="Interval-volume">Interval-volume</a> <var>interval</var></code></p>
+    <p> then <code>interval-lower-bounds-&gt;vector</code> returns a copy of <code><var>lower-bounds</var></code>  and <code>interval-upper-bounds-&gt;vector</code> returns a copy of <code><var>upper-bounds</var></code>. It is an error to call
+      <code>interval-lower-bounds-&gt;vector</code> or <code>interval-upper-bounds-&gt;vector</code> if <code><var>interval</var></code> does not satisfy these conditions.</p>
+    <p><b>Procedure: </b><code><a name="interval-volume">interval-volume</a> <var>interval</var></code></p>
     <p>If <code><var>interval</var></code> is an interval built with </p>
-    <blockquote><code>(Interval <var>lower-bounds</var> <var>upper-bounds</var>)</code>
+    <blockquote><code>(interval <var>lower-bounds</var> <var>upper-bounds</var>)</code>
     </blockquote>
-    <p>then <code>Interval-volume</code> returns </p>
-    <blockquote><code>(apply * (map - (Interval-upper-bounds-&gt;list <var>interval</var>) (Interval-lower-bounds-&gt;list <var>interval</var>))</code>
+    <p>then <code>interval-volume</code> returns </p>
+    <blockquote><code>(apply * (map - (interval-upper-bounds-&gt;list <var>interval</var>) (interval-lower-bounds-&gt;list <var>interval</var>))</code>
     </blockquote>
-    <p>It is an error to call <code>Interval-volume</code> if <code><var>interval</var></code> does not satisfy this condition.</p>
-    <p><b>Procedure: </b><code><a name="Interval=">Interval=</a> <var>interval1</var> <var>interval2</var></code></p>
+    <p>It is an error to call <code>interval-volume</code> if <code><var>interval</var></code> does not satisfy this condition.</p>
+    <p><b>Procedure: </b><code><a name="interval=">interval=</a> <var>interval1</var> <var>interval2</var></code></p>
     <p>If <code><var>interval1</var></code> and <code><var>interval2</var></code> are intervals built with </p>
-    <blockquote><code>(Interval <var>lower-bounds1</var> <var>upper-bounds1</var>)</code>
+    <blockquote><code>(interval <var>lower-bounds1</var> <var>upper-bounds1</var>)</code>
     </blockquote>
     <p>and</p>
-    <blockquote><code>(Interval <var>lower-bounds2</var> <var>upper-bounds2</var>)</code>
+    <blockquote><code>(interval <var>lower-bounds2</var> <var>upper-bounds2</var>)</code>
     </blockquote>
-    <p>respectively, then <code>Interval=</code> returns</p>
+    <p>respectively, then <code>interval=</code> returns</p>
     <blockquote><code>(and (equal? <var>lower-bounds1</var> <var>lower-bounds2</var>) (equal? <var>upper-bounds1</var> <var>upper-bounds2</var>))</code>
     </blockquote>
-    <p>It is an error to call <code>Interval=</code> if <code><var>interval1</var></code> or <code><var>interval2</var></code> do not satisfy this condition.</p>
-    <p><b>Procedure: </b><code><a name="Interval-subset?">Interval-subset?</a> <var>interval1</var> <var>interval2</var></code></p>
+    <p>It is an error to call <code>interval=</code> if <code><var>interval1</var></code> or <code><var>interval2</var></code> do not satisfy this condition.</p>
+    <p><b>Procedure: </b><code><a name="interval-subset?">interval-subset?</a> <var>interval1</var> <var>interval2</var></code></p>
     <p>If <code><var>interval1</var></code> and <code><var>interval2</var></code> are intervals of the same dimension built with </p>
-    <blockquote><code>(Interval <var>lower-bounds1</var> <var>upper-bounds1</var>)</code>
+    <blockquote><code>(interval <var>lower-bounds1</var> <var>upper-bounds1</var>)</code>
     </blockquote>
     <p>and</p>
-    <blockquote><code>(Interval <var>lower-bounds2</var> <var>upper-bounds2</var>)</code>
+    <blockquote><code>(interval <var>lower-bounds2</var> <var>upper-bounds2</var>)</code>
     </blockquote>
-    <p>respectively, then <code>Interval-subset?</code> returns</p>
+    <p>respectively, then <code>interval-subset?</code> returns</p>
     <pre>
 (and (equal? (map &gt;= (vector-&gt;list lower-bounds1) (vector-&gt;list lower-bounds2))
 	     (map (lambda (x) #t) (vector-&gt;list lower-bounds1)))
      (equal? (map &lt;= (vector-&gt;list upper-bounds1) (vector-&gt;list upper-bounds2))
 	     (map (lambda (x) #t) (vector-&gt;list lower-bounds1))))</pre>
-    <p>It is an error to call <code>Interval-subset?</code> if <code><var>interval1</var></code> or <code><var>interval2</var></code> do not satisfy this condition.</p>
-    <p><b>Procedure: </b><code><a name="Interval-contains-multi-index?">Interval-contains-multi-index?</a> <var>interval</var> <var>index-0</var> <var>...</var></code></p>
-    <p>If <code><var>interval</var></code> is an Interval with dimension d and <code><var>index-0</var></code>, ..., form a multi-index of length d,
-      then <code>Interval-contains-multi-index?</code> returns <code>#t</code> if and only if</p>
-    <blockquote><code>(Interval-lower-bound <var>interval</var> j) &lt;= <var>index-j</var> &lt; (Interval-upper-bound <var>interval</var> j)</code>
+    <p>It is an error to call <code>interval-subset?</code> if <code><var>interval1</var></code> or <code><var>interval2</var></code> do not satisfy this condition.</p>
+    <p><b>Procedure: </b><code><a name="interval-contains-multi-index?">interval-contains-multi-index?</a> <var>interval</var> <var>index-0</var> <var>...</var></code></p>
+    <p>If <code><var>interval</var></code> is an interval with dimension d and <code><var>index-0</var></code>, ..., form a multi-index of length d,
+      then <code>interval-contains-multi-index?</code> returns <code>#t</code> if and only if</p>
+    <blockquote><code>(interval-lower-bound <var>interval</var> j) &lt;= <var>index-j</var> &lt; (interval-upper-bound <var>interval</var> j)</code>
     </blockquote>
     <p>for 0&lt;= j &lt; d.</p>
-    <p>It is an error to call <code>Interval-contains-multi-index?</code> if <code><var>interval</var></code> and <code><var>index-0</var></code>,..., do not satisfy this condition.</p>
-    <p><b>Procedure: </b><code><a name="Interval-curry">Interval-curry</a> <var>interval</var> <var>left-dimension</var></code></p>
-    <p>Conceptually, <code>Interval-curry</code> takes a d-dimensional interval [l<sub>0</sub>, u<sub>0</sub>) x [l<sub>1</sub>, u<sub>1</sub>) x ... x [l<sub>d-1</sub>, u<sub>d-1</sub>)
+    <p>It is an error to call <code>interval-contains-multi-index?</code> if <code><var>interval</var></code> and <code><var>index-0</var></code>,..., do not satisfy this condition.</p>
+    <p><b>Procedure: </b><code><a name="interval-curry">interval-curry</a> <var>interval</var> <var>left-dimension</var></code></p>
+    <p>Conceptually, <code>interval-curry</code> takes a d-dimensional interval [l<sub>0</sub>, u<sub>0</sub>) x [l<sub>1</sub>, u<sub>1</sub>) x ... x [l<sub>d-1</sub>, u<sub>d-1</sub>)
       and splits it into two parts</p>
     <blockquote>[l<sub>0</sub>, u<sub>0</sub>) x [l<sub>1</sub>, u<sub>1</sub>) x ... x [l<sub>left-dimension - 1</sub>, u<sub>left-dimension - 1</sub>)
     </blockquote>
@@ -272,164 +270,164 @@
     <blockquote>[l<sub>left-dimension</sub>, u<sub>left-dimension</sub>) x  ... x [l<sub>d-1</sub>, u<sub>d-1</sub>)
     </blockquote>
     <p>This function, the inverse of Cartesian products or cross products of intervals, is used to keep track of the domains of curried arrays.</p>
-    <p>More precisely, if <code><var>interval</var></code> is an Interval and <code><var>left-dimension</var></code> is an exact integer that satisfies</p>
-    <blockquote><code>0 &lt; <var>left-dimension</var> &lt; (Interval-dimension <var>interval</var>)</code>
+    <p>More precisely, if <code><var>interval</var></code> is an interval and <code><var>left-dimension</var></code> is an exact integer that satisfies</p>
+    <blockquote><code>0 &lt; <var>left-dimension</var> &lt; (interval-dimension <var>interval</var>)</code>
     </blockquote>
-    <p>then <code>Interval-curry</code> returns two intervals:</p>
+    <p>then <code>interval-curry</code> returns two intervals:</p>
     <pre>
-(values (Interval (vector (Interval-lower-bound interval 0)
+(values (interval (vector (interval-lower-bound interval 0)
 			  ...
-			  (Interval-lower-bound interval (- left-dimension 1)))
-		  (vector (Interval-upper-bound interval 0)
+			  (interval-lower-bound interval (- left-dimension 1)))
+		  (vector (interval-upper-bound interval 0)
 			  ...
-			  (Interval-upper-bound interval (- left-dimension 1))))
-	(Interval (vector (Interval-lower-bound interval left-dimension)
+			  (interval-upper-bound interval (- left-dimension 1))))
+	(interval (vector (interval-lower-bound interval left-dimension)
 			  ...
-			  (Interval-lower-bound interval (- (Interval-dimension interval) 1)))
-		  (vector (Interval-upper-bound interval left-dimension)
+			  (interval-lower-bound interval (- (interval-dimension interval) 1)))
+		  (vector (interval-upper-bound interval left-dimension)
 			  ...
-			  (Interval-upper-bound interval (- (Interval-dimension interval) 1)))))</pre>
-    <p>It is an error to call <code>Interval-curry</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="Interval-distinguish-one-axis">Interval-distinguish-one-axis</a> <var>interval</var> <var>index</var></code></p>
+			  (interval-upper-bound interval (- (interval-dimension interval) 1)))))</pre>
+    <p>It is an error to call <code>interval-curry</code> if its arguments do not satisfy these conditions.</p>
+    <p><b>Procedure: </b><code><a name="interval-distinguish-one-axis">interval-distinguish-one-axis</a> <var>interval</var> <var>index</var></code></p>
     <p>If <code><var>interval</var></code> is an interval and
-      <code>(Interval-dimension <var>interval</var>)</code> is greater than one, and</p>
-    <blockquote><code>0 &lt;= <var>index</var> &lt; (Interval-dimension <var>interval</var>)</code>
+      <code>(interval-dimension <var>interval</var>)</code> is greater than one, and</p>
+    <blockquote><code>0 &lt;= <var>index</var> &lt; (interval-dimension <var>interval</var>)</code>
     </blockquote>
-    <p>then <code>Interval-distinguish-one-axis</code> returns</p>
+    <p>then <code>interval-distinguish-one-axis</code> returns</p>
     <pre>
-(values (Interval (vector (Interval-lower-bound interval 0)
-			  ...         ; leaving out (Interval-lower-bound interval index)
-			  (Interval-lower-bound interval (- left-dimension 1)))
-		  (vector (Interval-upper-bound interval 0)
-			  ...         ; leaving out (Interval-upper-bound interval index)
-			  (Interval-upper-bound interval (- left-dimension 1))))
-	(Interval (vector (Interval-lower-bound interval index))
-		  (vector (Interval-upper-bound interval index))))</pre>
-    <p>It is an error to call <code>Interval-distinguish-one-axis</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="Interval-for-each">Interval-for-each</a> <var>f</var> <var>interval</var></code></p>
-    <p><b>Procedure: </b><code><a name="Interval-for-each-serial">Interval-for-each-serial</a> <var>f</var> <var>interval</var></code></p>
+(values (interval (vector (interval-lower-bound interval 0)
+			  ...         ; leaving out (interval-lower-bound interval index)
+			  (interval-lower-bound interval (- left-dimension 1)))
+		  (vector (interval-upper-bound interval 0)
+			  ...         ; leaving out (interval-upper-bound interval index)
+			  (interval-upper-bound interval (- left-dimension 1))))
+	(interval (vector (interval-lower-bound interval index))
+		  (vector (interval-upper-bound interval index))))</pre>
+    <p>It is an error to call <code>interval-distinguish-one-axis</code> if its arguments do not satisfy these conditions.</p>
+    <p><b>Procedure: </b><code><a name="interval-for-each">interval-for-each</a> <var>f</var> <var>interval</var></code></p>
+    <p><b>Procedure: </b><code><a name="interval-for-each-serial">interval-for-each-serial</a> <var>f</var> <var>interval</var></code></p>
     <p>These routines assume that <code><var>interval</var></code> is an interval and <code><var>f</var></code> is a routine whose domain includes elements of <code><var>interval</var></code>.  It is an error to call
-      <code>Interval-for-each</code> if <code><var>interval</var></code> and <code><var>f</var></code> do not satisfy these conditions.</p>
-    <p><code>Interval-for-each</code> calls <code><var>f</var></code> on each element of <code><var>interval</var></code> in some unspecified order.</p>
-    <p><code>Interval-for-each-serial</code> calls <code><var>f</var></code> on each element of <code><var>interval</var></code> in lexicographical order.</p>
-    <p><b>Procedure: </b><code><a name="Interval-reduce">Interval-reduce</a> <var>f</var> <var>operator</var> <var>identity</var> <var>interval</var></code></p>
-    <p><b>Procedure: </b><code><a name="Interval-reduce-serial">Interval-reduce-serial</a> <var>f</var> <var>operator</var> <var>identity</var> <var>interval</var></code></p>
+      <code>interval-for-each</code> if <code><var>interval</var></code> and <code><var>f</var></code> do not satisfy these conditions.</p>
+    <p><code>interval-for-each</code> calls <code><var>f</var></code> on each element of <code><var>interval</var></code> in some unspecified order.</p>
+    <p><code>interval-for-each-serial</code> calls <code><var>f</var></code> on each element of <code><var>interval</var></code> in lexicographical order.</p>
+    <p><b>Procedure: </b><code><a name="interval-reduce">interval-reduce</a> <var>f</var> <var>operator</var> <var>identity</var> <var>interval</var></code></p>
+    <p><b>Procedure: </b><code><a name="interval-reduce-serial">interval-reduce-serial</a> <var>f</var> <var>operator</var> <var>identity</var> <var>interval</var></code></p>
     <p>If <code><var>interval</var></code> is an interval and <code><var>f</var></code> is a routine whose domain includes elements of <code><var>interval</var></code>, then
-      <code>Interval-reduce-serial</code> returns</p>
+      <code>interval-reduce-serial</code> returns</p>
     <blockquote><code>(... (<var>operator</var> (<var>operator</var> (<var>operator identity </var>(<var>f multi-index</var><sub>1</sub>)) (<var>f multi-index</var><sub>2</sub>)) (<var>f multi-index</var><sub>3</sub>)) ...)</code>
     </blockquote>
     <p>where <code><var>multi-index</var><sub>1</sub></code>, <code><var>multi-index</var><sub>2</sub></code>, ... are the multi-indices in <code><var>interval</var></code> in lexicographical order.</p>
-    <p><code>Interval-reduce</code> returns the same value when <code><var>operator</var></code> is associative and it doesn't matter in which order <code><var>f</var></code> is evaluated, and
+    <p><code>interval-reduce</code> returns the same value when <code><var>operator</var></code> is associative and it doesn't matter in which order <code><var>f</var></code> is evaluated, and
       it may assume these properties.</p>
-    <p>It is an error to call <code>Interval-reduce</code> or <code>Interval-reduce-serial</code> if <code><var>interval</var></code> and <code><var>f</var></code> do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="Interval-dilate">Interval-dilate</a> <var>interval</var> <var>lower-diffs</var> <var>upper-diffs</var></code></p>
+    <p>It is an error to call <code>interval-reduce</code> or <code>interval-reduce-serial</code> if <code><var>interval</var></code> and <code><var>f</var></code> do not satisfy these conditions.</p>
+    <p><b>Procedure: </b><code><a name="interval-dilate">interval-dilate</a> <var>interval</var> <var>lower-diffs</var> <var>upper-diffs</var></code></p>
     <p>If <code><var>interval</var></code> is an interval with
       lower bounds l<sub>0</sub>, ..., l<sub>d-1</sub> and
-      upper bounds u<sub>0</sub>, ..., u<sub>d-1</sub>, and <code><var>lower-diffs</var></code> is a vector of exact integers L<sub>0</sub>, ..., L<sub>d-1</sub> and <code><var>upper-diffs</var></code> is a vector of exact integers U<sub>0</sub>, ..., U<sub>d-1</sub>, then <code>Interval-dilate</code> returns a new interval with
+      upper bounds u<sub>0</sub>, ..., u<sub>d-1</sub>, and <code><var>lower-diffs</var></code> is a vector of exact integers L<sub>0</sub>, ..., L<sub>d-1</sub> and <code><var>upper-diffs</var></code> is a vector of exact integers U<sub>0</sub>, ..., U<sub>d-1</sub>, then <code>interval-dilate</code> returns a new interval with
       lower bounds l<sub>0</sub>+L<sub>0</sub>, ..., l<sub>d-1</sub>+L<sub>d-1</sub> and
       upper bounds u<sub>0</sub>+U<sub>0</sub>, ..., u<sub>d-1</sub>+U<sub>d-1</sub>, as long as this is a
       non-empty interval.  It is an error if the arguments do not satisfy these conditions.</p>
     <p>Examples:</p>
     <blockquote>
       <pre>
-(Interval= (Interval-dilate (Interval '#(0 0) '#(100 100)) '#(1 1) '#(1 1))
-	   (Interval '#(1 1) '#(101 101))) =&gt; #t
-(Interval= (Interval-dilate (Interval '#(0 0) '#(100 100)) '#(-1 -1) '#(1 1))
-	   (Interval '#(-1 -1) '#(101 101))) =&gt; #t
-(Interval= (Interval-dilate (Interval '#(0 0) '#(100 100))  '#(0 0) '#(-50 -50))
-	   (Interval '#(0 0) '#(50 50))) =&gt; #t
-(Interval-dilate (Interval '#(0 0) '#(100 100)) '#(0 0) '#(-500 -50)) =&gt; error
+(interval= (interval-dilate (interval '#(0 0) '#(100 100)) '#(1 1) '#(1 1))
+	   (interval '#(1 1) '#(101 101))) =&gt; #t
+(interval= (interval-dilate (interval '#(0 0) '#(100 100)) '#(-1 -1) '#(1 1))
+	   (interval '#(-1 -1) '#(101 101))) =&gt; #t
+(interval= (interval-dilate (interval '#(0 0) '#(100 100))  '#(0 0) '#(-50 -50))
+	   (interval '#(0 0) '#(50 50))) =&gt; #t
+(interval-dilate (interval '#(0 0) '#(100 100)) '#(0 0) '#(-500 -50)) =&gt; error
 </pre>
     </blockquote>
     <h2>Arrays</h2>
     <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a name="Array">Array</a> <var>domain</var> <var>getter</var></code></p>
-    <p>If <code><var>domain</var></code> is an Interval and <code><var>getter</var></code> is a function from
-      <code><var>domain</var></code> to Scheme objects, then <code>Array</code> returns an array with domain <code><var>domain</var></code>
-      and getter <code><var>getter</var></code>. It is an error to call <code>Array</code> if <code><var>domain</var></code> and <code><var>getter</var></code>
+    <p><b>Procedure: </b><code><a name="array">array</a> <var>domain</var> <var>getter</var></code></p>
+    <p>If <code><var>domain</var></code> is an interval and <code><var>getter</var></code> is a function from
+      <code><var>domain</var></code> to Scheme objects, then <code>array</code> returns an array with domain <code><var>domain</var></code>
+      and getter <code><var>getter</var></code>. It is an error to call <code>array</code> if <code><var>domain</var></code> and <code><var>getter</var></code>
       do not satisfy these conditions.</p>
     <p>Example: </p>
     <pre>
-(define a (Array (Interval '#(1 1) '#(11 11))
+(define a (array (interval '#(1 1) '#(11 11))
 		 (lambda (i j)
 		   (if (= i j)
 		       1
 		       0))))</pre>
-    <p>defines an Array for which <code>(Array-getter a)</code> returns 1 when i=j and 0 otherwise.</p>
-    <p><b>Procedure: </b><code><a name="Array?">Array?</a> <var>obj</var></code></p>
-    <p>Returns <code>#t</code> if and only if <code><var>obj</var></code> is an Array.</p>
-    <p><b>Procedure: </b><code><a name="Array-domain">Array-domain</a> <var>array</var></code></p>
-    <p><b>Procedure: </b><code><a name="Array-getter">Array-getter</a> <var>array</var></code></p>
-    <p>If <code><var>array</var></code> is an Array built by</p>
-    <blockquote><code>(Array <var>domain</var> <var>getter</var>)</code>
+    <p>defines an array for which <code>(array-getter a)</code> returns 1 when i=j and 0 otherwise.</p>
+    <p><b>Procedure: </b><code><a name="array?">array?</a> <var>obj</var></code></p>
+    <p>Returns <code>#t</code> if and only if <code><var>obj</var></code> is an array.</p>
+    <p><b>Procedure: </b><code><a name="array-domain">array-domain</a> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a name="array-getter">array-getter</a> <var>array</var></code></p>
+    <p>If <code><var>array</var></code> is an array built by</p>
+    <blockquote><code>(array <var>domain</var> <var>getter</var>)</code>
     </blockquote>
-    <p>then <code>Array-domain</code> returns <code><var>domain</var></code> and <code>Array-getter</code> returns  <code><var>getter</var></code>.
-      It is an error to call <code>Array-domain</code> or <code>Array-getter</code> if <code><var>array</var></code> is not an Array.</p>
+    <p>then <code>array-domain</code> returns <code><var>domain</var></code> and <code>array-getter</code> returns  <code><var>getter</var></code>.
+      It is an error to call <code>array-domain</code> or <code>array-getter</code> if <code><var>array</var></code> is not an array.</p>
     <p>Example: </p>
     <pre>
-(define a (Array (Interval '#(1 1) '#(11 11))
+(define a (array (interval '#(1 1) '#(11 11))
 		 (lambda (i j)
 		   (if (= i j)
 		       1
 		       0))))
-((Array-getter a) 3 3) =&gt; 1
-((Array-getter a) 2 3) =&gt; 0
-((Array-getter a) 11 0) =&gt; is an error, which may be signaled</pre>
-    <p><b>Procedure: </b><code><a name="Array-map">Array-map</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
-    <p>If <code><var>array</var></code>, <code>(car <var>arrays</var>)</code>, ... all have the same domain and <code><var>f</var></code> is a function, then <code>Array-map</code>
-      returns a new Array with the same domain and getter</p>
+((array-getter a) 3 3) =&gt; 1
+((array-getter a) 2 3) =&gt; 0
+((array-getter a) 11 0) =&gt; is an error, which may be signaled</pre>
+    <p><b>Procedure: </b><code><a name="array-map">array-map</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
+    <p>If <code><var>array</var></code>, <code>(car <var>arrays</var>)</code>, ... all have the same domain and <code><var>f</var></code> is a function, then <code>array-map</code>
+      returns a new array with the same domain and getter</p>
     <pre>
 (lambda multi-index
-  (apply f (map (lambda (g) (apply g multi-index)) (map Array-getter (cons array arrays)))))</pre>
-    <p>It is an error to call <code>Array-map</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="Array-curry">Array-curry</a> <var>array</var> <var>outer-dimension</var></code></p>
-    <p>If <code><var>array</var></code> is an Array and <code><var>outer-dimension</var></code> is an exact integer that satisfies</p>
-    <blockquote><code>0 &lt; <var>outer-dimension</var> &lt; (Interval-dimension (Array-domain <var>array</var>))</code>
+  (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))</pre>
+    <p>It is an error to call <code>array-map</code> if its arguments do not satisfy these conditions.</p>
+    <p><b>Procedure: </b><code><a name="array-curry">array-curry</a> <var>array</var> <var>outer-dimension</var></code></p>
+    <p>If <code><var>array</var></code> is an array and <code><var>outer-dimension</var></code> is an exact integer that satisfies</p>
+    <blockquote><code>0 &lt; <var>outer-dimension</var> &lt; (interval-dimension (array-domain <var>array</var>))</code>
     </blockquote>
-    <p>then <code>Array-curry</code> returns</p>
+    <p>then <code>array-curry</code> returns</p>
     <pre>
 (call-with-values
-    (lambda () (Interval-curry (Array-domain array) outer-dimension))
+    (lambda () (interval-curry (array-domain array) outer-dimension))
   (lambda (outer-interval inner-interval)
-    (Array outer-interval
+    (array outer-interval
 		 (lambda outer-multi-index
-		   (Array inner-interval
+		   (array inner-interval
 				(lambda inner-multi-index
-				  (apply (Array-getter array) (append outer-multi-index inner-multi-index))))))))</pre>
-    <p>It is an error to call <code>Array-curry</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Notes:</b> This function curries <code>(Array-getter <var>array</var>)</code> while keeping track of the
+				  (apply (array-getter array) (append outer-multi-index inner-multi-index))))))))</pre>
+    <p>It is an error to call <code>array-curry</code> if its arguments do not satisfy these conditions.</p>
+    <p><b>Notes:</b> This function curries <code>(array-getter <var>array</var>)</code> while keeping track of the
       domains of the outer and inner lambdas.</p>
-    <p>It is expected that <code>Array-curry</code> will specialize the construction of</p>
+    <p>It is expected that <code>array-curry</code> will specialize the construction of</p>
     <pre>
 (lambda outer-multi-index
-  (Array inner-interval
+  (array inner-interval
 	       (lambda inner-multi-index
-		 (apply (Array-getter array) (append outer-multi-index inner-multi-index)))))</pre>
+		 (apply (array-getter array) (append outer-multi-index inner-multi-index)))))</pre>
     <p>and</p>
-    <blockquote><code>(lambda inner-multi-index (apply (Array-getter array) (append outer-multi-index inner-multi-index)))</code>
+    <blockquote><code>(lambda inner-multi-index (apply (array-getter array) (append outer-multi-index inner-multi-index)))</code>
     </blockquote>
     <p>Example:</p>
     <pre>
-(define a (Array (Interval '#(0 0) '#(10 10))
+(define a (array (interval '#(0 0) '#(10 10))
 		       list))
-((Array-getter a) 3 4)  =&gt; (3 4)
-(define curried-a (Array-curry a 1))
-((Array-getter ((Array-getter curried-a) 3)) 4) =&gt; (3 4)</pre>
-    <p><b>Procedure: </b><code><a name="Array-distinguish-one-axis">Array-distinguish-one-axis</a> <var>array</var> <var>index</var></code></p>
-    <p>If <code><var>array</var></code> is an Array and
-      <code>(Interval-dimension (Array-domain <var>interval</var>))</code> is greater than one, and</p>
-    <blockquote><code>0 &lt;= <var>index</var> &lt; (Interval-dimension (Array-domain <var>interval</var>))</code>
+((array-getter a) 3 4)  =&gt; (3 4)
+(define curried-a (array-curry a 1))
+((array-getter ((array-getter curried-a) 3)) 4) =&gt; (3 4)</pre>
+    <p><b>Procedure: </b><code><a name="array-distinguish-one-axis">array-distinguish-one-axis</a> <var>array</var> <var>index</var></code></p>
+    <p>If <code><var>array</var></code> is an array and
+      <code>(interval-dimension (array-domain <var>interval</var>))</code> is greater than one, and</p>
+    <blockquote><code>0 &lt;= <var>index</var> &lt; (interval-dimension (array-domain <var>interval</var>))</code>
     </blockquote>
-    <p>then <code>Array-distinguish-one-axis</code> returns</p>
+    <p>then <code>array-distinguish-one-axis</code> returns</p>
     <pre>
 (call-with-values
-    (lambda () (Interval-distinguish-one-axis (Array-domain array) index))
+    (lambda () (interval-distinguish-one-axis (array-domain array) index))
   (lambda (outer-interval inner-interval)
-    (Array outer-interval
+    (array outer-interval
 		 (lambda outer-multi-index
-		   (Array inner-interval
+		   (array inner-interval
 				(lambda (m)
-				  (apply (Array-getter array) (insert-arg-into-arg-list m outer-index index))))))))</pre>
+				  (apply (array-getter array) (insert-arg-into-arg-list m outer-index index))))))))</pre>
     <p>where we define </p>
     <pre>
 (define (insert-arg-into-arg-list arg arg-list index)
@@ -438,46 +436,46 @@
 	(cons arg arg-list)
 	(cons arg (helper (cdr arg-list) (- i 1)))))
   (helper arg-list index))</pre>
-    <p>It is an error to call <code>Array-distinguish-one-axis</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Notes:</b> It is expected that <code>Array-distinguish-one-axis</code> will specialize the construction of </p>
+    <p>It is an error to call <code>array-distinguish-one-axis</code> if its arguments do not satisfy these conditions.</p>
+    <p><b>Notes:</b> It is expected that <code>array-distinguish-one-axis</code> will specialize the construction of </p>
     <pre>
 (lambda outer-multi-index
-  (Array inner-interval
+  (array inner-interval
 	       (lambda (m)
-		 (apply (Array-getter array) (insert-arg-into-arg-list m outer-index index)))))</pre>
+		 (apply (array-getter array) (insert-arg-into-arg-list m outer-index index)))))</pre>
     <p>and</p>
-    <blockquote><code>(lambda (m) (apply (Array-getter array) (insert-arg-into-arg-list m outer-index index)))</code>
+    <blockquote><code>(lambda (m) (apply (array-getter array) (insert-arg-into-arg-list m outer-index index)))</code>
     </blockquote>
-    <p><b>Procedure: </b><code><a name="Array-for-each">Array-for-each</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
-    <p><b>Procedure: </b><code><a name="Array-for-each-serial">Array-for-each-serial</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
-    <p>If <code><var>array</var></code>, <code>(car <var>arrays</var>)</code>, ... all have the same domain <code><var>domain</var></code> and <code><var>f</var></code> is an appropriate function, then <code>Array-for-each</code>
+    <p><b>Procedure: </b><code><a name="array-for-each">array-for-each</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
+    <p><b>Procedure: </b><code><a name="array-for-each-serial">array-for-each-serial</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
+    <p>If <code><var>array</var></code>, <code>(car <var>arrays</var>)</code>, ... all have the same domain <code><var>domain</var></code> and <code><var>f</var></code> is an appropriate function, then <code>array-for-each</code>
       calls</p>
     <pre>
-(Interval-for-each  (lambda multi-index
-		      (apply f (map (lambda (g) (apply g multi-index)) (map Array-getter (cons array arrays)))))
-		    (Array-domain array))</pre>
-    <p>and <code>Array-for-each-serial</code>
+(interval-for-each  (lambda multi-index
+		      (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))
+		    (array-domain array))</pre>
+    <p>and <code>array-for-each-serial</code>
       calls</p>
     <pre>
-(Interval-for-each-serial  (lambda multi-index
-			     (apply f (map (lambda (g) (apply g multi-index)) (map Array-getter (cons array arrays)))))
-			   (Array-domain array))</pre>
-    <p>It is expected that <code>Array-map</code>, <code>Array-for-each</code> and <code>Array-for-each-serial</code> will specialize the construction of</p>
+(interval-for-each-serial  (lambda multi-index
+			     (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))
+			   (array-domain array))</pre>
+    <p>It is expected that <code>array-map</code>, <code>array-for-each</code> and <code>array-for-each-serial</code> will specialize the construction of</p>
     <pre>
 (lambda multi-index
-  (apply f (map (lambda (g) (apply g multi-index)) (map Array-getter (cons array arrays)))))</pre>
-    <p>It is an error to call <code>Array-for-each</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="Array-reduce">Array-reduce</a> <var>operator</var> <var>identity</var> <var>array</var></code></p>
-    <p><b>Procedure: </b><code><a name="Array-reduce-serial">Array-reduce-serial</a> <var>operator</var> <var>identity</var> <var>array</var></code></p>
-    <p>If <code><var>array</var></code>  is an Array then <code>Array-reduce</code> returns <code>(Interval-reduce (Array-getter <var>array</var>) <var>operator identity</var> (Array-domain <var>array</var>))</code> and <code>Array-reduce-serial</code> returns <code>(Interval-reduce-serial (Array-getter <var>array</var>) <var>operator identity</var> (Array-domain <var>array</var>))</code>.</p>
-    <p><b>Procedure: </b><code><a name="Array-extract">Array-extract</a> <var>array</var> <var>new-domain</var></code></p>
-    <p>If <code><var>array</var></code> is an Array and <code><var>new-domain</var></code> is an Interval that is a sub-interval of <code>(Array-domain <var>array</var>)</code>, then <code>Array-extract</code> returns a new array</p>
-    <blockquote><code>(Array <var>new-domain</var> (Array-getter <var>array</var>))</code>
+  (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))</pre>
+    <p>It is an error to call <code>array-for-each</code> if its arguments do not satisfy these conditions.</p>
+    <p><b>Procedure: </b><code><a name="array-reduce">array-reduce</a> <var>operator</var> <var>identity</var> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a name="array-reduce-serial">array-reduce-serial</a> <var>operator</var> <var>identity</var> <var>array</var></code></p>
+    <p>If <code><var>array</var></code>  is an array then <code>array-reduce</code> returns <code>(interval-reduce (array-getter <var>array</var>) <var>operator identity</var> (array-domain <var>array</var>))</code> and <code>array-reduce-serial</code> returns <code>(interval-reduce-serial (array-getter <var>array</var>) <var>operator identity</var> (array-domain <var>array</var>))</code>.</p>
+    <p><b>Procedure: </b><code><a name="array-extract">array-extract</a> <var>array</var> <var>new-domain</var></code></p>
+    <p>If <code><var>array</var></code> is an array and <code><var>new-domain</var></code> is an interval that is a sub-interval of <code>(array-domain <var>array</var>)</code>, then <code>array-extract</code> returns a new array</p>
+    <blockquote><code>(array <var>new-domain</var> (array-getter <var>array</var>))</code>
     </blockquote>
     <h2>Mutable Arrays</h2>
     <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a name="Mutable-array">Mutable-array</a> <var>domain</var> <var>getter</var> <var>setter</var></code></p>
-    <p>Assume that <code><var>domain</var></code> is an Interval of dimension <code><var>n</var></code> and that <code><var>getter</var></code> and
+    <p><b>Procedure: </b><code><a name="mutable-array">mutable-array</a> <var>domain</var> <var>getter</var> <var>setter</var></code></p>
+    <p>Assume that <code><var>domain</var></code> is an interval of dimension <code><var>n</var></code> and that <code><var>getter</var></code> and
       <code><var>setter</var></code> are two routines that satisfy: If </p>
     <blockquote><code>(<var>i</var><sub>1</sub>,...,<var>i</var><sub>n</sub>) != (<var>j</var><sub>1</sub>,...,<var>j</var><sub>n</sub>)</code>
     </blockquote>
@@ -493,22 +491,22 @@
     <p>and</p>
     <blockquote><code>(getter <var>i</var><sub>1</sub>,...,<var>i</var><sub>n</sub>) =&gt; v</code>
     </blockquote>
-    <p>Then <code>Mutable-array</code> builds a Mutable-array with domain <code><var>domain</var></code>, getter <code><var>getter</var></code> and
-      setter <code><var>setter</var></code>.  A Mutable-array is an Array.  It is an error to call <code>Mutable-array</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="Mutable-array?">Mutable-array?</a> <var>obj</var></code></p>
-    <p>Returns <code>#t</code> if and only if <code><var>obj</var></code> is a Mutable-array.  Note: Mutable-arrays are Arrays.</p>
-    <p><b>Procedure: </b><code><a name="Array-setter">Array-setter</a> <var>array</var></code></p>
-    <p>If <code><var>array</var></code> is a Mutable-array built by</p>
-    <blockquote><code>(Mutable-array <var>domain</var> <var>getter</var> <var>setter</var>)</code>
+    <p>Then <code>mutable-array</code> builds a mutable-array with domain <code><var>domain</var></code>, getter <code><var>getter</var></code> and
+      setter <code><var>setter</var></code>.  A mutable-array is an array.  It is an error to call <code>mutable-array</code> if its arguments do not satisfy these conditions.</p>
+    <p><b>Procedure: </b><code><a name="mutable-array?">mutable-array?</a> <var>obj</var></code></p>
+    <p>Returns <code>#t</code> if and only if <code><var>obj</var></code> is a mutable-array.  Note: mutable-arrays are arrays.</p>
+    <p><b>Procedure: </b><code><a name="array-setter">array-setter</a> <var>array</var></code></p>
+    <p>If <code><var>array</var></code> is a mutable-array built by</p>
+    <blockquote><code>(mutable-array <var>domain</var> <var>getter</var> <var>setter</var>)</code>
     </blockquote>
-    <p>then <code>Array-setter</code> returns <code><var>setter</var></code>. It is an error to call <code>Array-setter</code>
-      if <code><var>array</var></code> is not a Mutable-array.</p>
+    <p>then <code>array-setter</code> returns <code><var>setter</var></code>. It is an error to call <code>array-setter</code>
+      if <code><var>array</var></code> is not a mutable-array.</p>
     <p>Example: </p>
     <pre>
 (define sparse-array
-  (let ((domain (Interval '#(0 0) '#(1000000 1000000)))
+  (let ((domain (interval '#(0 0) '#(1000000 1000000)))
 	(sparse-rows (make-vector 1000000 '())))
-    (Mutable-array domain
+    (mutable-array domain
 		   (lambda (i j)
 		     (cond ((assv j (vector-ref sparse-rows i))
 			    =&gt; cdr)
@@ -520,62 +518,62 @@
 				 (set-cdr! pair v)))
 			   (else
 			    (vector-set! sparse-rows i (cons (cons j v) (vector-ref sparse-rows i)))))))))
-((Array-getter sparse-array) 12345 6789)  =&gt; 0.
-((Array-getter sparse-array) 0 0) =&gt; 0.
-((Array-setter sparse-array) 1.0 0 0) =&gt; undefined
-((Array-getter sparse-array) 12345 6789)  =&gt; 0.
-((Array-getter sparse-array) 0 0) =&gt; 1.</pre>
-    <p><b>Procedure: </b><code><a name="Mutable-array-curry">Mutable-array-curry</a> <var>array</var> <var>outer-dimension</var></code></p>
-    <p>If <code><var>array</var></code> is a Mutable-array and <code><var>outer-dimension</var></code> is an exact integer that satisfies</p>
-    <blockquote><code>0 &lt; <var>outer-dimension</var> &lt; (Interval-dimension (Array-domain <var>array</var>))</code>
+((array-getter sparse-array) 12345 6789)  =&gt; 0.
+((array-getter sparse-array) 0 0) =&gt; 0.
+((array-setter sparse-array) 1.0 0 0) =&gt; undefined
+((array-getter sparse-array) 12345 6789)  =&gt; 0.
+((array-getter sparse-array) 0 0) =&gt; 1.</pre>
+    <p><b>Procedure: </b><code><a name="mutable-array-curry">mutable-array-curry</a> <var>array</var> <var>outer-dimension</var></code></p>
+    <p>If <code><var>array</var></code> is a mutable-array and <code><var>outer-dimension</var></code> is an exact integer that satisfies</p>
+    <blockquote><code>0 &lt; <var>outer-dimension</var> &lt; (interval-dimension (array-domain <var>array</var>))</code>
     </blockquote>
-    <p>then <code>Mutable-array-curry</code> returns</p>
+    <p>then <code>mutable-array-curry</code> returns</p>
     <pre>
 (call-with-values
-    (lambda () (Interval-curry (Array-domain array) outer-dimension))
+    (lambda () (interval-curry (array-domain array) outer-dimension))
   (lambda (outer-interval inner-interval)
-    (Array outer-interval
+    (array outer-interval
 	   (lambda outer-multi-index
-	     (Mutable-array inner-interval
+	     (mutable-array inner-interval
 			    (lambda inner-multi-index
-			      (apply (Array-getter array) (append outer-multi-index inner-multi-index)))
+			      (apply (array-getter array) (append outer-multi-index inner-multi-index)))
 			    (lambda (v . inner-multi-index)
-			      (apply (Array-setter array) v (append outer-multi-index inner-multi-index))))))))</pre>
-    <p>It is an error to call <code>Mutable-array-curry</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Notes:</b> This function curries <code>(Array-getter <var>array</var>)</code>
-      and <code>(Array-setter <var>array</var>)</code> while keeping track of the
+			      (apply (array-setter array) v (append outer-multi-index inner-multi-index))))))))</pre>
+    <p>It is an error to call <code>mutable-array-curry</code> if its arguments do not satisfy these conditions.</p>
+    <p><b>Notes:</b> This function curries <code>(array-getter <var>array</var>)</code>
+      and <code>(array-setter <var>array</var>)</code> while keeping track of the
       domains of the outer and inner lambdas.</p>
-    <p>It is expected that <code>Mutable-array-curry</code> will specialize the construction of</p>
+    <p>It is expected that <code>mutable-array-curry</code> will specialize the construction of</p>
     <pre>
 (lambda outer-multi-index
-  (Mutable-array inner-interval
+  (mutable-array inner-interval
 		       (lambda inner-multi-index
-			 (apply (Array-getter array) (append outer-multi-index inner-multi-index)))
+			 (apply (array-getter array) (append outer-multi-index inner-multi-index)))
 		       (lambda (v . inner-multi-index)
-			 (apply (Array-setter array) v (append outer-multi-index inner-multi-index)))))</pre>
+			 (apply (array-setter array) v (append outer-multi-index inner-multi-index)))))</pre>
     <p>and</p>
-    <blockquote><code>(lambda inner-multi-index (apply (Array-getter array) (append outer-multi-index inner-multi-index)))</code>
+    <blockquote><code>(lambda inner-multi-index (apply (array-getter array) (append outer-multi-index inner-multi-index)))</code>
     </blockquote>
     <p>and</p>
-    <blockquote><code>(lambda (v . inner-multi-index) (apply (Array-setter array) v (append outer-multi-index inner-multi-index)))</code>
+    <blockquote><code>(lambda (v . inner-multi-index) (apply (array-setter array) v (append outer-multi-index inner-multi-index)))</code>
     </blockquote>
-    <p><b>Procedure: </b><code><a name="Mutable-array-distinguish-one-axis">Mutable-array-distinguish-one-axis</a> <var>array</var> <var>index</var></code></p>
-    <p>If <code><var>array</var></code> is a Mutable-array and
-      <code>(Interval-dimension (Array-domain <var>interval</var>))</code> is greater than one, and</p>
-    <blockquote><code>0 &lt;= <var>index</var> &lt; (Interval-dimension (Array-domain <var>interval</var>))</code>
+    <p><b>Procedure: </b><code><a name="mutable-array-distinguish-one-axis">mutable-array-distinguish-one-axis</a> <var>array</var> <var>index</var></code></p>
+    <p>If <code><var>array</var></code> is a mutable-array and
+      <code>(interval-dimension (array-domain <var>interval</var>))</code> is greater than one, and</p>
+    <blockquote><code>0 &lt;= <var>index</var> &lt; (interval-dimension (array-domain <var>interval</var>))</code>
     </blockquote>
-    <p>then <code>Mutable-array-distinguish-one-axis</code> returns</p>
+    <p>then <code>mutable-array-distinguish-one-axis</code> returns</p>
     <pre>
 (call-with-values
-    (lambda () (Interval-distinguish-one-axis (Array-domain array) index))
+    (lambda () (interval-distinguish-one-axis (array-domain array) index))
   (lambda (outer-interval inner-interval)
     (array outer-interval
 		 (lambda outer-multi-index
-		   (Mutable-array inner-interval
+		   (mutable-array inner-interval
 					(lambda (m)
-					  (apply (Array-getter array) (insert-arg-into-arg-list m outer-index index)))
+					  (apply (array-getter array) (insert-arg-into-arg-list m outer-index index)))
 					(lambda (v m)
-					  (apply (Array-setter array) v (insert-arg-into-arg-list m outer-index index))))))))</pre>
+					  (apply (array-setter array) v (insert-arg-into-arg-list m outer-index index))))))))</pre>
     <p>where we define </p>
     <pre>
 (define (insert-arg-into-arg-list arg arg-list index)
@@ -584,45 +582,45 @@
 	(cons arg arg-list)
 	(cons arg (helper (cdr arg-list) (- i 1)))))
   (helper arg-list index))</pre>
-    <p>It is an error to call <code>Mutable-array-distinguish-one-axis</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Notes:</b> It is expected that <code>Mutable-array-distinguish-one-axis</code> will specialize the construction of </p>
+    <p>It is an error to call <code>mutable-array-distinguish-one-axis</code> if its arguments do not satisfy these conditions.</p>
+    <p><b>Notes:</b> It is expected that <code>mutable-array-distinguish-one-axis</code> will specialize the construction of </p>
     <pre>
 (lambda outer-multi-index
-  (Mutable-array inner-interval
+  (mutable-array inner-interval
 		       (lambda (m)
-			 (apply (Array-getter array) (insert-arg-into-arg-list m outer-index index)))
+			 (apply (array-getter array) (insert-arg-into-arg-list m outer-index index)))
 		       (lambda (v m)
-			 (apply (Array-setter array) v (insert-arg-into-arg-list m outer-index index)))))</pre>
+			 (apply (array-setter array) v (insert-arg-into-arg-list m outer-index index)))))</pre>
     <p>and</p>
-    <blockquote><code>(lambda (m) (apply (Array-getter array) (insert-arg-into-arg-list m outer-index index)))</code>
+    <blockquote><code>(lambda (m) (apply (array-getter array) (insert-arg-into-arg-list m outer-index index)))</code>
     </blockquote>
     <p>and</p>
-    <blockquote><code>(lambda (v m) (apply (Array-setter array) v (insert-arg-into-arg-list m outer-index index)))</code>
+    <blockquote><code>(lambda (v m) (apply (array-setter array) v (insert-arg-into-arg-list m outer-index index)))</code>
     </blockquote>
     <h2>Array Manipulators</h2>
-    <p>Conceptually, an array manipulator is a set of functions to manage the backing store of a Fixed-array.
+    <p>Conceptually, an array manipulator is a set of functions to manage the backing store of a fixed-array.
       The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogenous) vector.</p>
     <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a name="make-Array-manipulators">make-Array-manipulators</a> <var>getter</var> <var>setter</var> <var>checker</var> <var>maker</var> <var>length</var> <var>default</var></code></p>
-    <p>Here we assume the following relationships between the arguments of <code>make-Array-manipulators</code>.  Assume that the &quot;elements&quot; of
+    <p><b>Procedure: </b><code><a name="make-array-manipulators">make-array-manipulators</a> <var>getter</var> <var>setter</var> <var>checker</var> <var>maker</var> <var>length</var> <var>default</var></code></p>
+    <p>Here we assume the following relationships between the arguments of <code>make-array-manipulators</code>.  Assume that the &quot;elements&quot; of
       the backing store are of some &quot;type&quot;, either heterogeneous (all Scheme types) or homogeneous (of some restricted type).</p>
     <ul>
       <li><code>(<var>maker n</var> <var>value</var>)</code> returns an object containing <code><var>n</var></code> elements of value <code><var>value</var></code>.</li>
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code> and  0 &lt;= <code><var>i</var></code> &lt; <code><var>n</var></code>, then <code>(<var>getter v i</var>)</code> returns the current value of the <code><var>i</var></code>'th element of <code><var>v</var></code>, and <code>(<var>checker</var> (<var>getter v i</var>)) =&gt; #t</code>.</li>
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code>,  0 &lt;= <code><var>i</var></code> &lt; <code><var>n</var></code>, and <code>(<var>checker</var> <var>val</var>) =&gt; #t</code>, then <code>(<var>setter v i val</var>)</code> sets the value of the <code><var>i</var></code>'th element of  <code><var>v</var></code> to <code><var>val</var></code>.</li>
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code> then <code>(<var>length v</var>)</code> returns <code><var>n</var></code>.</li></ul>
-    <p>If the arguments do not satisfy these conditions, then it is an error to call <code>make-Array-manipulators</code></p>
+    <p>If the arguments do not satisfy these conditions, then it is an error to call <code>make-array-manipulators</code></p>
     <p>Note that we assume that <code><var>getter</var></code> and <code><var>setter</var></code> generally take <i>O</i>(1) time to execute.</p>
-    <p><b>Procedure: </b><code><a name="Array-manipulators-getter">Array-manipulators-getter</a> <var>m</var></code></p>
-    <p><b>Procedure: </b><code><a name="Array-manipulators-setter">Array-manipulators-setter</a> <var>m</var></code></p>
-    <p><b>Procedure: </b><code><a name="Array-manipulators-checker">Array-manipulators-checker</a> <var>m</var></code></p>
-    <p><b>Procedure: </b><code><a name="Array-manipulators-maker">Array-manipulators-maker</a> <var>m</var></code></p>
-    <p><b>Procedure: </b><code><a name="Array-manipulators-length">Array-manipulators-length</a> <var>m</var></code></p>
-    <p><b>Procedure: </b><code><a name="Array-manipulators-default">Array-manipulators-default</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a name="array-manipulators-getter">array-manipulators-getter</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a name="array-manipulators-setter">array-manipulators-setter</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a name="array-manipulators-checker">array-manipulators-checker</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a name="array-manipulators-maker">array-manipulators-maker</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a name="array-manipulators-length">array-manipulators-length</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a name="array-manipulators-default">array-manipulators-default</a> <var>m</var></code></p>
     <p>If <code><var>m</var></code> is an object created by</p>
-    <blockquote><code>(make-Array-manipulators <var>setter getter checker maker length default</var>)</code>
+    <blockquote><code>(make-array-manipulators <var>setter getter checker maker length default</var>)</code>
     </blockquote>
-    <p> then <code>Array-manipulators-getter</code> returns <code><var>getter</var></code>, <code>Array-manipulators-setter</code> returns <code><var>setter</var></code>, <code>Array-manipulators-checker</code> returns <code><var>checker</var></code>, <code>Array-manipulators-maker</code> returns <code><var>maker</var></code>, and <code>Array-manipulators-default</code> returns <code><var>default</var></code>.  Otherwise, it is an error to call any of these routines.</p>
+    <p> then <code>array-manipulators-getter</code> returns <code><var>getter</var></code>, <code>array-manipulators-setter</code> returns <code><var>setter</var></code>, <code>array-manipulators-checker</code> returns <code><var>checker</var></code>, <code>array-manipulators-maker</code> returns <code><var>maker</var></code>, and <code>array-manipulators-default</code> returns <code><var>default</var></code>.  Otherwise, it is an error to call any of these routines.</p>
     <h3>Global Variables</h3>
     <p><b>Variable: </b><code><a name="generic-array-manipulators">generic-array-manipulators</a></code></p>
     <p><b>Variable: </b><code><a name="s8-array-manipulators">s8-array-manipulators</a></code></p>
@@ -637,7 +635,7 @@
     <p><b>Variable: </b><code><a name="f32-array-manipulators">f32-array-manipulators</a></code></p>
     <p><b>Variable: </b><code><a name="f64-array-manipulators">f64-array-manipulators</a></code></p>
     <p><code>generic-array-manipulators</code> is defined by</p>
-    <blockquote><code>(define generic-array-manipulators (make-Array-manipulators vector-ref vector-set! (lambda (arg) #t) make-vector vector-length #f))</code>
+    <blockquote><code>(define generic-array-manipulators (make-array-manipulators vector-ref vector-set! (lambda (arg) #t) make-vector vector-length #f))</code>
     </blockquote>Furthermore, <code>s<var>X</var>-array-manipulators</code> are defined for <code><var>X</var></code>=8, 16, 32, and 64 (which have default values 0 and
     manipulate exact integer values between -2<sup><var>X</var>-1</sup> and
     2<sup><var>X</var>-1</sup>-1 inclusive),
@@ -656,107 +654,107 @@
       arguments don't satisfy these conditions.</p>
     <h2>Fixed Arrays</h2>
     <h3>Global Variable</h3>
-    <p><b>Variable: </b><code><a name="Fixed-array-default-safe?">Fixed-array-default-safe?</a></code></p>
-    <p>Determines whether the setters and getters of Fixed-arrays check their arguments for correctness by default.  Initially it has the value <code>#f</code>.</p>
+    <p><b>Variable: </b><code><a name="fixed-array-default-safe?">fixed-array-default-safe?</a></code></p>
+    <p>Determines whether the setters and getters of fixed-arrays check their arguments for correctness by default.  Initially it has the value <code>#f</code>.</p>
     <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a name="Fixed-array">Fixed-array</a> domain: <var>domain</var> manipulators: <var>manipulators</var> [ body: <var>body</var> ] [ indexer: <var>indexer</var> ] [ initializer-value: <var>initializer-value</var> ] [ safe?: <var>safe?</var> ]</code></p>
-    <p>Builds a Fixed-array.  <code><var>domain</var></code> must be an Interval; <code><var>manipulators</var></code> must
-       be Fixed-array-manipulators;  if <code><var>body</var></code> is given, it must be of the same type as that returned by
-      <code>(Fixed-array-manipulators-maker <var>manipulators</var>)</code>; if <code><var>initializer-value</var></code> is given, it must be storable
+    <p><b>Procedure: </b><code><a name="fixed-array">fixed-array</a> domain: <var>domain</var> manipulators: <var>manipulators</var> [ body: <var>body</var> ] [ indexer: <var>indexer</var> ] [ initializer-value: <var>initializer-value</var> ] [ safe?: <var>safe?</var> ]</code></p>
+    <p>Builds a fixed-array.  <code><var>domain</var></code> must be an interval; <code><var>manipulators</var></code> must
+       be fixed-array-manipulators;  if <code><var>body</var></code> is given, it must be of the same type as that returned by
+      <code>(fixed-array-manipulators-maker <var>manipulators</var>)</code>; if <code><var>initializer-value</var></code> is given, it must be storable
       in <code><var>body</var></code>; at most one of <code><var>initializer-value</var></code> and <code><var>body</var></code> can be given; if <code><var>indexer</var></code> is given, it must be a one-to-one affine mapping from <code><var>domain</var></code> to
-      [0,<code>((Fixed-array-manipulators-length <var>manipulators</var>) <var>body</var>)</code>); the variable <code><var>safe?</var></code> determines whether the multi-index arguments to the getter and setter are checked to be in the domain, and whether the value of the setter is storable in the body;
+      [0,<code>((fixed-array-manipulators-length <var>manipulators</var>) <var>body</var>)</code>); the variable <code><var>safe?</var></code> determines whether the multi-index arguments to the getter and setter are checked to be in the domain, and whether the value of the setter is storable in the body;
       the getter and setter of the result are defined by</p>
     <pre>
 (lambda (i_0 ... i_n-1)
-  ((Fixed-array-manipulators-getter manipulators)
+  ((fixed-array-manipulators-getter manipulators)
    body
    (indexer i_0 ... i_n-1)))</pre>
     <p>and</p>
     <pre>
 (lambda (v i_0 ... i_n-1)
-  ((Fixed-array-manipulators-setter manipulators)
+  ((fixed-array-manipulators-setter manipulators)
    body
    (indexer i_0 ... i_n-1)
    v))</pre>
     <p>The default values for arguments that are omitted are as follows:</p>
-    <p>Initializer-value: <code>(Fixed-array-manipulators-default manipulators)</code></p>
+    <p>Initializer-value: <code>(fixed-array-manipulators-default manipulators)</code></p>
     <p>Body:</p>
     <pre>
-((Fixed-array-manipulators-maker manipulators)
- (Interval-volume domain)
+((fixed-array-manipulators-maker manipulators)
+ (interval-volume domain)
  initializer-value)</pre>
-    <p>Indexer: The one-to-one mapping of elements of <code><var>domain</var></code> to [0,<code>(Interval-volume <var>domain</var>)</code>) in
+    <p>Indexer: The one-to-one mapping of elements of <code><var>domain</var></code> to [0,<code>(interval-volume <var>domain</var>)</code>) in
       lexicographical order.</p>
-    <p>Safe?: The current value of the global variable <code>Fixed-array-default-safe?</code>.</p>
-    <p><b>Procedure: </b><code><a name="Fixed-array?">Fixed-array?</a> <var>obj</var></code></p>
-    <p>Returns <code>#t</code> if <code><var>obj</var></code> is a Fixed-array, and <code>#f</code> otherwise. A Fixed-array is a Mutable-array, and hence an Array.</p>
-    <p><b>Procedure: </b><code><a name="Array-body">Array-body</a> <var>array</var></code></p>
-    <p><b>Procedure: </b><code><a name="Array-indexer">Array-indexer</a> <var>array</var></code></p>
-    <p><b>Procedure: </b><code><a name="Array-manipulators">Array-manipulators</a> <var>array</var></code></p>
-    <p><b>Procedure: </b><code><a name="Array-safe?">Array-safe?</a> <var>array</var></code></p>
-    <p><code>Array-body</code> returns the body of <code><var>array</var></code>, <code>Array-indexer</code> returns the indexer of <code><var>array</var></code>, <code>Array-manipulators</code> returns the manipulators of <code><var>array</var></code>, and <code>Array-safe?</code> is true if and only if the arguments of <code>(Array-getter <var>array</var>)</code> and <code>(Array-setter <var>array</var>)</code> are checked for correctness. It is an error to call any of these routines if <code><var>array</var></code> is not a Fixed-array.</p>
-    <p><b>Procedure: </b><code><a name="Fixed-array-share!">Fixed-array-share!</a> <var>array</var> <var>new-domain</var> <var>new-domain-&gt;old-domain</var></code></p>
-    <p>Constructs a new Fixed-array that shares the body of the Fixed-array <code><var>array</var></code>.
+    <p>Safe?: The current value of the global variable <code>fixed-array-default-safe?</code>.</p>
+    <p><b>Procedure: </b><code><a name="fixed-array?">fixed-array?</a> <var>obj</var></code></p>
+    <p>Returns <code>#t</code> if <code><var>obj</var></code> is a fixed-array, and <code>#f</code> otherwise. A fixed-array is a mutable-array, and hence an array.</p>
+    <p><b>Procedure: </b><code><a name="array-body">array-body</a> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a name="array-indexer">array-indexer</a> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a name="array-manipulators">array-manipulators</a> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a name="array-safe?">array-safe?</a> <var>array</var></code></p>
+    <p><code>array-body</code> returns the body of <code><var>array</var></code>, <code>array-indexer</code> returns the indexer of <code><var>array</var></code>, <code>array-manipulators</code> returns the manipulators of <code><var>array</var></code>, and <code>array-safe?</code> is true if and only if the arguments of <code>(array-getter <var>array</var>)</code> and <code>(array-setter <var>array</var>)</code> are checked for correctness. It is an error to call any of these routines if <code><var>array</var></code> is not a fixed-array.</p>
+    <p><b>Procedure: </b><code><a name="fixed-array-share!">fixed-array-share!</a> <var>array</var> <var>new-domain</var> <var>new-domain-&gt;old-domain</var></code></p>
+    <p>Constructs a new fixed-array that shares the body of the fixed-array <code><var>array</var></code>.
       Returns an object that is behaviorally equivalent to</p>
     <pre>
-(Fixed-array domain:       new-domain
-	     manipulators: (Fixed-array-manipulators array)
-	     body:         (Fixed-array-body array)
+(fixed-array domain:       new-domain
+	     manipulators: (fixed-array-manipulators array)
+	     body:         (fixed-array-body array)
 	     indexer:      (lambda multi-index
 			     (call-with-values
 				 (lambda ()
 				   (apply new-domain-&gt;old-domain multi-index))
-			       (Fixed-array-indexer array))))</pre>
-    <p><code><var>new-domain-&gt;old-domain</var></code> must be an affine one-to-one mapping from <code>(Array-domain <var>array</var>)</code> to
+			       (fixed-array-indexer array))))</pre>
+    <p><code><var>new-domain-&gt;old-domain</var></code> must be an affine one-to-one mapping from <code>(array-domain <var>array</var>)</code> to
       <code><var>new-domain</var></code>.</p>
-    <p>Note: It is assumed that affine structure of the composition of <code><var>new-domain-&gt;old-domain</var></code> and <code>(Fixed-array-indexer <var>array</var></code> will be used to simplify:</p>
+    <p>Note: It is assumed that affine structure of the composition of <code><var>new-domain-&gt;old-domain</var></code> and <code>(fixed-array-indexer <var>array</var></code> will be used to simplify:</p>
     <pre>
 (lambda multi-index
   (call-with-values
       (lambda ()
 	(apply new-domain-&gt;old-domain multi-index))
-    (Fixed-array-indexer array)))</pre>
-    <p><b>Procedure: </b><code><a name="Fixed-array-curry">Fixed-array-curry</a> <var>array</var> <var>outer-dimension</var></code></p>
-    <p>It is an error to call <code>Fixed-array-curry</code> unless
-       <code><var>array</var></code> is a Fixed-array
+    (fixed-array-indexer array)))</pre>
+    <p><b>Procedure: </b><code><a name="fixed-array-curry">fixed-array-curry</a> <var>array</var> <var>outer-dimension</var></code></p>
+    <p>It is an error to call <code>fixed-array-curry</code> unless
+       <code><var>array</var></code> is a fixed-array
       and <code><var>outer-dimension</var></code> is an exact integer that satisfies</p>
-    <blockquote><code>0 &lt; <var>outer-dimension</var> &lt; (Interval-dimension (Fixed-array-domain <var>array</var>)).</code>
+    <blockquote><code>0 &lt; <var>outer-dimension</var> &lt; (interval-dimension (fixed-array-domain <var>array</var>)).</code>
     </blockquote>
-    <p><code>Fixed-array-curry</code> returns</p>
+    <p><code>fixed-array-curry</code> returns</p>
     <pre>
 (call-with-values
-    (lambda () (Interval-curry (Fixed-array-domain array) outer-dimension))
+    (lambda () (interval-curry (fixed-array-domain array) outer-dimension))
   (lambda (outer-interval inner-interval)
-    (Array outer-interval
+    (array outer-interval
 	   (lambda outer-multi-index
-	     (Fixed-array-share! array
+	     (fixed-array-share! array
 				 outer-interval
 				 (lambda inner-multi-index
 				   (apply values (append outer-multi-index inner-multi-index))))))))</pre>
-    <p><b>Notes:</b> This function curries <code>(Array-getter <var>array</var>)</code>
-      and <code>(Array-setter <var>array</var>)</code> while keeping track of the
+    <p><b>Notes:</b> This function curries <code>(array-getter <var>array</var>)</code>
+      and <code>(array-setter <var>array</var>)</code> while keeping track of the
       domains of the outer and inner lambdas.</p>
-    <p>It is expected that <code>Fixed-array-curry</code> will specialize the construction of</p>
+    <p>It is expected that <code>fixed-array-curry</code> will specialize the construction of</p>
     <blockquote><code>(lambda outer-multi-index
-      		   (Fixed-array-share! array
+      		   (fixed-array-share! array
       				       outer-interval
       				       (lambda inner-multi-index
       					 (apply values (append outer-multi-index inner-multi-index)))))</code>
     </blockquote>
-    <p><b>Procedure: </b><code><a name="Fixed-array-distinguish-one-axis">Fixed-array-distinguish-one-axis</a> <var>array</var> <var>index</var></code></p>
-    <p>It is an error to call <code>Fixed-array-distinguish-one-axis</code> unless
-       <code><var>array</var></code> is a Fixed-array and
-      <code>(Interval-dimension (Fixed-array-domain <var>interval</var>))</code> is greater than one, and</p>
-    <blockquote><code>0 &lt;= <var>index</var> &lt; (Interval-dimension (Fixed-array-domain <var>array</var>))</code>
+    <p><b>Procedure: </b><code><a name="fixed-array-distinguish-one-axis">fixed-array-distinguish-one-axis</a> <var>array</var> <var>index</var></code></p>
+    <p>It is an error to call <code>fixed-array-distinguish-one-axis</code> unless
+       <code><var>array</var></code> is a fixed-array and
+      <code>(interval-dimension (fixed-array-domain <var>interval</var>))</code> is greater than one, and</p>
+    <blockquote><code>0 &lt;= <var>index</var> &lt; (interval-dimension (fixed-array-domain <var>array</var>))</code>
     </blockquote>
-    <p><code>Fixed-array-distinguish-one-axis</code> returns</p>
+    <p><code>fixed-array-distinguish-one-axis</code> returns</p>
     <pre>
 (call-with-values
-    (lambda () (Interval-distinguish-one-axis (Fixed-array-domain array) index))
+    (lambda () (interval-distinguish-one-axis (fixed-array-domain array) index))
   (lambda (outer-interval inner-interval)
-    (Array outer-interval
+    (array outer-interval
 		 (lambda outer-multi-index
-		   (Fixed-array-share! array
+		   (fixed-array-share! array
 				       inner-interval
 				       (lambda (m) (apply values (insert-arg-into-arg-list m outer-index index))))))))</pre>
     <p>where we define </p>
@@ -767,38 +765,38 @@
 	(cons arg arg-list)
 	(cons arg (helper (cdr arg-list) (- i 1)))))
   (helper arg-list index))</pre>
-    <p>It is expected that <code>Fixed-array-distinguish-one-axis</code> will specialize the construction of </p>
+    <p>It is expected that <code>fixed-array-distinguish-one-axis</code> will specialize the construction of </p>
     <pre>
 (lambda outer-multi-index
-  (Fixed-array-share! array
+  (fixed-array-share! array
 		      inner-interval
 		      (lambda (m) (apply values (insert-arg-into-arg-list m outer-index index)))))</pre>
-    <p><b>Procedure: </b><code><a name="Array-&gt;Fixed-array">Array-&gt;Fixed-array</a> <var>array</var> [ <var>result-manipulators</var> generic-array-manipulators ] [ <var>safe?</var> #f ]</code></p>
-    <p><b>Procedure: </b><code><a name="Array-&gt;Fixed-array-serial">Array-&gt;Fixed-array-serial</a> <var>array</var> [ <var>result-manipulators</var> generic-array-manipulators ] [ <var>safe?</var> #f ]</code></p>
-    <p>If <code><var>array</var></code> is an Array whose elements can be manipulated by the Fixed-array-manipulators
-      <code><var>result-manipulators</var></code>, then the Fixed-array returned by <code>Array-&gt;Fixed-array</code> can be defined by:</p>
+    <p><b>Procedure: </b><code><a name="array-&gt;fixed-array">array-&gt;fixed-array</a> <var>array</var> [ <var>result-manipulators</var> generic-array-manipulators ] [ <var>safe?</var> #f ]</code></p>
+    <p><b>Procedure: </b><code><a name="array-&gt;fixed-array-serial">array-&gt;fixed-array-serial</a> <var>array</var> [ <var>result-manipulators</var> generic-array-manipulators ] [ <var>safe?</var> #f ]</code></p>
+    <p>If <code><var>array</var></code> is an array whose elements can be manipulated by the fixed-array-manipulators
+      <code><var>result-manipulators</var></code>, then the fixed-array returned by <code>array-&gt;fixed-array</code> can be defined by:</p>
     <pre>
-(let ((result (Fixed-array domain:       (Array-domain array)
+(let ((result (fixed-array domain:       (array-domain array)
 			   manipulators: result-manipulators
 			   safe?:        safe?)))
-  (Interval-for-each (lambda multi-index
-		       (apply (Array-setter result) (apply (Array-getter array) multi-index) multi-index))
-		     (Array-domain array))
+  (interval-for-each (lambda multi-index
+		       (apply (array-setter result) (apply (array-getter array) multi-index) multi-index))
+		     (array-domain array))
   result)</pre>
-    <p>Otherwise it is an error to call <code>Array-&gt;Fixed-array</code>.</p>
-    <p><code>Array-&gt;Fixed-array</code>  does not specify
-      the order in which <code>(Array-getter <var>array</var>)</code> is applied to the multi-indices in <code>(Array-domain <var>array</var>)</code>.</p>
-    <p>Similarly, the Fixed-array returned by <code>Array-&gt;Fixed-array-serial</code> can be defined by:</p>
+    <p>Otherwise it is an error to call <code>array-&gt;fixed-array</code>.</p>
+    <p><code>array-&gt;fixed-array</code>  does not specify
+      the order in which <code>(array-getter <var>array</var>)</code> is applied to the multi-indices in <code>(array-domain <var>array</var>)</code>.</p>
+    <p>Similarly, the fixed-array returned by <code>array-&gt;fixed-array-serial</code> can be defined by:</p>
     <pre>
-(let ((result (Fixed-array domain:       (Array-domain array)
+(let ((result (fixed-array domain:       (array-domain array)
 			   manipulators: result-manipulators
 			   safe?:        safe?)))
-  (Interval-for-each-serial (lambda multi-index
-			      (apply (Array-setter result) (apply (Array-getter array) multi-index) multi-index))
-			    (Array-domain array))
+  (interval-for-each-serial (lambda multi-index
+			      (apply (array-setter result) (apply (array-getter array) multi-index) multi-index))
+			    (array-domain array))
   result)</pre>
-    <p>Thus, <code>Array-&gt;Fixed-array-serial</code> evaluates <code>(Array-getter <var>array</var>)</code> to the multi-indices in
-      <code>(Array-domain <var>array</var>)</code> in lexicographical order.</p>
+    <p>Thus, <code>array-&gt;fixed-array-serial</code> evaluates <code>(array-getter <var>array</var>)</code> to the multi-indices in
+      <code>(array-domain <var>array</var>)</code> in lexicographical order.</p>
     <h1>Implementation</h1>
     <p>We provide an implementation in Gambit-C; the nonstandard techniques used
       in the implementation are: DSSSL-style optional and keyword arguments; a
@@ -807,33 +805,33 @@
     <h1>Relationship to other SRFIs</h1>
     <p>Final SRFIs <a href="#SRFI-25">25</a>, <a href="#SRFI-47">47</a>, <a href="#SRFI-58">58</a>, and <a href="#SRFI-63">63</a> deal with &quot;Multi-dimensional Array Primitives&quot;, &quot;Array&quot;, &quot;Array Notation&quot;,
       and &quot;Homogeneous and Heterogeneous Arrays&quot;, respectively.  Each of these previous SRFIs deal with what we call in this SRFI
-      Fixed-arrays.  Many of the functions in these previous SRFIs  have corresponding forms in this SRFI.  For example, from SRFI 63, we can
+      fixed-arrays.  Many of the functions in these previous SRFIs  have corresponding forms in this SRFI.  For example, from SRFI 63, we can
       translate: </p>
     <dl>
       <dt><code>(array? obj)</code></dt>
-      <dd><code>(Array? obj)</code></dd>
+      <dd><code>(array? obj)</code></dd>
       <dt><code>(Array-rank a)</code></dt>
-      <dd><code>(Interval-dimension (Array-domain obj))</code></dd>
+      <dd><code>(interval-dimension (array-domain obj))</code></dd>
       <dt><code>(make-array prototype k1 ...)</code></dt>
-      <dd><code>(Fixed-array domain: (Interval (vector 0 ...) (vector k1 ...)) manipulators: manipulators)</code>.</dd>
+      <dd><code>(fixed-array domain: (interval (vector 0 ...) (vector k1 ...)) manipulators: manipulators)</code>.</dd>
       <dt><code>(make-shared-array array mapper k1 ...)</code></dt>
-      <dd><code>(Fixed-array-share! array (Interval (vector 0 ...) (vector k1 ...)) mapper)</code></dd>
+      <dd><code>(fixed-array-share! array (interval (vector 0 ...) (vector k1 ...)) mapper)</code></dd>
       <dt><code>(array-in-bounds? array index1 ...)</code></dt>
-      <dd><code>(Interval-contains-multi-index? (Array-domain array) index1 ...)</code></dd>
+      <dd><code>(interval-contains-multi-index? (array-domain array) index1 ...)</code></dd>
       <dt><code>(array-ref array k1 ...)</code></dt>
-      <dd><code>((Array-getter array) k1 ...)</code></dd>
+      <dd><code>((array-getter array) k1 ...)</code></dd>
       <dt><code>(array-set! array obj k1 ...)</code></dt>
-      <dd><code>((Array-setter array) obj k1 ...)</code></dd></dl>
+      <dd><code>((array-setter array) obj k1 ...)</code></dd></dl>
     <p>At the same time, this SRFI has some special features:</p>
     <ul>
-      <li>Intervals, used as the domains of Arrays in this SRFI, are useful
+      <li>Intervals, used as the domains of arrays in this SRFI, are useful
         objects in their own rights, with their own procedures.  We make a sharp distinction between the domains
-        of Arrays and the Arrays themselves.</li>
+        of arrays and the arrays themselves.</li>
       <li>Intervals can have nonzero lower bounds in each dimension.</li>
       <li>Intervals cannot be empty.</li>
       <li>Arrays must have a getter, but may have no setter.  For example, on a system with eight-bit chars, one
         can write a function to read greyscale images in the PGM format of the netpbm package as follows.  The  lexicographical
-        order in Array-&gt;Fixed-array-serial guarantees the the correct order of execution of the input procedures:
+        order in array-&gt;fixed-array-serial guarantees the the correct order of execution of the input procedures:
         <pre>
 (define make-pgm   cons)
 (define pgm-greys  car)
@@ -873,9 +871,9 @@
 	     (rows (read-pgm-object port))
 	     (greys (read-pgm-object port)))
 	(make-pgm greys
-		  (Array-&gt;Fixed-array-serial
-		   (Array
-		    (Interval '#(0 0)
+		  (array-&gt;fixed-array-serial
+		   (array
+		    (interval '#(0 0)
 			      (vector rows columns))
 		    (cond ((or (eq? header 'p5)                                     ;; pgm binary
 			       (eq? header 'P5))
@@ -892,11 +890,11 @@
 			     (read port)))
 			  (else
 			   (error &quot;read-pgm: not a pgm file&quot;))))))))))</pre></li>
-      <li>The set of Fixed-arrays is extensible.  For example, manipulators for Fixed-arrays that contain complex numbers with 32-bit
+      <li>The set of fixed-arrays is extensible.  For example, manipulators for fixed-arrays that contain complex numbers with 32-bit
         floating-point real and imaginary parts could be defined using <a href="#SRFI-4">SRFI-4</a> as:
         <pre>
 (define c32-array-manipulators
-  (make-Array-manipulators (lambda (body i)                                               ;; getter
+  (make-array-manipulators (lambda (body i)                                               ;; getter
 				   (make-rectangular (f32vector-ref body (* 2 i))
 						     (f32vector-ref body (+ (* 2 i) 1))))
 				 (lambda (body i obj)                                     ;; setter
@@ -919,7 +917,7 @@
 				   (quotient (f32vector-length body) 2))
 				 0.+0.i                                                   ;; default
 				 ))
-(define a (Array-&gt;Fixed-array (Array (Interval '#(0 0) '#(10 10))
+(define a (array-&gt;fixed-array (array (interval '#(0 0) '#(10 10))
 				     (lambda (i j)
 				       (cond ((&lt; i j) 1.0+0.0i)
 					     ((&lt; j i) 0.0+1.0i)
@@ -927,15 +925,15 @@
 					      0.0+0.0i))))
 			      c32-array-manipulators
 			      #t))
-((Array-getter a) 2 2) =&gt; 0.0+0.0i
-((Array-getter a) 2 3) =&gt; 1.0+0.0i
-((Array-getter a) 3 2) =&gt; 0.0+1.0i
-((Array-setter a) 2.0+2.0i 2 3) =&gt; undefined
-((Array-getter a) 2 2) =&gt; 0.0+0.0i
-((Array-getter a) 2 3) =&gt; 2.0+2.0i
-((Array-getter a) 3 2) =&gt; 0.0+1.0i
-((Array-getter a) 10 10) =&gt; an error, which is signalled
-((Array-setter a) 1+1i 2 2) =&gt; an error, which is signalled
+((array-getter a) 2 2) =&gt; 0.0+0.0i
+((array-getter a) 2 3) =&gt; 1.0+0.0i
+((array-getter a) 3 2) =&gt; 0.0+1.0i
+((array-setter a) 2.0+2.0i 2 3) =&gt; undefined
+((array-getter a) 2 2) =&gt; 0.0+0.0i
+((array-getter a) 2 3) =&gt; 2.0+2.0i
+((array-getter a) 3 2) =&gt; 0.0+1.0i
+((array-getter a) 10 10) =&gt; an error, which is signalled
+((array-setter a) 1+1i 2 2) =&gt; an error, which is signalled
 
 </pre></li></ul>
     <h1>References</h1>
