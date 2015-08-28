@@ -694,7 +694,7 @@
 	  #t
 	  (array-domain array1)))))
 
-(pp "array body, indexer, manipulators, and safe? error tests")
+(pp "array body, indexer, storage-class, and safe? error tests")
 
 (let ((a (mutable-array (interval '#(0 0) '#(1 1)) ;; not valid
 			values
@@ -703,28 +703,28 @@
 	"array-body: argument is not a fixed array: ")
   (test (array-indexer a)
 	"array-indexer: argument is not a fixed array: ")
-  (test (array-manipulators a)
-	"array-manipulators: argument is not a fixed array: ")
+  (test (array-storage-class a)
+	"array-storage-class: argument is not a fixed array: ")
   (test (array-safe? a)
 	"array-safe?: argument is not a fixed array: "))
 
 (pp "array->fixed-array error tests")
 
-(test (array->fixed-array #f generic-array-manipulators)
+(test (array->fixed-array #f generic-storage-class)
       "array->fixed-array: Argument is not an array: ")
 
 (test (array->fixed-array (array (interval '#(1) '#(2))
 				 list)
 			  #f)
-      "array->fixed-array: result-manipulators are not array-manipulators: ")
+      "array->fixed-array: result-storage-class is not a storage-class: ")
 
-(test (array->fixed-array-serial #f generic-array-manipulators)
+(test (array->fixed-array-serial #f generic-storage-class)
       "array->fixed-array-serial: Argument is not an array: ")
 
 (test (array->fixed-array-serial (array (interval '#(1) '#(2))
 					list)
 				 #f)
-      "array->fixed-array-serial: result-manipulators are not array-manipulators: ")
+      "array->fixed-array-serial: result-storage-class is not a storage-class: ")
 
 (pp "array->fixed-array result tests")
 
@@ -760,7 +760,7 @@
 		      (set! alist (cons (cons indices value)
 					alist))))))))
 	 (array2
-	  (array->fixed-array array1 generic-array-manipulators))
+	  (array->fixed-array array1 generic-storage-class))
 	 (setter1
 	  (array-setter array1))
 	 (setter2
@@ -772,8 +772,8 @@
 	(apply setter1 v indices)
 	(apply setter2 v indices)))
     (or (myarray= array1 array2) (pp "test1"))
-    (or (myarray= (array->fixed-array        array1 generic-array-manipulators ) array2) (pp "test3"))
-    (or (myarray= (array->fixed-array-serial array1 generic-array-manipulators ) array2) (pp "test4"))
+    (or (myarray= (array->fixed-array        array1 generic-storage-class ) array2) (pp "test3"))
+    (or (myarray= (array->fixed-array-serial array1 generic-storage-class ) array2) (pp "test4"))
     ))
 
 (set! fixed-array-default-safe? #f)
@@ -808,7 +808,7 @@
 		      (set! alist (cons (cons indices value)
 					alist))))))))
 	 (array2
-	  (array->fixed-array array1 generic-array-manipulators ))
+	  (array->fixed-array array1 generic-storage-class ))
 	 (setter1
 	  (array-setter array1))
 	 (setter2
@@ -820,8 +820,8 @@
 	(apply setter1 v indices)
 	(apply setter2 v indices)))
     (or (myarray= array1 array2) (pp "test1"))
-    (or (myarray= (array->fixed-array        array1 generic-array-manipulators ) array2) (pp "test3"))
-    (or (myarray= (array->fixed-array-serial array1 generic-array-manipulators ) array2) (pp "test4"))
+    (or (myarray= (array->fixed-array        array1 generic-storage-class ) array2) (pp "test3"))
+    (or (myarray= (array->fixed-array-serial array1 generic-storage-class ) array2) (pp "test4"))
     ))
 
 (pp "array-map error tests")
@@ -901,18 +901,20 @@
 
 (set! fixed-array-default-safe? #t)
 
-(let ((array-builders (vector (list u1-array-manipulators      (lambda indices (random 0 (expt 2 1))))
-			      (list u8-array-manipulators      (lambda indices (random 0 (expt 2 8))))
-			      (list u16-array-manipulators     (lambda indices (random 0 (expt 2 16))))
-			      (list u32-array-manipulators     (lambda indices (random 0 (expt 2 32))))
-			      (list u64-array-manipulators     (lambda indices (random 0 (expt 2 64))))
-			      (list s8-array-manipulators      (lambda indices (random (- (expt 2 7))  (expt 2 7))))
-			      (list s16-array-manipulators     (lambda indices (random (- (expt 2 15)) (expt 2 15))))
-			      (list s32-array-manipulators     (lambda indices (random (- (expt 2 31)) (expt 2 31))))
-			      (list s64-array-manipulators     (lambda indices (random (- (expt 2 63)) (expt 2 63))))
-			      (list f32-array-manipulators     (lambda indices (random-real)))
-			      (list f64-array-manipulators     (lambda indices (random-real)))
-			      (list generic-array-manipulators (lambda indices indices)))))
+(let ((array-builders (vector (list u1-storage-class      (lambda indices (random 0 (expt 2 1))))
+			      (list u8-storage-class      (lambda indices (random 0 (expt 2 8))))
+			      (list u16-storage-class     (lambda indices (random 0 (expt 2 16))))
+			      (list u32-storage-class     (lambda indices (random 0 (expt 2 32))))
+			      (list u64-storage-class     (lambda indices (random 0 (expt 2 64))))
+			      (list s8-storage-class      (lambda indices (random (- (expt 2 7))  (expt 2 7))))
+			      (list s16-storage-class     (lambda indices (random (- (expt 2 15)) (expt 2 15))))
+			      (list s32-storage-class     (lambda indices (random (- (expt 2 31)) (expt 2 31))))
+			      (list s64-storage-class     (lambda indices (random (- (expt 2 63)) (expt 2 63))))
+			      (list f32-storage-class     (lambda indices (random-real)))
+			      (list f64-storage-class     (lambda indices (random-real)))
+			      (list c64-storage-class     (lambda indices (make-rectangular (random-real) (random-real))))
+			      (list c128-storage-class    (lambda indices (make-rectangular (random-real) (random-real))))
+			      (list generic-storage-class (lambda indices indices)))))
   (do ((i 0 (+ i 1)))
       ((= i tests))
     (let* ((lower-bounds
@@ -921,6 +923,11 @@
 	   (upper-bounds
 	    (map (lambda (x) (+ x (random 1 5)))
 		 lower-bounds))
+	   (array-length
+	    (lambda (a)
+	      (let ((upper-bounds (interval-upper-bounds->list (array-domain a)))
+		    (lower-bounds (interval-lower-bounds->list (array-domain a))))
+		(apply * (map - upper-bounds lower-bounds)))))
 	   (domain
 	    (interval (list->vector lower-bounds)
 		      (list->vector upper-bounds)))
@@ -958,23 +965,30 @@
 				       (array-for-each (lambda (f)
 							 (set! result (cons f result)))
 						       result-array-2)
-				       result)))))
-	  (pp "Arghh")))))
+				       result)))
+		    (equal?  (map array-length arrays)
+			     (map (lambda (array)
+				    ((storage-class-length (array-storage-class array)) (array-body array)))
+				  arrays))))
+	  (pp "Arghh"))
+      )))
 
 (set! fixed-array-default-safe? #f)
 
-(let ((array-builders (vector (list u1-array-manipulators      (lambda indices (random (expt 2 1))))
-			      (list u8-array-manipulators      (lambda indices (random (expt 2 8))))
-			      (list u16-array-manipulators     (lambda indices (random (expt 2 16))))
-			      (list u32-array-manipulators     (lambda indices (random (expt 2 32))))
-			      (list u64-array-manipulators     (lambda indices (random (expt 2 64))))
-			      (list s8-array-manipulators      (lambda indices (random (- (expt 2 7))  (expt 2 7))))
-			      (list s16-array-manipulators     (lambda indices (random (- (expt 2 15)) (expt 2 15))))
-			      (list s32-array-manipulators     (lambda indices (random (- (expt 2 31)) (expt 2 31))))
-			      (list s64-array-manipulators     (lambda indices (random (- (expt 2 63)) (expt 2 63))))
-			      (list f32-array-manipulators     (lambda indices (random-real)))
-			      (list f64-array-manipulators     (lambda indices (random-real)))
-			      (list generic-array-manipulators (lambda indices indices)))))
+(let ((array-builders (vector (list u1-storage-class      (lambda indices (random (expt 2 1))))
+			      (list u8-storage-class      (lambda indices (random (expt 2 8))))
+			      (list u16-storage-class     (lambda indices (random (expt 2 16))))
+			      (list u32-storage-class     (lambda indices (random (expt 2 32))))
+			      (list u64-storage-class     (lambda indices (random (expt 2 64))))
+			      (list s8-storage-class      (lambda indices (random (- (expt 2 7))  (expt 2 7))))
+			      (list s16-storage-class     (lambda indices (random (- (expt 2 15)) (expt 2 15))))
+			      (list s32-storage-class     (lambda indices (random (- (expt 2 31)) (expt 2 31))))
+			      (list s64-storage-class     (lambda indices (random (- (expt 2 63)) (expt 2 63))))
+			      (list f32-storage-class     (lambda indices (random-real)))
+			      (list f64-storage-class     (lambda indices (random-real)))
+                              (list c64-storage-class     (lambda indices (make-rectangular (random-real) (random-real))))
+                              (list c128-storage-class    (lambda indices (make-rectangular (random-real) (random-real))))
+			      (list generic-storage-class (lambda indices indices)))))
   (do ((i 0 (+ i 1)))
       ((= i tests))
     (let* ((lower-bounds
@@ -1030,12 +1044,12 @@
       "fixed-array-share!: array is not a fixed-array: ")
 
 (test (fixed-array-share! (fixed-array domain: (interval '#(1) '#(2))
-				       manipulators: generic-array-manipulators)
+				       storage-class: generic-storage-class)
 			  1 1)
       "fixed-array-share!: new-domain is not an interval: ")
 
 (test (fixed-array-share! (fixed-array domain: (interval '#(1) '#(2))
-				       manipulators: generic-array-manipulators)
+				       storage-class: generic-storage-class)
 			  (interval '#(0) '#(1))
 			  1)
       "fixed-array-share!: new-domain->old-domain is not a procedure: ")
@@ -1070,7 +1084,7 @@
 	 (a (array->fixed-array (array (interval lower-bounds
 						 upper-bounds)
 				       list)
-				generic-array-manipulators
+				generic-storage-class
 				))
 	 (new-axis-order (vector-permute (list->vector axes)))
 	 (reverse-order? (list->vector (map (lambda (x) (zero? (random 2))) axes))))
@@ -1121,7 +1135,7 @@
 	 (a (array->fixed-array (array (interval lower-bounds
 						 upper-bounds)
 				       list)
-				generic-array-manipulators
+				generic-storage-class
 				))
 	 (new-axis-order (vector-permute (list->vector axes)))
 	 (reverse-order? (list->vector (map (lambda (x) (zero? (random 2))) axes))))
@@ -1300,55 +1314,3 @@
 	   (= ((array-getter (pgm-pixels a)) 127 127)
 	      225))
       #t)
-
-(define c32-array-manipulators
-  (make-array-manipulators (lambda (body i)                                         ;; getter
-			     (make-rectangular (f32vector-ref body (* 2 i))
-					       (f32vector-ref body (+ (* 2 i) 1))))
-			   (lambda (body i obj)                                     ;; setter
-			     (f32vector-set! body (* 2 i)       (real-part obj))
-			     (f32vector-set! body (+ (* 2 i) 1) (imag-part obj)))
-			   (lambda (obj)                                            ;; checker
-			     (and (complex? obj)
-				  (inexact? (real-part obj))
-				  (inexact? (imag-part obj))))
-			   (lambda (n val)                                          ;; maker
-			     (let ((l (* 2 n))
-				   (re (real-part val))
-				   (im (imag-part val)))
-			       (let ((result (make-f32vector l)))
-				 (do ((i 0 (+ i 2)))
-				     ((= i l) result)
-				   (f32vector-set! result i re)
-				   (f32vector-set! result (+ i 1) im)))))
-			   (lambda (body)                                           ;; length
-			     (quotient (f32vector-length body) 2))
-			   0.+0.i                                                   ;; default
-			   ))
-
-(define a (array->fixed-array (array (interval '#(0 0) '#(10 10))
-				     (lambda (i j)
-				       (cond ((< i j) 1.0+0.0i)
-					     ((< j i) 0.0+1.0i)
-					     (else
-					      0.0+0.0i))))
-			      c32-array-manipulators
-			      #t))
-
-(test (and (eqv? ((array-getter a) 2 2) 0.0+0.0i)
-	   (eqv? ((array-getter a) 2 3) 1.0+0.0i)
-	   (eqv? ((array-getter a) 3 2) 0.0+1.0i))
-      #t)
-
-((array-setter a) 2.0+2.0i 2 3)
-
-(test (and (eqv? ((array-getter a) 2 2) 0.0+0.0i)
-	   (eqv? ((array-getter a) 2 3) 2.0+2.0i)
-	   (eqv? ((array-getter a) 3 2) 0.0+1.0i))
-      #t)
-
-(test ((array-getter a) 10 10)
-      "array-getter: domain does not contain multi-index: ")
-
-(test ((array-setter a) 1+1i 2 2)
-      "array-setter: value cannot be stored in body: ")
