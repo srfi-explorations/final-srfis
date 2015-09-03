@@ -15,7 +15,7 @@
       <li>Draft #1 published: 2015/7/27</li>
       <li>Draft #2 published: 2015/7/31</li>
       <li>Draft #3 published: 2015/7/31</li>
-      <li>Draft #4 published: 2015/8/??</li></ul>
+      <li>Draft #4 published: 2015/9/03</li></ul>
     <h1>Abstract</h1>
     <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general, and benefit from a data type
        called <i>intervals</i>, which encapsulate the cross product of non-empty intervals of exact integers. These intervals  specify the domain
@@ -48,7 +48,7 @@
     <ul>
       <li>Many multi-dimensional transforms in signal processing are <i>separable</i>, in that that the multi-dimensional transform can be computed by applying one-dimensional transforms in each of the coordinate directions.  Examples of such transforms include the Fast Fourier Transform and the Fast Wavelet Transform.  Each one-dimensional subdomain of the complete domain is called a <i>pencil</i>, and the same one-dimensional transform is applied to all pencils in a given direction. This motivates us to define the various procedures *-distinguish-one-axis.</li>
       <li>Many applications have multi-dimensional data that behave differently in different coordinate directions.  For example, one might have a time series of maps, which can be stored in a single three-dimensional array.  Or one might have one-dimensional spectral data assigned to each pixel on a map.  The data cube as a whole is considered three-dimensional <i>hyperspectral</i> data, but for processing the spectra separately one would apply a function to the spectrum at each pixel.  This corresponds to <i>currying</i> arguments in programming languages, so we include such procedures here.</li>
-      <li>All arrays are <i>lazy</i> by default, in that we do not compute an array element until it is needed.  So the following code
+      <li>By default, an array computes each array element each time it is needed.  So the following code
         <pre>
 (define (vector-field-sequence-ell-infty-ell-1-ell-2-norm p)
   (array-max (array-map (lambda (p^k)
