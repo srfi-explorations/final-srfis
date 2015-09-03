@@ -639,7 +639,7 @@
   ;; Part of mutable arrays
   setter                  ;; (lambda (v i_0 ... i_n-1) ...) sets a value for (i_0,...,i_n-1) in (array-domain a)
   ;; Part of fixed arrays
-  manipulators            ;; a fixed-array-manipulator
+  storage-class           ;; a storage-class
   body                    ;; the backing store for this array
   indexer                 ;; see below
   safe?                   ;; do we check whether bounds (in getters and setters) and values (in setters) are valid
@@ -663,7 +663,7 @@
 	 (make-##array-base domain
 			    getter
 			    #f        ; setter
-			    #f        ; manipulators
+			    #f        ; storage-class
 			    #f        ; body
 			    #f        ; indexer
 			    #f        ; safe?
@@ -743,7 +743,7 @@ and
 	 (make-##array-base domain
 			    getter
 			    setter
-			    #f        ; manipulators
+			    #f        ; storage-class
 			    #f        ; body
 			    #f        ; indexer
 			    #f        ; safe?
@@ -761,7 +761,7 @@ and
 
 #|
 
-array-manipulators contains functions and objects to manipulate the
+A storage-class contains functions and objects to manipulate the
 backing store of a fixed-array.
 
 getter:   (lambda (body i) ...)   returns the value of body at index i
@@ -773,12 +773,13 @@ default:  object                  is the default value with which to fill body
 
 |#
 
-(define-structure array-manipulators getter setter checker maker length default)
+(define-structure storage-class getter setter checker maker length default)
 
 #|
-We define specialized array manipulators for:
+We define specialized storage-classes for:
 
 32- and 64-bit floating-point numbers,
+complex numbers with real and imaginary parts of 32- and 64-bit floating-point numbers respectively
 8-, 16-, 32-, and 64-bit signed integers,
 8-, 16-, 32-, and 64-bit unsigned integers, and
 1-bit unsigned integers
@@ -786,7 +787,7 @@ We define specialized array manipulators for:
 as well as generic objects.
 |#
 
-(define-macro (make-standard-array-manipulators)
+(define-macro (make-standard-storage-classes)
   
   (define (symbol-concatenate . symbols)
     (string->symbol (apply string-append (map (lambda (s)
@@ -797,8 +798,8 @@ as well as generic objects.
   
   `(begin
      ,@(map (lambda (name prefix default checker)
-	      `(define ,(symbol-concatenate name '-array-manipulators)
-		 (make-array-manipulators
+	      `(define ,(symbol-concatenate name '-storage-class)
+		 (make-storage-class
 		  ;; getter:
 		  (lambda (v i)
 		    (,(symbol-concatenate prefix 'vector-ref) v i))
@@ -865,13 +866,13 @@ as well as generic objects.
 	      (lambda (x) (##flonum? x))               ; f64
 	      ))))
 
-(make-standard-array-manipulators)
+(make-standard-storage-classes)
 
 ;;; for bit-arrays, body is a vector, the first element of which is the actual number of elements,
 ;;; the second element of which is a u16vector that contains the bit string
 
-(define u1-array-manipulators
-  (make-array-manipulators
+(define u1-storage-class
+  (make-storage-class
    ;; getter:
    (lambda (v i)
      (let ((index (##fixnum.arithmetic-shift-right i 4))
@@ -907,6 +908,59 @@ as well as generic objects.
    ;; default:
    0))
 
+(define-macro (make-complex-storage-classes)
+  (define (symbol-concatenate . symbols)
+    (string->symbol (apply string-append (map (lambda (s)
+						(if (string? s)
+						    s
+						    (symbol->string s)))
+					      symbols))))
+  (define construct
+    (lambda (size)
+      (let ((prefix (string-append "c" (number->string (fx* 2 size))))
+	    (floating-point-prefix (string-append "f" (number->string size))))
+	`(define ,(symbol-concatenate prefix '-storage-class)
+	   (make-storage-class
+	    ;; getter
+	    (lambda (body i)
+	      (make-rectangular (,(symbol-concatenate floating-point-prefix 'vector-ref) body (fx* 2 i))
+				(,(symbol-concatenate floating-point-prefix 'vector-ref) body (fx+ (fx* 2 i) 1))))
+	    ;; setter
+	    (lambda (body i obj)
+	      (,(symbol-concatenate floating-point-prefix 'vector-set!) body (fx* 2 i)         (real-part obj))
+	      (,(symbol-concatenate floating-point-prefix 'vector-set!) body (fx+ (fx* 2 i) 1) (imag-part obj)))
+	    ;; checker
+	    (lambda (obj)                                            ;; checker
+	      (and (complex? obj)
+		   (inexact? (real-part obj))
+		   (inexact? (imag-part obj))))
+	    ;; maker
+	    (lambda (n val)                                          ;; maker
+	      (let ((l (* 2 n))
+		    (re (real-part val))
+		    (im (imag-part val)))
+		(let ((result (,(symbol-concatenate 'make-
+						    floating-point-prefix
+						    'vector)
+			       l)))
+		  (do ((i 0 (+ i 2)))
+		      ((= i l) result)
+		    (,(symbol-concatenate floating-point-prefix 'vector-set!) result i re)
+		    (,(symbol-concatenate floating-point-prefix 'vector-set!) result (fx+ i 1) im)))))
+	    ;; length
+	    (lambda (body)                                           ;; length
+	      (fxquotient (,(symbol-concatenate floating-point-prefix 'vector-length) body) 2))
+	    ;; default
+	    0.+0.i)))))
+  (let ((result
+	 `(begin
+	    ,@(map construct
+		   '(32 64)))))
+    ;;(pp result)
+    result))
+
+(make-complex-storage-classes)
+
 #|
 
 Conceptually, an indexer is itself a 1-1 array that maps one interval to another; thus, it is
@@ -923,7 +977,7 @@ The indexer field of a fixed-array obj is a 1-1 mapping from
 
 to [0, top), where top is 
 
-((array-manipulators-length (array-manipulators obj)) (array-body obj))
+((storage-class-length (array-storage-class obj)) (array-body obj))
 
 |#
 
@@ -1219,23 +1273,23 @@ compute-indexer specializes
 The default getter and the setter of a fixed-array a are given by
 
 (lambda (i_0 ... i_n-1)
-  ((array-manipulators-getter a)
+  ((storage-class-getter (array-storage-class a))
    (array-body a)
    ((array-indexer a) i_0 ... i_n-1)))
 
 (lambda (v i_0 ... i_n-1)
-  ((array-manipulators-setter a)
+  ((storage-class-setter (array-storage-class a))
    (array-body a)
    ((array-indexer a) i_0 ... i_n-1)
    v))
 
 The default initializer-value is 
 
-(array-manipulators-default manipulators)
+(storage-class-default (array-storage-class a))
 
 The default body is
 
-((array-manipulators-maker manipulators)
+((storage-class-maker (array-storage-class a))
  (interval-volume domain)
  initializer-value)
 
@@ -1260,11 +1314,11 @@ the domain to the natural numbers in lexicographical order.
 	(else
 	 (##array-base-indexer obj))))
 
-(define (array-manipulators obj)
+(define (array-storage-class obj)
   (cond ((not (fixed-array? obj))
-	 (error "array-manipulators: argument is not a fixed array: " obj))
+	 (error "array-storage-class: argument is not a fixed array: " obj))
 	(else
-	 (##array-base-manipulators obj))))
+	 (##array-base-storage-class obj))))
 
 (define (array-safe? obj)
   (cond ((not (fixed-array? obj))
@@ -1272,17 +1326,17 @@ the domain to the natural numbers in lexicographical order.
 	(else
 	 (##array-base-safe? obj))))
 
-(define (##finish-fixed-array domain manipulators body indexer safe?)
-  (let ((manipulator-getter (array-manipulators-getter manipulators))
-	(manipulator-setter (array-manipulators-setter manipulators))
-	(checker (array-manipulators-checker manipulators))
+(define (##finish-fixed-array domain storage-class body indexer safe?)
+  (let ((storage-getter (storage-class-getter storage-class))
+	(storage-setter (storage-class-setter storage-class))
+	(checker (storage-class-checker storage-class))
 	(indexer indexer)
 	(body body))
 
     ;;; we write the following three macros to specialize the setters and getters in the
     ;;; non-safe case to reduce one more function call.
 
-    (define-macro (expand-manipulators original-suffix replacement-suffix expr)
+    (define-macro (expand-storage-class original-suffix replacement-suffix expr)
       
       (define (symbol-append . args)
 	(string->symbol (apply string-append (map (lambda (x) (if (symbol? x) (symbol->string x) x)) args))))
@@ -1297,8 +1351,8 @@ the domain to the natural numbers in lexicographical order.
 		 expr))))
       
       `(cond ,@(map (lambda (name prefix)
-		      `((eq? manipulators ,(symbol-append name '-array-manipulators))
-			,(replace (symbol-append 'manipulator original-suffix)
+		      `((eq? storage-class ,(symbol-append name '-storage-class))
+			,(replace (symbol-append 'storage-class original-suffix)
 				  (symbol-append prefix 'vector replacement-suffix)
 				  expr)))
 		    '(generic s8 u8 s16 u16 s32 u32 s64 u64 f32 f64)
@@ -1307,10 +1361,10 @@ the domain to the natural numbers in lexicographical order.
 	      ,expr)))
     
     (define-macro (expand-getters expr)
-      `(expand-manipulators -getter -ref ,expr))
+      `(expand-storage-class -getter -ref ,expr))
     
     (define-macro (expand-setters expr)
-      `(expand-manipulators -setter -set! ,expr))
+      `(expand-storage-class -setter -set! ,expr))
     
     (let ((getter (if safe?
 		      (case (##interval-dimension domain)
@@ -1320,7 +1374,7 @@ the domain to the natural numbers in lexicographical order.
 				      ((not (##interval-contains-multi-index?-1 domain i))
 				       (error "array-getter: domain does not contain multi-index: "    domain i))
 				      (else
-				       (manipulator-getter body (indexer i))))))
+				       (storage-getter body (indexer i))))))
 			((2)  (lambda (i j)
 				(cond ((not (and (##exact-integer? i)
 						 (##exact-integer? j)))
@@ -1328,7 +1382,7 @@ the domain to the natural numbers in lexicographical order.
 				      ((not (##interval-contains-multi-index?-2 domain i j))
 				       (error "array-getter: domain does not contain multi-index: "    domain i j))
 				      (else
-				       (manipulator-getter body (indexer i j))))))
+				       (storage-getter body (indexer i j))))))
 			((3)  (lambda (i j k)
 				(cond ((not (and (##exact-integer? i)
 						 (##exact-integer? j)
@@ -1337,7 +1391,7 @@ the domain to the natural numbers in lexicographical order.
 				      ((not (##interval-contains-multi-index?-3 domain i j k))
 				       (error "array-getter: domain does not contain multi-index: "    domain i j k))
 				      (else
-				       (manipulator-getter body (indexer i j k))))))
+				       (storage-getter body (indexer i j k))))))
 			((4)  (lambda (i j k l)
 				(cond ((not (and (##exact-integer? i)
 						 (##exact-integer? j)
@@ -1347,7 +1401,7 @@ the domain to the natural numbers in lexicographical order.
 				      ((not (##interval-contains-multi-index?-4 domain i j k l))
 				       (error "array-getter: domain does not contain multi-index: "    domain i j k l))
 				      (else
-				       (manipulator-getter body (indexer i j k l))))))
+				       (storage-getter body (indexer i j k l))))))
 			(else (lambda multi-index
 				(cond ((not (every exact-integer? multi-index))
 				       (apply error "array-getter: multi-index component is not an exact integer: " multi-index))
@@ -1356,13 +1410,13 @@ the domain to the natural numbers in lexicographical order.
 				      ((not (apply interval-contains-multi-index? domain multi-index))
 				       (apply error "array-getter: domain does not contain multi-index: "    domain multi-index))
 				      (else
-				       (manipulator-getter body (apply indexer multi-index)))))))
+				       (storage-getter body (apply indexer multi-index)))))))
 		      (case (##interval-dimension domain)
-			((1)  (expand-getters (lambda (i)         (manipulator-getter body (indexer i)))))
-			((2)  (expand-getters (lambda (i j)       (manipulator-getter body (indexer i j)))))
-			((3)  (expand-getters (lambda (i j k)     (manipulator-getter body (indexer i j k)))))
-			((4)  (expand-getters (lambda (i j k l)   (manipulator-getter body (indexer i j k l)))))
-			(else (lambda multi-index (manipulator-getter body (apply indexer multi-index)))))))
+			((1)  (expand-getters (lambda (i)         (storage-getter body (indexer i)))))
+			((2)  (expand-getters (lambda (i j)       (storage-getter body (indexer i j)))))
+			((3)  (expand-getters (lambda (i j k)     (storage-getter body (indexer i j k)))))
+			((4)  (expand-getters (lambda (i j k l)   (storage-getter body (indexer i j k l)))))
+			(else (lambda multi-index (storage-getter body (apply indexer multi-index)))))))
 	  (setter (if safe?
 		      (case (##interval-dimension domain)
 			((1)  (lambda (value i)
@@ -1373,7 +1427,7 @@ the domain to the natural numbers in lexicographical order.
 				      ((not (checker value))
 				       (error "array-setter: value cannot be stored in body: " value))
 				      (else
-				       (manipulator-setter body (indexer i) value)))))
+				       (storage-setter body (indexer i) value)))))
 			((2)  (lambda (value i j)
 				(cond ((not (and (##exact-integer? i)
 						 (##exact-integer? j)))
@@ -1383,7 +1437,7 @@ the domain to the natural numbers in lexicographical order.
 				      ((not (checker value))
 				       (error "array-setter: value cannot be stored in body: " value))
 				      (else
-				       (manipulator-setter body (indexer i j) value)))))
+				       (storage-setter body (indexer i j) value)))))
 			((3)  (lambda (value i j k)
 				(cond ((not (and (##exact-integer? i)
 						 (##exact-integer? j)
@@ -1394,7 +1448,7 @@ the domain to the natural numbers in lexicographical order.
 				      ((not (checker value))
 				       (error "array-setter: value cannot be stored in body: " value))
 				      (else
-				       (manipulator-setter body (indexer i j k) value)))))
+				       (storage-setter body (indexer i j k) value)))))
 			((4)  (lambda (value i j k l)
 				(cond ((not (and (##exact-integer? i)
 						 (##exact-integer? j)
@@ -1406,7 +1460,7 @@ the domain to the natural numbers in lexicographical order.
 				      ((not (checker value))
 				       (error "array-setter: value cannot be stored in body: " value))
 				      (else
-				       (manipulator-setter body (indexer i j k l) value)))))
+				       (storage-setter body (indexer i j k l) value)))))
 			(else (lambda (value . multi-index)
 				(cond ((not (every exact-integer? multi-index))
 				       (apply error "array-setter: multi-index component is not an exact integer: " multi-index))
@@ -1417,17 +1471,17 @@ the domain to the natural numbers in lexicographical order.
 				      ((not (checker value))
 				       (error "array-setter: value cannot be stored in body: " value))
 				      (else
-				       (manipulator-setter body (apply indexer multi-index) value))))))
+				       (storage-setter body (apply indexer multi-index) value))))))
 		      (case (##interval-dimension domain)
-			((1)  (expand-setters (lambda (value i)             (manipulator-setter body (indexer i)                 value))))
-			((2)  (expand-setters (lambda (value i j)           (manipulator-setter body (indexer i j)               value))))
-			((3)  (expand-setters (lambda (value i j k)         (manipulator-setter body (indexer i j k)             value))))
-			((4)  (expand-setters (lambda (value i j k l)       (manipulator-setter body (indexer i j k l)           value))))
-			(else (lambda (value . multi-index) (manipulator-setter body (apply indexer multi-index) value)))))))
+			((1)  (expand-setters (lambda (value i)             (storage-setter body (indexer i)                 value))))
+			((2)  (expand-setters (lambda (value i j)           (storage-setter body (indexer i j)               value))))
+			((3)  (expand-setters (lambda (value i j k)         (storage-setter body (indexer i j k)             value))))
+			((4)  (expand-setters (lambda (value i j k l)       (storage-setter body (indexer i j k l)           value))))
+			(else (lambda (value . multi-index) (storage-setter body (apply indexer multi-index) value)))))))
       (make-##array-base domain
 			 getter
 			 setter
-			 manipulators
+			 storage-class
 			 body
 			 indexer
 			 safe?))))
@@ -1435,7 +1489,7 @@ the domain to the natural numbers in lexicographical order.
 
 (define (fixed-array #!key
 		     (domain            (macro-absent-obj))
-		     (manipulators      (macro-absent-obj))
+		     (storage-class     (macro-absent-obj))
 		     (body              (macro-absent-obj))
 		     (indexer           (macro-absent-obj))
 		     (initializer-value (macro-absent-obj))
@@ -1445,10 +1499,10 @@ the domain to the natural numbers in lexicographical order.
 	 (error "fixed-array: the domain must be given: " domain))
 	((not (interval? domain))
 	 (error "fixed-array: domain is not an interval: " domain))
-	((eq? (macro-absent-obj) manipulators)
-	 (error "fixed-array: the manipulators must be given: " manipulators))
-	((not (array-manipulators? manipulators))
-	 (error "fixed-array: manipulators are not fixed-array-manipulators: " manipulators))
+	((eq? (macro-absent-obj) storage-class)
+	 (error "fixed-array: the storage-class must be given: " storage-class))
+	((not (storage-class? storage-class))
+	 (error "fixed-array: argument is not a storage-class: " storage-class))
 	((and (not (eq? (macro-absent-obj) indexer))
 	      (not (procedure? indexer)))
 	 (error "fixed-array:  indexer is not a procedure: " indexer))
@@ -1463,10 +1517,10 @@ the domain to the natural numbers in lexicographical order.
 			   fixed-array-default-safe?
 			   safe?))
 		(initializer-value (if (eq? initializer-value (macro-absent-obj))
-				       (array-manipulators-default manipulators)
+				       (storage-class-default storage-class)
 				       initializer-value))
 		(body (if (eq? body (macro-absent-obj))
-			  ((array-manipulators-maker manipulators) (##interval-volume domain) initializer-value)
+			  ((storage-class-maker storage-class) (##interval-volume domain) initializer-value)
 			  body))
 		(indexer (if (eq? indexer (macro-absent-obj))
 			     (case (interval-dimension domain)
@@ -1522,7 +1576,7 @@ the domain to the natural numbers in lexicographical order.
 					((null? (cdr ranges)) (indexer-generic 0 lower-bounds increments)))))))
 			     indexer)))
 	   (##finish-fixed-array domain
-				 manipulators
+				 storage-class
 				 body
 				 indexer
 				 safe?)))))
@@ -1539,19 +1593,19 @@ Assumes, and may exploit, that (array-getter a) is thread-safe.
 
 |#
 
-(define (array->fixed-array array #!optional (result-manipulators (macro-absent-obj)) (safe? (macro-absent-obj)))
+(define (array->fixed-array array #!optional (result-storage-class (macro-absent-obj)) (safe? (macro-absent-obj)))
   (cond ((not (array? array))
 	 (error "array->fixed-array: Argument is not an array: " array))
-	((not (or (eq? result-manipulators (macro-absent-obj))
-		  (array-manipulators? result-manipulators)))
-	 (error "array->fixed-array: result-manipulators are not array-manipulators: " result-manipulators))
+	((not (or (eq? result-storage-class (macro-absent-obj))
+		  (storage-class? result-storage-class)))
+	 (error "array->fixed-array: result-storage-class is not a storage-class: " result-storage-class))
 	((not (or (eq? safe? (macro-absent-obj))
 		  (boolean? safe?)))
 	 (error "array->fixed-array: safe? is not a boolean: " safe?))
 	(else
-	 (##array->fixed-array (if (eq? result-manipulators (macro-absent-obj))
-				   generic-array-manipulators
-				   result-manipulators)
+	 (##array->fixed-array (if (eq? result-storage-class (macro-absent-obj))
+				   generic-storage-class
+				   result-storage-class)
 			       array
 			       (if (eq? safe? (macro-absent-obj))
 				   fixed-array-default-safe?
@@ -1561,30 +1615,30 @@ Assumes, and may exploit, that (array-getter a) is thread-safe.
 ;;; This version evaluates (array-getter array) on the elements of (array-domain array) in
 ;;; lexicographical order
 
-(define (array->fixed-array-serial array #!optional (result-manipulators (macro-absent-obj)) (safe? (macro-absent-obj)))
+(define (array->fixed-array-serial array #!optional (result-storage-class (macro-absent-obj)) (safe? (macro-absent-obj)))
   (cond ((not (array? array))
 	 (error "array->fixed-array-serial: Argument is not an array: " array))
-	((not (or (eq? result-manipulators (macro-absent-obj))
-		  (array-manipulators? result-manipulators)))
-	 (error "array->fixed-array-serial: result-manipulators are not array-manipulators: " result-manipulators))
+	((not (or (eq? result-storage-class (macro-absent-obj))
+		  (storage-class? result-storage-class)))
+	 (error "array->fixed-array-serial: result-storage-class is not a storage-class: " result-storage-class))
 	((not (or (eq? safe? (macro-absent-obj))
 		  (boolean? safe?)))
 	 (error "array->fixed-array-serial: safe? is not a boolean: " safe?))
 	(else
-	 (##array->fixed-array (if (eq? result-manipulators (macro-absent-obj))
-				   generic-array-manipulators
-				   result-manipulators)
+	 (##array->fixed-array (if (eq? result-storage-class (macro-absent-obj))
+				   generic-storage-class
+				   result-storage-class)
 			       array
 			       (if (eq? safe? (macro-absent-obj))
 				   fixed-array-default-safe?
 				   safe?)
 			       ##interval-for-each-serial))))
 
-(define (##array->fixed-array result-manipulators array safe? interval-for-each)
+(define (##array->fixed-array result-storage-class array safe? interval-for-each)
   (let ((domain (array-domain array)))
     (let ((result (fixed-array
 		   domain: domain
-		   manipulators: result-manipulators
+		   storage-class: result-storage-class
 		   safe?: safe?)))
       (let ((range-setter (array-setter result))
 	    (domain-getter (array-getter array)))
@@ -1758,13 +1812,13 @@ So you specify a new domain and an affine 1-1 mapping from the new-domain to the
 		  (boolean? safe?)))
 	 (error "fixed-array-share!: safe? is not a boolean: " safe?))
 	(else
-	 (let ((old-domain       (array-domain       array))
-	       (old-indexer      (array-indexer      array))
-	       (body             (array-body         array))
-	       (manipulators     (array-manipulators array))
-	       (safe?            (if (eq? safe? (macro-absent-obj)) fixed-array-default-safe? safe?)))
+	 (let ((old-domain        (array-domain       array))
+	       (old-indexer       (array-indexer      array))
+	       (body              (array-body         array))
+	       (storage-class     (array-storage-class array))
+	       (safe?             (if (eq? safe? (macro-absent-obj)) fixed-array-default-safe? safe?)))
 	   (##finish-fixed-array new-domain
-				 manipulators
+				 storage-class
 				 body
 				 (compose-indexers old-indexer new-domain new-domain->old-domain)
 				 safe?)))))

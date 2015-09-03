@@ -9,14 +9,13 @@
     <h1>Author</h1>
     <p>Bradley J. Lucier</p>
     <h1>Status</h1>
-    <p>This SRFI is currently in <em>draft</em> status.  Here is <a href="http://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To
-      provide input on this SRFI, please send email to <code><a href="mailto:srfi minus 122 at srfi dot schemers dot org">srfi-122@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.
-      To subscribe to the list, follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="http://srfi-email.schemers.org/srfi-122">archive</a>.</p>
+    <p>This SRFI is currently in <em>draft</em> status.  Here is <a href="http://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi minus 122 at srfi dot schemers dot org">srfi-122@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="http://srfi-email.schemers.org/srfi-122">archive</a>.</p>
     <ul>
       <li>Received: 2015/7/23</li>
       <li>Draft #1 published: 2015/7/27</li>
       <li>Draft #2 published: 2015/7/31</li>
-      <li>Draft #3 published: 2015/7/31</li></ul>
+      <li>Draft #3 published: 2015/7/31</li>
+      <li>Draft #4 published: 2015/9/03</li></ul>
     <h1>Abstract</h1>
     <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general, and benefit from a data type
        called <i>intervals</i>, which encapsulate the cross product of non-empty intervals of exact integers. These intervals  specify the domain
@@ -43,13 +42,13 @@
       While we considered the formalized use of non-affine indexers in fixed-arrays, we restrict indexers in fixed-arrays to be affine.
       Thus our fixed-arrays are very similar to <a href="#bawden">Bawden-style arrays</a>. (If you want to specify a non-affine indexer into a body, it can be done by constructing a mutable-array.)</p>
     <p>The backing store of a fixed-array, which may be a heterogeneous or homogeneous vector,
-      is created, accessed, etc., via the components of  objects we call array-manipulators.  We define their properties below.</p>
+      is created, accessed, etc., via the components of an object we call a storage-class.  We define their properties below.</p>
     <p>The API of this SRFI uses keywords from SRFI-88 and the calling convention from SRFI-89 for optional and keyword arguments (although the implementation defines functions with keyword and optional arguments using DSSSL's notation, not the notation from SRFI-89).</p>
     <h1>Examples of application areas</h1>
     <ul>
       <li>Many multi-dimensional transforms in signal processing are <i>separable</i>, in that that the multi-dimensional transform can be computed by applying one-dimensional transforms in each of the coordinate directions.  Examples of such transforms include the Fast Fourier Transform and the Fast Wavelet Transform.  Each one-dimensional subdomain of the complete domain is called a <i>pencil</i>, and the same one-dimensional transform is applied to all pencils in a given direction. This motivates us to define the various procedures *-distinguish-one-axis.</li>
       <li>Many applications have multi-dimensional data that behave differently in different coordinate directions.  For example, one might have a time series of maps, which can be stored in a single three-dimensional array.  Or one might have one-dimensional spectral data assigned to each pixel on a map.  The data cube as a whole is considered three-dimensional <i>hyperspectral</i> data, but for processing the spectra separately one would apply a function to the spectrum at each pixel.  This corresponds to <i>currying</i> arguments in programming languages, so we include such procedures here.</li>
-      <li>All arrays are <i>lazy</i> by default, in that we do not compute an array element until it is needed.  So the following code
+      <li>By default, an array computes each array element each time it is needed.  So the following code
         <pre>
 (define (vector-field-sequence-ell-infty-ell-1-ell-2-norm p)
   (array-max (array-map (lambda (p^k)
@@ -125,7 +124,7 @@
         <a href="#array-setter">array-setter</a>,
         <a href="#array-body">array-body</a>,
         <a href="#array-indexer">array-indexer</a>,
-        <a href="#array-manipulators">array-manipulators</a>,
+        <a href="#array-storage-class ">array-storage-class</a>,
         <a href="#array-map">array-map</a>,
         <a href="#array-curry">array-curry</a>,
         <a href="#array-distinguish-one-axis">array-distinguish-one-axis</a>,
@@ -138,25 +137,27 @@
         <a href="#mutable-array?">mutable-array?</a>,
         <a href="#mutable-array-curry">mutable-array-curry</a>,
         <a href="#mutable-array-distinguish-one-axis">mutable-array-distinguish-one-axis</a>.</dd>
-      <dt>Array Manipulators</dt>
-      <dd><a href="#make-array-manipulators">make-array-manipulators</a>,
-        <a href="#array-manipulators-getter">array-manipulators-getter</a>,
-        <a href="#array-manipulators-setter">array-manipulators-setter</a>,
-        <a href="#array-manipulators-maker">array-manipulators-maker</a>,
-        <a href="#array-manipulators-length">array-manipulators-length</a>,
-        <a href="#array-manipulators-default">array-manipulators-default</a>,
-        <a href="#generic-array-manipulators">generic-array-manipulators</a>,
-        <a href="#s8-array-manipulators">s8-array-manipulators</a>,
-        <a href="#s16-array-manipulators">s16-array-manipulators</a>,
-        <a href="#s32-array-manipulators">s32-array-manipulators</a>,
-        <a href="#s64-array-manipulators">s64-array-manipulators</a>,
-        <a href="#u1-array-manipulators">u1-array-manipulators</a>,
-        <a href="#u8-array-manipulators">u8-array-manipulators</a>,
-        <a href="#u16-array-manipulators">u16-array-manipulators</a>,
-        <a href="#u32-array-manipulators">u32-array-manipulators</a>,
-        <a href="#u64-array-manipulators">u64-array-manipulators</a>,
-        <a href="#f32-array-manipulators">f32-array-manipulators</a>,
-        <a href="#f64-array-manipulators">f64-array-manipulators</a>.</dd>
+      <dt>Storage</dt>
+      <dd><a href="#make-storage-class">make-storage-class</a>,
+        <a href="#storage-class-getter">storage-class-getter</a>,
+        <a href="#storage-class-setter">storage-class-setter</a>,
+        <a href="#storage-class-maker">storage-class-maker</a>,
+        <a href="#storage-class-length">storage-class-length</a>,
+        <a href="#storage-class-default">storage-class-default</a>,
+        <a href="#generic-storage-class">generic-storage-class</a>,
+        <a href="#s8-storage-class">s8-storage-class</a>,
+        <a href="#s16-storage-class">s16-storage-class</a>,
+        <a href="#s32-storage-class">s32-storage-class</a>,
+        <a href="#s64-storage-class">s64-storage-class</a>,
+        <a href="#u1-storage-class">u1-storage-class</a>,
+        <a href="#u8-storage-class">u8-storage-class</a>,
+        <a href="#u16-storage-class">u16-storage-class</a>,
+        <a href="#u32-storage-class">u32-storage-class</a>,
+        <a href="#u64-storage-class">u64-storage-class</a>,
+        <a href="#f32-storage-class">f32-storage-class</a>,
+        <a href="#f64-storage-class">f64-storage-class</a>,
+        <a href="#c64-storage-class">c64-storage-class</a>,
+        <a href="#c128-storage-class">c128-storage-class</a>.</dd>
       <dt>Indexers</dt>
       <dd><a href="#indexer=">indexer=</a>.</dd>
       <dt>Fixed Arrays</dt>
@@ -599,52 +600,55 @@
     <p>and</p>
     <blockquote><code>(lambda (v m) (apply (array-setter array) v (insert-arg-into-arg-list m outer-index index)))</code>
     </blockquote>
-    <h2>Array Manipulators</h2>
-    <p>Conceptually, an array manipulator is a set of functions to manage the backing store of a fixed-array.
+    <h2>Storage classes</h2>
+    <p>Conceptually, a storage-class is a set of functions to manage the backing store of a fixed-array.
       The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogenous) vector.</p>
     <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a name="make-array-manipulators">make-array-manipulators</a> <var>getter</var> <var>setter</var> <var>checker</var> <var>maker</var> <var>length</var> <var>default</var></code></p>
-    <p>Here we assume the following relationships between the arguments of <code>make-array-manipulators</code>.  Assume that the &quot;elements&quot; of
+    <p><b>Procedure: </b><code><a name="make-storage-class">make-storage-class</a> <var>getter</var> <var>setter</var> <var>checker</var> <var>maker</var> <var>length</var> <var>default</var></code></p>
+    <p>Here we assume the following relationships between the arguments of <code>make-storage-class</code>.  Assume that the &quot;elements&quot; of
       the backing store are of some &quot;type&quot;, either heterogeneous (all Scheme types) or homogeneous (of some restricted type).</p>
     <ul>
       <li><code>(<var>maker n</var> <var>value</var>)</code> returns an object containing <code><var>n</var></code> elements of value <code><var>value</var></code>.</li>
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code> and  0 &lt;= <code><var>i</var></code> &lt; <code><var>n</var></code>, then <code>(<var>getter v i</var>)</code> returns the current value of the <code><var>i</var></code>'th element of <code><var>v</var></code>, and <code>(<var>checker</var> (<var>getter v i</var>)) =&gt; #t</code>.</li>
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code>,  0 &lt;= <code><var>i</var></code> &lt; <code><var>n</var></code>, and <code>(<var>checker</var> <var>val</var>) =&gt; #t</code>, then <code>(<var>setter v i val</var>)</code> sets the value of the <code><var>i</var></code>'th element of  <code><var>v</var></code> to <code><var>val</var></code>.</li>
       <li>If <code><var>v</var></code> is an object created by <code>(<var>maker n value</var>)</code> then <code>(<var>length v</var>)</code> returns <code><var>n</var></code>.</li></ul>
-    <p>If the arguments do not satisfy these conditions, then it is an error to call <code>make-array-manipulators</code></p>
+    <p>If the arguments do not satisfy these conditions, then it is an error to call <code>make-storage-class</code></p>
     <p>Note that we assume that <code><var>getter</var></code> and <code><var>setter</var></code> generally take <i>O</i>(1) time to execute.</p>
-    <p><b>Procedure: </b><code><a name="array-manipulators-getter">array-manipulators-getter</a> <var>m</var></code></p>
-    <p><b>Procedure: </b><code><a name="array-manipulators-setter">array-manipulators-setter</a> <var>m</var></code></p>
-    <p><b>Procedure: </b><code><a name="array-manipulators-checker">array-manipulators-checker</a> <var>m</var></code></p>
-    <p><b>Procedure: </b><code><a name="array-manipulators-maker">array-manipulators-maker</a> <var>m</var></code></p>
-    <p><b>Procedure: </b><code><a name="array-manipulators-length">array-manipulators-length</a> <var>m</var></code></p>
-    <p><b>Procedure: </b><code><a name="array-manipulators-default">array-manipulators-default</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a name="storage-class-getter">storage-class-getter</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a name="storage-class-setter">storage-class-setter</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a name="storage-class-checker">storage-class-checker</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a name="storage-class-maker">storage-class-maker</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a name="storage-class-length">storage-class-length</a> <var>m</var></code></p>
+    <p><b>Procedure: </b><code><a name="storage-class-default">storage-class-default</a> <var>m</var></code></p>
     <p>If <code><var>m</var></code> is an object created by</p>
-    <blockquote><code>(make-array-manipulators <var>setter getter checker maker length default</var>)</code>
+    <blockquote><code>(make-storage-class <var>setter getter checker maker length default</var>)</code>
     </blockquote>
-    <p> then <code>array-manipulators-getter</code> returns <code><var>getter</var></code>, <code>array-manipulators-setter</code> returns <code><var>setter</var></code>, <code>array-manipulators-checker</code> returns <code><var>checker</var></code>, <code>array-manipulators-maker</code> returns <code><var>maker</var></code>, and <code>array-manipulators-default</code> returns <code><var>default</var></code>.  Otherwise, it is an error to call any of these routines.</p>
+    <p> then <code>storage-class-getter</code> returns <code><var>getter</var></code>, <code>storage-class-setter</code> returns <code><var>setter</var></code>, <code>storage-class-checker</code> returns <code><var>checker</var></code>, <code>storage-class-maker</code> returns <code><var>maker</var></code>, and <code>storage-class-default</code> returns <code><var>default</var></code>.  Otherwise, it is an error to call any of these routines.</p>
     <h3>Global Variables</h3>
-    <p><b>Variable: </b><code><a name="generic-array-manipulators">generic-array-manipulators</a></code></p>
-    <p><b>Variable: </b><code><a name="s8-array-manipulators">s8-array-manipulators</a></code></p>
-    <p><b>Variable: </b><code><a name="s16-array-manipulators">s16-array-manipulators</a></code></p>
-    <p><b>Variable: </b><code><a name="s32-array-manipulators">s32-array-manipulators</a></code></p>
-    <p><b>Variable: </b><code><a name="s64-array-manipulators">s64-array-manipulators</a></code></p>
-    <p><b>Variable: </b><code><a name="u1-array-manipulators">u1-array-manipulators</a></code></p>
-    <p><b>Variable: </b><code><a name="u8-array-manipulators">u8-array-manipulators</a></code></p>
-    <p><b>Variable: </b><code><a name="u16-array-manipulators">u16-array-manipulators</a></code></p>
-    <p><b>Variable: </b><code><a name="u32-array-manipulators">u32-array-manipulators</a></code></p>
-    <p><b>Variable: </b><code><a name="u64-array-manipulators">u64-array-manipulators</a></code></p>
-    <p><b>Variable: </b><code><a name="f32-array-manipulators">f32-array-manipulators</a></code></p>
-    <p><b>Variable: </b><code><a name="f64-array-manipulators">f64-array-manipulators</a></code></p>
-    <p><code>generic-array-manipulators</code> is defined by</p>
-    <blockquote><code>(define generic-array-manipulators (make-array-manipulators vector-ref vector-set! (lambda (arg) #t) make-vector vector-length #f))</code>
-    </blockquote>Furthermore, <code>s<var>X</var>-array-manipulators</code> are defined for <code><var>X</var></code>=8, 16, 32, and 64 (which have default values 0 and
+    <p><b>Variable: </b><code><a name="generic-storage-class">generic-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a name="s8-storage-class">s8-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a name="s16-storage-class">s16-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a name="s32-storage-class">s32-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a name="s64-storage-class">s64-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a name="u1-storage-class">u1-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a name="u8-storage-class">u8-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a name="u16-storage-class">u16-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a name="u32-storage-class">u32-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a name="u64-storage-class">u64-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a name="f32-storage-class">f32-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a name="f64-storage-class">f64-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a name="c64-storage-class">c64-storage-class</a></code></p>
+    <p><b>Variable: </b><code><a name="c128-storage-class">c128-storage-class</a></code></p>
+    <p><code>generic-storage-class</code> is defined by</p>
+    <blockquote><code>(define generic-storage-class (make-storage-class vector-ref vector-set! (lambda (arg) #t) make-vector vector-length #f))</code>
+    </blockquote>Furthermore, <code>s<var>X</var>-storage-class</code> is defined for <code><var>X</var></code>=8, 16, 32, and 64 (which have default values 0 and
     manipulate exact integer values between -2<sup><var>X</var>-1</sup> and
     2<sup><var>X</var>-1</sup>-1 inclusive),
-     <code>u<var>X</var>-array-manipulators</code> are defined for <code><var>X</var></code>=1, 8, 16, 32, and 64 (which have default values 0 and manipulate exact integer values between 0 and
-    2<sup><var>X</var></sup>-1 inclusive), and
-    <code>f<var>X</var>-array-manipulators</code> are defined for <code><var>X</var></code>= 32 and 64 (which have default value 0.0 and manipulate 32- and 64-bit floating-point numbers).  Each of these
-    could be defined simply as generic-array-manipulators, but it is assumed that implementations with homogeneous arrays will give definitions
+     <code>u<var>X</var>-storage-class</code> is defined for <code><var>X</var></code>=1, 8, 16, 32, and 64 (which have default values 0 and manipulate exact integer values between 0 and
+    2<sup><var>X</var></sup>-1 inclusive),
+    <code>f<var>X</var>-storage-class</code> is defined for <code><var>X</var></code>= 32 and 64 (which have default value 0.0 and manipulate 32- and 64-bit floating-point numbers), and
+    <code>c<var>X</var>-storage-class</code> is defined for <code><var>X</var></code>= 64 and 128 (which have default value 0.0+0.0i and manipulate complex numbers with, respectively,32- and 64-bit floating-point numbers as real and imaginary parts).  Each of these
+    could be defined simply as generic-storage-class, but it is assumed that implementations with homogeneous arrays will give definitions
     that either save space, avoid boxing, etc., for the specialized arrays.
     <h2>Indexers</h2>
     <h3>Procedures</h3>
@@ -659,30 +663,30 @@
     <p><b>Variable: </b><code><a name="fixed-array-default-safe?">fixed-array-default-safe?</a></code></p>
     <p>Determines whether the setters and getters of fixed-arrays check their arguments for correctness by default.  Initially it has the value <code>#f</code>.</p>
     <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a name="fixed-array">fixed-array</a> domain: <var>domain</var> manipulators: <var>manipulators</var> [ body: <var>body</var> ] [ indexer: <var>indexer</var> ] [ initializer-value: <var>initializer-value</var> ] [ safe?: <var>safe?</var> ]</code></p>
-    <p>Builds a fixed-array.  <code><var>domain</var></code> must be an interval; <code><var>manipulators</var></code> must
-       be fixed-array-manipulators;  if <code><var>body</var></code> is given, it must be of the same type as that returned by
-      <code>(fixed-array-manipulators-maker <var>manipulators</var>)</code>; if <code><var>initializer-value</var></code> is given, it must be storable
+    <p><b>Procedure: </b><code><a name="fixed-array">fixed-array</a> domain: <var>domain</var> storage-class: <var>storage-class</var> [ body: <var>body</var> ] [ indexer: <var>indexer</var> ] [ initializer-value: <var>initializer-value</var> ] [ safe?: <var>safe?</var> ]</code></p>
+    <p>Builds a fixed-array.  <code><var>domain</var></code> must be an interval; <code><var>storage-class</var></code> must
+       be a storage-class;  if <code><var>body</var></code> is given, it must be of the same type as that returned by
+      <code>(storage-class-maker <var>storage-class</var>)</code>; if <code><var>initializer-value</var></code> is given, it must be storable
       in <code><var>body</var></code>; at most one of <code><var>initializer-value</var></code> and <code><var>body</var></code> can be given; if <code><var>indexer</var></code> is given, it must be a one-to-one affine mapping from <code><var>domain</var></code> to
-      [0,<code>((fixed-array-manipulators-length <var>manipulators</var>) <var>body</var>)</code>); the variable <code><var>safe?</var></code> determines whether the multi-index arguments to the getter and setter are checked to be in the domain, and whether the value of the setter is storable in the body;
+      [0,<code>((storage-class-length <var>storage-class</var>) <var>body</var>)</code>); the variable <code><var>safe?</var></code> determines whether the multi-index arguments to the getter and setter are checked to be in the domain, and whether the value of the setter is storable in the body;
       the getter and setter of the result are defined by</p>
     <pre>
 (lambda (i_0 ... i_n-1)
-  ((fixed-array-manipulators-getter manipulators)
+  ((storage-class-getter storage-class)
    body
    (indexer i_0 ... i_n-1)))</pre>
     <p>and</p>
     <pre>
 (lambda (v i_0 ... i_n-1)
-  ((fixed-array-manipulators-setter manipulators)
+  ((storage-class-setter storage-class)
    body
    (indexer i_0 ... i_n-1)
    v))</pre>
     <p>The default values for arguments that are omitted are as follows:</p>
-    <p>Initializer-value: <code>(fixed-array-manipulators-default manipulators)</code></p>
+    <p>Initializer-value: <code>(storage-class-default storage-class)</code></p>
     <p>Body:</p>
     <pre>
-((fixed-array-manipulators-maker manipulators)
+((storage-class-maker storage-class)
  (interval-volume domain)
  initializer-value)</pre>
     <p>Indexer: The one-to-one mapping of elements of <code><var>domain</var></code> to [0,<code>(interval-volume <var>domain</var>)</code>) in
@@ -692,21 +696,21 @@
     <p>Returns <code>#t</code> if <code><var>obj</var></code> is a fixed-array, and <code>#f</code> otherwise. A fixed-array is a mutable-array, and hence an array.</p>
     <p><b>Procedure: </b><code><a name="array-body">array-body</a> <var>array</var></code></p>
     <p><b>Procedure: </b><code><a name="array-indexer">array-indexer</a> <var>array</var></code></p>
-    <p><b>Procedure: </b><code><a name="array-manipulators">array-manipulators</a> <var>array</var></code></p>
+    <p><b>Procedure: </b><code><a name="array-storage-class">array-storage-class</a> <var>array</var></code></p>
     <p><b>Procedure: </b><code><a name="array-safe?">array-safe?</a> <var>array</var></code></p>
-    <p><code>array-body</code> returns the body of <code><var>array</var></code>, <code>array-indexer</code> returns the indexer of <code><var>array</var></code>, <code>array-manipulators</code> returns the manipulators of <code><var>array</var></code>, and <code>array-safe?</code> is true if and only if the arguments of <code>(array-getter <var>array</var>)</code> and <code>(array-setter <var>array</var>)</code> are checked for correctness. It is an error to call any of these routines if <code><var>array</var></code> is not a fixed-array.</p>
+    <p><code>array-body</code> returns the body of <code><var>array</var></code>, <code>array-indexer</code> returns the indexer of <code><var>array</var></code>, <code>array-storage-class</code> returns the storage-class of <code><var>array</var></code>, and <code>array-safe?</code> is true if and only if the arguments of <code>(array-getter <var>array</var>)</code> and <code>(array-setter <var>array</var>)</code> are checked for correctness. It is an error to call any of these routines if <code><var>array</var></code> is not a fixed-array.</p>
     <p><b>Procedure: </b><code><a name="fixed-array-share!">fixed-array-share!</a> <var>array</var> <var>new-domain</var> <var>new-domain-&gt;old-domain</var></code></p>
     <p>Constructs a new fixed-array that shares the body of the fixed-array <code><var>array</var></code>.
       Returns an object that is behaviorally equivalent to</p>
     <pre>
-(fixed-array domain:       new-domain
-	     manipulators: (fixed-array-manipulators array)
-	     body:         (fixed-array-body array)
-	     indexer:      (lambda multi-index
-			     (call-with-values
-				 (lambda ()
-				   (apply new-domain-&gt;old-domain multi-index))
-			       (fixed-array-indexer array))))</pre>
+(fixed-array domain:        new-domain
+	     storage-class: (array-storage-class array)
+	     body:          (array-body array)
+	     indexer:       (lambda multi-index
+			      (call-with-values
+				  (lambda ()
+				    (apply new-domain-&gt;old-domain multi-index))
+			        (fixed-array-indexer array))))</pre>
     <p><code><var>new-domain-&gt;old-domain</var></code> must be an affine one-to-one mapping from <code>(array-domain <var>array</var>)</code> to
       <code><var>new-domain</var></code>.</p>
     <p>Note: It is assumed that affine structure of the composition of <code><var>new-domain-&gt;old-domain</var></code> and <code>(fixed-array-indexer <var>array</var></code> will be used to simplify:</p>
@@ -773,14 +777,14 @@
   (fixed-array-share! array
 		      inner-interval
 		      (lambda (m) (apply values (insert-arg-into-arg-list m outer-index index)))))</pre>
-    <p><b>Procedure: </b><code><a name="array-&gt;fixed-array">array-&gt;fixed-array</a> <var>array</var> [ <var>result-manipulators</var> generic-array-manipulators ] [ <var>safe?</var> #f ]</code></p>
-    <p><b>Procedure: </b><code><a name="array-&gt;fixed-array-serial">array-&gt;fixed-array-serial</a> <var>array</var> [ <var>result-manipulators</var> generic-array-manipulators ] [ <var>safe?</var> #f ]</code></p>
-    <p>If <code><var>array</var></code> is an array whose elements can be manipulated by the fixed-array-manipulators
-      <code><var>result-manipulators</var></code>, then the fixed-array returned by <code>array-&gt;fixed-array</code> can be defined by:</p>
+    <p><b>Procedure: </b><code><a name="array-&gt;fixed-array">array-&gt;fixed-array</a> <var>array</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>safe?</var> #f ]</code></p>
+    <p><b>Procedure: </b><code><a name="array-&gt;fixed-array-serial">array-&gt;fixed-array-serial</a> <var>array</var> [ <var>result-storage-class</var> generic-storage-class [ <var>safe?</var> #f ]</code></p>
+    <p>If <code><var>array</var></code> is an array whose elements can be manipulated by the storage-class
+      <code><var>result-storage-class</var></code>, then the fixed-array returned by <code>array-&gt;fixed-array</code> can be defined by:</p>
     <pre>
-(let ((result (fixed-array domain:       (array-domain array)
-			   manipulators: result-manipulators
-			   safe?:        safe?)))
+(let ((result (fixed-array domain:        (array-domain array)
+			   storage-class: result-storage-class
+			   safe?:         safe?)))
   (interval-for-each (lambda multi-index
 		       (apply (array-setter result) (apply (array-getter array) multi-index) multi-index))
 		     (array-domain array))
@@ -790,9 +794,9 @@
       the order in which <code>(array-getter <var>array</var>)</code> is applied to the multi-indices in <code>(array-domain <var>array</var>)</code>.</p>
     <p>Similarly, the fixed-array returned by <code>array-&gt;fixed-array-serial</code> can be defined by:</p>
     <pre>
-(let ((result (fixed-array domain:       (array-domain array)
-			   manipulators: result-manipulators
-			   safe?:        safe?)))
+(let ((result (fixed-array domain:        (array-domain array)
+			   storage-class: result-storage-class
+			   safe?:         safe?)))
   (interval-for-each-serial (lambda multi-index
 			      (apply (array-setter result) (apply (array-getter array) multi-index) multi-index))
 			    (array-domain array))
@@ -815,7 +819,7 @@
       <dt><code>(Array-rank a)</code></dt>
       <dd><code>(interval-dimension (array-domain obj))</code></dd>
       <dt><code>(make-array prototype k1 ...)</code></dt>
-      <dd><code>(fixed-array domain: (interval (vector 0 ...) (vector k1 ...)) manipulators: manipulators)</code>.</dd>
+      <dd><code>(fixed-array domain: (interval (vector 0 ...) (vector k1 ...)) storage-class: storage-class)</code>.</dd>
       <dt><code>(make-shared-array array mapper k1 ...)</code></dt>
       <dd><code>(fixed-array-share! array (interval (vector 0 ...) (vector k1 ...)) mapper)</code></dd>
       <dt><code>(array-in-bounds? array index1 ...)</code></dt>
@@ -891,53 +895,7 @@
 			   (lambda (i j)
 			     (read port)))
 			  (else
-			   (error &quot;read-pgm: not a pgm file&quot;))))))))))</pre></li>
-      <li>The set of fixed-arrays is extensible.  For example, manipulators for fixed-arrays that contain complex numbers with 32-bit
-        floating-point real and imaginary parts could be defined using <a href="#SRFI-4">SRFI-4</a> as:
-        <pre>
-(define c32-array-manipulators
-  (make-array-manipulators (lambda (body i)                                               ;; getter
-				   (make-rectangular (f32vector-ref body (* 2 i))
-						     (f32vector-ref body (+ (* 2 i) 1))))
-				 (lambda (body i obj)                                     ;; setter
-				   (f32vector-set! body (* 2 i)       (real-part obj))
-				   (f32vector-set! body (+ (* 2 i) 1) (imag-part obj)))
-				 (lambda (obj)                                            ;; checker
-				   (and (complex? obj)
-					(inexact? (real-part obj))
-					(inexact? (imag-part obj))))
-				 (lambda (n val)                                          ;; maker
-				   (let ((l (* 2 n))
-					 (re (real-part val))
-					 (im (imag-part val)))
-				     (let ((result (make-f32vector l)))
-				       (do ((i 0 (+ i 2)))
-					   ((= i l) result)
-					 (f32vector-set! result i re)
-					 (f32vector-set! result (+ i 1) im)))))
-				 (lambda (body)                                           ;; length
-				   (quotient (f32vector-length body) 2))
-				 0.+0.i                                                   ;; default
-				 ))
-(define a (array-&gt;fixed-array (array (interval '#(0 0) '#(10 10))
-				     (lambda (i j)
-				       (cond ((&lt; i j) 1.0+0.0i)
-					     ((&lt; j i) 0.0+1.0i)
-					     (else
-					      0.0+0.0i))))
-			      c32-array-manipulators
-			      #t))
-((array-getter a) 2 2) =&gt; 0.0+0.0i
-((array-getter a) 2 3) =&gt; 1.0+0.0i
-((array-getter a) 3 2) =&gt; 0.0+1.0i
-((array-setter a) 2.0+2.0i 2 3) =&gt; undefined
-((array-getter a) 2 2) =&gt; 0.0+0.0i
-((array-getter a) 2 3) =&gt; 2.0+2.0i
-((array-getter a) 3 2) =&gt; 0.0+1.0i
-((array-getter a) 10 10) =&gt; an error, which is signalled
-((array-setter a) 1+1i 2 2) =&gt; an error, which is signalled
-
-</pre></li></ul>
+			   (error &quot;read-pgm: not a pgm file&quot;))))))))))</pre></li></ul>
     <h1>References</h1>
     <ol>
       <li><a name="bawden" href="http://groups-beta.google.com/group/comp.lang.scheme/msg/6c2f85dbb15d986b?hl=en&amp;">&quot;multi-dimensional arrays in R5RS?&quot;</a>, by Alan Bawden.</li>
