@@ -15,7 +15,7 @@
 			       (unbound-global-exception-variable args))
 			      (else
 			       "piffle")))
-			
+		      
 		      (lambda ()
 			,expr))))))
      (if (not (equal? result ,value))
@@ -700,35 +700,35 @@
 			values
 			values)))
   (test (array-body a)
-	"array-body: argument is not a fixed array: ")
+	"array-body: argument is not a specialized array: ")
   (test (array-indexer a)
-	"array-indexer: argument is not a fixed array: ")
+	"array-indexer: argument is not a specialized array: ")
   (test (array-storage-class a)
-	"array-storage-class: argument is not a fixed array: ")
+	"array-storage-class: argument is not a specialized array: ")
   (test (array-safe? a)
-	"array-safe?: argument is not a fixed array: "))
+	"array-safe?: argument is not a specialized array: "))
 
-(pp "array->fixed-array error tests")
+(pp "array->specialized-array error tests")
 
-(test (array->fixed-array #f generic-storage-class)
-      "array->fixed-array: Argument is not an array: ")
+(test (array->specialized-array #f generic-storage-class)
+      "array->specialized-array: Argument is not an array: ")
 
-(test (array->fixed-array (array (interval '#(1) '#(2))
-				 list)
-			  #f)
-      "array->fixed-array: result-storage-class is not a storage-class: ")
+(test (array->specialized-array (array (interval '#(1) '#(2))
+				       list)
+				#f)
+      "array->specialized-array: result-storage-class is not a storage-class: ")
 
-(test (array->fixed-array-serial #f generic-storage-class)
-      "array->fixed-array-serial: Argument is not an array: ")
+(test (array->specialized-array-serial #f generic-storage-class)
+      "array->specialized-array-serial: Argument is not an array: ")
 
-(test (array->fixed-array-serial (array (interval '#(1) '#(2))
-					list)
-				 #f)
-      "array->fixed-array-serial: result-storage-class is not a storage-class: ")
+(test (array->specialized-array-serial (array (interval '#(1) '#(2))
+					      list)
+				       #f)
+      "array->specialized-array-serial: result-storage-class is not a storage-class: ")
 
-(pp "array->fixed-array result tests")
+(pp "array->specialized-array result tests")
 
-(set! fixed-array-default-safe? #t)
+(set! specialized-array-default-safe? #t)
 
 (pp "Safe tests")
 
@@ -760,7 +760,7 @@
 		      (set! alist (cons (cons indices value)
 					alist))))))))
 	 (array2
-	  (array->fixed-array array1 generic-storage-class))
+	  (array->specialized-array array1 generic-storage-class))
 	 (setter1
 	  (array-setter array1))
 	 (setter2
@@ -772,11 +772,11 @@
 	(apply setter1 v indices)
 	(apply setter2 v indices)))
     (or (myarray= array1 array2) (pp "test1"))
-    (or (myarray= (array->fixed-array        array1 generic-storage-class ) array2) (pp "test3"))
-    (or (myarray= (array->fixed-array-serial array1 generic-storage-class ) array2) (pp "test4"))
+    (or (myarray= (array->specialized-array        array1 generic-storage-class ) array2) (pp "test3"))
+    (or (myarray= (array->specialized-array-serial array1 generic-storage-class ) array2) (pp "test4"))
     ))
 
-(set! fixed-array-default-safe? #f)
+(set! specialized-array-default-safe? #f)
 
 (pp "Unsafe tests")
 
@@ -808,7 +808,7 @@
 		      (set! alist (cons (cons indices value)
 					alist))))))))
 	 (array2
-	  (array->fixed-array array1 generic-storage-class ))
+	  (array->specialized-array array1 generic-storage-class ))
 	 (setter1
 	  (array-setter array1))
 	 (setter2
@@ -820,8 +820,8 @@
 	(apply setter1 v indices)
 	(apply setter2 v indices)))
     (or (myarray= array1 array2) (pp "test1"))
-    (or (myarray= (array->fixed-array        array1 generic-storage-class ) array2) (pp "test3"))
-    (or (myarray= (array->fixed-array-serial array1 generic-storage-class ) array2) (pp "test4"))
+    (or (myarray= (array->specialized-array        array1 generic-storage-class ) array2) (pp "test3"))
+    (or (myarray= (array->specialized-array-serial array1 generic-storage-class ) array2) (pp "test4"))
     ))
 
 (pp "array-map error tests")
@@ -899,7 +899,7 @@
 
 (pp "array-map, array-reduce, and array-for-each result tests")
 
-(set! fixed-array-default-safe? #t)
+(set! specialized-array-default-safe? #t)
 
 (let ((array-builders (vector (list u1-storage-class      (lambda indices (random 0 (expt 2 1))))
 			      (list u8-storage-class      (lambda indices (random 0 (expt 2 8))))
@@ -934,17 +934,17 @@
 	   (arrays
 	    (map (lambda (ignore)
 		   (let ((array-builder (vector-ref array-builders (random (vector-length array-builders)))))
-		     (array->fixed-array (array domain
-						(cadr array-builder))
-					 (car array-builder)
-					 )))
+		     (array->specialized-array (array domain
+						      (cadr array-builder))
+					       (car array-builder)
+					       )))
 		 (iota 0 (random 1 7))))
 	   (result-array-1
 	    (apply array-map
 		   list
 		   arrays))
 	   (result-array-2
-	    (array->fixed-array
+	    (array->specialized-array
 	     (apply array-map
 		    list
 		    arrays)))
@@ -973,7 +973,7 @@
 	  (pp "Arghh"))
       )))
 
-(set! fixed-array-default-safe? #f)
+(set! specialized-array-default-safe? #f)
 
 (let ((array-builders (vector (list u1-storage-class      (lambda indices (random (expt 2 1))))
 			      (list u8-storage-class      (lambda indices (random (expt 2 8))))
@@ -1003,17 +1003,17 @@
 	   (arrays
 	    (map (lambda (ignore)
 		   (let ((array-builder (vector-ref array-builders (random (vector-length array-builders)))))
-		     (array->fixed-array (array domain
-						(cadr array-builder))
-					 (car array-builder)
-					 )))
+		     (array->specialized-array (array domain
+						      (cadr array-builder))
+					       (car array-builder)
+					       )))
 		 (iota 0 (random 1 7))))
 	   (result-array-1
 	    (apply array-map
 		   list
 		   arrays))
 	   (result-array-2
-	    (array->fixed-array
+	    (array->specialized-array
 	     (apply array-map
 		    list
 		    arrays)))
@@ -1038,24 +1038,24 @@
 	  (pp "Arghh")))))
 
 
-(pp "fixed-array-share! error tests")
+(pp "specialized-array-share! error tests")
 
-(test (fixed-array-share! 1 1 1)
-      "fixed-array-share!: array is not a fixed-array: ")
+(test (specialized-array-share! 1 1 1)
+      "specialized-array-share!: array is not a specialized-array: ")
 
-(test (fixed-array-share! (fixed-array domain: (interval '#(1) '#(2))
-				       storage-class: generic-storage-class)
-			  1 1)
-      "fixed-array-share!: new-domain is not an interval: ")
+(test (specialized-array-share! (specialized-array domain: (interval '#(1) '#(2))
+						   storage-class: generic-storage-class)
+				1 1)
+      "specialized-array-share!: new-domain is not an interval: ")
 
-(test (fixed-array-share! (fixed-array domain: (interval '#(1) '#(2))
-				       storage-class: generic-storage-class)
-			  (interval '#(0) '#(1))
-			  1)
-      "fixed-array-share!: new-domain->old-domain is not a procedure: ")
+(test (specialized-array-share! (specialized-array domain: (interval '#(1) '#(2))
+						   storage-class: generic-storage-class)
+				(interval '#(0) '#(1))
+				1)
+      "specialized-array-share!: new-domain->old-domain is not a procedure: ")
 
 
-(pp "fixed-array-share! result tests")
+(pp "specialized-array-share! result tests")
 
 (define (vector-permute v)
   (let ((result (vector-copy v))
@@ -1074,18 +1074,18 @@
 	((= i n) result)
       (vector-set! result i (vector-ref v (vector-ref permutation i))))))
 
-(set! fixed-array-default-safe? #t)
+(set! specialized-array-default-safe? #t)
 
 (do ((i 0 (+ i 1)))
     ((= i tests))
   (let* ((axes (iota 0 (random 1 5)))
 	 (lower-bounds (list->vector (map (lambda (x) (random -10 10)) axes)))
 	 (upper-bounds (list->vector (map (lambda (l) (+ l (random 1 4))) (vector->list lower-bounds))))
-	 (a (array->fixed-array (array (interval lower-bounds
-						 upper-bounds)
-				       list)
-				generic-storage-class
-				))
+	 (a (array->specialized-array (array (interval lower-bounds
+						       upper-bounds)
+					     list)
+				      generic-storage-class
+				      ))
 	 (new-axis-order (vector-permute (list->vector axes)))
 	 (reverse-order? (list->vector (map (lambda (x) (zero? (random 2))) axes))))
     (let ((b (array (interval (permute lower-bounds new-axis-order)
@@ -1104,39 +1104,39 @@
 							(vector-ref multi-index-vector i)
 							1))
 						  (vector-ref multi-index-vector i)))))))))
-	  (c (fixed-array-share! a
-				 (interval (permute lower-bounds new-axis-order)
-					   (permute upper-bounds new-axis-order))
-				 (lambda multi-index
-				   (apply values
-					  (let* ((n (vector-length new-axis-order))
-						 (multi-index-vector (list->vector multi-index))
-						 (result (make-vector n)))
-					    (do ((i 0 (+ i 1)))
-						((= i n) (vector->list result))
-					      (vector-set! result (vector-ref new-axis-order i)
-							   (if (vector-ref reverse-order? (vector-ref new-axis-order i))
-							       (+ (vector-ref lower-bounds (vector-ref new-axis-order i))
-								  (- (vector-ref upper-bounds (vector-ref new-axis-order i))
-								     (vector-ref multi-index-vector i)
-								     1))
-							       (vector-ref multi-index-vector i))))))))))
+	  (c (specialized-array-share! a
+				       (interval (permute lower-bounds new-axis-order)
+						 (permute upper-bounds new-axis-order))
+				       (lambda multi-index
+					 (apply values
+						(let* ((n (vector-length new-axis-order))
+						       (multi-index-vector (list->vector multi-index))
+						       (result (make-vector n)))
+						  (do ((i 0 (+ i 1)))
+						      ((= i n) (vector->list result))
+						    (vector-set! result (vector-ref new-axis-order i)
+								 (if (vector-ref reverse-order? (vector-ref new-axis-order i))
+								     (+ (vector-ref lower-bounds (vector-ref new-axis-order i))
+									(- (vector-ref upper-bounds (vector-ref new-axis-order i))
+									   (vector-ref multi-index-vector i)
+									   1))
+								     (vector-ref multi-index-vector i))))))))))
       (if (not (myarray= b c))
 	  (pp (list "piffle"
 		    a b c))))))
 
-(set! fixed-array-default-safe? #f)
+(set! specialized-array-default-safe? #f)
 
 (do ((i 0 (+ i 1)))
     ((= i tests))
   (let* ((axes (iota 0 (random 1 5)))
 	 (lower-bounds (list->vector (map (lambda (x) (random -10 10)) axes)))
 	 (upper-bounds (list->vector (map (lambda (l) (+ l (random 1 4))) (vector->list lower-bounds))))
-	 (a (array->fixed-array (array (interval lower-bounds
-						 upper-bounds)
-				       list)
-				generic-storage-class
-				))
+	 (a (array->specialized-array (array (interval lower-bounds
+						       upper-bounds)
+					     list)
+				      generic-storage-class
+				      ))
 	 (new-axis-order (vector-permute (list->vector axes)))
 	 (reverse-order? (list->vector (map (lambda (x) (zero? (random 2))) axes))))
     (let ((b (array (interval (permute lower-bounds new-axis-order)
@@ -1155,23 +1155,23 @@
 							(vector-ref multi-index-vector i)
 							1))
 						  (vector-ref multi-index-vector i)))))))))
-	  (c (fixed-array-share! a
-				 (interval (permute lower-bounds new-axis-order)
-					   (permute upper-bounds new-axis-order))
-				 (lambda multi-index
-				   (apply values
-					  (let* ((n (vector-length new-axis-order))
-						 (multi-index-vector (list->vector multi-index))
-						 (result (make-vector n)))
-					    (do ((i 0 (+ i 1)))
-						((= i n) (vector->list result))
-					      (vector-set! result (vector-ref new-axis-order i)
-							   (if (vector-ref reverse-order? (vector-ref new-axis-order i))
-							       (+ (vector-ref lower-bounds (vector-ref new-axis-order i))
-								  (- (vector-ref upper-bounds (vector-ref new-axis-order i))
-								     (vector-ref multi-index-vector i)
-								     1))
-							       (vector-ref multi-index-vector i))))))))))
+	  (c (specialized-array-share! a
+				       (interval (permute lower-bounds new-axis-order)
+						 (permute upper-bounds new-axis-order))
+				       (lambda multi-index
+					 (apply values
+						(let* ((n (vector-length new-axis-order))
+						       (multi-index-vector (list->vector multi-index))
+						       (result (make-vector n)))
+						  (do ((i 0 (+ i 1)))
+						      ((= i n) (vector->list result))
+						    (vector-set! result (vector-ref new-axis-order i)
+								 (if (vector-ref reverse-order? (vector-ref new-axis-order i))
+								     (+ (vector-ref lower-bounds (vector-ref new-axis-order i))
+									(- (vector-ref upper-bounds (vector-ref new-axis-order i))
+									   (vector-ref multi-index-vector i)
+									   1))
+								     (vector-ref multi-index-vector i))))))))))
       (if (not (myarray= b c))
 	  (pp (list "piffle"
 		    a b c))))))
@@ -1194,10 +1194,10 @@
       "interval-dilate: the resulting interval is empty: ")
 
 (define a (array (interval '#(1 1) '#(11 11))
-		       (lambda (i j)
-			 (if (= i j)
-			     1
-			     0))))
+		 (lambda (i j)
+		   (if (= i j)
+		       1
+		       0))))
 
 (test ((array-getter a) 3 3)
       1)
@@ -1222,17 +1222,17 @@
   (let ((domain (interval '#(0 0) '#(1000000 1000000)))
 	(sparse-rows (make-vector 1000000 '())))
     (mutable-array domain
-			 (lambda (i j)
-			   (cond ((assv j (vector-ref sparse-rows i))
-				  => cdr)
-				 (else
-				  0.0)))
-			 (lambda (v i j)
-			   (cond ((assv j (vector-ref sparse-rows i))
-				  => (lambda (pair)
-				       (set-cdr! pair v)))
-				 (else
-				  (vector-set! sparse-rows i (cons (cons j v) (vector-ref sparse-rows i)))))))))
+		   (lambda (i j)
+		     (cond ((assv j (vector-ref sparse-rows i))
+			    => cdr)
+			   (else
+			    0.0)))
+		   (lambda (v i j)
+		     (cond ((assv j (vector-ref sparse-rows i))
+			    => (lambda (pair)
+				 (set-cdr! pair v)))
+			   (else
+			    (vector-set! sparse-rows i (cons (cons j v) (vector-ref sparse-rows i)))))))))
 
 (test ((array-getter sparse-array) 12345 6789)
       0.)
@@ -1286,7 +1286,7 @@
 	     (rows (read-pgm-object port))
 	     (greys (read-pgm-object port)))
 	(make-pgm greys
-		  (array->fixed-array-serial
+		  (array->specialized-array-serial
 		   (array
 		    (interval '#(0 0)
 			      (vector rows columns))
