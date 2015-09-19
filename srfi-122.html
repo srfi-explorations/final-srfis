@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
   <head>
-    <title>Nonempty Intervals and Generalized Arrays</title><link rel="stylesheet" href="http://srfi.schemers.org/srfi.css">
+    <title>Non-Empty Intervals and Generalized Arrays</title><link rel="stylesheet" href="http://srfi.schemers.org/srfi.css">
   </head>
   <body>
     <h1>Title</h1>
-    <p>Nonempty Intervals and Generalized Arrays</p>
+    <p>Non-Empty Intervals and Generalized Arrays</p>
     <h1>Author</h1>
     <p>Bradley J. Lucier</p>
     <h1>Status</h1>
@@ -16,7 +16,7 @@
       <li>Draft #2 published: 2015/7/31</li>
       <li>Draft #3 published: 2015/7/31</li>
       <li>Draft #4 published: 2015/9/03</li>
-      <li>Draft #5 published: 2015/9/19</li></ul>
+      <li>Draft #5 published: 2015/9/18</li></ul>
     <h1>Abstract</h1>
     <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general, and benefit from a data type
        called <i>intervals</i>, which encapsulate the cross product of non-empty intervals of exact integers. These intervals  specify the domain
@@ -28,7 +28,7 @@
       [l<sub>0</sub>, u<sub>0</sub>) x [l<sub>1</sub>, u<sub>1</sub>) x ... x [l<sub>d-1</sub>, u<sub>d-1</sub>) to Scheme objects.
       Thus, two things are necessary to specify an array: an interval and a mapping.</p>
     <p>Since these two things are often sufficient for certain algorithms, we introduce in this SRFI a minimal set of interfaces for dealing with such arrays.</p>
-    <p>Specifically, an array specifies a nonempty, multi-dimensional interval, called its <i>domain</i>, and a mapping from this domain to (single) Scheme objects.  This mapping is called the <i>getter</i> of the array.</p>
+    <p>Specifically, an array specifies a non-empty, multi-dimensional interval, called its <i>domain</i>, and a mapping from this domain to (single) Scheme objects.  This mapping is called the <i>getter</i> of the array.</p>
     <p>If this mapping can be changed, the array is said to be <i>mutable</i> and the mutation is effected
       by the array's <i>setter</i>.  We call an object of this type a mutable-array.</p>
     <p>In general, we leave the implementation of arrays completely open.  They may be defined simply by closures, or
@@ -73,7 +73,7 @@
         </blockquote>(the inverse of <code>interval-curry</code>) and
         <blockquote><code>(interval-intersect interval1 interval2 ...)</code>
         </blockquote> which don't seem terribly natural for arrays.  If you could use these functions in your programs, tell me (windowing systems, etc.?).</li>
-      <li><b>No empty intervals. </b>This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.</li></ul>
+      <li><b>No empty intervals. </b>This SRFI considers arrays over only non-empty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.</li></ul>
     <h1>Specification</h1>
     <dl>
       <dt>Intervals</dt>
@@ -165,7 +165,7 @@
     <h3>Procedures</h3>
     <p><b>Procedure: </b><code><a name="interval">interval</a> <var>lower-bounds</var> <var>upper-bounds</var></code></p>
     <p>Create a new interval; <code><var>lower-bounds</var></code> and <code><var>upper-bounds</var></code>
-      are nonempty vectors (of the same length) of exact integers that satisfy</p>
+      are non-empty vectors (of the same length) of exact integers that satisfy</p>
     <blockquote><code> (&lt; (vector-ref <var>lower-bounds</var> i) (vector-ref <var>upper-bounds</var> i))</code>
     </blockquote>
     <p> for
