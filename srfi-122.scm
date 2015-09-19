@@ -26,12 +26,12 @@
       (<unprotected> "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">")
       (<html>
        (<head>
-	(<title> "Intervals and Generalized Arrays")
+	(<title> "Nonempty Intervals and Generalized Arrays")
 	(<link> href: "http://srfi.schemers.org/srfi.css"
 		rel: "stylesheet"))
        (<body>
 	(<h1> "Title")
-	(<p> "Intervals and Generalized arrays")
+	(<p> "Nonempty Intervals and Generalized Arrays")
 	
 	(<h1> "Author")
 	(<p> "Bradley J. Lucier")
@@ -51,6 +51,7 @@
 	      (<li> "Draft #2 published: 2015/7/31")
 	      (<li> "Draft #3 published: 2015/7/31")
 	      (<li> "Draft #4 published: 2015/9/03")
+	      (<li> "Draft #4 published: 2015/9/19")
 	      )
        
        (<h1> "Abstract")
@@ -72,18 +73,19 @@ by the array's "(<i> 'setter)".  We call an object of this type a mutable-array.
 they may have hash tables or databases behind an implementation.  If the getter and setter functions of a mutable-array are
 defined by accessing and setting elements  of a one-dimensional (heterogeneous or homogeneous) vector that are determined by a one-to-one function from
 the domain of the array into the integers between 0 (inclusive) and the length of the backing-store vector (exclusive),
-the array is said to be "(<i> 'fixed)". A fixed-array is an example of a mutable-array.")
+the array is said to be "(<i> 'fixed)". A specialized-array is an example of a mutable-array.")
 
 (<p> "Thus,  we  need the concept of an "(<i> 'indexer)", which is a one-to-one mapping whose domain is an interval and whose range is
 contained in another interval.  Conceptually, an indexer is itself an array that returns multiple values.  An
 important subset of indexers are affine mappings (linear mappings plus constants) from one domain to another.  We do not
 encapsulate indexers, with their domain interval, range interval, and multi-valued mapping, into a distinct type.
-While we considered the formalized use of non-affine indexers in fixed-arrays, we restrict indexers in fixed-arrays to be affine.
-Thus our fixed-arrays are very similar to "
+While we considered the formalized use of non-affine indexers in specialized-arrays, we restrict indexers in specialized-arrays to be affine.
+Thus our specialized-arrays are very similar to "
      (<a> href: "#bawden" "Bawden-style arrays")". (If you want to specify a non-affine indexer into a body, it can be done by constructing a mutable-array.)")
-(<p> "The backing store of a fixed-array, which may be a heterogeneous or homogeneous vector,
+(<p> "The backing store of a specialized-array, which may be a heterogeneous or homogeneous vector,
 is created, accessed, etc., via the components of an object we call a storage-class.  We define their properties below.")
 (<p> "The API of this SRFI uses keywords from SRFI-88 and the calling convention from SRFI-89 for optional and keyword arguments (although the implementation defines functions with keyword and optional arguments using DSSSL's notation, not the notation from SRFI-89).")
+
 
 (<h1> "Examples of application areas")
 (<ul>
@@ -105,21 +107,9 @@ is created, accessed, etc., via the components of an object we call a storage-cl
 
 (<h1> "Issues and Notes")
 (<ul>
- (<li> (<b> "fixed-arrays. ")  "Bawden-style arrays have their elements stored in a heterogeneous or homogeneous
-vector.  A single vector can contain the elements of
-several conceptually separate arrays.  I needed a name for this type of array implementation, and I think of the
-backing-store vector that contains the array elements as \"fixed\", sitting somewhere out of sight.  Thus the name
-\"fixed-array\".  If you can come up with a better name, good.")
- (<li> (<b> "\"object\" vs. \"make-object\". ") "I think of "(<code> 'make-vector)", "(<code> 'make-string)", etc., as low-level memory
-allocators with little computation going on behind the scenes.  Instantiating the objects of this SRFI may require non-trivial
-computation behind the scenes, so I didn't want to name the instantiation routines make-whatever.")
- (<li> (<b> "Specifying intervals. ")  "I couldn't, for the life of me, figure out the most \"natural\" way to specify intervals.  Perhaps " #\newline
-       (<blockquote> (<code> "(interval lower-bounds: l0 l1 ... upper-bounds: u0 u1 ...)"))
-       "comes closes, but it would take a lot of computation to check properly , and this isn't even a valid DSSSL argument list. " #\newline
-       "In the end I decided to just require the lower and upper bound arguments to be vectors.")
- (<li> (<b> (<code>" interval-lower-bounds->list" )". ") "I think of this routine not as a getter ("(<code> 'interval-lower-bounds)" would be a getter) but as a converter, like " #\newline
-       (<code> 'vector->list)".  I don't want to expose the inner storage mechanism for lower and upper bounds of intervals, so I don't provide a getter, only these converters.")
- (<li> (<b> "Indexers. ")"Both the arguments new-domain->old-domain to "(<code> 'fixed-array-share!)" and indexer to "(<code> 'fixed-array)" are conceptual arrays, " #\newline
+ (<li> (<b> "Relationship to "(<a> href: "http://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29" "nonstrict arrays")" in Racket. ")
+       "It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an "(<a> href: "http://research.microsoft.com/en-us/um/people/simonpj/papers/ndp/RArrays.pdf" "array proposal for Haskell")".  Our \"specialized\" arrays are related to Racket's \"strict\" arrays.")
+ (<li> (<b> "Indexers. ")"Both the arguments new-domain->old-domain to "(<code> 'specialized-array-share!)" and indexer to "(<code> 'specialized-array)" are conceptual arrays, " #\newline
        "the first multiple-valued and the second single-valued.")
  (<li> (<b> "Source of function names. ")"The function "(<code> 'array-curry)" gets its name from the " #\newline
        (<a> href: "http://en.wikipedia.org/wiki/Currying" "curry operator")
@@ -133,13 +123,7 @@ computation behind the scenes, so I didn't want to name the instantiation routin
        "(the inverse of "(<code> 'interval-curry)") and"
        (<blockquote> (<code>"(interval-intersect interval1 interval2 ...)"))
        " which don't seem terribly natural for arrays.  If you could use these functions in your programs, tell me (windowing systems, etc.?).")
- (<li> (<b> "No empty intervals or arrays. ")"Mathematically, a functions f(x) is a relation R, which is a set  of ordered pairs {(x,y)} for x in some domain set X and " #\newline
-       "y in some range set Y, for which (x1,y1) and (x2, y2) are in R and x1=x2 implies y1=y2.  (Here we assume that f is onto Y, in other words that Y consists precisely of" #\newline
-       "the second coordinates of the ordered pairs in R, and \"=\" means \"identical\", i.e., y1 and y2 are the "(<i> 'same)" objects (in the sense of "#\newline
-       (<code> 'eq?)").). The only relation R where X is the empty set is the empty relation consisting " #\newline
-       " of no ordered pairs at all.  Since there are no ordered pairs, there are no values in the range set Y, i.e., Y is the empty set.  So the getter of an array with "#\newline
-       "an empty interval as a domain would be able to return no values at all.  So I don't understand constructions that allow arrays with empty intervals as domains to return a single value."#\newline
-       "Since I don't understand it, I don't allow it.")
+ (<li> (<b> "No empty intervals. ")"This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.")
        
  )
 (<h1> "Specification")
@@ -213,15 +197,15 @@ computation behind the scenes, so I didn't want to name the instantiation routin
    (<dt> "Indexers")
    (<dd> (<a> href: "#indexer=" "indexer=")
 	 ".")
-   (<dt> "Fixed Arrays")
-   (<dd> (<a> href: "#fixed-array-default-safe?" "fixed-array-default-safe?") END
-	 (<a> href: "#fixed-array" "fixed-array")END
-	 (<a> href: "#fixed-array?" "fixed-array?")END
-	 (<a> href: "#fixed-array-curry" "fixed-array-curry")END
-	 (<a> href: "#fixed-array-distinguish-one-axis" "fixed-array-distinguish-one-axis")END
-	 (<a> href: "#array->fixed-array" "array->fixed-array")END
-	 (<a> href: "#array->fixed-array-serial" "array->fixed-array-serial")END
-	 (<a> href: "#fixed-array-share!" "fixed-array-share!")
+   (<dt> "Specialized Arrays")
+   (<dd> (<a> href: "#specialized-array-default-safe?" "specialized-array-default-safe?") END
+	 (<a> href: "#specialized-array" "specialized-array")END
+	 (<a> href: "#specialized-array?" "specialized-array?")END
+	 (<a> href: "#specialized-array-curry" "specialized-array-curry")END
+	 (<a> href: "#specialized-array-distinguish-one-axis" "specialized-array-distinguish-one-axis")END
+	 (<a> href: "#array->specialized-array" "array->specialized-array")END
+	 (<a> href: "#array->specialized-array-serial" "array->specialized-array-serial")END
+	 (<a> href: "#specialized-array-share!" "specialized-array-share!")
 	 "."
 	 )))
 (<h2> "Intervals")
@@ -720,7 +704,7 @@ domains of the outer and inner lambdas.")
  (<code> "(lambda (v m) (apply (array-setter array) v (insert-arg-into-arg-list m outer-index index)))"))
 
 (<h2> "Storage classes")
-(<p> "Conceptually, a storage-class is a set of functions to manage the backing store of a fixed-array.
+(<p> "Conceptually, a storage-class is a set of functions to manage the backing store of a specialized-array.
 The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogenous) vector.")
 (<h3> "Procedures")
 
@@ -796,13 +780,13 @@ if "(<code>(<var> 'indexer1))" and "(<code>(<var> 'indexer2))" take the same val
 otherwise "(<code> 'indexer=)" returns "(<code>"#f")".  It is an error to call "(<code> 'indexer=)" if its
 arguments don't satisfy these conditions.")
 
-(<h2> "Fixed Arrays")
+(<h2> "Specialized Arrays")
 (<h3> "Global Variable")
-(format-global-variable 'fixed-array-default-safe?)
-(<p> "Determines whether the setters and getters of fixed-arrays check their arguments for correctness by default.  Initially it has the value "(<code> "#f")".")
+(format-global-variable 'specialized-array-default-safe?)
+(<p> "Determines whether the setters and getters of specialized-arrays check their arguments for correctness by default.  Initially it has the value "(<code> "#f")".")
 (<h3> "Procedures")
-(format-lambda-list '(fixed-array "domain:" domain "storage-class:" storage-class #\[ "body:" body #\] #\[ "indexer:" indexer #\] #\[ "initializer-value:" initializer-value #\] #\[ "safe?:" safe? #\]))
-(<p> "Builds a fixed-array.  "(<code>(<var> 'domain))" must be an interval; "(<code>(<var> 'storage-class))" must
+(format-lambda-list '(specialized-array "domain:" domain "storage-class:" storage-class #\[ "body:" body #\] #\[ "indexer:" indexer #\] #\[ "initializer-value:" initializer-value #\] #\[ "safe?:" safe? #\]))
+(<p> "Builds a specialized-array.  "(<code>(<var> 'domain))" must be an interval; "(<code>(<var> 'storage-class))" must
  be a storage-class;  if "(<code>(<var> 'body))" is given, it must be of the same type as that returned by
 "(<code>"(storage-class-maker "(<var> 'storage-class)")")"; if "(<code>(<var> 'initializer-value))" is given, it must be storable
 in "(<code>(<var> 'body))"; at most one of "(<code>(<var> 'initializer-value))" and "(<code>(<var> 'body))" can be given; if "(<code>(<var> 'indexer))" is given, it must be a one-to-one affine mapping from "(<code>(<var> 'domain))" to
@@ -833,10 +817,10 @@ the getter and setter of the result are defined by")
 (<p> "Indexer: The one-to-one mapping of elements of "(<code>(<var> 'domain))" to [0,"(<code>"(interval-volume "(<var> 'domain)")")") in
 lexicographical order.")
 
-(<p> "Safe?: The current value of the global variable "(<code> 'fixed-array-default-safe?)".")
+(<p> "Safe?: The current value of the global variable "(<code> 'specialized-array-default-safe?)".")
 
-(format-lambda-list '(fixed-array? obj))
-(<p> "Returns "(<code>"#t")" if "(<code>(<var> 'obj))" is a fixed-array, and "(<code>"#f")" otherwise. A fixed-array is a mutable-array, and hence an array.")
+(format-lambda-list '(specialized-array? obj))
+(<p> "Returns "(<code>"#t")" if "(<code>(<var> 'obj))" is a specialized-array, and "(<code>"#f")" otherwise. A specialized-array is a mutable-array, and hence an array.")
 
 (format-lambda-list '(array-body array))
 (format-lambda-list '(array-indexer array))
@@ -845,46 +829,46 @@ lexicographical order.")
 (<p> (<code>'array-body)" returns the body of "(<code>(<var> 'array))", "
      (<code>'array-indexer)" returns the indexer of "(<code>(<var> 'array))", "
      (<code>'array-storage-class)" returns the storage-class of "(<code>(<var> 'array))", and "
-     (<code>'array-safe?)" is true if and only if the arguments of "(<code> "(array-getter "(<var> 'array)")")" and "(<code> "(array-setter "(<var> 'array)")")" are checked for correctness. It is an error to call any of these routines if "(<code>(<var> 'array))" is not a fixed-array.")
+     (<code>'array-safe?)" is true if and only if the arguments of "(<code> "(array-getter "(<var> 'array)")")" and "(<code> "(array-setter "(<var> 'array)")")" are checked for correctness. It is an error to call any of these routines if "(<code>(<var> 'array))" is not a specialized-array.")
 
-(format-lambda-list '(fixed-array-share! array new-domain new-domain->old-domain))
-(<p> "Constructs a new fixed-array that shares the body of the fixed-array "(<code>(<var> 'array))".
+(format-lambda-list '(specialized-array-share! array new-domain new-domain->old-domain))
+(<p> "Constructs a new specialized-array that shares the body of the specialized-array "(<code>(<var> 'array))".
 Returns an object that is behaviorally equivalent to")
 (<pre>"
-(fixed-array domain:        new-domain
+(specialized-array domain:        new-domain
 	     storage-class: (array-storage-class array)
 	     body:          (array-body array)
 	     indexer:       (lambda multi-index
 			      (call-with-values
 				  (lambda ()
 				    (apply new-domain->old-domain multi-index))
-			        (fixed-array-indexer array))))")
+			        (specialized-array-indexer array))))")
 (<p> (<code>(<var> 'new-domain->old-domain))" must be an affine one-to-one mapping from "(<code>"(array-domain "(<var> 'array)")")" to
 "(<code>(<var> 'new-domain))".")
 
-(<p> "Note: It is assumed that affine structure of the composition of "(<code>(<var> 'new-domain->old-domain))" and "(<code>"(fixed-array-indexer "(<var> 'array))" will be used to simplify:")
+(<p> "Note: It is assumed that affine structure of the composition of "(<code>(<var> 'new-domain->old-domain))" and "(<code>"(specialized-array-indexer "(<var> 'array))" will be used to simplify:")
 (<pre>"
 (lambda multi-index
   (call-with-values
       (lambda ()
 	(apply new-domain->old-domain multi-index))
-    (fixed-array-indexer array)))"
+    (specialized-array-indexer array)))"
 )
 
-(format-lambda-list '(fixed-array-curry array outer-dimension))
-(<p> "It is an error to call "(<code> 'fixed-array-curry)" unless
- "(<code>(<var> 'array))" is a fixed-array
+(format-lambda-list '(specialized-array-curry array outer-dimension))
+(<p> "It is an error to call "(<code> 'specialized-array-curry)" unless
+ "(<code>(<var> 'array))" is a specialized-array
 and "(<code>(<var> 'outer-dimension))" is an exact integer that satisfies")
 (<blockquote>
- (<code> "0 < "(<var> 'outer-dimension)" < (interval-dimension (fixed-array-domain "(<var> 'array)"))."))
-(<p> (<code> 'fixed-array-curry)" returns")
+ (<code> "0 < "(<var> 'outer-dimension)" < (interval-dimension (specialized-array-domain "(<var> 'array)"))."))
+(<p> (<code> 'specialized-array-curry)" returns")
 (<pre>"
 (call-with-values
-    (lambda () (interval-curry (fixed-array-domain array) outer-dimension))
+    (lambda () (interval-curry (specialized-array-domain array) outer-dimension))
   (lambda (outer-interval inner-interval)
     (array outer-interval
 	   (lambda outer-multi-index
-	     (fixed-array-share! array
+	     (specialized-array-share! array
 				 outer-interval
 				 (lambda inner-multi-index
 				   (apply values (append outer-multi-index inner-multi-index))))))))")
@@ -892,28 +876,28 @@ and "(<code>(<var> 'outer-dimension))" is an exact integer that satisfies")
 (<p> (<b> "Notes:")" This function curries "(<code>"(array-getter "(<var> 'array)")")"
 and "(<code>"(array-setter "(<var> 'array)")")" while keeping track of the
 domains of the outer and inner lambdas.")
-(<p> "It is expected that "(<code> 'fixed-array-curry)" will specialize the construction of")
+(<p> "It is expected that "(<code> 'specialized-array-curry)" will specialize the construction of")
 (<blockquote>
  (<code> "(lambda outer-multi-index
-		   (fixed-array-share! array
+		   (specialized-array-share! array
 				       outer-interval
 				       (lambda inner-multi-index
 					 (apply values (append outer-multi-index inner-multi-index)))))"))
 
-(format-lambda-list '(fixed-array-distinguish-one-axis array index))
-(<p> "It is an error to call "(<code> 'fixed-array-distinguish-one-axis)" unless
- "(<code>(<var> 'array))" is a fixed-array and
-"(<code>"(interval-dimension (fixed-array-domain "(<var> 'interval)"))")" is greater than one, and")
+(format-lambda-list '(specialized-array-distinguish-one-axis array index))
+(<p> "It is an error to call "(<code> 'specialized-array-distinguish-one-axis)" unless
+ "(<code>(<var> 'array))" is a specialized-array and
+"(<code>"(interval-dimension (specialized-array-domain "(<var> 'interval)"))")" is greater than one, and")
 (<blockquote>
- (<code> "0 <= "(<var> 'index)" < (interval-dimension (fixed-array-domain "(<var> 'array)"))"))
-(<p> (<code> 'fixed-array-distinguish-one-axis)" returns")
+ (<code> "0 <= "(<var> 'index)" < (interval-dimension (specialized-array-domain "(<var> 'array)"))"))
+(<p> (<code> 'specialized-array-distinguish-one-axis)" returns")
 (<pre>"
 (call-with-values
-    (lambda () (interval-distinguish-one-axis (fixed-array-domain array) index))
+    (lambda () (interval-distinguish-one-axis (specialized-array-domain array) index))
   (lambda (outer-interval inner-interval)
     (array outer-interval
 		 (lambda outer-multi-index
-		   (fixed-array-share! array
+		   (specialized-array-share! array
 				       inner-interval
 				       (lambda (m) (apply values (insert-arg-into-arg-list m outer-index index))))))))")
 (<p> "where we define ")
@@ -927,40 +911,40 @@ domains of the outer and inner lambdas.")
 
 
 
-(<p> "It is expected that "(<code> 'fixed-array-distinguish-one-axis)" will specialize the construction of ")
+(<p> "It is expected that "(<code> 'specialized-array-distinguish-one-axis)" will specialize the construction of ")
 (<pre>"
 (lambda outer-multi-index
-  (fixed-array-share! array
+  (specialized-array-share! array
 		      inner-interval
 		      (lambda (m) (apply values (insert-arg-into-arg-list m outer-index index)))))")
 
 
 
-(format-lambda-list '(array->fixed-array array #\[ result-storage-class "generic-storage-class" #\] #\[ safe? "#f" #\]))
-(format-lambda-list '(array->fixed-array-serial array #\[ result-storage-class "generic-storage-class" #\[ safe? "#f"#\]))
+(format-lambda-list '(array->specialized-array array #\[ result-storage-class "generic-storage-class" #\] #\[ safe? "#f" #\]))
+(format-lambda-list '(array->specialized-array-serial array #\[ result-storage-class "generic-storage-class" #\[ safe? "#f"#\]))
 (<p> "If "(<code>(<var> 'array))" is an array whose elements can be manipulated by the storage-class
-"(<code>(<var> 'result-storage-class))", then the fixed-array returned by "(<code> 'array->fixed-array)" can be defined by:")
+"(<code>(<var> 'result-storage-class))", then the specialized-array returned by "(<code> 'array->specialized-array)" can be defined by:")
 (<pre>"
-(let ((result (fixed-array domain:        (array-domain array)
+(let ((result (specialized-array domain:        (array-domain array)
 			   storage-class: result-storage-class
 			   safe?:         safe?)))
   (interval-for-each (lambda multi-index
 		       (apply (array-setter result) (apply (array-getter array) multi-index) multi-index))
 		     (array-domain array))
   result)")
-(<p> "Otherwise it is an error to call "(<code> 'array->fixed-array)".")
-(<p> (<code> 'array->fixed-array)"  does not specify
+(<p> "Otherwise it is an error to call "(<code> 'array->specialized-array)".")
+(<p> (<code> 'array->specialized-array)"  does not specify
 the order in which "(<code>"(array-getter "(<var> 'array)")")" is applied to the multi-indices in "(<code>"(array-domain "(<var> 'array)")")".")
-(<p> "Similarly, the fixed-array returned by "(<code> 'array->fixed-array-serial)" can be defined by:")
+(<p> "Similarly, the specialized-array returned by "(<code> 'array->specialized-array-serial)" can be defined by:")
 (<pre>"
-(let ((result (fixed-array domain:        (array-domain array)
+(let ((result (specialized-array domain:        (array-domain array)
 			   storage-class: result-storage-class
 			   safe?:         safe?)))
   (interval-for-each-serial (lambda multi-index
 			      (apply (array-setter result) (apply (array-getter array) multi-index) multi-index))
 			    (array-domain array))
   result)")
-(<p> "Thus, "(<code> 'array->fixed-array-serial)" evaluates "(<code>"(array-getter "(<var> 'array)")")" to the multi-indices in
+(<p> "Thus, "(<code> 'array->specialized-array-serial)" evaluates "(<code>"(array-getter "(<var> 'array)")")" to the multi-indices in
 "(<code>"(array-domain "(<var> 'array)")")" in lexicographical order.")
 
 
@@ -973,7 +957,7 @@ and "(<code>"define-macro")".")
 (<h1> "Relationship to other SRFIs")
 (<p> "Final SRFIs "(<a> href: "#SRFI-25" "25")", "(<a> href: "#SRFI-47" "47")", "(<a> href: "#SRFI-58" "58")", and "(<a> href: "#SRFI-63" "63")" deal with \"Multi-dimensional Array Primitives\", \"Array\", \"Array Notation\",
 and \"Homogeneous and Heterogeneous Arrays\", respectively.  Each of these previous SRFIs deal with what we call in this SRFI
-fixed-arrays.  Many of the functions in these previous SRFIs  have corresponding forms in this SRFI.  For example, from SRFI 63, we can
+specialized-arrays.  Many of the functions in these previous SRFIs  have corresponding forms in this SRFI.  For example, from SRFI 63, we can
 translate: ")
 (<dl>
  (<dt> (<code> "(array? obj)"))
@@ -981,9 +965,9 @@ translate: ")
  (<dt> (<code> "(Array-rank a)"))
  (<dd> (<code> "(interval-dimension (array-domain obj))"))
  (<dt> (<code> "(make-array prototype k1 ...)"))
- (<dd> (<code> "(fixed-array domain: (interval (vector 0 ...) (vector k1 ...)) storage-class: storage-class)")".")
+ (<dd> (<code> "(specialized-array domain: (interval (vector 0 ...) (vector k1 ...)) storage-class: storage-class)")".")
  (<dt> (<code> "(make-shared-array array mapper k1 ...)"))
- (<dd> (<code> "(fixed-array-share! array (interval (vector 0 ...) (vector k1 ...)) mapper)"))
+ (<dd> (<code> "(specialized-array-share! array (interval (vector 0 ...) (vector k1 ...)) mapper)"))
  (<dt> (<code> "(array-in-bounds? array index1 ...)"))
  (<dd> (<code> "(interval-contains-multi-index? (array-domain array) index1 ...)"))
  (<dt> (<code> "(array-ref array k1 ...)"))
@@ -1000,7 +984,7 @@ of arrays and the arrays themselves.")
  (<li> "Intervals cannot be empty.")
  (<li> "Arrays must have a getter, but may have no setter.  For example, on a system with eight-bit chars, one
 can write a function to read greyscale images in the PGM format of the netpbm package as follows.  The  lexicographical
-order in array->fixed-array-serial guarantees the the correct order of execution of the input procedures:"
+order in array->specialized-array-serial guarantees the the correct order of execution of the input procedures:"
 (<pre>"
 (define make-pgm   cons)
 (define pgm-greys  car)
@@ -1040,7 +1024,7 @@ order in array->fixed-array-serial guarantees the the correct order of execution
 	     (rows (read-pgm-object port))
 	     (greys (read-pgm-object port)))
 	(make-pgm greys
-		  (array->fixed-array-serial
+		  (array->specialized-array-serial
 		   (array
 		    (interval '#(0 0)
 			      (vector rows columns))
