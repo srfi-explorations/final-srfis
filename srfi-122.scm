@@ -26,12 +26,12 @@
       (<unprotected> "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">")
       (<html>
        (<head>
-	(<title> "Non-Empty Intervals and Generalized Arrays")
+	(<title> "Nonempty Intervals and Generalized Arrays")
 	(<link> href: "http://srfi.schemers.org/srfi.css"
 		rel: "stylesheet"))
        (<body>
 	(<h1> "Title")
-	(<p> "Non-Empty Intervals and Generalized Arrays")
+	(<p> "Nonempty Intervals and Generalized Arrays")
 	
 	(<h1> "Author")
 	(<p> "Bradley J. Lucier")
@@ -56,17 +56,17 @@
        
        (<h1> "Abstract")
        (<p> "This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general, and benefit from a data type
- called "(<i> 'intervals)", which encapsulate the cross product of non-empty intervals of exact integers. These intervals  specify the domain
+ called "(<i> 'intervals)", which encapsulate the cross product of nonempty intervals of exact integers. These intervals  specify the domain
 information for arrays. An array is then characterized as a mapping from multi-indices of exact integers (i"(<sub>"0")",...,i"(<sub>"d-1")")
 contained in an interval to Scheme values. Additionally, specialized variants of arrays are specified to provide portable programs with efficient representations for common use cases.")
        
        (<h1> "Rationale")
        (<p> "An array, as commonly understood, provides a mapping from multi-indices  (i"(<sub>"0")",...,i"(<sub>"d-1")") of exact integers 
-in a non-empty, rectangular, d-dimensional interval
+in a nonempty, rectangular, d-dimensional interval
 [l"(<sub> '0)", u"(<sub> '0)") x [l"(<sub> '1)", u"(<sub> '1)") x ... x [l"(<sub> 'd-1)", u"(<sub> 'd-1)") to Scheme objects.
 Thus, two things are necessary to specify an array: an interval and a mapping.")
        (<p> "Since these two things are often sufficient for certain algorithms, we introduce in this SRFI a minimal set of interfaces for dealing with such arrays.")
-       (<p> "Specifically, an array specifies a non-empty, multi-dimensional interval, called its "(<i> "domain")", and a mapping from this domain to (single) Scheme objects.  This mapping is called the "(<i> 'getter)" of the array.")
+       (<p> "Specifically, an array specifies a nonempty, multi-dimensional interval, called its "(<i> "domain")", and a mapping from this domain to (single) Scheme objects.  This mapping is called the "(<i> 'getter)" of the array.")
        (<p> "If this mapping can be changed, the array is said to be "(<i> 'mutable)" and the mutation is effected
 by the array's "(<i> 'setter)".  We call an object of this type a mutable-array.")
        (<p> "In general, we leave the implementation of arrays completely open.  They may be defined simply by closures, or
@@ -123,7 +123,7 @@ is created, accessed, etc., via the components of an object we call a storage-cl
        "(the inverse of "(<code> 'interval-curry)") and"
        (<blockquote> (<code>"(interval-intersect interval1 interval2 ...)"))
        " which don't seem terribly natural for arrays.  If you could use these functions in your programs, tell me (windowing systems, etc.?).")
- (<li> (<b> "No empty intervals. ")"This SRFI considers arrays over only non-empty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.")
+ (<li> (<b> "No empty intervals. ")"This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.")
        
  )
 (<h1> "Specification")
@@ -224,7 +224,7 @@ l"(<sub>"0")"<u"(<sub>"0")", ..., l"(<sub>"d-1")"<u"(<sub>"d-1")".")
 (<h3> "Procedures")
 (format-lambda-list '(interval lower-bounds upper-bounds))
 (<p> "Create a new interval; "(<code> (<var>"lower-bounds"))" and "(<code> (<var>"upper-bounds"))"
-are non-empty vectors (of the same length) of exact integers that satisfy")
+are nonempty vectors (of the same length) of exact integers that satisfy")
 (<blockquote>
  (<code>" (< (vector-ref "(<var>"lower-bounds")" i) (vector-ref "(<var>"upper-bounds")" i))"))
 (<p> " for
@@ -406,7 +406,7 @@ upper bounds u"(<sub>"0")", ..., u"(<sub>"d-1")", and "
 (<code>"interval-dilate")" returns a new interval with
 lower bounds l"(<sub>"0")"+L"(<sub>"0")", ..., l"(<sub>"d-1")"+L"(<sub>"d-1")" and
 upper bounds u"(<sub>"0")"+U"(<sub>"0")", ..., u"(<sub>"d-1")"+U"(<sub>"d-1")", as long as this is a
-non-empty interval.  It is an error if the arguments do not satisfy these conditions.")
+nonempty interval.  It is an error if the arguments do not satisfy these conditions.")
 (<p> "Examples:")
 (<blockquote>
  (<pre>"
