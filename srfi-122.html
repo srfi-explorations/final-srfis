@@ -6,9 +6,9 @@
   <body>
     <h1>Title</h1>
     <p>Nonempty Intervals and Generalized Arrays</p>
-    <h1>Author</h1>
+    <h2>Author</h2>
     <p>Bradley J. Lucier</p>
-    <h1>Status</h1>
+    <h2>Status</h2>
     <p>This SRFI is currently in <em>draft</em> status.  Here is <a href="http://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi minus 122 at srfi dot schemers dot org">srfi-122@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="http://srfi-email.schemers.org/srfi-122">archive</a>.</p>
     <ul>
       <li>Received: 2015/7/23</li>
@@ -17,12 +17,12 @@
       <li>Draft #3 published: 2015/7/31</li>
       <li>Draft #4 published: 2015/9/03</li>
       <li>Draft #5 published: 2015/9/18</li></ul>
-    <h1>Abstract</h1>
+    <h2>Abstract</h2>
     <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general, and benefit from a data type
        called <i>intervals</i>, which encapsulate the cross product of nonempty intervals of exact integers. These intervals  specify the domain
       information for arrays. An array is then characterized as a mapping from multi-indices of exact integers (i<sub>0</sub>,...,i<sub>d-1</sub>)
       contained in an interval to Scheme values. Additionally, specialized variants of arrays are specified to provide portable programs with efficient representations for common use cases.</p>
-    <h1>Rationale</h1>
+    <h2>Rationale</h2>
     <p>An array, as commonly understood, provides a mapping from multi-indices  (i<sub>0</sub>,...,i<sub>d-1</sub>) of exact integers 
       in a nonempty, rectangular, d-dimensional interval
       [l<sub>0</sub>, u<sub>0</sub>) x [l<sub>1</sub>, u<sub>1</sub>) x ... x [l<sub>d-1</sub>, u<sub>d-1</sub>) to Scheme objects.
@@ -45,7 +45,7 @@
     <p>The backing store of a specialized-array, which may be a heterogeneous or homogeneous vector,
       is created, accessed, etc., via the components of an object we call a storage-class.  We define their properties below.</p>
     <p>The API of this SRFI uses keywords from SRFI-88 and the calling convention from SRFI-89 for optional and keyword arguments (although the implementation defines functions with keyword and optional arguments using DSSSL's notation, not the notation from SRFI-89).</p>
-    <h1>Examples of application areas</h1>
+    <h2>Examples of application areas</h2>
     <ul>
       <li>Many multi-dimensional transforms in signal processing are <i>separable</i>, in that that the multi-dimensional transform can be computed by applying one-dimensional transforms in each of the coordinate directions.  Examples of such transforms include the Fast Fourier Transform and the Fast Wavelet Transform.  Each one-dimensional subdomain of the complete domain is called a <i>pencil</i>, and the same one-dimensional transform is applied to all pencils in a given direction. This motivates us to define the various procedures *-distinguish-one-axis.</li>
       <li>Many applications have multi-dimensional data that behave differently in different coordinate directions.  For example, one might have a time series of maps, which can be stored in a single three-dimensional array.  Or one might have one-dimensional spectral data assigned to each pixel on a map.  The data cube as a whole is considered three-dimensional <i>hyperspectral</i> data, but for processing the spectra separately one would apply a function to the spectrum at each pixel.  This corresponds to <i>currying</i> arguments in programming languages, so we include such procedures here.</li>
@@ -57,10 +57,10 @@
                                                     (array-extract p^k
 								   (array-domain zero-image)))))
                         p)))</pre>(with suitable definitions for <code>array-max</code>, <code>array-average</code>, and <code>Point-length-R^4</code>) computes the maximum over a number of two-dimensional arrays of the average length of four-vectors in those arrays restricted to the domain of <code>zero-image</code>, without storing all of the elements of any of the intermediate arrays together.</li></ul>
-    <h1>Issues and Notes</h1>
+    <h2>Issues and Notes</h2>
     <ul>
       <li><b>Relationship to <a href="http://docs.racket-lang.org/math/array_nonstrict.html#%28tech._nonstrict%29">nonstrict arrays</a> in Racket. </b>It appears that what we call simply arrays in this SRFI are called nonstrict arrays in the math/array library of Racket, which in turn was influenced by an <a href="http://research.microsoft.com/en-us/um/people/simonpj/papers/ndp/RArrays.pdf">array proposal for Haskell</a>.  Our &quot;specialized&quot; arrays are related to Racket's &quot;strict&quot; arrays.</li>
-      <li><b>Indexers. </b>Both the arguments new-domain-&gt;old-domain to <code>specialized-array-share!</code> and indexer to <code>specialized-array</code> are conceptual arrays, 
+      <li><b>Indexers. </b>Both the arguments new-domain-&gt;old-domain to <code>specialized-array-share</code> and indexer to <code>specialized-array</code> are conceptual arrays, 
         the first multiple-valued and the second single-valued.</li>
       <li><b>Source of function names. </b>The function <code>array-curry</code> gets its name from the 
         <a href="http://en.wikipedia.org/wiki/Currying">curry operator</a> in programming---we are currying the getter of the array and keeping careful track of the domains. 
@@ -74,7 +74,7 @@
         <blockquote><code>(interval-intersect interval1 interval2 ...)</code>
         </blockquote> which don't seem terribly natural for arrays.  If you could use these functions in your programs, tell me (windowing systems, etc.?).</li>
       <li><b>No empty intervals. </b>This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.</li></ul>
-    <h1>Specification</h1>
+    <h2>Specification</h2>
     <dl>
       <dt>Intervals</dt>
       <dd><a href="#interval">interval</a>,
@@ -93,9 +93,7 @@
         <a href="#interval-curry">interval-curry</a>,
         <a href="#interval-distinguish-one-axis">interval-distinguish-one-axis</a>,
         <a href="#interval-for-each">interval-for-each</a>,
-        <a href="#interval-for-each-serial">interval-for-each-serial</a>,
         <a href="#interval-reduce">interval-reduce</a>,
-        <a href="#interval-reduce-serial">interval-reduce-serial</a>,
         <a href="#interval-dilate">interval-dilate</a>.</dd>
       <dt>Arrays</dt>
       <dd><a href="#array">array</a>,
@@ -110,15 +108,13 @@
         <a href="#array-curry">array-curry</a>,
         <a href="#array-distinguish-one-axis">array-distinguish-one-axis</a>,
         <a href="#array-for-each">array-for-each</a>,
-        <a href="#array-for-each-serial">array-for-each-serial</a>,
         <a href="#array-reduce">array-reduce</a>,
-        <a href="#array-reduce-serial">array-reduce-serial</a>.</dd>
+        <a href="#array-every?">array-every?</a>,
+        <a href="#array-extract">array-extract</a>.</dd>
       <dt>Mutable Arrays</dt>
       <dd><a href="#mutable-array">mutable-array</a>,
-        <a href="#mutable-array?">mutable-array?</a>,
-        <a href="#mutable-array-curry">mutable-array-curry</a>,
-        <a href="#mutable-array-distinguish-one-axis">mutable-array-distinguish-one-axis</a>.</dd>
-      <dt>Storage</dt>
+        <a href="#mutable-array?">mutable-array?</a>.</dd>
+      <dt>Storage Classes</dt>
       <dd><a href="#make-storage-class">make-storage-class</a>,
         <a href="#storage-class-getter">storage-class-getter</a>,
         <a href="#storage-class-setter">storage-class-setter</a>,
@@ -139,17 +135,12 @@
         <a href="#f64-storage-class">f64-storage-class</a>,
         <a href="#c64-storage-class">c64-storage-class</a>,
         <a href="#c128-storage-class">c128-storage-class</a>.</dd>
-      <dt>Indexers</dt>
-      <dd><a href="#indexer=">indexer=</a>.</dd>
       <dt>Specialized Arrays</dt>
       <dd><a href="#specialized-array-default-safe?">specialized-array-default-safe?</a>,
         <a href="#specialized-array">specialized-array</a>,
         <a href="#specialized-array?">specialized-array?</a>,
-        <a href="#specialized-array-curry">specialized-array-curry</a>,
-        <a href="#specialized-array-distinguish-one-axis">specialized-array-distinguish-one-axis</a>,
         <a href="#array-&gt;specialized-array">array-&gt;specialized-array</a>,
-        <a href="#array-&gt;specialized-array-serial">array-&gt;specialized-array-serial</a>,
-        <a href="#specialized-array-share!">specialized-array-share!</a>.</dd></dl>
+        <a href="#specialized-array-share">specialized-array-share</a>.</dd></dl>
     <h2>Intervals</h2>
     <p>Intervals are sets of all multi-indices
       (i<sub>0</sub>,...,i<sub>d-1</sub>)
@@ -236,7 +227,9 @@
 (and (equal? (map &gt;= (vector-&gt;list lower-bounds1) (vector-&gt;list lower-bounds2))
 	     (map (lambda (x) #t) (vector-&gt;list lower-bounds1)))
      (equal? (map &lt;= (vector-&gt;list upper-bounds1) (vector-&gt;list upper-bounds2))
-	     (map (lambda (x) #t) (vector-&gt;list lower-bounds1))))</pre>
+	     (map (lambda (x) #t) (vector-&gt;list lower-bounds1))))
+</pre>
+    <p>In other words, it returns #t if interval1 is a subset of interval2, and #f othewise.</p>
     <p>It is an error to call <code>interval-subset?</code> if <code><var>interval1</var></code> or <code><var>interval2</var></code> do not satisfy this condition.</p>
     <p><b>Procedure: </b><code><a name="interval-contains-multi-index?">interval-contains-multi-index?</a> <var>interval</var> <var>index-0</var> <var>...</var></code></p>
     <p>If <code><var>interval</var></code> is an interval with dimension d and <code><var>index-0</var></code>, ..., form a multi-index of length d,
@@ -288,22 +281,19 @@
 	(interval (vector (interval-lower-bound interval index))
 		  (vector (interval-upper-bound interval index))))</pre>
     <p>It is an error to call <code>interval-distinguish-one-axis</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="interval-for-each">interval-for-each</a> <var>f</var> <var>interval</var></code></p>
-    <p><b>Procedure: </b><code><a name="interval-for-each-serial">interval-for-each-serial</a> <var>f</var> <var>interval</var></code></p>
-    <p>These routines assume that <code><var>interval</var></code> is an interval and <code><var>f</var></code> is a routine whose domain includes elements of <code><var>interval</var></code>.  It is an error to call
+    <p><b>Procedure: </b><code><a name="interval-for-each">interval-for-each</a> <var>f</var> <var>interval</var> [ <var>serial</var> #f ]</code></p>
+    <p>This routine assumes that <code><var>interval</var></code> is an interval and <code><var>f</var></code> is a routine whose domain includes elements of <code><var>interval</var></code>.  It is an error to call
       <code>interval-for-each</code> if <code><var>interval</var></code> and <code><var>f</var></code> do not satisfy these conditions.</p>
-    <p><code>interval-for-each</code> calls <code><var>f</var></code> on each element of <code><var>interval</var></code> in some unspecified order.</p>
-    <p><code>interval-for-each-serial</code> calls <code><var>f</var></code> on each element of <code><var>interval</var></code> in lexicographical order.</p>
-    <p><b>Procedure: </b><code><a name="interval-reduce">interval-reduce</a> <var>f</var> <var>operator</var> <var>identity</var> <var>interval</var></code></p>
-    <p><b>Procedure: </b><code><a name="interval-reduce-serial">interval-reduce-serial</a> <var>f</var> <var>operator</var> <var>identity</var> <var>interval</var></code></p>
-    <p>If <code><var>interval</var></code> is an interval and <code><var>f</var></code> is a routine whose domain includes elements of <code><var>interval</var></code>, then
-      <code>interval-reduce-serial</code> returns</p>
+    <p>If <code><var>serial</var></code> is omitted or #f, then <code>interval-for-each</code> calls <code><var>f</var></code> on each element of <code><var>interval</var></code> in some unspecified order. Otherwise <code>interval-for-each-serial</code> calls <code><var>f</var></code> on each element of <code><var>interval</var></code> in lexicographical order.</p>
+    <p><b>Procedure: </b><code><a name="interval-reduce">interval-reduce</a> <var>f</var> <var>operator</var> <var>identity</var> <var>interval</var> [ <var>serial</var> #f ]</code></p>
+    <p>If <code><var>interval</var></code> is an interval, <code><var>f</var></code> is a routine whose domain includes elements of <code><var>interval</var></code>, and <code><var>serial</var></code> is not #f, then
+      <code>interval-reduce</code> returns</p>
     <blockquote><code>(... (<var>operator</var> (<var>operator</var> (<var>operator identity </var>(<var>f multi-index</var><sub>1</sub>)) (<var>f multi-index</var><sub>2</sub>)) (<var>f multi-index</var><sub>3</sub>)) ...)</code>
     </blockquote>
     <p>where <code><var>multi-index</var><sub>1</sub></code>, <code><var>multi-index</var><sub>2</sub></code>, ... are the multi-indices in <code><var>interval</var></code> in lexicographical order.</p>
-    <p><code>interval-reduce</code> returns the same value when <code><var>operator</var></code> is associative and it doesn't matter in which order <code><var>f</var></code> is evaluated, and
+    <p><code>interval-reduce</code> returns the same value when <var><code>serial</code></var> is #f and <code><var>operator</var></code> is associative and it doesn't matter in which order <code><var>f</var></code> is evaluated, and
       it may assume these properties.</p>
-    <p>It is an error to call <code>interval-reduce</code> or <code>interval-reduce-serial</code> if <code><var>interval</var></code> and <code><var>f</var></code> do not satisfy these conditions.</p>
+    <p>It is an error to call <code>interval-reduce</code> if <code><var>interval</var></code> and <code><var>f</var></code> do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a name="interval-dilate">interval-dilate</a> <var>interval</var> <var>lower-diffs</var> <var>upper-diffs</var></code></p>
     <p>If <code><var>interval</var></code> is an interval with
       lower bounds l<sub>0</sub>, ..., l<sub>d-1</sub> and
@@ -364,54 +354,72 @@
 (lambda multi-index
   (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))</pre>
     <p>It is an error to call <code>array-map</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="array-curry">array-curry</a> <var>array</var> <var>outer-dimension</var></code></p>
-    <p>If <code><var>array</var></code> is an array and <code><var>outer-dimension</var></code> is an exact integer that satisfies</p>
+    <p><b>Procedure: </b><code><a name="array-curry">array-curry</a> <var>array</var> <var>outer-dimension</var> [ <var>subarray-type</var> 'immutable ]</code></p>
+    <p>If <code><var>array</var></code> is an array whose domain is an interval  [l<sub>0</sub>, u<sub>0</sub>) x  ... x [l<sub>d-1</sub>, u<sub>d-1</sub>) and <code><var>outer-dimension</var></code> is an exact integer strictly between 0 and d, then array-curry returns an (immutable) array with domain [l<sub>0</sub>, u<sub>0</sub>) x ...x [l<sub>outer-dimension-1</sub>, u<sub>outer-dimension-1</sub>), each of whose entries is in itself an array with domain [l<sub>outer-dimension</sub>, u<sub>outer-dimension</sub>) x ... x [l<sub>d-1</sub>, u<sub>d-1</sub>).</p>
+    <p>The type of the subarrays is determined by the optional argument <code>subarray-type</code> in combination with the type of the input array.</p>
+    <p>If <code>subarray-type</code> is 'mutable, and the input array is mutable (which includes specialized arrays), then each subarray is mutable.</p>
+    <p>If <code>subarray-type</code> is 'specialized and the input array is specialized, then each subarray is specialized.</p>
+    <p>More precisely, if </p>
     <blockquote><code>0 &lt; <var>outer-dimension</var> &lt; (interval-dimension (array-domain <var>array</var>))</code>
     </blockquote>
-    <p>then <code>array-curry</code> returns</p>
+    <p>then <code>array-curry</code> returns a result as follows: If  subarray-type is not given, or is given as 'immutable, then array-curry returns</p>
     <pre>
 (call-with-values
     (lambda () (interval-curry (array-domain array) outer-dimension))
   (lambda (outer-interval inner-interval)
     (array outer-interval
-		 (lambda outer-multi-index
-		   (array inner-interval
-				(lambda inner-multi-index
-				  (apply (array-getter array) (append outer-multi-index inner-multi-index))))))))</pre>
-    <p>It is an error to call <code>array-curry</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Notes:</b> This function curries <code>(array-getter <var>array</var>)</code> while keeping track of the
-      domains of the outer and inner lambdas.</p>
-    <p>It is expected that <code>array-curry</code> will specialize the construction of</p>
+	   (lambda outer-multi-index
+	     (array inner-interval
+		    (lambda inner-multi-index
+		      (apply (array-getter array) (append outer-multi-index inner-multi-index))))))))</pre>
+    <p>If  subarray-type is given as 'mutable and the input array is mutable, then array-curry returns</p>
     <pre>
-(lambda outer-multi-index
-  (array inner-interval
-	       (lambda inner-multi-index
-		 (apply (array-getter array) (append outer-multi-index inner-multi-index)))))</pre>
-    <p>and</p>
-    <blockquote><code>(lambda inner-multi-index (apply (array-getter array) (append outer-multi-index inner-multi-index)))</code>
-    </blockquote>
+(call-with-values
+    (lambda () (interval-curry (array-domain array) outer-dimension))
+  (lambda (outer-interval inner-interval)
+    (array outer-interval
+	   (lambda outer-multi-index
+	     (mutable-array inner-interval
+			    (lambda inner-multi-index
+			      (apply (array-getter array) (append outer-multi-index inner-multi-index)))
+			    (lambda (v . inner-multi-index)
+			      (apply (array-setter array) v (append outer-multi-index inner-multi-index))))))))</pre>
+    <p>And if subarray-type is given as 'specialized and the input array is specialized, then array-curry returns</p>
+    <pre>
+(call-with-values
+    (lambda () (interval-curry (array-domain array) outer-dimension))
+  (lambda (outer-interval inner-interval)
+    (array outer-interval
+	   (lambda outer-multi-index
+	     (specialized-array-share array
+				      inner-interval
+				      (lambda inner-multi-index
+					(apply values (append outer-multi-index inner-multi-index))))))))</pre>
+    <p>It is an error to call <code>array-curry</code> if its arguments do not satisfy these conditions.</p>
     <p>Example:</p>
     <pre>
 (define a (array (interval '#(0 0) '#(10 10))
-		       list))
+		 list))
 ((array-getter a) 3 4)  =&gt; (3 4)
 (define curried-a (array-curry a 1))
 ((array-getter ((array-getter curried-a) 3)) 4) =&gt; (3 4)</pre>
-    <p><b>Procedure: </b><code><a name="array-distinguish-one-axis">array-distinguish-one-axis</a> <var>array</var> <var>index</var></code></p>
-    <p>If <code><var>array</var></code> is an array and
-      <code>(interval-dimension (array-domain <var>interval</var>))</code> is greater than one, and</p>
+    <p><b>Procedure: </b><code><a name="array-distinguish-one-axis">array-distinguish-one-axis</a> <var>array</var> <var>index</var> [ <var>subarray-type</var> 'immutable ]</code></p>
+    <p>If <code><var>array</var></code> is an array,
+      <code>(interval-dimension (array-domain <var>interval</var>))</code> is greater than one, subarray-type is either omitted or given as 'immutable, and</p>
     <blockquote><code>0 &lt;= <var>index</var> &lt; (interval-dimension (array-domain <var>interval</var>))</code>
     </blockquote>
     <p>then <code>array-distinguish-one-axis</code> returns</p>
     <pre>
-(call-with-values
-    (lambda () (interval-distinguish-one-axis (array-domain array) index))
-  (lambda (outer-interval inner-interval)
-    (array outer-interval
-		 (lambda outer-multi-index
-		   (array inner-interval
-				(lambda (m)
-				  (apply (array-getter array) (insert-arg-into-arg-list m outer-index index))))))))</pre>
+(let ((domain (array-domain array))
+      (getter (array-getter array)))
+  (call-with-values
+      (lambda () (interval-distinguish-one-axis domain index))
+    (lambda (outer-interval inner-interval)
+      (array outer-interval
+	     (lambda outer-multi-index
+	       (array inner-interval
+		      (lambda (m)
+			(apply getter (insert-arg-into-arg-list m outer-index index)))))))))</pre>
     <p>where we define </p>
     <pre>
 (define (insert-arg-into-arg-list arg arg-list index)
@@ -420,38 +428,56 @@
 	(cons arg arg-list)
 	(cons arg (helper (cdr arg-list) (- i 1)))))
   (helper arg-list index))</pre>
-    <p>It is an error to call <code>array-distinguish-one-axis</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Notes:</b> It is expected that <code>array-distinguish-one-axis</code> will specialize the construction of </p>
+    <p>In other words, array-distinguish-one-axis decomposes the input array into an array of one-dimensional (immutable) subarrays, with the subarrays aligned along the axis specified by the index.</p>
+    <p>If the input array is mutable (which includes specialized arrays) and subarray-type is given as 'mutable, then <code>array-distinguish-one-axis</code> returns</p>
     <pre>
-(lambda outer-multi-index
-  (array inner-interval
-	       (lambda (m)
-		 (apply (array-getter array) (insert-arg-into-arg-list m outer-index index)))))</pre>
-    <p>and</p>
+(let ((domain (array-domain array))
+      (getter (array-getter array))
+      (setter (array-setter array)))
+  (call-with-values
+      (lambda () (interval-distinguish-one-axis domain index))
+    (lambda (outer-interval inner-interval)
+      (array outer-interval
+	     (lambda outer-multi-index
+	       (mutable-array inner-interval
+			      (lambda (m)
+				(apply getter (insert-arg-into-arg-list m outer-index index)))
+			      (lambda (v m)
+				(apply setter v (insert-arg-into-arg-list m outer-index index)))))))))</pre>
+    <p>So in this case <code>array-distinguish-one-axis</code> decomposes the input array into an immutable array of mutable one-dimensional arrays.</p>
+    <p>If the input array is specialized  and subarray-type is given as 'specialized, then <code>array-distinguish-one-axisaindexquotespecialized</code> returns</p>
+    <pre>
+(call-with-values
+    (lambda () (interval-distinguish-one-axis (specialized-array-domain a) index))
+  (lambda (outer-interval inner-interval)
+    (array outer-interval
+	   (lambda outer-multi-index
+	     (specialized-array-share a
+				      inner-interval
+				      (lambda (m) (apply values (insert-arg-into-arg-list m outer-index index))))))))</pre>
+    <p>So in this case <code>array-distinguish-one-axis</code> decomposes the input array into an immutable array of specialized one-dimensional arrays.</p>
+    <p>It is an error to call <code>array-distinguish-one-axis</code> if its arguments do not satisfy these conditions.</p>
+    <p><b>Notes:</b> It is expected that <code>array-distinguish-one-axis</code> will specialize the construction of, e.g., </p>
     <blockquote><code>(lambda (m) (apply (array-getter array) (insert-arg-into-arg-list m outer-index index)))</code>
     </blockquote>
     <p><b>Procedure: </b><code><a name="array-for-each">array-for-each</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
-    <p><b>Procedure: </b><code><a name="array-for-each-serial">array-for-each-serial</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
     <p>If <code><var>array</var></code>, <code>(car <var>arrays</var>)</code>, ... all have the same domain <code><var>domain</var></code> and <code><var>f</var></code> is an appropriate function, then <code>array-for-each</code>
       calls</p>
     <pre>
 (interval-for-each  (lambda multi-index
 		      (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))
-		    (array-domain array))</pre>
-    <p>and <code>array-for-each-serial</code>
-      calls</p>
-    <pre>
-(interval-for-each-serial  (lambda multi-index
-			     (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))
-			   (array-domain array))</pre>
-    <p>It is expected that <code>array-map</code>, <code>array-for-each</code> and <code>array-for-each-serial</code> will specialize the construction of</p>
+		    (array-domain array)
+		    #t)</pre>
+    <p>In particular, <code>array-for-each</code> always calls walks the indices of the arrays in lexicographical order.</p>
+    <p>It is expected that <code>array-map</code> and <code>array-for-each</code> will specialize the construction of</p>
     <pre>
 (lambda multi-index
   (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))</pre>
     <p>It is an error to call <code>array-for-each</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="array-reduce">array-reduce</a> <var>operator</var> <var>identity</var> <var>array</var></code></p>
-    <p><b>Procedure: </b><code><a name="array-reduce-serial">array-reduce-serial</a> <var>operator</var> <var>identity</var> <var>array</var></code></p>
-    <p>If <code><var>array</var></code>  is an array then <code>array-reduce</code> returns <code>(interval-reduce (array-getter <var>array</var>) <var>operator identity</var> (array-domain <var>array</var>))</code> and <code>array-reduce-serial</code> returns <code>(interval-reduce-serial (array-getter <var>array</var>) <var>operator identity</var> (array-domain <var>array</var>))</code>.</p>
+    <p><b>Procedure: </b><code><a name="array-reduce">array-reduce</a> <var>operator</var> <var>identity</var> <var>array</var> [ <var>serial</var> #f ]</code></p>
+    <p>If <code><var>array</var></code>  is an array then <code>array-reduce</code> returns <code>(interval-reduce (array-getter <var>array</var>) <var>operator identity</var> (array-domain <var>array</var>)<var>serial</var>)</code>.</p>
+    <p><b>Procedure: </b><code><a name="array-every?">array-every?</a> <var>proc</var> <var>array</var></code></p>
+    <p>Returns <code>#f</code> if <code><var>proc</var></code> is not true of every element of array, and another, non-false, value otherwise.</p>
     <p><b>Procedure: </b><code><a name="array-extract">array-extract</a> <var>array</var> <var>new-domain</var></code></p>
     <p>If <code><var>array</var></code> is an array and <code><var>new-domain</var></code> is an interval that is a sub-interval of <code>(array-domain <var>array</var>)</code>, then <code>array-extract</code> returns a new array</p>
     <blockquote><code>(array <var>new-domain</var> (array-getter <var>array</var>))</code>
@@ -507,80 +533,6 @@
 ((array-setter sparse-array) 1.0 0 0) =&gt; undefined
 ((array-getter sparse-array) 12345 6789)  =&gt; 0.
 ((array-getter sparse-array) 0 0) =&gt; 1.</pre>
-    <p><b>Procedure: </b><code><a name="mutable-array-curry">mutable-array-curry</a> <var>array</var> <var>outer-dimension</var></code></p>
-    <p>If <code><var>array</var></code> is a mutable-array and <code><var>outer-dimension</var></code> is an exact integer that satisfies</p>
-    <blockquote><code>0 &lt; <var>outer-dimension</var> &lt; (interval-dimension (array-domain <var>array</var>))</code>
-    </blockquote>
-    <p>then <code>mutable-array-curry</code> returns</p>
-    <pre>
-(call-with-values
-    (lambda () (interval-curry (array-domain array) outer-dimension))
-  (lambda (outer-interval inner-interval)
-    (array outer-interval
-	   (lambda outer-multi-index
-	     (mutable-array inner-interval
-			    (lambda inner-multi-index
-			      (apply (array-getter array) (append outer-multi-index inner-multi-index)))
-			    (lambda (v . inner-multi-index)
-			      (apply (array-setter array) v (append outer-multi-index inner-multi-index))))))))</pre>
-    <p>It is an error to call <code>mutable-array-curry</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Notes:</b> This function curries <code>(array-getter <var>array</var>)</code>
-      and <code>(array-setter <var>array</var>)</code> while keeping track of the
-      domains of the outer and inner lambdas.</p>
-    <p>It is expected that <code>mutable-array-curry</code> will specialize the construction of</p>
-    <pre>
-(lambda outer-multi-index
-  (mutable-array inner-interval
-		       (lambda inner-multi-index
-			 (apply (array-getter array) (append outer-multi-index inner-multi-index)))
-		       (lambda (v . inner-multi-index)
-			 (apply (array-setter array) v (append outer-multi-index inner-multi-index)))))</pre>
-    <p>and</p>
-    <blockquote><code>(lambda inner-multi-index (apply (array-getter array) (append outer-multi-index inner-multi-index)))</code>
-    </blockquote>
-    <p>and</p>
-    <blockquote><code>(lambda (v . inner-multi-index) (apply (array-setter array) v (append outer-multi-index inner-multi-index)))</code>
-    </blockquote>
-    <p><b>Procedure: </b><code><a name="mutable-array-distinguish-one-axis">mutable-array-distinguish-one-axis</a> <var>array</var> <var>index</var></code></p>
-    <p>If <code><var>array</var></code> is a mutable-array and
-      <code>(interval-dimension (array-domain <var>interval</var>))</code> is greater than one, and</p>
-    <blockquote><code>0 &lt;= <var>index</var> &lt; (interval-dimension (array-domain <var>interval</var>))</code>
-    </blockquote>
-    <p>then <code>mutable-array-distinguish-one-axis</code> returns</p>
-    <pre>
-(call-with-values
-    (lambda () (interval-distinguish-one-axis (array-domain array) index))
-  (lambda (outer-interval inner-interval)
-    (array outer-interval
-		 (lambda outer-multi-index
-		   (mutable-array inner-interval
-					(lambda (m)
-					  (apply (array-getter array) (insert-arg-into-arg-list m outer-index index)))
-					(lambda (v m)
-					  (apply (array-setter array) v (insert-arg-into-arg-list m outer-index index))))))))</pre>
-    <p>where we define </p>
-    <pre>
-(define (insert-arg-into-arg-list arg arg-list index)
-  (define (helper arg-list i)
-    (if (= i 0)
-	(cons arg arg-list)
-	(cons arg (helper (cdr arg-list) (- i 1)))))
-  (helper arg-list index))</pre>
-    <p>It is an error to call <code>mutable-array-distinguish-one-axis</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Notes:</b> It is expected that <code>mutable-array-distinguish-one-axis</code> will specialize the construction of </p>
-    <pre>
-(lambda outer-multi-index
-  (mutable-array inner-interval
-		       (lambda (m)
-			 (apply (array-getter array) (insert-arg-into-arg-list m outer-index index)))
-		       (lambda (v m)
-			 (apply (array-setter array) v (insert-arg-into-arg-list m outer-index index)))))</pre>
-    <p>and</p>
-    <blockquote><code>(lambda (m) (apply (array-getter array) (insert-arg-into-arg-list m outer-index index)))</code>
-    </blockquote>
-    <p>and</p>
-    <blockquote><code>(lambda (v m) (apply (array-setter array) v (insert-arg-into-arg-list m outer-index index)))</code>
-    </blockquote>
     <h2>Storage classes</h2>
     <p>Conceptually, a storage-class is a set of functions to manage the backing store of a specialized-array.
       The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogenous) vector.</p>
@@ -631,14 +583,6 @@
     <code>c<var>X</var>-storage-class</code> is defined for <code><var>X</var></code>= 64 and 128 (which have default value 0.0+0.0i and manipulate complex numbers with, respectively,32- and 64-bit floating-point numbers as real and imaginary parts).  Each of these
     could be defined simply as generic-storage-class, but it is assumed that implementations with homogeneous arrays will give definitions
     that either save space, avoid boxing, etc., for the specialized arrays.
-    <h2>Indexers</h2>
-    <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a name="indexer=">indexer=</a> <var>indexer1</var> <var>indexer2</var> <var>interval</var></code></p>
-    <p>If <code><var>indexer1</var></code> and <code><var>indexer2</var></code> are one-to-one affine mappings from <code><var>interval</var></code>
-      to the interval <code>[0,<var>K</var>)</code> for some <code><var>K</var></code>, then <code>indexer=</code> returns <code>#t</code>
-      if <code><var>indexer1</var></code> and <code><var>indexer2</var></code> take the same values on all elements of <code><var>interval</var></code>;
-      otherwise <code>indexer=</code> returns <code>#f</code>.  It is an error to call <code>indexer=</code> if its
-      arguments don't satisfy these conditions.</p>
     <h2>Specialized Arrays</h2>
     <h3>Global Variable</h3>
     <p><b>Variable: </b><code><a name="specialized-array-default-safe?">specialized-array-default-safe?</a></code></p>
@@ -680,18 +624,18 @@
     <p><b>Procedure: </b><code><a name="array-storage-class">array-storage-class</a> <var>array</var></code></p>
     <p><b>Procedure: </b><code><a name="array-safe?">array-safe?</a> <var>array</var></code></p>
     <p><code>array-body</code> returns the body of <code><var>array</var></code>, <code>array-indexer</code> returns the indexer of <code><var>array</var></code>, <code>array-storage-class</code> returns the storage-class of <code><var>array</var></code>, and <code>array-safe?</code> is true if and only if the arguments of <code>(array-getter <var>array</var>)</code> and <code>(array-setter <var>array</var>)</code> are checked for correctness. It is an error to call any of these routines if <code><var>array</var></code> is not a specialized-array.</p>
-    <p><b>Procedure: </b><code><a name="specialized-array-share!">specialized-array-share!</a> <var>array</var> <var>new-domain</var> <var>new-domain-&gt;old-domain</var></code></p>
+    <p><b>Procedure: </b><code><a name="specialized-array-share">specialized-array-share</a> <var>array</var> <var>new-domain</var> <var>new-domain-&gt;old-domain</var></code></p>
     <p>Constructs a new specialized-array that shares the body of the specialized-array <code><var>array</var></code>.
       Returns an object that is behaviorally equivalent to</p>
     <pre>
 (specialized-array domain:        new-domain
-	     storage-class: (array-storage-class array)
-	     body:          (array-body array)
-	     indexer:       (lambda multi-index
-			      (call-with-values
-				  (lambda ()
-				    (apply new-domain-&gt;old-domain multi-index))
-			        (specialized-array-indexer array))))</pre>
+		   storage-class: (array-storage-class array)
+		   body:          (array-body array)
+		   indexer:       (lambda multi-index
+				    (call-with-values
+					(lambda ()
+					  (apply new-domain-&gt;old-domain multi-index))
+				      (specialized-array-indexer array))))</pre>
     <p><code><var>new-domain-&gt;old-domain</var></code> must be an affine one-to-one mapping from <code>(array-domain <var>array</var>)</code> to
       <code><var>new-domain</var></code>.</p>
     <p>Note: It is assumed that affine structure of the composition of <code><var>new-domain-&gt;old-domain</var></code> and <code>(specialized-array-indexer <var>array</var></code> will be used to simplify:</p>
@@ -701,95 +645,26 @@
       (lambda ()
 	(apply new-domain-&gt;old-domain multi-index))
     (specialized-array-indexer array)))</pre>
-    <p><b>Procedure: </b><code><a name="specialized-array-curry">specialized-array-curry</a> <var>array</var> <var>outer-dimension</var></code></p>
-    <p>It is an error to call <code>specialized-array-curry</code> unless
-       <code><var>array</var></code> is a specialized-array
-      and <code><var>outer-dimension</var></code> is an exact integer that satisfies</p>
-    <blockquote><code>0 &lt; <var>outer-dimension</var> &lt; (interval-dimension (specialized-array-domain <var>array</var>)).</code>
-    </blockquote>
-    <p><code>specialized-array-curry</code> returns</p>
-    <pre>
-(call-with-values
-    (lambda () (interval-curry (specialized-array-domain array) outer-dimension))
-  (lambda (outer-interval inner-interval)
-    (array outer-interval
-	   (lambda outer-multi-index
-	     (specialized-array-share! array
-				 outer-interval
-				 (lambda inner-multi-index
-				   (apply values (append outer-multi-index inner-multi-index))))))))</pre>
-    <p><b>Notes:</b> This function curries <code>(array-getter <var>array</var>)</code>
-      and <code>(array-setter <var>array</var>)</code> while keeping track of the
-      domains of the outer and inner lambdas.</p>
-    <p>It is expected that <code>specialized-array-curry</code> will specialize the construction of</p>
-    <blockquote><code>(lambda outer-multi-index
-      		   (specialized-array-share! array
-      				       outer-interval
-      				       (lambda inner-multi-index
-      					 (apply values (append outer-multi-index inner-multi-index)))))</code>
-    </blockquote>
-    <p><b>Procedure: </b><code><a name="specialized-array-distinguish-one-axis">specialized-array-distinguish-one-axis</a> <var>array</var> <var>index</var></code></p>
-    <p>It is an error to call <code>specialized-array-distinguish-one-axis</code> unless
-       <code><var>array</var></code> is a specialized-array and
-      <code>(interval-dimension (specialized-array-domain <var>interval</var>))</code> is greater than one, and</p>
-    <blockquote><code>0 &lt;= <var>index</var> &lt; (interval-dimension (specialized-array-domain <var>array</var>))</code>
-    </blockquote>
-    <p><code>specialized-array-distinguish-one-axis</code> returns</p>
-    <pre>
-(call-with-values
-    (lambda () (interval-distinguish-one-axis (specialized-array-domain array) index))
-  (lambda (outer-interval inner-interval)
-    (array outer-interval
-		 (lambda outer-multi-index
-		   (specialized-array-share! array
-				       inner-interval
-				       (lambda (m) (apply values (insert-arg-into-arg-list m outer-index index))))))))</pre>
-    <p>where we define </p>
-    <pre>
-(define (insert-arg-into-arg-list arg arg-list index)
-  (define (helper arg-list i)
-    (if (= i 0)
-	(cons arg arg-list)
-	(cons arg (helper (cdr arg-list) (- i 1)))))
-  (helper arg-list index))</pre>
-    <p>It is expected that <code>specialized-array-distinguish-one-axis</code> will specialize the construction of </p>
-    <pre>
-(lambda outer-multi-index
-  (specialized-array-share! array
-		      inner-interval
-		      (lambda (m) (apply values (insert-arg-into-arg-list m outer-index index)))))</pre>
     <p><b>Procedure: </b><code><a name="array-&gt;specialized-array">array-&gt;specialized-array</a> <var>array</var> [ <var>result-storage-class</var> generic-storage-class ] [ <var>safe?</var> #f ]</code></p>
-    <p><b>Procedure: </b><code><a name="array-&gt;specialized-array-serial">array-&gt;specialized-array-serial</a> <var>array</var> [ <var>result-storage-class</var> generic-storage-class [ <var>safe?</var> #f ]</code></p>
     <p>If <code><var>array</var></code> is an array whose elements can be manipulated by the storage-class
       <code><var>result-storage-class</var></code>, then the specialized-array returned by <code>array-&gt;specialized-array</code> can be defined by:</p>
     <pre>
 (let ((result (specialized-array domain:        (array-domain array)
-			   storage-class: result-storage-class
-			   safe?:         safe?)))
+				 storage-class: result-storage-class
+				 safe?:         safe?)))
   (interval-for-each (lambda multi-index
 		       (apply (array-setter result) (apply (array-getter array) multi-index) multi-index))
-		     (array-domain array))
+		     (array-domain array)
+		     #t)
   result)</pre>
+    <p>In particular, the indices of the domain are visited in lexicographical order.</p>
     <p>Otherwise it is an error to call <code>array-&gt;specialized-array</code>.</p>
-    <p><code>array-&gt;specialized-array</code>  does not specify
-      the order in which <code>(array-getter <var>array</var>)</code> is applied to the multi-indices in <code>(array-domain <var>array</var>)</code>.</p>
-    <p>Similarly, the specialized-array returned by <code>array-&gt;specialized-array-serial</code> can be defined by:</p>
-    <pre>
-(let ((result (specialized-array domain:        (array-domain array)
-			   storage-class: result-storage-class
-			   safe?:         safe?)))
-  (interval-for-each-serial (lambda multi-index
-			      (apply (array-setter result) (apply (array-getter array) multi-index) multi-index))
-			    (array-domain array))
-  result)</pre>
-    <p>Thus, <code>array-&gt;specialized-array-serial</code> evaluates <code>(array-getter <var>array</var>)</code> to the multi-indices in
-      <code>(array-domain <var>array</var>)</code> in lexicographical order.</p>
-    <h1>Implementation</h1>
+    <h2>Implementation</h2>
     <p>We provide an implementation in Gambit-C; the nonstandard techniques used
       in the implementation are: DSSSL-style optional and keyword arguments; a
       unique object to indicate absent arguments; <code>define-structure</code>;
       and <code>define-macro</code>.</p>
-    <h1>Relationship to other SRFIs</h1>
+    <h2>Relationship to other SRFIs</h2>
     <p>Final SRFIs <a href="#SRFI-25">25</a>, <a href="#SRFI-47">47</a>, <a href="#SRFI-58">58</a>, and <a href="#SRFI-63">63</a> deal with &quot;Multi-dimensional Array Primitives&quot;, &quot;Array&quot;, &quot;Array Notation&quot;,
       and &quot;Homogeneous and Heterogeneous Arrays&quot;, respectively.  Each of these previous SRFIs deal with what we call in this SRFI
       specialized-arrays.  Many of the functions in these previous SRFIs  have corresponding forms in this SRFI.  For example, from SRFI 63, we can
@@ -802,7 +677,7 @@
       <dt><code>(make-array prototype k1 ...)</code></dt>
       <dd><code>(specialized-array domain: (interval (vector 0 ...) (vector k1 ...)) storage-class: storage-class)</code>.</dd>
       <dt><code>(make-shared-array array mapper k1 ...)</code></dt>
-      <dd><code>(specialized-array-share! array (interval (vector 0 ...) (vector k1 ...)) mapper)</code></dd>
+      <dd><code>(specialized-array-share array (interval (vector 0 ...) (vector k1 ...)) mapper)</code></dd>
       <dt><code>(array-in-bounds? array index1 ...)</code></dt>
       <dd><code>(interval-contains-multi-index? (array-domain array) index1 ...)</code></dd>
       <dt><code>(array-ref array k1 ...)</code></dt>
@@ -818,7 +693,7 @@
       <li>Intervals cannot be empty.</li>
       <li>Arrays must have a getter, but may have no setter.  For example, on a system with eight-bit chars, one
         can write a function to read greyscale images in the PGM format of the netpbm package as follows.  The  lexicographical
-        order in array-&gt;specialized-array-serial guarantees the the correct order of execution of the input procedures:
+        order in array-&gt;specialized-array guarantees the the correct order of execution of the input procedures:
         <pre>
 (define make-pgm   cons)
 (define pgm-greys  car)
@@ -850,15 +725,34 @@
 	    ((eq? ch #\#) (skip-to-end-of-line port)(skip-white-space port))
 	    (else #f))))
 
+  ;; The image file formats defined in netpbm are problematical, because
+  ;; they read the data in the header as variable-length ISO-8859-1 text, including
+  ;; arbitrary whitespace and comments, and then they may read the rest of the file
+  ;; as binary data.
+  ;; So we give here a solution of how to deal with these subtleties in Gambit Scheme.
+  
   (call-with-input-file
-      file
+      (list path:          file
+	    char-encoding: 'ISO-8859-1
+	    eol-encoding:  'lf)
     (lambda (port)
+
+      ;; We're going to read text for a while, then switch to binary.
+      ;; So we need to turn off buffering until we switch to binary.
+
+      (port-settings-set! port '(buffering: #f))
+      
       (let* ((header (read-pgm-object port))
 	     (columns (read-pgm-object port))
 	     (rows (read-pgm-object port))
 	     (greys (read-pgm-object port)))
+
+	;; now we switch back to buffering to speed things up
+
+	(port-settings-set! port '(buffering: #t))
+	
 	(make-pgm greys
-		  (array-&gt;specialized-array-serial
+		  (array-&gt;specialized-array
 		   (array
 		    (interval '#(0 0)
 			      (vector rows columns))
@@ -877,7 +771,43 @@
 			     (read port)))
 			  (else
 			   (error &quot;read-pgm: not a pgm file&quot;))))))))))</pre></li></ul>
-    <h1>References</h1>
+    <h2>Other examples</h2>
+    <p>While the author of this SRFI thinks it's important to emphasize that arrays are not matrices and matrices are not arrays, matrix operations can provide insightful applications of this SRFI.</p>
+    <p>For example, we could define the matrix </p>
+    <pre>
+(define m
+  (array-&gt;specialized-array
+   (array (interval '#(0 0)
+		    '#(40 30))
+	  (lambda (i j)
+	    (exact-&gt;inexact (+ i j))))))
+</pre>
+    <p>If we define the functions on arrays (treated now as vectors) </p>
+    <pre>
+(define (array-sum a)
+  (array-reduce + 0 a))
+(define (array-max a)
+  (array-reduce max -inf.0 a))
+
+(define (max-norm a)
+  (array-max (array-map abs a)))
+(define (one-norm a)
+  (array-sum (array-map abs a)))
+</pre>
+    <p>then we could define the norms on arrays (treated as matrices)</p>
+    <pre>
+(define (operator-max-norm a)
+  (max-norm (array-map one-norm (array-distinguish-one-axis a 0))))
+(define (operator-one-norm a)
+  (max-norm (array-map one-norm (array-distinguish-one-axis a 1))))
+</pre>
+    <p>and find</p>
+    <pre>
+(operator-max-norm m) =&gt; 1940.
+(operator-one-norm m) =&gt; 1605.
+</pre>
+    <p>See <a href="https://en.wikipedia.org/wiki/Matrix_norm">Wikipedia's discussion of matrix norms</a> for details.</p>
+    <h2>References</h2>
     <ol>
       <li><a name="bawden" href="http://groups-beta.google.com/group/comp.lang.scheme/msg/6c2f85dbb15d986b?hl=en&amp;">&quot;multi-dimensional arrays in R5RS?&quot;</a>, by Alan Bawden.</li>
       <li><a name="SRFI-4" href="http://srfi.schemers.org/srfi-4/">SRFI 4:  Homogeneous Numeric Vector Datatypes</a>, by Marc Feeley.</li>

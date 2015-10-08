@@ -377,26 +377,16 @@
 ;;; Applies f to every element of the domain; assumes that f is thread-safe,
 ;;; the order of application is not specified
 
-(define (interval-for-each f interval)
+(define (interval-for-each f interval #!optional (serial #f))
   (cond ((not (interval? interval))
 	 (error "interval-for-each: Argument is not a interval: " interval))
 	((not (procedure? f))
 	 (error "interval-for-each: Argument is not a procedure: " f))
 	(else
-	 (##interval-for-each f interval))))
+	 (##interval-for-each f interval serial))))
 
-(define (##interval-for-each f interval)
+(define (##interval-for-each f interval serial)
   (##interval-for-each-serial f interval))
-
-;;; Applies f to every element of the domain, in lexicographical order
-
-(define (interval-for-each-serial f interval)
-  (cond ((not (interval? interval))
-	 (error "interval-for-each-serial: Argument is not a interval: " interval))
-	((not (procedure? f))
-	 (error "interval-for-each-serial: Argument is not a procedure: " f))
-	(else
-	 (##interval-for-each-serial f interval))))
 
 (define (##interval-for-each-serial f interval)
   (case (##interval-dimension interval)
@@ -503,7 +493,8 @@
 ;;; This version assumes, and may use, that f is thread-safe and that operator is associative.
 ;;; The order of application of f and operator is not specified.
 
-(define (interval-reduce f operator identity interval)
+
+(define (interval-reduce f operator identity interval #!optional (serial #f))
   (cond ((not (interval? interval))
 	 (error "interval-reduce: Argument is not a interval: " interval))
 	((not (procedure? f))
@@ -511,22 +502,9 @@
 	((not (procedure? operator))
 	 (error "interval-reduce: Operator is not a procedure: " operator))
 	(else
-	 (##interval-reduce f operator identity interval))))
+	 (##interval-reduce f operator identity interval serial))))
 
-;;; This version applies f to the elements of interval in lexicographical order and applies
-;;; operator in the order given
-
-(define (interval-reduce-serial f operator identity interval)
-  (cond ((not (interval? interval))
-	 (error "interval-reduce-serial: Argument is not a interval: " interval))
-	((not (procedure? f))
-	 (error "interval-reduce-serial: Argument is not a procedure: " f))
-	((not (procedure? operator))
-	 (error "interval-reduce-serial: Operator is not a procedure: " operator))
-	(else
-	 (##interval-reduce-serial f operator identity interval))))
-
-(define (##interval-reduce f operator identity interval)
+(define (##interval-reduce f operator identity interval serial)
   (##interval-reduce-serial f operator identity interval))
 
 (define (##interval-reduce-serial f operator identity interval)
@@ -1236,14 +1214,19 @@ compute-indexer specializes
 		   (* increment-3 (- l low-3))))))))
 
 (define (indexer-generic base lower-bounds increments)
-  (lambda multi-index
-    (do ((multi-index  multi-index  (cdr multi-index))
-	 (lower-bounds lower-bounds (cdr lower-bounds))
-	 (increments   increments   (cdr increments))
-	 (result       base         (+ result (* (car increments)
-						 (- (car multi-index)
-						    (car lower-bounds))))))
-	((null? multi-index) result))))
+  (let ((result
+	 (lambda multi-index
+	   (do ((multi-index  multi-index  (cdr multi-index))
+		(lower-bounds lower-bounds (cdr lower-bounds))
+		(increments   increments   (cdr increments))
+		(result       base         (+ result (* (car increments)
+							(- (car multi-index)
+							   (car lower-bounds))))))
+	       ((null? multi-index) result)))))
+    ;;(trace result)
+    result))
+
+;;(trace indexer-generic)
 
 
 (define (indexer= indexer1 indexer2 interval)
@@ -1486,6 +1469,8 @@ the domain to the natural numbers in lexicographical order.
 			 indexer
 			 safe?))))
 
+;;(trace make-##array-base)
+
 
 (define (specialized-array #!key
 			   (domain            (macro-absent-obj))
@@ -1593,6 +1578,7 @@ Assumes, and may exploit, that (array-getter a) is thread-safe.
 
 |#
 
+
 (define (array->specialized-array array #!optional (result-storage-class (macro-absent-obj)) (safe? (macro-absent-obj)))
   (cond ((not (array? array))
 	 (error "array->specialized-array: Argument is not an array: " array))
@@ -1602,28 +1588,6 @@ Assumes, and may exploit, that (array-getter a) is thread-safe.
 	((not (or (eq? safe? (macro-absent-obj))
 		  (boolean? safe?)))
 	 (error "array->specialized-array: safe? is not a boolean: " safe?))
-	(else
-	 (##array->specialized-array (if (eq? result-storage-class (macro-absent-obj))
-					 generic-storage-class
-					 result-storage-class)
-				     array
-				     (if (eq? safe? (macro-absent-obj))
-					 specialized-array-default-safe?
-					 safe?)
-				     ##interval-for-each))))
-
-;;; This version evaluates (array-getter array) on the elements of (array-domain array) in
-;;; lexicographical order
-
-(define (array->specialized-array-serial array #!optional (result-storage-class (macro-absent-obj)) (safe? (macro-absent-obj)))
-  (cond ((not (array? array))
-	 (error "array->specialized-array-serial: Argument is not an array: " array))
-	((not (or (eq? result-storage-class (macro-absent-obj))
-		  (storage-class? result-storage-class)))
-	 (error "array->specialized-array-serial: result-storage-class is not a storage-class: " result-storage-class))
-	((not (or (eq? safe? (macro-absent-obj))
-		  (boolean? safe?)))
-	 (error "array->specialized-array-serial: safe? is not a boolean: " safe?))
 	(else
 	 (##array->specialized-array (if (eq? result-storage-class (macro-absent-obj))
 					 generic-storage-class
@@ -1798,19 +1762,19 @@ So you specify a new domain and an affine 1-1 mapping from the new-domain to the
 
 |#
 
-(define (specialized-array-share! array
+(define (specialized-array-share array
 				  new-domain
 				  new-domain->old-domain
 				  #!optional (safe? (macro-absent-obj)))
   (cond ((not (specialized-array? array))
-	 (error "specialized-array-share!: array is not a specialized-array: " array))
+	 (error "specialized-array-share: array is not a specialized-array: " array))
 	((not (interval? new-domain))
-	 (error "specialized-array-share!: new-domain is not an interval: " new-domain))
+	 (error "specialized-array-share: new-domain is not an interval: " new-domain))
 	((not (procedure? new-domain->old-domain))
-	 (error "specialized-array-share!: new-domain->old-domain is not a procedure: " new-domain->old-domain))
+	 (error "specialized-array-share: new-domain->old-domain is not a procedure: " new-domain->old-domain))
 	((not (or (eq? safe? (macro-absent-obj))
 		  (boolean? safe?)))
-	 (error "specialized-array-share!: safe? is not a boolean: " safe?))
+	 (error "specialized-array-share: safe? is not a boolean: " safe?))
 	(else
 	 (let ((old-domain        (array-domain       array))
 	       (old-indexer       (array-indexer      array))
@@ -1823,15 +1787,8 @@ So you specify a new domain and an affine 1-1 mapping from the new-domain to the
 				       (compose-indexers old-indexer new-domain new-domain->old-domain)
 				       safe?)))))
 
-(define (array-curry Array left-dimension)
-  (cond ((not (array? Array))
-	 (error "array-curry: argument is not an array: " Array left-dimension))
-	((not (##exact-integer? left-dimension))
-	 (error "array-curry: argument is not an exact integer: " Array left-dimension))
-	((not (< 0 left-dimension (##interval-dimension (array-domain Array))))
-	 (error "array-curry: argument is not between 0 and (interval-dimension (array-domain array)) (exclusive): " Array left-dimension))
-	(else
-	 (call-with-values
+(define (##immutable-array-curry Array left-dimension)
+  (call-with-values
 	     (lambda () (interval-curry (array-domain Array) left-dimension))
 	   (lambda (left-interval right-interval)
 	     (let ((getter (array-getter Array)))
@@ -1852,91 +1809,96 @@ So you specify a new domain and an affine 1-1 mapping from the new-domain to the
 			(else (lambda left-multi-index
 				(array right-interval
 				       (lambda right-multi-index
-					 (apply getter (append left-multi-index right-multi-index))))))))))))))
+					 (apply getter (append left-multi-index right-multi-index))))))))))))
 
-(define (mutable-array-curry Array left-dimension)
-  (cond ((not (mutable-array? Array))
-	 (error "mutable-array-curry: argument is not a mutable-array: " Array left-dimension))
-	((not (##exact-integer? left-dimension))
-	 (error "mutable-array-curry: argument is not an exact integer: " Array left-dimension))
-	((not (< 0 left-dimension (##interval-dimension (array-domain Array))))
-	 (error "mutable-array-curry: argument is not between 0 and (interval-dimension (array-domain array)) (exclusive): " Array left-dimension))
-	(else
-	 (call-with-values
-	     (lambda () (interval-curry (array-domain Array) left-dimension))
-	   (lambda (left-interval right-interval)
-	     (let ((getter (array-getter Array))
-		   (setter   (array-setter   Array)))
-	       (array left-interval
-		      (case (##interval-dimension left-interval)
-			((1)  (case (##interval-dimension right-interval)
-				((1)  (lambda (i)     (mutable-array right-interval
-								     (lambda (  j)     (getter   i j))
-								     (lambda (v j)     (setter v i j)))))
-				((2)  (lambda (i)     (mutable-array right-interval
-								     (lambda (  j k)   (getter   i j k))
-								     (lambda (v j k)   (setter v i j k)))))
-				((3)  (lambda (i)     (mutable-array right-interval
-								     (lambda (  j k l) (getter   i j k l))
-								     (lambda (v j k l) (setter v i j k l)))))
-				(else (lambda (i)     (mutable-array right-interval
-								     (lambda      multi-index  (apply getter   i     multi-index))
-								     (lambda (v . multi-index) (apply setter v i     multi-index)))))))
-			((2)  (case (##interval-dimension right-interval)
-				((1)  (lambda (i j)   (mutable-array right-interval
-								     (lambda (    k)   (getter   i j k))
-								     (lambda (v   k)   (setter v i j k)))))
-				((2)  (lambda (i j)   (mutable-array right-interval
-								     (lambda (    k l) (getter   i j k l))
-								     (lambda (v   k l) (setter v i j k l)))))
-				(else (lambda (i j)   (mutable-array right-interval
-								     (lambda      multi-index  (apply getter   i j   multi-index))
-								     (lambda (v . multi-index) (apply setter v i j   multi-index)))))))
-			((3)  (case (##interval-dimension right-interval)
-				((1)  (lambda (i j k) (mutable-array right-interval
-								     (lambda (      l) (getter   i j k l))
-								     (lambda (v     l) (setter v i j k l)))))
-				(else (lambda (i j k) (mutable-array right-interval
-								     (lambda      multi-index  (apply getter   i j k multi-index))
-								     (lambda (v . multi-index) (apply setter v i j k multi-index)))))))
-			(else (lambda left-multi-index
-				(mutable-array right-interval
-					       (lambda      right-multi-index  (apply getter   (append left-multi-index right-multi-index)))
-					       (lambda (v . right-multi-index) (apply setter v (append left-multi-index right-multi-index))))))))))))))
+(define (##mutable-array-curry Array left-dimension)
+  (call-with-values
+      (lambda () (interval-curry (array-domain Array) left-dimension))
+    (lambda (left-interval right-interval)
+      (let ((getter (array-getter Array))
+	    (setter   (array-setter   Array)))
+	(array left-interval
+	       (case (##interval-dimension left-interval)
+		 ((1)  (case (##interval-dimension right-interval)
+			 ((1)  (lambda (i)     (mutable-array right-interval
+							      (lambda (  j)     (getter   i j))
+							      (lambda (v j)     (setter v i j)))))
+			 ((2)  (lambda (i)     (mutable-array right-interval
+							      (lambda (  j k)   (getter   i j k))
+							      (lambda (v j k)   (setter v i j k)))))
+			 ((3)  (lambda (i)     (mutable-array right-interval
+							      (lambda (  j k l) (getter   i j k l))
+							      (lambda (v j k l) (setter v i j k l)))))
+			 (else (lambda (i)     (mutable-array right-interval
+							      (lambda      multi-index  (apply getter   i     multi-index))
+							      (lambda (v . multi-index) (apply setter v i     multi-index)))))))
+		 ((2)  (case (##interval-dimension right-interval)
+			 ((1)  (lambda (i j)   (mutable-array right-interval
+							      (lambda (    k)   (getter   i j k))
+							      (lambda (v   k)   (setter v i j k)))))
+			 ((2)  (lambda (i j)   (mutable-array right-interval
+							      (lambda (    k l) (getter   i j k l))
+							      (lambda (v   k l) (setter v i j k l)))))
+			 (else (lambda (i j)   (mutable-array right-interval
+							      (lambda      multi-index  (apply getter   i j   multi-index))
+							      (lambda (v . multi-index) (apply setter v i j   multi-index)))))))
+		 ((3)  (case (##interval-dimension right-interval)
+			 ((1)  (lambda (i j k) (mutable-array right-interval
+							      (lambda (      l) (getter   i j k l))
+							      (lambda (v     l) (setter v i j k l)))))
+			 (else (lambda (i j k) (mutable-array right-interval
+							      (lambda      multi-index  (apply getter   i j k multi-index))
+							      (lambda (v . multi-index) (apply setter v i j k multi-index)))))))
+		 (else (lambda left-multi-index
+			 (mutable-array right-interval
+					(lambda      right-multi-index  (apply getter   (append left-multi-index right-multi-index)))
+					(lambda (v . right-multi-index) (apply setter v (append left-multi-index right-multi-index))))))))))))
 
-(define (specialized-array-curry Array left-dimension #!optional (safe? (macro-absent-obj)))
-  (cond ((not (specialized-array? Array))
-	 (error "specialized-array-curry: argument is not a specialized-array: " Array left-dimension))
+(define (##specialized-array-curry Array left-dimension)
+  (call-with-values
+      (lambda () (interval-curry (array-domain Array) left-dimension))
+    (lambda (left-interval right-interval)
+      (let ((safe? specialized-array-default-safe?))
+	(array left-interval
+	       (case (##interval-dimension left-interval)
+		 ((1)  (case (##interval-dimension right-interval)
+			 ((1)  (lambda (i)     (specialized-array-share Array right-interval (lambda (j)                         (values i j    )) safe?)))
+			 ((2)  (lambda (i)     (specialized-array-share Array right-interval (lambda (j k)                       (values i j k  )) safe?)))
+			 ((3)  (lambda (i)     (specialized-array-share Array right-interval (lambda (j k l)                     (values i j k l)) safe?)))
+			 (else (lambda (i)     (specialized-array-share Array right-interval (lambda multi-index (apply values i     multi-index)) safe?)))))
+		 ((2)  (case (##interval-dimension right-interval)
+			 ((1)  (lambda (i j)   (specialized-array-share Array right-interval (lambda (  k)                       (values i j k  )) safe?)))
+			 ((2)  (lambda (i j)   (specialized-array-share Array right-interval (lambda (  k l)                     (values i j k l)) safe?)))
+			 (else (lambda (i j)   (specialized-array-share Array right-interval (lambda multi-index (apply values i j   multi-index)) safe?)))))
+		 ((3)  (case (##interval-dimension right-interval)
+			 ((1)  (lambda (i j k) (specialized-array-share Array right-interval (lambda (    l)                    (values i j k l)) safe?)))
+			 (else (lambda (i j k) (specialized-array-share Array right-interval (lambda multi-index (apply values i j k multi-index)) safe?)))))
+		 (else (lambda left-multi-index 
+			 (specialized-array-share Array right-interval (lambda right-multi-index (apply values (append left-multi-index right-multi-index))) safe?)))))))))
+
+(define (array-curry Array left-dimension #!optional (subarray-type 'immutable))
+  (cond ((not (and (symbol? subarray-type)
+		   (memq subarray-type '(immutable mutable specialized))))
+	 (error "array-curry:  If the type of the subarrays is given, it must be either 'immutable, 'mutable, or 'specialized: " Array left-dimension subarray-type))
+	((and (eq? subarray-type 'mutable)
+	      (not (mutable-array? Array)))
+	 (error "array-curry: The type of subarrays is specified as mutable, but input array is not mutable: " Array left-dimension subarray-type))
+	((and (eq? subarray-type 'specialized)
+	      (not (specialized-array? Array)))
+	 (error "array-curry: type of subarrays is specified as specialized, but input array is not specialized: " Array left-dimension subarray-type))
 	((not (##exact-integer? left-dimension))
-	 (error "specialized-array-curry: argument is not an exact integer: " Array left-dimension))
+	 (error "array-curry: argument is not an exact integer: " Array left-dimension subarray-type))
 	((not (< 0 left-dimension (##interval-dimension (array-domain Array))))
-	 (error "specialized-array-curry: argument is not between 0 and (interval-dimension (array-domain array)) (exclusive): " Array left-dimension))
-	((not (or (eq? safe? (macro-absent-obj))
-		  (boolean? safe?)))
-	 (error "specialized-array-curry: safe? is not a boolean: " safe?))
+	 (error "array-curry: argument is not between 0 and (interval-dimension (array-domain array)) (exclusive): " Array left-dimension subarray-type))
 	(else
-	 (call-with-values
-	     (lambda () (interval-curry (array-domain Array) left-dimension))
-	   (lambda (left-interval right-interval)
-	     (let ((safe? (if (eq? safe? (macro-absent-obj))
-			      specialized-array-default-safe?
-			      safe?)))
-	       (array left-interval
-		      (case (##interval-dimension left-interval)
-			((1)  (case (##interval-dimension right-interval)
-				((1)  (lambda (i)     (specialized-array-share! Array right-interval (lambda (j)                         (values i j    )) safe?)))
-				((2)  (lambda (i)     (specialized-array-share! Array right-interval (lambda (j k)                       (values i j k  )) safe?)))
-				((3)  (lambda (i)     (specialized-array-share! Array right-interval (lambda (j k l)                     (values i j k l)) safe?)))
-				(else (lambda (i)     (specialized-array-share! Array right-interval (lambda multi-index (apply values i     multi-index)) safe?)))))
-			((2)  (case (##interval-dimension right-interval)
-				((1)  (lambda (i j)   (specialized-array-share! Array right-interval (lambda (  k)                       (values i j k  )) safe?)))
-				((2)  (lambda (i j)   (specialized-array-share! Array right-interval (lambda (  k l)                     (values i j k l)) safe?)))
-				(else (lambda (i j)   (specialized-array-share! Array right-interval (lambda multi-index (apply values i j   multi-index)) safe?)))))
-			((3)  (case (##interval-dimension right-interval)
-				((1)  (lambda (i j k) (specialized-array-share! Array right-interval (lambda (    l)                    (values i j k l)) safe?)))
-				(else (lambda (i j k) (specialized-array-share! Array right-interval (lambda multi-index (apply values i j k multi-index)) safe?)))))
-			(else (lambda left-multi-index 
-				(specialized-array-share! Array right-interval (lambda right-multi-index (apply values (append left-multi-index right-multi-index)) safe?))))))))))))
+	 (case subarray-type
+	   ((immutable)
+	    (##immutable-array-curry Array left-dimension))
+	   ((mutable)
+	    (##mutable-array-curry Array left-dimension))
+	   ((specialized)
+	    (##specialized-array-curry Array left-dimension))))))
+	
 
 
 (define (insert-arg-into-arg-list arg arg-list index)
@@ -1944,125 +1906,119 @@ So you specify a new domain and an affine 1-1 mapping from the new-domain to the
       (cons arg arg-list)
       (cons arg (insert-arg-into-arg-list arg (cdr arg-list) (- index 1)))))
 
-(define (array-distinguish-one-axis Array index)
-  (cond ((not (array? Array))
-	 (error "array-distinguish-one-axis: argument is not an array: " Array index))
+(define (##immutable-array-distinguish-one-axis Array index)
+  (call-with-values
+      (lambda () (interval-distinguish-one-axis (array-domain Array) index))
+    (lambda (outer-interval inner-interval)
+      (let ((getter (array-getter Array)))
+	(array outer-interval
+	       (case (##interval-dimension outer-interval)
+		 ((1) (case index
+			((0) (lambda (  j)       (array inner-interval (lambda (i) (getter i j)))))
+			((1) (lambda (i  )       (array inner-interval (lambda (j) (getter i j)))))))
+		 ((2) (case index
+			((0) (lambda (  j k)     (array inner-interval (lambda (i) (getter i j k)))))
+			((1) (lambda (i   k)     (array inner-interval (lambda (j) (getter i j k)))))
+			((2) (lambda (i j  )     (array inner-interval (lambda (k) (getter i j k)))))))
+		 ((3) (case index
+			((0) (lambda (  j k l)   (array inner-interval (lambda (i) (getter i j k l)))))
+			((1) (lambda (i   k l)   (array inner-interval (lambda (j) (getter i j k l)))))
+			((2) (lambda (i j   l)   (array inner-interval (lambda (k) (getter i j k l)))))
+			((3) (lambda (i j k  )   (array inner-interval (lambda (l) (getter i j k l)))))))
+		 (else       (lambda outer-index (array inner-interval (lambda (m) (apply getter (insert-arg-into-arg-list m outer-index index))))))))))))
+
+(define (##mutable-array-distinguish-one-axis Array index)
+  (call-with-values
+      (lambda () (interval-distinguish-one-axis (array-domain Array) index))
+    (lambda (outer-interval inner-interval)
+      (let ((getter (array-getter Array))
+	    (setter   (array-setter Array)))
+	(array outer-interval
+	       (case (##interval-dimension outer-interval)
+		 ((1) (case index
+			((0) (lambda (  j)     (mutable-array inner-interval
+							      (lambda (  i) (getter   i j))
+							      (lambda (v i) (setter v i j)))))
+			((1) (lambda (i  )     (mutable-array inner-interval
+							      (lambda (  j) (getter   i j))
+							      (lambda (v j) (setter v i j)))))))
+		 ((2) (case index
+			((0) (lambda (  j k)   (mutable-array inner-interval
+							      (lambda (  i) (getter   i j k))
+							      (lambda (v i) (setter v i j k)))))
+			((1) (lambda (i   k)   (mutable-array inner-interval
+							      (lambda (  j) (getter   i j k))
+							      (lambda (v j) (setter v i j k)))))
+			((2) (lambda (i j  )   (mutable-array inner-interval
+							      (lambda (  k) (getter   i j k))
+							      (lambda (v k) (setter v i j k)))))))
+		 ((3) (case index
+			((0) (lambda (  j k l) (mutable-array inner-interval
+							      (lambda (  i) (getter   i j k l))
+							      (lambda (v i) (setter v i j k l)))))
+			((1) (lambda (i   k l) (mutable-array inner-interval
+							      (lambda (  j) (getter   i j k l))
+							      (lambda (v j) (setter v i j k l)))))
+			((2) (lambda (i j   l) (mutable-array inner-interval
+							      (lambda (  k) (getter   i j k l))
+							      (lambda (v k) (setter v i j k l)))))
+			((3) (lambda (i j k  ) (mutable-array inner-interval
+							      (lambda (  l) (getter   i j k l))
+							      (lambda (v l) (setter v i j k l)))))))
+		 (else (lambda outer-index
+			 (mutable-array inner-interval
+					(lambda (  m) (apply getter   (insert-arg-into-arg-list m outer-index index)))
+					(lambda (v m) (apply setter v (insert-arg-into-arg-list m outer-index index))))))))))))
+
+
+(define (##specialized-array-distinguish-one-axis Array index)
+  (call-with-values
+      (lambda () (interval-distinguish-one-axis (array-domain Array) index))
+    (lambda (outer-interval inner-interval)
+      (let ((safe? specialized-array-default-safe?))
+	(array outer-interval 
+	       (case (##interval-dimension outer-interval)
+		 ((1) (case index
+			((0) (lambda (  j)     (specialized-array-share Array inner-interval (lambda (i) (values i j)) safe?)))
+			((1) (lambda (i  )     (specialized-array-share Array inner-interval (lambda (j) (values i j)) safe?)))))
+		 ((2) (case index
+			((0) (lambda (  j k)   (specialized-array-share Array inner-interval (lambda (i) (values i j k)) safe?)))
+			((1) (lambda (i   k)   (specialized-array-share Array inner-interval (lambda (j) (values i j k)) safe?)))
+			((2) (lambda (i j  )   (specialized-array-share Array inner-interval (lambda (k) (values i j k)) safe?)))))
+		 ((3) (case index
+			((0) (lambda (  j k l) (specialized-array-share Array inner-interval (lambda (i) (values i j k l)) safe?)))
+			((1) (lambda (i   k l) (specialized-array-share Array inner-interval (lambda (j) (values i j k l)) safe?)))
+			((2) (lambda (i j   l) (specialized-array-share Array inner-interval (lambda (k) (values i j k l)) safe?)))
+			((3) (lambda (i j k  ) (specialized-array-share Array inner-interval (lambda (l) (values i j k l)) safe?)))))
+		 (else (lambda outer-index
+			 (specialized-array-share Array inner-interval (lambda (m) (apply values (insert-arg-into-arg-list m outer-index index)) safe?))))))))))
+
+
+(define (array-distinguish-one-axis Array index #!optional (subarray-type 'immutable))
+  (cond ((not (and (symbol? subarray-type)
+		   (memq subarray-type '(immutable mutable specialized))))
+	 (error "array-distinguish-one-axis:  If the type of the subarrays is given, it must be either 'immutable, 'mutable, or 'specialized: " Array index subarray-type))
+	((and (eq? subarray-type 'mutable)
+	      (not (mutable-array? Array)))
+	 (error "array-distinguish-one-axis: The type of subarrays is specified as mutable, but input array is not mutable: " Array index subarray-type))
+	((and (eq? subarray-type 'specialized)
+	      (not (specialized-array? Array)))
+	 (error "array-distinguish-one-axis: type of subarrays is specified as specialized, but input array is not specialized: " Array index subarray-type))
 	((not (##exact-integer? index))
-	 (error "array-distinguish-one-axis: argument is not an exact integer: " Array index))
-	((not (< 1 (##interval-dimension (array-domain Array))))
-	 (error "array-distinguish-one-axis:  (interval-dimension (array-domain array)) is not greater than 1 : " Array index))
+	 (error "array-distinguish-one-axis: argument is not an exact integer: " Array index subarray-type))
+	((not (<= 2 (##interval-dimension (array-domain Array))))
+	 (error "array-distinguish-one-axis: the array argument does not have at least dimension 2: " Array index subarray-type))
 	((not (< -1 index (##interval-dimension (array-domain Array))))
-	 (error "array-distinguish-one-axis: argument is not between 0 (inclusive) and (interval-dimension (array-domain array)) (exclusive): " Array index))
+	 (error "array-distinguish-one-axis: argument is not between 0 (inclusive) and (interval-dimension (array-domain array)) (exclusive): " Array index subarray-type))
 	(else
-	 (call-with-values
-	     (lambda () (interval-distinguish-one-axis (array-domain Array) index))
-	   (lambda (outer-interval inner-interval)
-	     (let ((getter (array-getter Array)))
-	       (array outer-interval
-		      (case (##interval-dimension outer-interval)
-			((1) (case index
-			       ((0) (lambda (  j)       (array inner-interval (lambda (i) (getter i j)))))
-			       ((1) (lambda (i  )       (array inner-interval (lambda (j) (getter i j)))))))
-			((2) (case index
-			       ((0) (lambda (  j k)     (array inner-interval (lambda (i) (getter i j k)))))
-			       ((1) (lambda (i   k)     (array inner-interval (lambda (j) (getter i j k)))))
-			       ((2) (lambda (i j  )     (array inner-interval (lambda (k) (getter i j k)))))))
-			((3) (case index
-			       ((0) (lambda (  j k l)   (array inner-interval (lambda (i) (getter i j k l)))))
-			       ((1) (lambda (i   k l)   (array inner-interval (lambda (j) (getter i j k l)))))
-			       ((2) (lambda (i j   l)   (array inner-interval (lambda (k) (getter i j k l)))))
-			       ((3) (lambda (i j k  )   (array inner-interval (lambda (l) (getter i j k l)))))))
-			(else       (lambda outer-index (array inner-interval (lambda (m) (apply getter (insert-arg-into-arg-list m outer-index index))))))))))))))
-
-(define (mutable-array-distinguish-one-axis Array index)
-  (cond ((not (mutable-array? Array))
-	 (error "mutable-array-distinguish-one-axis: argument is not an array: " Array index))
-	((not (##exact-integer? index))
-	 (error "mutable-array-distinguish-one-axis: argument is not an exact integer: " Array index))
-	((not (< 1 (##interval-dimension (array-domain Array))))
-	 (error "mutable-array-distinguish-one-axis:  (interval-dimension (array-domain array)) is not greater than 1 : " Array index))
-	((not (< -1 index (##interval-dimension (array-domain Array))))
-	 (error "mutable-array-distinguish-one-axis: argument is not between 0 (inclusive) and (interval-dimension (array-domain array)) (exclusive): " Array index))
-	(else
-	 (call-with-values
-	     (lambda () (interval-distinguish-one-axis (array-domain Array) index))
-	   (lambda (outer-interval inner-interval)
-	     (let ((getter (array-getter Array))
-		   (setter   (array-setter Array)))
-	       (array outer-interval
-		      (case (##interval-dimension outer-interval)
-			((1) (case index
-			       ((0) (lambda (  j)     (mutable-array inner-interval
-								     (lambda (  i) (getter   i j))
-								     (lambda (v i) (setter v i j)))))
-			       ((1) (lambda (i  )     (mutable-array inner-interval
-								     (lambda (  j) (getter   i j))
-								     (lambda (v j) (setter v i j)))))))
-			((2) (case index
-			       ((0) (lambda (  j k)   (mutable-array inner-interval
-								     (lambda (  i) (getter   i j k))
-								     (lambda (v i) (setter v i j k)))))
-			       ((1) (lambda (i   k)   (mutable-array inner-interval
-								     (lambda (  j) (getter   i j k))
-								     (lambda (v j) (setter v i j k)))))
-			       ((2) (lambda (i j  )   (mutable-array inner-interval
-								     (lambda (  k) (getter   i j k))
-								     (lambda (v k) (setter v i j k)))))))
-			((3) (case index
-			       ((0) (lambda (  j k l) (mutable-array inner-interval
-								     (lambda (  i) (getter   i j k l))
-								     (lambda (v i) (setter v i j k l)))))
-			       ((1) (lambda (i   k l) (mutable-array inner-interval
-								     (lambda (  j) (getter   i j k l))
-								     (lambda (v j) (setter v i j k l)))))
-			       ((2) (lambda (i j   l) (mutable-array inner-interval
-								     (lambda (  k) (getter   i j k l))
-								     (lambda (v k) (setter v i j k l)))))
-			       ((3) (lambda (i j k  ) (mutable-array inner-interval
-								     (lambda (  l) (getter   i j k l))
-								     (lambda (v l) (setter v i j k l)))))))
-			(else (lambda outer-index
-				(mutable-array inner-interval
-					       (lambda (  m) (apply getter   (insert-arg-into-arg-list m outer-index index)))
-					       (lambda (v m) (apply setter v (insert-arg-into-arg-list m outer-index index))))))))))))))
-
-
-(define (specialized-array-distinguish-one-axis Array index #!optional (safe? (macro-absent-obj)))
-  (cond ((not (specialized-array? Array))
-	 (error "specialized-array-distinguish-one-axis: argument is not an specialized-array: " Array index))
-	((not (##exact-integer? index))
-	 (error "specialized-array-distinguish-one-axis: argument is not an exact integer: " Array index))
-	((not (< 1 (##interval-dimension (array-domain Array))))
-	 (error "specialized-array-distinguish-one-axis: (interval-dimension (array-domain array)) is not greater than 1 : " Array index))
-	((not (< -1 index (##interval-dimension (array-domain Array))))
-	 (error "specialized-array-distinguish-one-axis: argument is not between 0 (inclusive) and (interval-dimension (array-domain array)) (exclusive): " Array index))
-	((not (or (eq? safe? (macro-absent-obj))
-		  (boolean? safe?)))
-	 (error "specialized-array-distinguish-one-axis: safe? is not a boolean: " safe?))
-	(else
-	 (call-with-values
-	     (lambda () (interval-distinguish-one-axis (array-domain Array) index))
-	   (lambda (outer-interval inner-interval)
-	     (let ((safe? (if (eq? safe? (macro-absent-obj))
-			      specialized-array-default-safe?
-			      safe?)))
-	       (array outer-interval 
-		      (case (##interval-dimension outer-interval)
-			((1) (case index
-			       ((0) (lambda (  j)     (specialized-array-share! Array inner-interval (lambda (i) (values i j)) safe?)))
-			       ((1) (lambda (i  )     (specialized-array-share! Array inner-interval (lambda (j) (values i j)) safe?)))))
-			((2) (case index
-			       ((0) (lambda (  j k)   (specialized-array-share! Array inner-interval (lambda (i) (values i j k)) safe?)))
-			       ((1) (lambda (i   k)   (specialized-array-share! Array inner-interval (lambda (j) (values i j k)) safe?)))
-			       ((2) (lambda (i j  )   (specialized-array-share! Array inner-interval (lambda (k) (values i j k)) safe?)))))
-			((3) (case index
-			       ((0) (lambda (  j k l) (specialized-array-share! Array inner-interval (lambda (i) (values i j k l)) safe?)))
-			       ((1) (lambda (i   k l) (specialized-array-share! Array inner-interval (lambda (j) (values i j k l)) safe?)))
-			       ((2) (lambda (i j   l) (specialized-array-share! Array inner-interval (lambda (k) (values i j k l)) safe?)))
-			       ((3) (lambda (i j k  ) (specialized-array-share! Array inner-interval (lambda (l) (values i j k l)) safe?)))))
-			(else (lambda outer-index
-				(specialized-array-share! Array inner-interval (lambda (m) (apply values (insert-arg-into-arg-list m outer-index index)) safe?))))))))))))
-
+	 (case subarray-type
+	   ((immutable)
+	    (##immutable-array-distinguish-one-axis Array index))
+	   ((mutable)
+	    (##mutable-array-distinguish-one-axis Array index))
+	   ((specialized)
+	    (##specialized-array-distinguish-one-axis Array index))))))
+	
 
 #|
 
@@ -2147,17 +2103,7 @@ function to speed things up a bit.
 	((not (every (lambda (d) (##interval= d (array-domain array))) (map array-domain arrays)))
 	 (apply error "array-for-each: Not all arrays have the same domain: " array arrays))
 	(else
-	 (##interval-for-each (specialize-function-applied-to-array-getters f array arrays) (array-domain array)))))
-
-(define (array-for-each-serial f array #!rest arrays)
-  (cond ((not (procedure? f))
-	 (error "array-for-each-serial: Argument is not a procedure: " f))
-	((not (every array? (cons array arrays)))
-	 (apply error "array-for-each-serial: Not all arguments are arrays: " array arrays))
-	((not (every (lambda (d) (##interval= d (array-domain array))) (map array-domain arrays)))
-	 (apply error "array-for-each-serial: Not all arrays have the same domain: " array arrays))
-	(else
-	 (##interval-for-each-serial (specialize-function-applied-to-array-getters f array arrays) (array-domain array)))))
+	 (##interval-for-each (specialize-function-applied-to-array-getters f array arrays) (array-domain array) #t))))
 
 
 ;;; Calculates
@@ -2168,30 +2114,17 @@ function to speed things up a bit.
 ;;; This version assumes, and may use, that (array-getter a) is thread-safe and that operator is associative.
 ;;; The order of application of (array-getter) and operator is not specified.
 
-(define (array-reduce op id a)
+(define (array-reduce op id a #!optional (serial #f))
   (cond ((not (procedure? op))
 	 (error "array-reduce: operator is not a procedure: " op))
 	((not (array? a))
 	 (error "array-reduce: argument is not an array: " a))
 	(else
-	 (##interval-reduce (array-getter a) op id (array-domain a)))))
+	 (##interval-reduce (array-getter a) op id (array-domain a) serial))))
 
-;;; This version applies (array-getter a) to the elements of (array-domain a) in lexicographical order and applies
-;;; operator in the order given
 
-(define (array-reduce-serial op id a)
-  (cond ((not (procedure? op))
-	 (error "array-reduce-serial: operator is not a procedure: " op))
-	((not (array? a))
-	 (error "array-reduce-serial: argument is not an array: " a))
-	(else
-	 (##interval-reduce-serial (array-getter a) op id (array-domain a)))))
 
-#|
-
-I've never used the following routines, so I'm removing them from the SRFI for now.
-
-(define (array-every? proc a)
+(define (array-every? proc a #!optional (serial #f) )
   (cond ((not (procedure? proc))
 	 (error "array-every?: First argument is not a procedure: " proc a))
 	((not (array? a))
@@ -2201,20 +2134,8 @@ I've never used the following routines, so I'm removing them from the SRFI for n
 			    (lambda (result x)
 			      (and result (proc x)))
 			    #t
-			    (array-domain a)))))
+			    (array-domain a)
+			    serial))))
 
-(define (array-every?-serial proc a)
-  (cond ((not (procedure? proc))
-	 (error "array-every?-serial: First argument is not a procedure: " proc a))
-	((not (array? a))
-	 (error "array-every?-serial: Second argument is not an array: " proc a))
-	(else
-	 (##interval-reduce-serial (array-getter a)
-				   (lambda (result x)
-				     (and result (proc x)))
-				   #t
-				   (array-domain a)))))
-
-|#
 
 (declare (inline))
