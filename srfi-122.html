@@ -16,7 +16,8 @@
       <li>Draft #2 published: 2015/7/31</li>
       <li>Draft #3 published: 2015/7/31</li>
       <li>Draft #4 published: 2015/9/03</li>
-      <li>Draft #5 published: 2015/9/18</li></ul>
+      <li>Draft #5 published: 2015/9/18</li>
+      <li>Draft #6 published: 2015/10/19</li></ul>
     <h2>Abstract</h2>
     <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general, and benefit from a data type
        called <i>intervals</i>, which encapsulate the cross product of nonempty intervals of exact integers. These intervals  specify the domain
@@ -30,18 +31,18 @@
     <p>Since these two things are often sufficient for certain algorithms, we introduce in this SRFI a minimal set of interfaces for dealing with such arrays.</p>
     <p>Specifically, an array specifies a nonempty, multi-dimensional interval, called its <i>domain</i>, and a mapping from this domain to (single) Scheme objects.  This mapping is called the <i>getter</i> of the array.</p>
     <p>If this mapping can be changed, the array is said to be <i>mutable</i> and the mutation is effected
-      by the array's <i>setter</i>.  We call an object of this type a mutable-array.</p>
+      by the array's <i>setter</i>.  We call an object of this type a mutable array. Note: If an array does not have a setter, then we call it immutable even though the array's getter might not be a &quot;pure&quot; function, i.e., the value it returns may not depend solely on the arguments.</p>
     <p>In general, we leave the implementation of arrays completely open.  They may be defined simply by closures, or
-      they may have hash tables or databases behind an implementation.  If the getter and setter functions of a mutable-array are
-      defined by accessing and setting elements  of a one-dimensional (heterogeneous or homogeneous) vector that are determined by a one-to-one function from
+      they may have hash tables or databases behind an implementation.  If the getter and setter functions of a mutable array are
+      defined by accessing and setting elements  of a one-dimensional (heterogeneous or homogeneous) vector that are determined by a one-to-one affine function from
       the domain of the array into the integers between 0 (inclusive) and the length of the backing-store vector (exclusive),
-      the array is said to be <i>fixed</i>. A specialized-array is an example of a mutable-array.</p>
+      the array is said to be <i>specialized</i>. A specialized-array is an example of a mutable array.</p>
     <p>Thus,  we  need the concept of an <i>indexer</i>, which is a one-to-one mapping whose domain is an interval and whose range is
       contained in another interval.  Conceptually, an indexer is itself an array that returns multiple values.  An
       important subset of indexers are affine mappings (linear mappings plus constants) from one domain to another.  We do not
       encapsulate indexers, with their domain interval, range interval, and multi-valued mapping, into a distinct type.
       While we considered the formalized use of non-affine indexers in specialized-arrays, we restrict indexers in specialized-arrays to be affine.
-      Thus our specialized-arrays are very similar to <a href="#bawden">Bawden-style arrays</a>. (If you want to specify a non-affine indexer into a body, it can be done by constructing a mutable-array.)</p>
+      Thus our specialized-arrays are very similar to <a href="#bawden">Bawden-style arrays</a>. (If you want to specify a non-affine indexer into a body, it can be done by constructing a mutable array.)</p>
     <p>The backing store of a specialized-array, which may be a heterogeneous or homogeneous vector,
       is created, accessed, etc., via the components of an object we call a storage-class.  We define their properties below.</p>
     <p>The API of this SRFI uses keywords from SRFI-88 and the calling convention from SRFI-89 for optional and keyword arguments (although the implementation defines functions with keyword and optional arguments using DSSSL's notation, not the notation from SRFI-89).</p>
@@ -100,6 +101,7 @@
         <a href="#array?">array?</a>,
         <a href="#array-domain">array-domain</a>,
         <a href="#array-getter">array-getter</a>,
+        <a href="#mutable-array?">mutable-array?</a>,
         <a href="#array-setter">array-setter</a>,
         <a href="#array-body">array-body</a>,
         <a href="#array-indexer">array-indexer</a>,
@@ -111,9 +113,6 @@
         <a href="#array-reduce">array-reduce</a>,
         <a href="#array-every?">array-every?</a>,
         <a href="#array-extract">array-extract</a>.</dd>
-      <dt>Mutable Arrays</dt>
-      <dd><a href="#mutable-array">mutable-array</a>,
-        <a href="#mutable-array?">mutable-array?</a>.</dd>
       <dt>Storage Classes</dt>
       <dd><a href="#make-storage-class">make-storage-class</a>,
         <a href="#storage-class-getter">storage-class-getter</a>,
@@ -315,11 +314,30 @@
     </blockquote>
     <h2>Arrays</h2>
     <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a name="array">array</a> <var>domain</var> <var>getter</var></code></p>
+    <p><b>Procedure: </b><code><a name="array">array</a> <var>domain</var> <var>getter</var> [ <var>setter</var> ]</code></p>
+    <p>Assume first that the optional argument <code>setter</code> is not given.</p>
     <p>If <code><var>domain</var></code> is an interval and <code><var>getter</var></code> is a function from
       <code><var>domain</var></code> to Scheme objects, then <code>array</code> returns an array with domain <code><var>domain</var></code>
-      and getter <code><var>getter</var></code>. It is an error to call <code>array</code> if <code><var>domain</var></code> and <code><var>getter</var></code>
+      and getter <code><var>getter</var></code>.</p>
+    <p>It is an error to call <code>array</code> if <code><var>domain</var></code> and <code><var>getter</var></code>
       do not satisfy these conditions.</p>
+    <p>If now <code><var>setter</var></code> is specified, assume that it is a procedure such that getter and setter satisfy: If</p>
+    <blockquote><code>(<var>i</var><sub>1</sub>,...,<var>i</var><sub>n</sub>) != (<var>j</var><sub>1</sub>,...,<var>j</var><sub>n</sub>)</code>
+    </blockquote>
+    <p>are elements of <code><var>domain</var></code> and </p>
+    <blockquote><code>(getter <var>j</var><sub>1</sub> ... <var>j</var><sub>n</sub>) =&gt; x</code>
+    </blockquote>
+    <p>then &quot;after&quot;</p>
+    <blockquote><code>(setter v <var>i</var><sub>1</sub> ... <var>i</var><sub>n</sub>)</code>
+    </blockquote>
+    <p>we have</p>
+    <blockquote><code>(getter <var>j</var><sub>1</sub> ... <var>j</var><sub>n</sub>) =&gt; x</code>
+    </blockquote>
+    <p>and</p>
+    <blockquote><code>(getter <var>i</var><sub>1</sub>,...,<var>i</var><sub>n</sub>) =&gt; v</code>
+    </blockquote>
+    <p>Then <code>array</code> builds a mutable array with domain <code><var>domain</var></code>, getter <code><var>getter</var></code>, and
+      setter <code><var>setter</var></code>.  It is an error to call <code>array</code> if its arguments do not satisfy these conditions.</p>
     <p>Example: </p>
     <pre>
 (define a (array (interval '#(1 1) '#(11 11))
@@ -328,6 +346,28 @@
 		       1
 		       0))))</pre>
     <p>defines an array for which <code>(array-getter a)</code> returns 1 when i=j and 0 otherwise.</p>
+    <p>Example: </p>
+    <pre>
+(define sparse-array
+  (let ((domain (interval '#(0 0) '#(1000000 1000000)))
+	(sparse-rows (make-vector 1000000 '())))
+    (array domain
+	   (lambda (i j)
+	     (cond ((assv j (vector-ref sparse-rows i))
+		    =&gt; cdr)
+		   (else
+		    0.0)))
+	   (lambda (v i j)
+	     (cond ((assv j (vector-ref sparse-rows i))
+		    =&gt; (lambda (pair)
+			 (set-cdr! pair v)))
+		   (else
+		    (vector-set! sparse-rows i (cons (cons j v) (vector-ref sparse-rows i)))))))))
+((array-getter sparse-array) 12345 6789)  =&gt; 0.
+((array-getter sparse-array) 0 0) =&gt; 0.
+((array-setter sparse-array) 1.0 0 0) =&gt; undefined
+((array-getter sparse-array) 12345 6789)  =&gt; 0.
+((array-getter sparse-array) 0 0) =&gt; 1.</pre>
     <p><b>Procedure: </b><code><a name="array?">array?</a> <var>obj</var></code></p>
     <p>Returns <code>#t</code> if and only if <code><var>obj</var></code> is an array.</p>
     <p><b>Procedure: </b><code><a name="array-domain">array-domain</a> <var>array</var></code></p>
@@ -347,6 +387,14 @@
 ((array-getter a) 3 3) =&gt; 1
 ((array-getter a) 2 3) =&gt; 0
 ((array-getter a) 11 0) =&gt; is an error, which may be signaled</pre>
+    <p><b>Procedure: </b><code><a name="mutable-array?">mutable-array?</a> <var>obj</var></code></p>
+    <p>Returns <code>#t</code> if and only if <code><var>obj</var></code> is a mutable array.</p>
+    <p><b>Procedure: </b><code><a name="array-setter">array-setter</a> <var>array</var></code></p>
+    <p>If <code><var>array</var></code> is an array built by</p>
+    <blockquote><code>(array <var>domain</var> <var>getter</var> <var>setter</var>)</code>
+    </blockquote>
+    <p>then <code>array-setter</code> returns <code><var>setter</var></code>. It is an error to call <code>array-setter</code>
+      if <code><var>array</var></code> is not a mutable array.</p>
     <p><b>Procedure: </b><code><a name="array-map">array-map</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
     <p>If <code><var>array</var></code>, <code>(car <var>arrays</var>)</code>, ... all have the same domain and <code><var>f</var></code> is a function, then <code>array-map</code>
       returns a new array with the same domain and getter</p>
@@ -354,37 +402,31 @@
 (lambda multi-index
   (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))</pre>
     <p>It is an error to call <code>array-map</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="array-curry">array-curry</a> <var>array</var> <var>outer-dimension</var> [ <var>subarray-type</var> 'immutable ]</code></p>
+    <p><b>Procedure: </b><code><a name="array-curry">array-curry</a> <var>array</var> <var>outer-dimension</var></code></p>
     <p>If <code><var>array</var></code> is an array whose domain is an interval  [l<sub>0</sub>, u<sub>0</sub>) x  ... x [l<sub>d-1</sub>, u<sub>d-1</sub>) and <code><var>outer-dimension</var></code> is an exact integer strictly between 0 and d, then array-curry returns an (immutable) array with domain [l<sub>0</sub>, u<sub>0</sub>) x ...x [l<sub>outer-dimension-1</sub>, u<sub>outer-dimension-1</sub>), each of whose entries is in itself an array with domain [l<sub>outer-dimension</sub>, u<sub>outer-dimension</sub>) x ... x [l<sub>d-1</sub>, u<sub>d-1</sub>).</p>
-    <p>The type of the subarrays is determined by the optional argument <code>subarray-type</code> in combination with the type of the input array.</p>
-    <p>If <code>subarray-type</code> is 'mutable, and the input array is mutable (which includes specialized arrays), then each subarray is mutable.</p>
-    <p>If <code>subarray-type</code> is 'specialized and the input array is specialized, then each subarray is specialized.</p>
+    <p>For example, if <code>A</code> and <code>B</code> are defined by </p>
+    <pre>
+(define domain (interval '#(0 0 0 0)
+			 '#(10 10 10 10)))
+(define A (array domain list))
+(define B (array-curry A 3))
+</pre>
+    <p>so</p>
+    <pre>
+((array-getter A) i j k l) =&gt; (list i j k l)</pre>
+    <p>then <code>B</code> is an immutable array with domain <code>(interval '#(0 0 0) '#(10 10 10))</code>, each
+      of whose elements is itself an (immutable) array and </p>
+    <pre>
+(equal? ((array-getter A) i j k l)
+	(array-getter ((array-getter B) i j k) l)) =&gt; #t
+</pre>
+    <p>for all multi-indices <code>(i,j,k,l)</code> in <code>domain</code>.</p>
+    <p>The type of the subarrays is the same as the type of the input array.</p>
     <p>More precisely, if </p>
     <blockquote><code>0 &lt; <var>outer-dimension</var> &lt; (interval-dimension (array-domain <var>array</var>))</code>
     </blockquote>
-    <p>then <code>array-curry</code> returns a result as follows: If  subarray-type is not given, or is given as 'immutable, then array-curry returns</p>
-    <pre>
-(call-with-values
-    (lambda () (interval-curry (array-domain array) outer-dimension))
-  (lambda (outer-interval inner-interval)
-    (array outer-interval
-	   (lambda outer-multi-index
-	     (array inner-interval
-		    (lambda inner-multi-index
-		      (apply (array-getter array) (append outer-multi-index inner-multi-index))))))))</pre>
-    <p>If  subarray-type is given as 'mutable and the input array is mutable, then array-curry returns</p>
-    <pre>
-(call-with-values
-    (lambda () (interval-curry (array-domain array) outer-dimension))
-  (lambda (outer-interval inner-interval)
-    (array outer-interval
-	   (lambda outer-multi-index
-	     (mutable-array inner-interval
-			    (lambda inner-multi-index
-			      (apply (array-getter array) (append outer-multi-index inner-multi-index)))
-			    (lambda (v . inner-multi-index)
-			      (apply (array-setter array) v (append outer-multi-index inner-multi-index))))))))</pre>
-    <p>And if subarray-type is given as 'specialized and the input array is specialized, then array-curry returns</p>
+    <p>then <code>array-curry</code> returns a result as follows.</p>
+    <p>If the input array is specialized, then array-curry returns</p>
     <pre>
 (call-with-values
     (lambda () (interval-curry (array-domain array) outer-dimension))
@@ -395,6 +437,28 @@
 				      inner-interval
 				      (lambda inner-multi-index
 					(apply values (append outer-multi-index inner-multi-index))))))))</pre>
+    <p>Otherwise, if the input array is mutable, then array-curry returns</p>
+    <pre>
+(call-with-values
+    (lambda () (interval-curry (array-domain array) outer-dimension))
+  (lambda (outer-interval inner-interval)
+    (array outer-interval
+	   (lambda outer-multi-index
+	     (array inner-interval
+		    (lambda inner-multi-index
+		      (apply (array-getter array) (append outer-multi-index inner-multi-index)))
+		    (lambda (v . inner-multi-index)
+		      (apply (array-setter array) v (append outer-multi-index inner-multi-index))))))))</pre>
+    <p>Otherwise, array-curry returns</p>
+    <pre>
+(call-with-values
+    (lambda () (interval-curry (array-domain array) outer-dimension))
+  (lambda (outer-interval inner-interval)
+    (array outer-interval
+	   (lambda outer-multi-index
+	     (array inner-interval
+		    (lambda inner-multi-index
+		      (apply (array-getter array) (append outer-multi-index inner-multi-index))))))))</pre>
     <p>It is an error to call <code>array-curry</code> if its arguments do not satisfy these conditions.</p>
     <p>Example:</p>
     <pre>
@@ -403,12 +467,48 @@
 ((array-getter a) 3 4)  =&gt; (3 4)
 (define curried-a (array-curry a 1))
 ((array-getter ((array-getter curried-a) 3)) 4) =&gt; (3 4)</pre>
-    <p><b>Procedure: </b><code><a name="array-distinguish-one-axis">array-distinguish-one-axis</a> <var>array</var> <var>index</var> [ <var>subarray-type</var> 'immutable ]</code></p>
-    <p>If <code><var>array</var></code> is an array,
-      <code>(interval-dimension (array-domain <var>interval</var>))</code> is greater than one, subarray-type is either omitted or given as 'immutable, and</p>
+    <p><b>Procedure: </b><code><a name="array-distinguish-one-axis">array-distinguish-one-axis</a> <var>array</var> <var>index</var></code></p>
+    <p>Assume that <code><var>array</var></code> is an array,
+      <code>(interval-dimension (array-domain <var>interval</var>))</code> is greater than one, and</p>
     <blockquote><code>0 &lt;= <var>index</var> &lt; (interval-dimension (array-domain <var>interval</var>))</code>
     </blockquote>
-    <p>then <code>array-distinguish-one-axis</code> returns</p>
+    <p>If the input array is specialized, then <code>(array-distinguish-one-axis a index)</code> returns</p>
+    <pre>
+(call-with-values
+    (lambda () (interval-distinguish-one-axis (array-domain a) index))
+  (lambda (outer-interval inner-interval)
+    (array outer-interval
+	   (lambda outer-multi-index
+	     (specialized-array-share a
+				      inner-interval
+				      (lambda (m) (apply values (insert-arg-into-arg-list m outer-index index))))))))</pre>
+    <p>where we define </p>
+    <pre>
+(define (insert-arg-into-arg-list arg arg-list index)
+  (cond ((= index 0)
+	 (cons arg arg-list))
+	(else
+	 (cons (car arg-list)
+	       (insert-arg-into-arg-list arg (cdr arg-list) (- index 1))))))
+</pre>
+    <p>In other words, array-distinguish-one-axis decomposes the input array into an immutable array of one-dimensional specialized subarrays, with the subarrays aligned along the axis specified by the index.</p>
+    <p>Otherwise, if the input array is mutable, then <code>array-distinguish-one-axis</code> returns</p>
+    <pre>
+(let ((domain (array-domain array))
+      (getter (array-getter array))
+      (setter (array-setter array)))
+  (call-with-values
+      (lambda () (interval-distinguish-one-axis domain index))
+    (lambda (outer-interval inner-interval)
+      (array outer-interval
+	     (lambda outer-multi-index
+	       (array inner-interval
+		      (lambda (m)
+			(apply getter (insert-arg-into-arg-list m outer-index index)))
+		      (lambda (v m)
+			(apply setter v (insert-arg-into-arg-list m outer-index index)))))))))</pre>
+    <p>So in this case <code>array-distinguish-one-axis</code> decomposes the input array into an immutable array of mutable one-dimensional arrays.</p>
+    <p>Otherwise, <code>array-distinguish-one-axis</code> returns</p>
     <pre>
 (let ((domain (array-domain array))
       (getter (array-getter array)))
@@ -420,46 +520,22 @@
 	       (array inner-interval
 		      (lambda (m)
 			(apply getter (insert-arg-into-arg-list m outer-index index)))))))))</pre>
-    <p>where we define </p>
-    <pre>
-(define (insert-arg-into-arg-list arg arg-list index)
-  (define (helper arg-list i)
-    (if (= i 0)
-	(cons arg arg-list)
-	(cons arg (helper (cdr arg-list) (- i 1)))))
-  (helper arg-list index))</pre>
-    <p>In other words, array-distinguish-one-axis decomposes the input array into an array of one-dimensional (immutable) subarrays, with the subarrays aligned along the axis specified by the index.</p>
-    <p>If the input array is mutable (which includes specialized arrays) and subarray-type is given as 'mutable, then <code>array-distinguish-one-axis</code> returns</p>
-    <pre>
-(let ((domain (array-domain array))
-      (getter (array-getter array))
-      (setter (array-setter array)))
-  (call-with-values
-      (lambda () (interval-distinguish-one-axis domain index))
-    (lambda (outer-interval inner-interval)
-      (array outer-interval
-	     (lambda outer-multi-index
-	       (mutable-array inner-interval
-			      (lambda (m)
-				(apply getter (insert-arg-into-arg-list m outer-index index)))
-			      (lambda (v m)
-				(apply setter v (insert-arg-into-arg-list m outer-index index)))))))))</pre>
-    <p>So in this case <code>array-distinguish-one-axis</code> decomposes the input array into an immutable array of mutable one-dimensional arrays.</p>
-    <p>If the input array is specialized  and subarray-type is given as 'specialized, then <code>array-distinguish-one-axisaindexquotespecialized</code> returns</p>
-    <pre>
-(call-with-values
-    (lambda () (interval-distinguish-one-axis (specialized-array-domain a) index))
-  (lambda (outer-interval inner-interval)
-    (array outer-interval
-	   (lambda outer-multi-index
-	     (specialized-array-share a
-				      inner-interval
-				      (lambda (m) (apply values (insert-arg-into-arg-list m outer-index index))))))))</pre>
-    <p>So in this case <code>array-distinguish-one-axis</code> decomposes the input array into an immutable array of specialized one-dimensional arrays.</p>
+    <p>In other words, array-distinguish-one-axis decomposes the input array into an array of one-dimensional immutable subarrays, with the subarrays aligned along the axis specified by the index.</p>
     <p>It is an error to call <code>array-distinguish-one-axis</code> if its arguments do not satisfy these conditions.</p>
     <p><b>Notes:</b> It is expected that <code>array-distinguish-one-axis</code> will specialize the construction of, e.g., </p>
     <blockquote><code>(lambda (m) (apply (array-getter array) (insert-arg-into-arg-list m outer-index index)))</code>
     </blockquote>
+    <p>Example: If we define the 100 x 200 Hilbert matrix by </p>
+    <pre>
+(define domain (interval '#(1 1) '#(101 201)))
+(define A (array domain (lambda (i j) (/ (+ i j)))))
+</pre>
+    <p>and</p>
+    <pre>
+(define B (array-distintuish-one-axis A 0))
+(define C (array-distinguish-one-axis A 1))
+</pre>
+    <p>then <code>B</code> is a one-dimensional array, the i'th element of which is the i'th row of <code>A</code>, and <code>C</code> is a one-dimensional array containing the columns of <code>A</code>.  The elements of <code>B</code> and <code>C</code> are specialized (mutable) if <code>A</code> is specialized (mutable).</p>
     <p><b>Procedure: </b><code><a name="array-for-each">array-for-each</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
     <p>If <code><var>array</var></code>, <code>(car <var>arrays</var>)</code>, ... all have the same domain <code><var>domain</var></code> and <code><var>f</var></code> is an appropriate function, then <code>array-for-each</code>
       calls</p>
@@ -482,57 +558,6 @@
     <p>If <code><var>array</var></code> is an array and <code><var>new-domain</var></code> is an interval that is a sub-interval of <code>(array-domain <var>array</var>)</code>, then <code>array-extract</code> returns a new array</p>
     <blockquote><code>(array <var>new-domain</var> (array-getter <var>array</var>))</code>
     </blockquote>
-    <h2>Mutable Arrays</h2>
-    <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a name="mutable-array">mutable-array</a> <var>domain</var> <var>getter</var> <var>setter</var></code></p>
-    <p>Assume that <code><var>domain</var></code> is an interval of dimension <code><var>n</var></code> and that <code><var>getter</var></code> and
-      <code><var>setter</var></code> are two routines that satisfy: If </p>
-    <blockquote><code>(<var>i</var><sub>1</sub>,...,<var>i</var><sub>n</sub>) != (<var>j</var><sub>1</sub>,...,<var>j</var><sub>n</sub>)</code>
-    </blockquote>
-    <p>are elements of <code><var>domain</var></code> and </p>
-    <blockquote><code>(getter <var>j</var><sub>1</sub> ... <var>j</var><sub>n</sub>) =&gt; x</code>
-    </blockquote>
-    <p>then &quot;after&quot;</p>
-    <blockquote><code>(setter v <var>i</var><sub>1</sub> ... <var>i</var><sub>n</sub>)</code>
-    </blockquote>
-    <p>we have</p>
-    <blockquote><code>(getter <var>j</var><sub>1</sub> ... <var>j</var><sub>n</sub>) =&gt; x</code>
-    </blockquote>
-    <p>and</p>
-    <blockquote><code>(getter <var>i</var><sub>1</sub>,...,<var>i</var><sub>n</sub>) =&gt; v</code>
-    </blockquote>
-    <p>Then <code>mutable-array</code> builds a mutable-array with domain <code><var>domain</var></code>, getter <code><var>getter</var></code> and
-      setter <code><var>setter</var></code>.  A mutable-array is an array.  It is an error to call <code>mutable-array</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="mutable-array?">mutable-array?</a> <var>obj</var></code></p>
-    <p>Returns <code>#t</code> if and only if <code><var>obj</var></code> is a mutable-array.  Note: mutable-arrays are arrays.</p>
-    <p><b>Procedure: </b><code><a name="array-setter">array-setter</a> <var>array</var></code></p>
-    <p>If <code><var>array</var></code> is a mutable-array built by</p>
-    <blockquote><code>(mutable-array <var>domain</var> <var>getter</var> <var>setter</var>)</code>
-    </blockquote>
-    <p>then <code>array-setter</code> returns <code><var>setter</var></code>. It is an error to call <code>array-setter</code>
-      if <code><var>array</var></code> is not a mutable-array.</p>
-    <p>Example: </p>
-    <pre>
-(define sparse-array
-  (let ((domain (interval '#(0 0) '#(1000000 1000000)))
-	(sparse-rows (make-vector 1000000 '())))
-    (mutable-array domain
-		   (lambda (i j)
-		     (cond ((assv j (vector-ref sparse-rows i))
-			    =&gt; cdr)
-			   (else
-			    0.0)))
-		   (lambda (v i j)
-		     (cond ((assv j (vector-ref sparse-rows i))
-			    =&gt; (lambda (pair)
-				 (set-cdr! pair v)))
-			   (else
-			    (vector-set! sparse-rows i (cons (cons j v) (vector-ref sparse-rows i)))))))))
-((array-getter sparse-array) 12345 6789)  =&gt; 0.
-((array-getter sparse-array) 0 0) =&gt; 0.
-((array-setter sparse-array) 1.0 0 0) =&gt; undefined
-((array-getter sparse-array) 12345 6789)  =&gt; 0.
-((array-getter sparse-array) 0 0) =&gt; 1.</pre>
     <h2>Storage classes</h2>
     <p>Conceptually, a storage-class is a set of functions to manage the backing store of a specialized-array.
       The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogenous) vector.</p>
@@ -618,7 +643,7 @@
       lexicographical order.</p>
     <p>Safe?: The current value of the global variable <code>specialized-array-default-safe?</code>.</p>
     <p><b>Procedure: </b><code><a name="specialized-array?">specialized-array?</a> <var>obj</var></code></p>
-    <p>Returns <code>#t</code> if <code><var>obj</var></code> is a specialized-array, and <code>#f</code> otherwise. A specialized-array is a mutable-array, and hence an array.</p>
+    <p>Returns <code>#t</code> if <code><var>obj</var></code> is a specialized-array, and <code>#f</code> otherwise. A specialized-array is an array.</p>
     <p><b>Procedure: </b><code><a name="array-body">array-body</a> <var>array</var></code></p>
     <p><b>Procedure: </b><code><a name="array-indexer">array-indexer</a> <var>array</var></code></p>
     <p><b>Procedure: </b><code><a name="array-storage-class">array-storage-class</a> <var>array</var></code></p>

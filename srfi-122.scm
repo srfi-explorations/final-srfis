@@ -52,6 +52,7 @@
 	      (<li> "Draft #3 published: 2015/7/31")
 	      (<li> "Draft #4 published: 2015/9/03")
 	      (<li> "Draft #5 published: 2015/9/18")
+	      (<li> "Draft #6 published: 2015/10/19")
 	      )
 	
 	(<h2> "Abstract")
