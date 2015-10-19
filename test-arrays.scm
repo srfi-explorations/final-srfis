@@ -1,6 +1,6 @@
 ;;(declare (standard-bindings)(extended-bindings)(block)(not safe) (fixnum))
 (declare (inlining-limit 0))
-(define tests 20)
+(define tests 50)
 
 (define-macro (test expr value)
   `(let* (;(ignore (pretty-print ',expr))
@@ -28,6 +28,12 @@
        (if (not (equal? args ,vals))
 	   (pp (list ',expr  " => " args ", not " ,vals #\newline))))))
 
+(define-macro (do-times  var n . body)
+  ;; not so useful when the debugger can't report line numbers inside macros.
+  `(do ((,var 0 (+ ,var 1)))
+       ((= ,var ,n))
+     ,@body))
+
 (define (random a #!optional b)
   (if b
       (+ a (random-integer (- b a)))
@@ -36,11 +42,6 @@
 (include "generic-arrays.scm")
 
 (declare (generic))
-
-(define (random-index interval)
-  (apply values (map random (map list
-				 (interval-lower-bounds->list interval)
-				 (interval-upper-bounds->list interval)))))
 
 (pp "Interval error tests")
 
@@ -153,6 +154,8 @@
 
 (pp "interval-lower-bound, interval-upper-bound, interval-lower-bounds->list, and interval-upper-bounds->list result tests")
 
+
+
 (do ((i 0 (+ i 1)))
     ((= i tests))
   (let* ((lower (map (lambda (x) (random 10)) (vector->list (make-vector (random 1 11)))))
@@ -220,19 +223,19 @@
 
 (pp "interval-curry result tests")
 
-(do ((i 0 (+ i 1)))
-    ((= i tests))
-  (let* ((lower (map (lambda (x) (random 10)) (vector->list (make-vector (random 3 11)))))
-	 (upper (map (lambda (x) (+ (random 1 11) x)) lower))
-	 (left-dimension (random 1 (- (length lower) 1))))
-    (test-multiple-values
-     (interval-curry (interval (list->vector lower)
-			       (list->vector upper))
-		     left-dimension)
-     (list (interval (list->vector (reverse (list-tail (reverse lower) (- (length lower) left-dimension))))
-		     (list->vector (reverse (list-tail (reverse upper) (- (length upper) left-dimension)))))
-	   (interval (list->vector (list-tail lower left-dimension))
-		     (list->vector (list-tail upper left-dimension)))))))
+(do ((i 0 (+ i 1))
+     ((= i tests)))
+    (let* ((lower (map (lambda (x) (random 10)) (vector->list (make-vector (random 3 11)))))
+	   (upper (map (lambda (x) (+ (random 1 11) x)) lower))
+	   (left-dimension (random 1 (- (length lower) 1))))
+      (test-multiple-values
+       (interval-curry (interval (list->vector lower)
+				 (list->vector upper))
+		       left-dimension)
+       (list (interval (list->vector (reverse (list-tail (reverse lower) (- (length lower) left-dimension))))
+		       (list->vector (reverse (list-tail (reverse upper) (- (length upper) left-dimension)))))
+	     (interval (list->vector (list-tail lower left-dimension))
+		       (list->vector (list-tail upper left-dimension)))))))
 
 (pp "interval-distinguish-one-axis error tests")
 
@@ -455,6 +458,34 @@
 			   #f)
 	  result)))
 
+;;; define random-interval, random-multi-index
+
+(define (random-multi-index interval)
+  (apply values
+	 (apply map
+		random
+		(map (lambda (bounds)
+		       (bounds interval))
+		     (list interval-lower-bounds->list
+			   interval-upper-bounds->list)))))
+
+
+(define (random-interval #!optional (min 1) (max 11) )
+  ;; a random interval with min <= dimension < max
+  ;; positive and negative lower bounds
+  (let* ((lower
+	  (map (lambda (x)
+		 (random -10 10))
+	       (vector->list (make-vector (random min max)))))
+	 (upper
+	  (map (lambda (x)
+		 (+ (random 1 11) x))
+	       lower)))
+    (interval (list->vector lower)
+	      (list->vector upper))))
+
+
+
 (pp "array error tests")
 
 (test (array 1 values)
@@ -496,18 +527,6 @@
   (test (array-getter array)
 	getter))
 
-(pp "mutable-array error tests")
-
-(test (mutable-array #f 1 1)
-      "mutable-array: domain is not an interval: ")
-
-(test (mutable-array (interval '#(3) '#(4)) 1 1)
-      "mutable-array: getter is not a procedure: ")
-
-(test (mutable-array (interval '#(3) '#(4))
-		     (lambda args 1.)
-		     #f)
-      "mutable-array: setter is not a procedure: ")
 
 (pp "mutable-array result tests")
 
@@ -515,9 +534,9 @@
   (let ((getter (lambda (i) result))
 	(setter   (lambda (v i) (set! result v)))
 	(domain   (interval '#(3) '#(4))))
-    (test (mutable-array domain
-			 getter
-			 setter)
+    (test (array domain
+		 getter
+		 setter)
 	  (make-##array-base domain
 			     getter
 			     setter
@@ -537,9 +556,9 @@
   (let ((getter (lambda (i) (car result)))
 	(setter   (lambda (v i) (set-car! result v)))
 	(domain   (interval '#(3) '#(4))))
-    (let ((array (mutable-array domain
-				getter
-				setter)))
+    (let ((array (array domain
+			getter
+			setter)))
       (test (array? array)
 	    #t)
       (test (mutable-array? array)
@@ -689,9 +708,9 @@
 
 (pp "array body, indexer, storage-class, and safe? error tests")
 
-(let ((a (mutable-array (interval '#(0 0) '#(1 1)) ;; not valid
-			values
-			values)))
+(let ((a (array (interval '#(0 0) '#(1 1)) ;; not valid
+		values
+		values)))
   (test (array-body a)
 	"array-body: argument is not a specialized array: ")
   (test (array-indexer a)
@@ -731,7 +750,7 @@
 		    (list->vector upper-bounds)))
 	 (array1
 	  (let ((alist '()))
-	    (mutable-array
+	    (array
 	     domain
 	     (lambda indices
 	       (cond ((assoc indices alist)
@@ -778,7 +797,7 @@
 		    (list->vector upper-bounds)))
 	 (array1
 	  (let ((alist '()))
-	    (mutable-array
+	    (array
 	     domain
 	     (lambda indices
 	       (cond ((assoc indices alist)
@@ -1000,8 +1019,6 @@
 	  (pp "Arghh")))))
 
 (pp "Some array-curry tests.")
-(pp "TODO:  MUTATE ARRAY_CURRY tests")
-
 
 (let ((array-builders (vector (list u1-storage-class      (lambda indices (random (expt 2 1))))
 			      (list u8-storage-class      (lambda indices (random (expt 2 8))))
@@ -1030,18 +1047,36 @@
 		      (list->vector upper-bounds)))
 	   (array-builder
 	    (vector-ref array-builders (random (vector-length array-builders))))
+	   (random-array-element
+	    (cadr array-builder))
+	   (storage-class
+	    (car array-builder))
 	   (Array
 	    (array->specialized-array (array domain
-					     (cadr array-builder))
-				      (car array-builder)))
+					     random-array-element)
+				      storage-class))
+	   (copied-array
+	    (array->specialized-array Array
+				      storage-class))
 	   (outer-dimension
 	    (random 1 (interval-dimension domain)))
+	   (domains
+	    (call-with-values (lambda ()(interval-curry domain outer-dimension)) list))
+	   (outer-domain
+	    (car domains))
+	   (inner-domain
+	    (cadr domains))
 	   (immutable-curry
-	    (array-curry Array outer-dimension))
+	    (array-curry (array (array-domain Array)
+				(array-getter Array))
+			 outer-dimension))
 	   (mutable-curry
-	    (array-curry Array outer-dimension 'mutable))
+	    (array-curry (array (array-domain Array)
+				(array-getter Array)
+				(array-setter Array))
+			 outer-dimension))
 	   (specialized-curry
-	    (array-curry Array outer-dimension 'specialized))
+	    (array-curry Array outer-dimension))
 	   (immutable-curry-from-definition
 	    (call-with-values
 		(lambda () (interval-curry (array-domain Array) outer-dimension))
@@ -1057,11 +1092,11 @@
 	      (lambda (outer-interval inner-interval)
 		(array outer-interval
 		       (lambda outer-multi-index
-			 (mutable-array inner-interval
-					(lambda inner-multi-index
-					  (apply (array-getter Array) (append outer-multi-index inner-multi-index)))
-					(lambda (v . inner-multi-index)
-					  (apply (array-setter Array) v (append outer-multi-index inner-multi-index)))))))))
+			 (array inner-interval
+				(lambda inner-multi-index
+				  (apply (array-getter Array) (append outer-multi-index inner-multi-index)))
+				(lambda (v . inner-multi-index)
+				  (apply (array-setter Array) v (append outer-multi-index inner-multi-index)))))))))
 	   (specialized-curry-from-definition
 	    (call-with-values
 		(lambda () (interval-curry (array-domain Array) outer-dimension))
@@ -1072,18 +1107,186 @@
 						  inner-interval
 						  (lambda inner-multi-index
 						    (apply values (append outer-multi-index inner-multi-index))))))))))
-      (if (not (and (array-every? array? immutable-curry)
-		    (array-every? (lambda (a) (not (mutable-array? a))) immutable-curry)
-		    (array-every? mutable-array? mutable-curry)
-		    (array-every? (lambda (a) (not (specialized-array? a))) mutable-curry)
-		    (array-every? specialized-array? specialized-curry)
-		    (array-every? (lambda (xy) (apply myarray= xy))
-				  (array-map list immutable-curry immutable-curry-from-definition))
-		    (array-every? (lambda (xy) (apply myarray= xy))
-				  (array-map list mutable-curry mutable-curry-from-definition))
-		    (array-every? (lambda (xy) (apply myarray= xy))
-				  (array-map list specialized-curry specialized-curry-from-definition))))
-	  (error "Arghh")))))
+      ;; mutate the curried array
+      (for-each (lambda (curried-array)
+		  (let ((outer-getter
+			 (array-getter curried-array)))
+		    (do ((i 0 (+ i 1)))
+			((= i tests))
+		      (call-with-values
+			  (lambda ()
+			    (random-multi-index outer-domain))
+			(lambda outer-multi-index
+			  (let ((inner-setter
+				 (array-setter (apply outer-getter outer-multi-index))))
+			    (call-with-values
+				(lambda ()
+				  (random-multi-index inner-domain))
+			      (lambda inner-multi-index
+				(let ((new-element
+				       (random-array-element)))
+				  (apply inner-setter new-element inner-multi-index)
+				  ;; mutate the copied array without currying
+				  (apply (array-setter copied-array) new-element (append outer-multi-index inner-multi-index)))))))))))
+		(list mutable-curry
+		      specialized-curry
+		      mutable-curry-from-definition
+		      specialized-curry-from-definition
+		      ))
+      
+      (and (or (myarray= Array copied-array) (error "Arggh"))
+	   (or (array-every? array? immutable-curry) (error "Arggh"))
+	   (or (array-every? (lambda (a) (not (mutable-array? a))) immutable-curry) (error "Arggh"))
+	   (or (array-every? mutable-array? mutable-curry) (error "Arggh"))
+	   (or (array-every? (lambda (a) (not (specialized-array? a))) mutable-curry) (error "Arggh"))
+	   (or (array-every? specialized-array? specialized-curry) (error "Arggh"))
+	   (or (array-every? (lambda (xy) (apply myarray= xy))
+			     (array-map list immutable-curry immutable-curry-from-definition))
+	       (error "Arggh"))
+	   (or (array-every? (lambda (xy) (apply myarray= xy))
+			     (array-map list mutable-curry mutable-curry-from-definition))
+	       (error "Arggh"))
+	   (or (array-every? (lambda (xy) (apply myarray= xy))
+			     (array-map list specialized-curry specialized-curry-from-definition))
+	       (error "Arggh"))))))
+
+(pp "Some array-distinguish-one-axis tests")
+
+(let ((array-builders (vector (list u1-storage-class      (lambda indices (random (expt 2 1))))
+			      (list u8-storage-class      (lambda indices (random (expt 2 8))))
+			      (list u16-storage-class     (lambda indices (random (expt 2 16))))
+			      (list u32-storage-class     (lambda indices (random (expt 2 32))))
+			      (list u64-storage-class     (lambda indices (random (expt 2 64))))
+			      (list s8-storage-class      (lambda indices (random (- (expt 2 7))  (expt 2 7))))
+			      (list s16-storage-class     (lambda indices (random (- (expt 2 15)) (expt 2 15))))
+			      (list s32-storage-class     (lambda indices (random (- (expt 2 31)) (expt 2 31))))
+			      (list s64-storage-class     (lambda indices (random (- (expt 2 63)) (expt 2 63))))
+			      (list f32-storage-class     (lambda indices (random-real)))
+			      (list f64-storage-class     (lambda indices (random-real)))
+                              (list c64-storage-class     (lambda indices (make-rectangular (random-real) (random-real))))
+                              (list c128-storage-class    (lambda indices (make-rectangular (random-real) (random-real))))
+			      (list generic-storage-class (lambda indices indices)))))
+  (do ((i 0 (+ i 1)))
+      ((= i tests))
+    (let* ((lower-bounds
+	    (map (lambda (x) (random 4))
+		 (vector->list (make-vector (random 2 7)))))
+	   (upper-bounds
+	    (map (lambda (x) (+ x (random 1 5)))
+		 lower-bounds))
+	   (domain
+	    (interval (list->vector lower-bounds)
+		      (list->vector upper-bounds)))
+	   (array-builder
+	    (vector-ref array-builders (random (vector-length array-builders))))
+	   (random-array-element
+	    (cadr array-builder))
+	   (storage-class
+	    (car array-builder))
+	   (Array
+	    (array->specialized-array (array domain
+					     random-array-element)
+				      storage-class))
+	   (copied-array
+	    (array->specialized-array Array
+				      storage-class))
+	   (distinguished-axis
+	    (random (interval-dimension domain)))
+	   (domains
+	    (call-with-values (lambda ()(interval-distinguish-one-axis domain distinguished-axis)) list))
+	   (outer-domain
+	    (car domains))
+	   (inner-domain
+	    (cadr domains))
+	   (immutable-distinguish-one-axis
+	    (array-distinguish-one-axis (array (array-domain Array)
+					       (array-getter Array))
+					distinguished-axis))
+	   (mutable-distinguish-one-axis
+	    (array-distinguish-one-axis (array (array-domain Array)
+					       (array-getter Array)
+					       (array-setter Array))
+					distinguished-axis))
+	   (specialized-distinguish-one-axis
+	    (array-distinguish-one-axis Array distinguished-axis))
+	   (immutable-distinguish-one-axis-from-definition
+	    (let ((domain (array-domain Array))
+		  (getter (array-getter Array)))
+	      (call-with-values
+		  (lambda () (interval-distinguish-one-axis domain distinguished-axis))
+		(lambda (outer-interval inner-interval)
+		  (array outer-interval
+			 (lambda outer-multi-index
+			   (array inner-interval
+				  (lambda (m)
+				    (apply getter (insert-arg-into-arg-list m outer-multi-index distinguished-axis))))))))))
+	   (mutable-distinguish-one-axis-from-definition
+	    (let ((domain (array-domain Array))
+		  (getter (array-getter Array))
+		  (setter (array-setter Array)))
+	      (call-with-values
+		  (lambda () (interval-distinguish-one-axis domain distinguished-axis))
+		(lambda (outer-interval inner-interval)
+		  (array outer-interval
+			 (lambda outer-multi-index
+			   (array inner-interval
+				  (lambda (m)
+				    (apply getter (insert-arg-into-arg-list m outer-multi-index distinguished-axis)))
+				  (lambda (v m)
+				    (apply setter v (insert-arg-into-arg-list m outer-multi-index distinguished-axis))))))))))
+	   (specialized-distinguish-one-axis-from-definition
+	    (call-with-values
+		(lambda () (interval-distinguish-one-axis domain distinguished-axis))
+	      (lambda (outer-interval inner-interval)
+		(array outer-interval
+		       (lambda outer-multi-index
+			 (specialized-array-share Array
+						  inner-interval
+						  (lambda (m) (apply values (insert-arg-into-arg-list m outer-multi-index distinguished-axis))))))))))
+      ;; mutate the distinguished array
+      (for-each (lambda (distinguished-array)
+		  (let ((outer-getter
+			 (array-getter distinguished-array)))
+		    (do ((i 0 (+ i 1)))
+			((= i tests))
+		      (call-with-values
+			  (lambda ()
+			    (random-multi-index outer-domain))
+			(lambda outer-multi-index
+			  (let ((inner-setter
+				 (array-setter (apply outer-getter outer-multi-index))))
+			    (call-with-values
+				(lambda ()
+				  (random-multi-index inner-domain))
+			      (lambda (inner-multi-index)
+				(let ((new-element
+				       (random-array-element)))
+				  (inner-setter new-element inner-multi-index)
+				  ;; mutate the copied array without distinguishing one axis
+				  (apply (array-setter copied-array)
+					 new-element
+					 (insert-arg-into-arg-list inner-multi-index outer-multi-index distinguished-axis)))))))))))
+		(list mutable-distinguish-one-axis
+		      specialized-distinguish-one-axis
+		      mutable-distinguish-one-axis-from-definition
+		      specialized-distinguish-one-axis-from-definition
+		      ))
+      
+      (and (or (myarray= Array copied-array) (error "Arggh"))
+	   (or (array-every? array? immutable-distinguish-one-axis) (error "Arggh"))
+	   (or (array-every? (lambda (a) (not (mutable-array? a))) immutable-distinguish-one-axis) (error "Arggh"))
+	   (or (array-every? mutable-array? mutable-distinguish-one-axis) (error "Arggh"))
+	   (or (array-every? (lambda (a) (not (specialized-array? a))) mutable-distinguish-one-axis) (error "Arggh"))
+	   (or (array-every? specialized-array? specialized-distinguish-one-axis) (error "Arggh"))
+	   (or (array-every? (lambda (xy) (apply myarray= xy))
+			     (array-map list immutable-distinguish-one-axis immutable-distinguish-one-axis-from-definition))
+	       (error "Arggh"))
+	   (or (array-every? (lambda (xy) (apply myarray= xy))
+			     (array-map list mutable-distinguish-one-axis mutable-distinguish-one-axis-from-definition))
+	       (error "Arggh"))
+	   (or (array-every? (lambda (xy) (apply myarray= xy))
+			     (array-map list specialized-distinguish-one-axis specialized-distinguish-one-axis-from-definition))
+	       (error "Arggh"))))))
 
 (pp "specialized-array-share error tests")
 
@@ -1268,18 +1471,18 @@
 (define sparse-array
   (let ((domain (interval '#(0 0) '#(1000000 1000000)))
 	(sparse-rows (make-vector 1000000 '())))
-    (mutable-array domain
-		   (lambda (i j)
-		     (cond ((assv j (vector-ref sparse-rows i))
-			    => cdr)
-			   (else
-			    0.0)))
-		   (lambda (v i j)
-		     (cond ((assv j (vector-ref sparse-rows i))
-			    => (lambda (pair)
-				 (set-cdr! pair v)))
-			   (else
-			    (vector-set! sparse-rows i (cons (cons j v) (vector-ref sparse-rows i)))))))))
+    (array domain
+	   (lambda (i j)
+	     (cond ((assv j (vector-ref sparse-rows i))
+		    => cdr)
+		   (else
+		    0.0)))
+	   (lambda (v i j)
+	     (cond ((assv j (vector-ref sparse-rows i))
+		    => (lambda (pair)
+			 (set-cdr! pair v)))
+		   (else
+		    (vector-set! sparse-rows i (cons (cons j v) (vector-ref sparse-rows i)))))))))
 
 (test ((array-getter sparse-array) 12345 6789)
       0.)

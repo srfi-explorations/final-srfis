@@ -632,20 +632,26 @@
 ;; An array has a domain (which is an interval) and an getter that maps that domain into some type of
 ;; Scheme objects
 
-(define (array domain getter)
-  (cond ((not (interval? domain))
-	 (error "array: domain is not an interval: " domain))
-	((not (procedure? getter))
-	 (error "array: getter is not a procedure: " getter))
-	(else
-	 (make-##array-base domain
-			    getter
-			    #f        ; setter
-			    #f        ; storage-class
-			    #f        ; body
-			    #f        ; indexer
-			    #f        ; safe?
-			    ))))
+(define (array domain getter #!optional (setter (macro-absent-obj)))
+  (let ((setter (cond ((eq? setter (macro-absent-obj))
+		       #f)
+		      ((procedure? setter)
+		       setter)
+		      (else
+		       (error "array: setter is not a procedure: " domain getter setter)))))
+    (cond ((not (interval? domain))
+	   (error "array: domain is not an interval: " domain getter setter))
+	  ((not (procedure? getter))
+	   (error "array: getter is not a procedure: " domain getter setter))
+	  (else
+	   (make-##array-base domain
+			      getter
+			      setter
+			      #f        ; storage-class
+			      #f        ; body
+			      #f        ; indexer
+			      #f        ; safe?
+			      )))))
 
 (define (array? x)
   (##array-base? x))
@@ -709,23 +715,6 @@ and
 ((array-getter a) i_1 ... i_n) => v
 
 |#
-
-(define (mutable-array domain getter setter)
-  (cond ((not (interval? domain))
-	 (error "mutable-array: domain is not an interval: " domain))
-	((not (procedure? getter))
-	 (error "mutable-array: getter is not a procedure: " getter))
-	((not (procedure? setter))
-	 (error "mutable-array: setter is not a procedure: " setter))
-	(else
-	 (make-##array-base domain
-			    getter
-			    setter
-			    #f        ; storage-class
-			    #f        ; body
-			    #f        ; indexer
-			    #f        ; safe?
-			    ))))
 
 (define (mutable-array? obj)
   (and (array? obj)
@@ -1763,9 +1752,9 @@ So you specify a new domain and an affine 1-1 mapping from the new-domain to the
 |#
 
 (define (specialized-array-share array
-				  new-domain
-				  new-domain->old-domain
-				  #!optional (safe? (macro-absent-obj)))
+				 new-domain
+				 new-domain->old-domain
+				 #!optional (safe? (macro-absent-obj)))
   (cond ((not (specialized-array? array))
 	 (error "specialized-array-share: array is not a specialized-array: " array))
 	((not (interval? new-domain))
@@ -1789,27 +1778,27 @@ So you specify a new domain and an affine 1-1 mapping from the new-domain to the
 
 (define (##immutable-array-curry Array left-dimension)
   (call-with-values
-	     (lambda () (interval-curry (array-domain Array) left-dimension))
-	   (lambda (left-interval right-interval)
-	     (let ((getter (array-getter Array)))
-	       (array left-interval
-		      (case (##interval-dimension left-interval)
-			((1)  (case (##interval-dimension right-interval)
-				((1)  (lambda (i)      (array right-interval (lambda (j)         (getter i j)))))
-				((2)  (lambda (i)      (array right-interval (lambda (j k)       (getter i j k)))))
-				((3)  (lambda (i)      (array right-interval (lambda (j k l)     (getter i j k l)))))
-				(else (lambda (i)      (array right-interval (lambda multi-index (apply getter i multi-index)))))))
-			((2)  (case (##interval-dimension right-interval)
-				((1)  (lambda (i j)    (array right-interval (lambda   (k)       (getter i j k)))))
-				((2)  (lambda (i j)    (array right-interval (lambda   (k l)     (getter i j k l)))))
-				(else (lambda (i j)    (array right-interval (lambda multi-index (apply getter i j multi-index)))))))
-			((3)  (case (##interval-dimension right-interval)
-				((1)  (lambda (i j k)  (array right-interval (lambda     (l)     (getter i j k l)))))
-				(else (lambda (i j k)  (array right-interval (lambda multi-index (apply getter i j k multi-index)))))))
-			(else (lambda left-multi-index
-				(array right-interval
-				       (lambda right-multi-index
-					 (apply getter (append left-multi-index right-multi-index))))))))))))
+      (lambda () (interval-curry (array-domain Array) left-dimension))
+    (lambda (left-interval right-interval)
+      (let ((getter (array-getter Array)))
+	(array left-interval
+	       (case (##interval-dimension left-interval)
+		 ((1)  (case (##interval-dimension right-interval)
+			 ((1)  (lambda (i)      (array right-interval (lambda (j)         (getter i j)))))
+			 ((2)  (lambda (i)      (array right-interval (lambda (j k)       (getter i j k)))))
+			 ((3)  (lambda (i)      (array right-interval (lambda (j k l)     (getter i j k l)))))
+			 (else (lambda (i)      (array right-interval (lambda multi-index (apply getter i multi-index)))))))
+		 ((2)  (case (##interval-dimension right-interval)
+			 ((1)  (lambda (i j)    (array right-interval (lambda   (k)       (getter i j k)))))
+			 ((2)  (lambda (i j)    (array right-interval (lambda   (k l)     (getter i j k l)))))
+			 (else (lambda (i j)    (array right-interval (lambda multi-index (apply getter i j multi-index)))))))
+		 ((3)  (case (##interval-dimension right-interval)
+			 ((1)  (lambda (i j k)  (array right-interval (lambda     (l)     (getter i j k l)))))
+			 (else (lambda (i j k)  (array right-interval (lambda multi-index (apply getter i j k multi-index)))))))
+		 (else (lambda left-multi-index
+			 (array right-interval
+				(lambda right-multi-index
+				  (apply getter (append left-multi-index right-multi-index))))))))))))
 
 (define (##mutable-array-curry Array left-dimension)
   (call-with-values
@@ -1820,39 +1809,39 @@ So you specify a new domain and an affine 1-1 mapping from the new-domain to the
 	(array left-interval
 	       (case (##interval-dimension left-interval)
 		 ((1)  (case (##interval-dimension right-interval)
-			 ((1)  (lambda (i)     (mutable-array right-interval
-							      (lambda (  j)     (getter   i j))
-							      (lambda (v j)     (setter v i j)))))
-			 ((2)  (lambda (i)     (mutable-array right-interval
-							      (lambda (  j k)   (getter   i j k))
-							      (lambda (v j k)   (setter v i j k)))))
-			 ((3)  (lambda (i)     (mutable-array right-interval
-							      (lambda (  j k l) (getter   i j k l))
-							      (lambda (v j k l) (setter v i j k l)))))
-			 (else (lambda (i)     (mutable-array right-interval
-							      (lambda      multi-index  (apply getter   i     multi-index))
-							      (lambda (v . multi-index) (apply setter v i     multi-index)))))))
+			 ((1)  (lambda (i)     (array right-interval
+						      (lambda (  j)     (getter   i j))
+						      (lambda (v j)     (setter v i j)))))
+			 ((2)  (lambda (i)     (array right-interval
+						      (lambda (  j k)   (getter   i j k))
+						      (lambda (v j k)   (setter v i j k)))))
+			 ((3)  (lambda (i)     (array right-interval
+						      (lambda (  j k l) (getter   i j k l))
+						      (lambda (v j k l) (setter v i j k l)))))
+			 (else (lambda (i)     (array right-interval
+						      (lambda      multi-index  (apply getter   i     multi-index))
+						      (lambda (v . multi-index) (apply setter v i     multi-index)))))))
 		 ((2)  (case (##interval-dimension right-interval)
-			 ((1)  (lambda (i j)   (mutable-array right-interval
-							      (lambda (    k)   (getter   i j k))
-							      (lambda (v   k)   (setter v i j k)))))
-			 ((2)  (lambda (i j)   (mutable-array right-interval
-							      (lambda (    k l) (getter   i j k l))
-							      (lambda (v   k l) (setter v i j k l)))))
-			 (else (lambda (i j)   (mutable-array right-interval
-							      (lambda      multi-index  (apply getter   i j   multi-index))
-							      (lambda (v . multi-index) (apply setter v i j   multi-index)))))))
+			 ((1)  (lambda (i j)   (array right-interval
+						      (lambda (    k)   (getter   i j k))
+						      (lambda (v   k)   (setter v i j k)))))
+			 ((2)  (lambda (i j)   (array right-interval
+						      (lambda (    k l) (getter   i j k l))
+						      (lambda (v   k l) (setter v i j k l)))))
+			 (else (lambda (i j)   (array right-interval
+						      (lambda      multi-index  (apply getter   i j   multi-index))
+						      (lambda (v . multi-index) (apply setter v i j   multi-index)))))))
 		 ((3)  (case (##interval-dimension right-interval)
-			 ((1)  (lambda (i j k) (mutable-array right-interval
-							      (lambda (      l) (getter   i j k l))
-							      (lambda (v     l) (setter v i j k l)))))
-			 (else (lambda (i j k) (mutable-array right-interval
-							      (lambda      multi-index  (apply getter   i j k multi-index))
-							      (lambda (v . multi-index) (apply setter v i j k multi-index)))))))
+			 ((1)  (lambda (i j k) (array right-interval
+						      (lambda (      l) (getter   i j k l))
+						      (lambda (v     l) (setter v i j k l)))))
+			 (else (lambda (i j k) (array right-interval
+						      (lambda      multi-index  (apply getter   i j k multi-index))
+						      (lambda (v . multi-index) (apply setter v i j k multi-index)))))))
 		 (else (lambda left-multi-index
-			 (mutable-array right-interval
-					(lambda      right-multi-index  (apply getter   (append left-multi-index right-multi-index)))
-					(lambda (v . right-multi-index) (apply setter v (append left-multi-index right-multi-index))))))))))))
+			 (array right-interval
+				(lambda      right-multi-index  (apply getter   (append left-multi-index right-multi-index)))
+				(lambda (v . right-multi-index) (apply setter v (append left-multi-index right-multi-index))))))))))))
 
 (define (##specialized-array-curry Array left-dimension)
   (call-with-values
@@ -1876,35 +1865,30 @@ So you specify a new domain and an affine 1-1 mapping from the new-domain to the
 		 (else (lambda left-multi-index 
 			 (specialized-array-share Array right-interval (lambda right-multi-index (apply values (append left-multi-index right-multi-index))) safe?)))))))))
 
-(define (array-curry Array left-dimension #!optional (subarray-type 'immutable))
-  (cond ((not (and (symbol? subarray-type)
-		   (memq subarray-type '(immutable mutable specialized))))
-	 (error "array-curry:  If the type of the subarrays is given, it must be either 'immutable, 'mutable, or 'specialized: " Array left-dimension subarray-type))
-	((and (eq? subarray-type 'mutable)
-	      (not (mutable-array? Array)))
-	 (error "array-curry: The type of subarrays is specified as mutable, but input array is not mutable: " Array left-dimension subarray-type))
-	((and (eq? subarray-type 'specialized)
-	      (not (specialized-array? Array)))
-	 (error "array-curry: type of subarrays is specified as specialized, but input array is not specialized: " Array left-dimension subarray-type))
-	((not (##exact-integer? left-dimension))
-	 (error "array-curry: argument is not an exact integer: " Array left-dimension subarray-type))
+(define (array-curry Array left-dimension)
+  (cond ((not (##exact-integer? left-dimension))
+	 (error "array-curry: second argument is not an exact integer: " Array left-dimension))
+	((not (array? Array))
+	 (error "array-curry: first argument is not an array: " Array left-dimension))
 	((not (< 0 left-dimension (##interval-dimension (array-domain Array))))
-	 (error "array-curry: argument is not between 0 and (interval-dimension (array-domain array)) (exclusive): " Array left-dimension subarray-type))
-	(else
-	 (case subarray-type
-	   ((immutable)
-	    (##immutable-array-curry Array left-dimension))
-	   ((mutable)
-	    (##mutable-array-curry Array left-dimension))
-	   ((specialized)
-	    (##specialized-array-curry Array left-dimension))))))
-	
+	 (error "array-curry: argument is not between 0 and (interval-dimension (array-domain array)) (exclusive): " Array left-dimension))
+	((specialized-array? Array)
+	 (##specialized-array-curry Array left-dimension))
+	((mutable-array? Array)
+	 (##mutable-array-curry Array left-dimension))
+	(else ; immutable array
+	 (##immutable-array-curry Array left-dimension))))
+
 
 
 (define (insert-arg-into-arg-list arg arg-list index)
-  (if (= index 0)
-      (cons arg arg-list)
-      (cons arg (insert-arg-into-arg-list arg (cdr arg-list) (- index 1)))))
+  (cond ((= index 0)
+	 (cons arg arg-list))
+	((null? arg-list)
+	 (error "insert-arg-int-arg-list: Ran out of arg-list: " arg arg-list index))
+	(else
+	 (cons (car arg-list)
+	       (insert-arg-into-arg-list arg (cdr arg-list) (- index 1))))))
 
 (define (##immutable-array-distinguish-one-axis Array index)
   (call-with-values
@@ -1936,39 +1920,39 @@ So you specify a new domain and an affine 1-1 mapping from the new-domain to the
 	(array outer-interval
 	       (case (##interval-dimension outer-interval)
 		 ((1) (case index
-			((0) (lambda (  j)     (mutable-array inner-interval
-							      (lambda (  i) (getter   i j))
-							      (lambda (v i) (setter v i j)))))
-			((1) (lambda (i  )     (mutable-array inner-interval
-							      (lambda (  j) (getter   i j))
-							      (lambda (v j) (setter v i j)))))))
+			((0) (lambda (  j)     (array inner-interval
+						      (lambda (  i) (getter   i j))
+						      (lambda (v i) (setter v i j)))))
+			((1) (lambda (i  )     (array inner-interval
+						      (lambda (  j) (getter   i j))
+						      (lambda (v j) (setter v i j)))))))
 		 ((2) (case index
-			((0) (lambda (  j k)   (mutable-array inner-interval
-							      (lambda (  i) (getter   i j k))
-							      (lambda (v i) (setter v i j k)))))
-			((1) (lambda (i   k)   (mutable-array inner-interval
-							      (lambda (  j) (getter   i j k))
-							      (lambda (v j) (setter v i j k)))))
-			((2) (lambda (i j  )   (mutable-array inner-interval
-							      (lambda (  k) (getter   i j k))
-							      (lambda (v k) (setter v i j k)))))))
+			((0) (lambda (  j k)   (array inner-interval
+						      (lambda (  i) (getter   i j k))
+						      (lambda (v i) (setter v i j k)))))
+			((1) (lambda (i   k)   (array inner-interval
+						      (lambda (  j) (getter   i j k))
+						      (lambda (v j) (setter v i j k)))))
+			((2) (lambda (i j  )   (array inner-interval
+						      (lambda (  k) (getter   i j k))
+						      (lambda (v k) (setter v i j k)))))))
 		 ((3) (case index
-			((0) (lambda (  j k l) (mutable-array inner-interval
-							      (lambda (  i) (getter   i j k l))
-							      (lambda (v i) (setter v i j k l)))))
-			((1) (lambda (i   k l) (mutable-array inner-interval
-							      (lambda (  j) (getter   i j k l))
-							      (lambda (v j) (setter v i j k l)))))
-			((2) (lambda (i j   l) (mutable-array inner-interval
-							      (lambda (  k) (getter   i j k l))
-							      (lambda (v k) (setter v i j k l)))))
-			((3) (lambda (i j k  ) (mutable-array inner-interval
-							      (lambda (  l) (getter   i j k l))
-							      (lambda (v l) (setter v i j k l)))))))
+			((0) (lambda (  j k l) (array inner-interval
+						      (lambda (  i) (getter   i j k l))
+						      (lambda (v i) (setter v i j k l)))))
+			((1) (lambda (i   k l) (array inner-interval
+						      (lambda (  j) (getter   i j k l))
+						      (lambda (v j) (setter v i j k l)))))
+			((2) (lambda (i j   l) (array inner-interval
+						      (lambda (  k) (getter   i j k l))
+						      (lambda (v k) (setter v i j k l)))))
+			((3) (lambda (i j k  ) (array inner-interval
+						      (lambda (  l) (getter   i j k l))
+						      (lambda (v l) (setter v i j k l)))))))
 		 (else (lambda outer-index
-			 (mutable-array inner-interval
-					(lambda (  m) (apply getter   (insert-arg-into-arg-list m outer-index index)))
-					(lambda (v m) (apply setter v (insert-arg-into-arg-list m outer-index index))))))))))))
+			 (array inner-interval
+				(lambda (  m) (apply getter   (insert-arg-into-arg-list m outer-index index)))
+				(lambda (v m) (apply setter v (insert-arg-into-arg-list m outer-index index))))))))))))
 
 
 (define (##specialized-array-distinguish-one-axis Array index)
@@ -1991,34 +1975,25 @@ So you specify a new domain and an affine 1-1 mapping from the new-domain to the
 			((2) (lambda (i j   l) (specialized-array-share Array inner-interval (lambda (k) (values i j k l)) safe?)))
 			((3) (lambda (i j k  ) (specialized-array-share Array inner-interval (lambda (l) (values i j k l)) safe?)))))
 		 (else (lambda outer-index
-			 (specialized-array-share Array inner-interval (lambda (m) (apply values (insert-arg-into-arg-list m outer-index index)) safe?))))))))))
+			 (specialized-array-share Array inner-interval (lambda (m) (apply values (insert-arg-into-arg-list m outer-index index))) safe?)))))))))
 
 
-(define (array-distinguish-one-axis Array index #!optional (subarray-type 'immutable))
-  (cond ((not (and (symbol? subarray-type)
-		   (memq subarray-type '(immutable mutable specialized))))
-	 (error "array-distinguish-one-axis:  If the type of the subarrays is given, it must be either 'immutable, 'mutable, or 'specialized: " Array index subarray-type))
-	((and (eq? subarray-type 'mutable)
-	      (not (mutable-array? Array)))
-	 (error "array-distinguish-one-axis: The type of subarrays is specified as mutable, but input array is not mutable: " Array index subarray-type))
-	((and (eq? subarray-type 'specialized)
-	      (not (specialized-array? Array)))
-	 (error "array-distinguish-one-axis: type of subarrays is specified as specialized, but input array is not specialized: " Array index subarray-type))
+(define (array-distinguish-one-axis Array index)
+  (cond ((not (array? Array))
+	 (error "array-distinguish-one-axis: argument is not an array: "array index))
 	((not (##exact-integer? index))
-	 (error "array-distinguish-one-axis: argument is not an exact integer: " Array index subarray-type))
+	 (error "array-distinguish-one-axis: argument is not an exact integer: " Array index))
 	((not (<= 2 (##interval-dimension (array-domain Array))))
-	 (error "array-distinguish-one-axis: the array argument does not have at least dimension 2: " Array index subarray-type))
+	 (error "array-distinguish-one-axis: the array argument does not have at least dimension 2: " Array index))
 	((not (< -1 index (##interval-dimension (array-domain Array))))
 	 (error "array-distinguish-one-axis: argument is not between 0 (inclusive) and (interval-dimension (array-domain array)) (exclusive): " Array index subarray-type))
+	((specialized-array? Array)
+	 (##specialized-array-distinguish-one-axis Array index))
+	((mutable-array? Array)
+	 (##mutable-array-distinguish-one-axis Array index))
 	(else
-	 (case subarray-type
-	   ((immutable)
-	    (##immutable-array-distinguish-one-axis Array index))
-	   ((mutable)
-	    (##mutable-array-distinguish-one-axis Array index))
-	   ((specialized)
-	    (##specialized-array-distinguish-one-axis Array index))))))
-	
+	 (##immutable-array-distinguish-one-axis Array index))))
+
 
 #|
 
