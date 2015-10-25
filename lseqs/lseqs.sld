@@ -1,0 +1,11 @@
+(define-library (lseqs)
+  (import (scheme base))
+  (import (scheme case-lambda))
+  (export generator->lseq lseq? lseq=?)
+  (export lseq-car lseq-first lseq-cdr lseq-rest lseq-ref lseq-take lseq-drop)
+  (export lseq-realize lseq->generator lseq-length lseq-append lseq-zip)
+  (export lseq-map lseq-for-each lseq-filter lseq-remove)
+  (export lseq-find lseq-find-tail lseq-take-while lseq-drop-while
+          lseq-any lseq-every lseq-index lseq-member lseq-memq lseq-memv)
+  (include "lseqs-impl.scm")
+)
