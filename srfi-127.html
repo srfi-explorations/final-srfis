@@ -1,7 +1,8 @@
 <!DOCTYPE html PUBLIC "-//IETF//DTD HTML//EN">
+<!-- saved from url=(0047)http://srfi.schemers.org/srfi-127/srfi-127.html -->
 <html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>SRFI 127: Lazy Sequences</title>
-    <link rel="stylesheet" href="http://srfi.schemers.org/srfi.css" type="text/css" />
+    <link rel="stylesheet" href="./srfi-127-2_files/srfi.css" type="text/css">
   <style>#content > #right > .dose > .dosesingle,
 #content > #center > .dose > .dosesingle
 {display:none !important;}</style></head>
@@ -74,27 +75,35 @@ to be used with ordinary Scheme functions, which are strict, so
 neither left nor right folds are provided: it is just as time-efficient to
 use <code>lseq-realize</code> and then SRFI 1 <code>fold</code> or
 <code>fold-right</code>, and just as space-efficient to use <code>lseq-&gt;generator</code>
-and SRFI 121's <code>generator-fold</code>.</p>
-<p>The linear-update procedures of SRFI 1 are also left out, as lazy sequences
+and SRFI 121's <code>generator-fold</code>.
+Exceptions are <code>lseq-length</code> and <code>lseq-for-each</code>,
+which are very common operations on lists and so are provided.</p>
+
+<p>Lazy alists have been omitted, as the point of an alist is
+to express a function whose results are not algorithmically deducible from
+its arguments.  As a result, there is little point in using a generator
+procedure to produce key-value mappings when an ordinary procedure can
+compute the value from the key directly.
+The linear-update procedures of SRFI 1 are also left out, as lazy sequences
 are not intended to be mutated.</p>
+
 <h2>Table of contents</h2>
 <ul id="toc-table">
-</ul><li><a href="#ProcedureIndex">Procedure index</a>
-<li><a href="#Specification">Specification</a>
+</ul><li><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#ProcedureIndex">Procedure index</a>
+</li><li><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#Specification">Specification</a>
   <ul>
-  <li><a href="#Constructors">Constructors</a>
-  </li><li><a href="#Predicates">Predicates</a>
-  </li><li><a href="#Selectors">Selectors</a>
-  </li><li><a href="#Whole">The whole lazy sequence</a>
-  </li><li><a href="#MappingFiltering">Mapping and filtering</a>
-  </li><li><a href="#Searching">Searching</a>
-  </li><li><a href="#LazyAssociationLists">Lazy association lists</a>
+  <li><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#Constructors">Constructors</a>
+  </li><li><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#Predicates">Predicates</a>
+  </li><li><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#Selectors">Selectors</a>
+  </li><li><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#Whole">The whole lazy sequence</a>
+  </li><li><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#MappingFiltering">Mapping and filtering</a>
+  </li><li><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#Searching">Searching</a>
   </li></ul>
-</li><li><a href="#SampleImplementation">Sample Implementation</a>
-</li><li><a href="#Acknowledgements">Acknowledgements</a>
-</li><li><a href="#ReferencesLinks">References &amp; links</a>
-</li><li><a href="#Copyright">Copyright</a>
-</li></li>
+</li><li><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#SampleImplementation">Sample Implementation</a>
+</li><li><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#Acknowledgements">Acknowledgements</a>
+</li><li><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#ReferencesLinks">References &amp; links</a>
+</li><li><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#Copyright">Copyright</a>
+</li>
 <h1><a name="ProcedureIndex">Procedure Index</a></h1>
 <p>
 Here is a short list of the procedures provided by this SRFI.
@@ -102,42 +111,35 @@ Here is a short list of the procedures provided by this SRFI.
 <dl>
 <dt class="proc-index"> Constructors
 </dt><dd class="proc-index">
-<pre class="proc-index"><a href="#generator-&gt;lseq">generator-&gt;lseq</a> 
+<pre class="proc-index"><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#generator->lseq">generator-&gt;lseq</a> 
 </pre>
 </dd><dt class="proc-index"> Predicates
 </dt><dd class="proc-index">
-<pre class="proc-index">
-<a href="#lseq-p">lseq?</a>         <a href="#lseq=">lseq=</a>
+<pre class="proc-index"><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-p">lseq?</a>         <a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq=">lseq=</a>
 </pre>
 </dd><dt class="proc-index"> Selectors
 </dt><dd class="proc-index">
-<pre class="proc-index">
-<a href="#lseq-car">lseq-car</a>     <a href="#lseq-cdr">lseq-cdr</a>
-<a href="#lseq-first">lseq-first</a>   <a href="#lseq-rest">lseq-rest</a> <a href="#lseq-ref">lseq-ref</a>
-<a href="#lseq-take">lseq-take</a>    <a href="#lseq-drop">lseq-drop</a>   
+<pre class="proc-index"><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-car">lseq-car</a>     <a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-cdr">lseq-cdr</a>
+<a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-first">lseq-first</a>   <a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-rest">lseq-rest</a> <a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-ref">lseq-ref</a>
+<a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-take">lseq-take</a>    <a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-drop">lseq-drop</a>   
 </pre>
 </dd><dt class="proc-index"> The whole lazy sequence
 </dt><dd class="proc-index">
-<pre class="proc-index"><a href="#lseq-realize">lseq-realize</a> <a href="#lseq-&gt;generator">lseq-&gt;generator</a>
-<a href="#lseq-length">lseq-length</a>
-<a href="#lseq-append">lseq-append</a>  <a href="#lseq-zip">lseq-zip</a></pre>
+<pre class="proc-index"><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-realize">lseq-realize</a> <a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq->generator">lseq-&gt;generator</a>
+<a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-length">lseq-length</a>
+<a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-append">lseq-append</a>  <a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-zip">lseq-zip</a></pre>
 </dd><dt class="proc-index"> Mapping and filtering
 </dt><dd class="proc-index">
-<pre class="proc-index"><a href="#lseq-map">lseq-map</a>        <a href="#lseq-pair-map">lseq-pair-map</a>
-<a href="#lseq-for-each">lseq-for-each</a>   <a href="#lseq-pair-for-each">lseq-pair-for-each</a>
-<a href="#lseq-filter">lseq-filter</a>     <a href="#lseq-remove">lseq-remove</a>
+<pre class="proc-index"><a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-map">lseq-map</a>        <a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-for-each">lseq-for-each</a>
+<a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-filter">lseq-filter</a>     <a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-remove">lseq-remove</a>
 </pre>
 </dd><dt class="proc-index"> Searching
 </dt><dd class="proc-index"><pre class="proc-index">
-<a href="#lseq-member">lseq-member</a>       <a href="#lseq-memq">lseq-memq</a>     <a href="#lseq-memv">lseq-memv</a>
-<a href="#lseq-find">lseq-find</a>         <a href="#lseq-find-rest">lseq-find-rest</a> 
-<a href="#lseq-any">lseq-any</a>          <a href="#lseq-every">lseq-every</a>
-<a href="#lseq-index">lseq-index</a>
-<a href="#lseq-take-while">lseq-take-while</a>   <a href="#lseq-drop-while">lseq-drop-while</a>
-</pre>
-</dd><dt class="proc-index"> Lazy association lists
-</dt><dd class="proc-index">
-<pre class="proc-index"><a href="#lseq-assoc">lseq-assoc</a>        <a href="#lseq-assq">lseq-assq</a>       <a href="#lseq-assv">lseq-assv</a>
+<a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-find">lseq-find</a>         <a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-find-rest">lseq-find-rest</a> 
+<a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-any">lseq-any</a>          <a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-every">lseq-every</a>
+<a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-index">lseq-index</a>
+<a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-take-while">lseq-take-while</a>   <a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-drop-while">lseq-drop-while</a>
+<a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-member">lseq-member</a>       <a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-memq">lseq-memq</a>     <a href="http://srfi.schemers.org/srfi-127/srfi-127.html#lseq-memv">lseq-memv</a>
 </pre>
 </dd></dl>
 <h1><a name="Specification">Specification</a></h1>
@@ -185,8 +187,7 @@ simply use <code>cons</code>; to prepend more than one value, use SRFI 1's
 <li>Otherwise, a newly allocated pair whose car is <var>obj</var> and whose
 cdr is <var>generator</var> is returned.</li>
 </ul>
-<pre class="code-example">
-(generator-&gt;lseq (make-repeating-generator 'c)) =&gt; (c c c ...)
+<pre class="code-example">(generator-&gt;lseq (make-repeating-generator 'c)) =&gt; (c c c ...)
 </pre></dd>
 <h2><a name="Predicates">Predicates</a></h2>
 <dl>
@@ -274,8 +275,8 @@ possible.</p>
 <code class="proc-def">lseq-drop</code><var> lseq i -&gt; lseq</var>
 </dt><dt class="proc-def">
 </dt><dd class="proc-def">
-    <p><code>lseq-take</code> returns the first <var>i</var> elements of <var>lseq</var>.<br />
-    <code>lseq-drop</code> returns all but the first <var>i</var> elements of <var>lseq</var>.<br /></p>
+    <p><code>lseq-take</code> returns the first <var>i</var> elements of <var>lseq</var>.<br>
+    <code>lseq-drop</code> returns all but the first <var>i</var> elements of <var>lseq</var>.<br></p>
 <pre class="code-example">(lseq-take '(a b c d e)  2) =&gt; (a b)
 (lseq-drop '(a b c d e)  2) =&gt; (c d e)
 </pre>
@@ -391,12 +392,10 @@ in order.
      <p>The procedure <code>lseq-remove</code> is the same as
      <code>lseq-filter</code>, except that it
      returns elements that do not satisfy <var>pred</var>.</p>
-<pre class="code-example">
-(lseq-filter odd? (generator->lseq (make-range-generator 1 5)))
+<pre class="code-example">(lseq-filter odd? (generator-&gt;lseq (make-range-generator 1 5)))
   =&gt;  (1 3)
 </pre>
-<pre class="code-example">
-(lseq-remove odd? (generator->lseq (make-range-generator 1 5)))
+<pre class="code-example">(lseq-remove odd? (generator-&gt;lseq (make-range-generator 1 5)))
   =&gt;  (2 4)
 </pre>
  <p>
@@ -405,7 +404,7 @@ in order.
 <p>
 The following procedures all search lseqs for the leftmost element satisfying
 some criteria.
-<dt class="proc-def">
+</p><dt class="proc-def">
 <a name="lseq-find"></a>
 <code class="proc-def">lseq-find</code><var> pred lseq -&gt; value</var>
 </dt><dd class="proc-def">
@@ -483,10 +482,9 @@ satisfy the predicate <var>pred</var>, and returns the rest of the lseq.</p>
 (lseq-any integer? '(a 3.1 b 2.7)) =&gt; #f
 (lseq-any &lt; '(3 1 4 1 5)
        '(2 7 1 8 2)) =&gt; #t
-</pre><pre>
-(define (factorial n)
+</pre><pre>(define (factorial n)
   (cond
-    ((< n 0) #f)
+    ((&lt; n 0) #f)
     ((= n 0) 1)
     (else (* n (factorial (- n 1))))))
 (lseq-any factorial '(-1 -2 3 4))
@@ -514,8 +512,7 @@ satisfy the predicate <var>pred</var>, and returns the rest of the lseq.</p>
     Like <code>lseq-any</code>, <code>lseq-every</code>'s name does not end with a question mark — this is to
     indicate that it does not return a simple boolean (<code>#t</code> or <code>#f</code>), but a
     general value.
-</p><pre>
-(lseq-any factorial '(1 2 3 4))
+</p><pre>(lseq-every factorial '(1 2 3 4))
         =&gt; 24
 </pre>
 </dd><dt class="proc-def">
@@ -585,7 +582,7 @@ satisfy the predicate <var>pred</var>, and returns the rest of the lseq.</p>
     the <code>lseq-find-tail</code> procedure, <em>e.g.</em>
 </p><pre class="code-example">(lseq-find-tail even? lseq) ; Find the first elt with an even key.
 </pre>
-</dd></p>
+</dd><p></p>
 <h2><a name="LazyAssociationLists">Lazy association lists</a></h2>
 <p>
 A "lazy association list" (or "lazy alist") is an lseq of pairs. The car of each pair
@@ -640,7 +637,7 @@ in these cases, immutable maps or some other alternative should be employed.
 (lseq-find (lambda (a) (even? (car a))) lazy-alist)
 </pre>
 <h1><a name="SampleImplementation">Sample Implementation</a></h1>
-<p>The files in the implementation are (not yet) in the SRFI 127 repository, and are as follows:</p>
+<p>The files in the implementation are in the SRFI 127 repository, and are as follows:</p>
 <ul>
 <li><code>lseq.sld</code> - an R7RS library</li>
 <li><code>lseq.scm</code> - a Chicken library</li>
@@ -655,7 +652,7 @@ This is not to imply that either Olin or anyone else necessarily endorses the fi
 results, of course.</p>
 <p>Special thanks to Shiro Kawai, whose Gauche implementation of lazy sequences inspired this one,
 and to Kragen Javier Sitaker, who did a thorough review.</p>
-</blockquote>
+
 
 <h1>Copyright</h1>
 Copyright (C) John Cowan (2015). All Rights Reserved. 
@@ -679,4 +676,3 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
     </p><hr>
-    <address>Editor: <a href="mailto:srfi-editors at srfi dot schemers dot org">Arthur Gleckler</a></address></body></html>
