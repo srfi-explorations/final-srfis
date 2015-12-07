@@ -31,18 +31,14 @@
        (apply string (map integer->char (reverse result)))
        (let* ((ch (string-ref str n)) (codepoint (char->integer ch)))
          (if (or (= n 0) (char-caseless? (string-ref str (- n 1))))
-           ; ch should be titlecased
+           ; ch must be titlecased
            (let ((multi-title (assq codepoint title-multiple-map)))
              (if multi-title
                ; ch has multiple- or single-character titlecase mapping
                (loop (+ n 1) (reverse-push (cdr multi-title) result))
-               (let ((multi-upcase (assq codepoint upper-multiple-map)))
-                 (if multi-upcase
-                   ; ch has multiple uppercase mapping
-                   (loop (+ n 1) (reverse-push (cdr multi-upcase) result))
-                   ; ch has single-character uppercase mapping
-                   (loop (+ n 1) (reverse-push (list (char->integer (char-upcase ch))) result))))))
-           ; ch should be lowercased
+               ; ch has single-character uppercase mapping
+               (loop (+ n 1) (reverse-push (list (char->integer (char-upcase ch))) result))))
+           ; ch must be lowercased
            (let ((multi-downcase (assq codepoint lower-multiple-map)))
              (if multi-downcase
                ; ch has multiple-character lowercase mapping
