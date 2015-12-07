@@ -1,0 +1,163 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 131: ERR5RS Record Syntax (reduced)</title>
+    <link rel="stylesheet" href="http://srfi.schemers.org/srfi.css" type="text/css" />
+  </head>
+
+  <body>
+
+<h1>Title</h1>
+
+<p>ERR5RS Record Syntax (reduced)</p>
+
+<h1>Author</h1>
+
+<p>John Cowan, Will Clinger</p>
+
+<h1>Status</h1>
+
+<p>This SRFI is currently in <em>draft</em> status. Here is <a href="http://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+131+at+srfi+dotschemers+dot+org">srfi-131@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="http://srfi-email.schemers.org/srfi-131">archive</a>.</p>
+<ul>
+  <li>Received: 2015/12/7</li>
+  <li>60-day deadline: 2016/2/5</li>
+  <li>Draft #1 published: 2015/12/7</li>
+</ul>
+
+<h1>Abstract</h1>
+
+<p>This SRFI is a reduced version of the SRFI 99 syntactic layer
+that can be implemented with <tt>syntax-rules</tt> without requiring
+low-level macros.  Like SRFI-99's syntax layer, it is backward
+compatible with the <code>define-record-type</code> macro from
+<a href="http://srfi.schemers.org/srfi-9/srfi-9.html">SRFI 9</a>
+or R7RS-small.  It is forward compatible with 
+<a href="http://srfi.schemers.org/srfi-99/srfi-99.html">SRFI 99</a>.
+</p>
+
+<h1>Issues</h1>
+
+<p>No issues at present.</p>
+
+<h1>Rationale</h1>
+
+<p>Implementations of Scheme that provide only <code>syntax-rules</code>
+macros cannot currently implement the syntactic layer of SRFI 99.  Three
+features make a <code>syntax-rules</code> implementation impossible:<p>
+
+<ul><li><p>Specifying <code>#t</code> as the constructor name,
+which is equivalent to specifying the type name prefixed by
+<tt>make-</tt>.</p></li>
+
+<li>Specifying <code>#t</code> as the predicate name, which is equivalent
+to specifying the type name suffixed by <tt>?</tt>.</p></li>
+
+<li><p>Specifying a field spec as either an identifier or a parenthesized
+identifier, which are equivalent to specifying an accessor name equivalent
+to the type name followed by <code>-</code> followed by the field name,
+and (in the latter case) a mutator name equivalent to the type name
+followed by <code>-</code> followed by the field name followed by
+<code>-set!</code></p></li></ul>
+
+<p>All of these features violate macro hygiene by introducing identifiers
+into the code which don't appear in the macro call, which is why
+<code>syntax-rules</code> will not suffice to implement them.
+However, they are only notational and can be replaced by explicit equivalents in user code.
+By eliminating them, as in this SRFI, a pure <code>syntax-rules</code>
+implementation such as the sample implementation can provide all the
+other features of SRFI 99's syntactic layer.</p>
+
+<h1>Specification</h1>
+
+<h2 id="SyntacticLayer">Syntactic Layer</h2>
+<p>
+The syntactic layer consists of R7RS <tt>define-record-type</tt> extended with single inheritance and mechanisms for abstract record types.
+</p>
+<p>
+The syntax of a record-type definition is:
+</p>
+<pre>
+ &lt;definition&gt;           
+   -&gt; &lt;record type definition&gt;
+
+ &lt;record type definition&gt;
+   -&gt; (define-record-type &lt;type spec&gt;
+        &lt;constructor spec&gt;
+        &lt;predicate spec&gt;
+        &lt;field spec&gt; ...)
+
+ &lt;type spec&gt;  -&gt; &lt;type name&gt;
+              -&gt; (&lt;type name&gt; &lt;parent&gt;)
+
+ &lt;constructor spec&gt;
+              -&gt; #f
+              -&gt; &lt;constructor name&gt;
+              -&gt; (&lt;constructor name&gt; &lt;field name&gt; ...)
+
+ &lt;predicate spec&gt;
+              -&gt; #f
+              -&gt; &lt;predicate name&gt;
+
+ &lt;field spec&gt; -&gt; (&lt;field name&gt; &lt;accessor name&gt;)
+              -&gt; (&lt;field name&gt; &lt;accessor name&gt; &lt;mutator name&gt;)
+
+ &lt;parent&gt;           -&gt; &lt;expression&gt;
+
+ &lt;type name&gt;        -&gt; &lt;identifier&gt;
+ &lt;constructor name&gt; -&gt; &lt;identifier&gt;
+ &lt;predicate name&gt;   -&gt; &lt;identifier&gt;
+ &lt;accessor name&gt;    -&gt; &lt;identifier&gt;
+ &lt;mutator name&gt;     -&gt; &lt;identifier&gt;
+ &lt;field name&gt;       -&gt; &lt;identifier&gt;
+</pre>
+<p>
+The semantics of a record type definition is the same as in R7RS (or SRFI 9, except that record types are generative).
+The record type definition macro-expands into a cluster of definitions that:
+</p>
+<ul><li>define the <tt>&lt;type name&gt;</tt> as the record-type descriptor for the new record-type;
+</li><li>defines a constructor for instances of the new record-type (unless the constructor spec is <tt>#f</tt>);
+</li><li>defines a predicate that recognizes instances of the new record-type and its subtypes (unless the predicate spec is <tt>#f</tt>);
+</li><li>defines an accessor for each field name;
+</li><li>defines a mutator for each mutable field name.
+</li></ul><p>
+A record type definition extends SRFI 9 with the following additional options:
+</p>
+<ul><li>If a <tt>&lt;parent&gt;</tt> expression is specified, then it must evaluate to a record-type descriptor that serves as the parent record-type for the record-type being defined.
+</li><li>If <tt>#f</tt> is specified for the constructor or predicate, then no constructor or predicate procedure is defined.  (This is useful when the record-type being defined will be used as an abstract base class.)
+</li><li>If the constructor name is specified as an identifier, then the constructor's arguments correspond to the fields of the parent (if any) followed by the new fields added by this record-type definition in the specified order.
+</li></ul>
+
+<h1>Implementation</h1>
+
+<p>The sample implementation, a single-file R7RS library, is in the code
+repository of this SRFI.  It was written by Will Clinger.</p>
+</p>
+
+<h1>Copyright</h1>
+Copyright (C) John Cowan, Will Clinger (2015).  All Rights Reserved. 
+
+<p>
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
+
+<p>
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
+
+<p>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+  <hr>
+  <address>Editor: <a href="mailto:srfi-editors at srfi dot schemers dot org">Arthur A. Gleckler</a></address></body></html>
