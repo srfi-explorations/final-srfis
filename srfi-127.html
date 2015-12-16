@@ -217,7 +217,7 @@ cdr is <var>generator</var> is returned.</li>
     The <var>elt=?</var> procedure must be consistent with <code>eq?</code>.
     This implies that two lseqs which are <code>eq?</code>
     are always <code>lseq=?</code>, as well; implementations may exploit this
-    fact to "short-cut" the element-by-element comparisons.</p>
+    fact to "short-cut" the element-by-element equality tests.</p>
 </dd></dl>
 <h2><a name="Selectors">Selectors</a></h2>
 <dl>
@@ -421,7 +421,7 @@ some criterion.
 </dt><dd class="proc-def">
     <p>Return the first element of <var>lseq</var> that satisfies predicate <var>pred</var>, or
     <code>#f</code> if no element does.  It cannot reliably be applied to lseqs that include
-    <code>#f</code> as an element; use <code>find-tail</code> instead.
+    <code>#f</code> as an element; use <code>lseq-find-tail</code> instead.
     The predicate is guaranteed to be evaluated on the elements of <var>lseq</var>
     in sequence order, and only as often as necessary.</p>
 <pre class="code-example">(lseq-find even? '(3 1 4 1 5 9 2 6)) =&gt; 4
@@ -473,13 +473,14 @@ satisfy the predicate <var>pred</var>, and returns the rest of the lseq.</p>
 <code class="proc-def">lseq-any</code><var> pred lseq<sub>1</sub> lseq<sub>2</sub> ... -&gt; value</var>
 </dt><dd class="proc-def">
     <p>Applies <var>pred</var> to successive elements of the lseqs, returning true if <var>pred</var>
-    (which must be a
-    procedure taking <var>n</var> arguments and returning a boolean result)
     returns true on any application.
     If an application returns a true value, <code>lseq-any</code> immediately returns
     that value. Otherwise, it iterates until a true value is produced or one of the lseqs runs
     out of values; in
     the latter case, <code>lseq-any</code> returns <code>#f</code>.
+    It is an error if <i>pred</i> does not
+    accept the same number of arguments as there are <i>lseqs</i> and return a boolean result.
+
 </p><p>
     Note the difference between <code>lseq-find</code> and <code>lseq-any</code> — <code>lseq-find</code> returns the element
     that satisfied the predicate; <code>lseq-any</code> returns the true value that the
@@ -505,14 +506,14 @@ satisfy the predicate <var>pred</var>, and returns the rest of the lseq.</p>
 <code class="proc-def">lseq-every</code><var> pred lseq<sub>1</sub> lseq<sub>2</sub> ... -&gt; value</var>
 </dt><dd class="proc-def">
     <p>Applies <var>pred</var> to successive elements of the lseqs, returning true if the predicate
-    (which must be a
-    procedure taking <var>n</var> arguments and returning a boolean result)
     returns true on every application.
     If an application returns a false value, <code>lseq-any</code> immediately returns
     that value. Otherwise, it iterates until a false value is produced or one of the lseqs runs
     out of values; in
     the latter case, <code>lseq-any</code> returns the last value returned by <var>pred</var>,
     or <code>#t</code> if <var>pred</var> was never invoked.
+    It is an error if <i>pred</i> does not
+    accept the same number of arguments as there are <i>lseqs</i> and return a boolean result.
 </p><p>
     Like <code>lseq-any</code>, <code>lseq-every</code>'s name does not end with a question mark — this is to
     indicate that it does not return a simple boolean (<code>#t</code> or <code>#f</code>), but a
@@ -528,10 +529,10 @@ satisfy the predicate <var>pred</var>, and returns the rest of the lseq.</p>
 </p><p>
     Applies <var>pred</var> to successive elements of the lseqs, returning
     an index usable with <code>lseq-ref</code> if the predicate
-    (which must be a
-    procedure taking <var>n</var> arguments and returning a boolean result)
     returns true.  Otherwise, it iterates until one of the lseqs runs
     out of values, in which case <code>#f</code> is returned.</p>
+    It is an error if <i>pred</i> does not
+    accept the same number of arguments as there are <i>lseqs</i> and return a boolean result.
 <p>
     The iteration stops when one of the lseqs runs out of values; in this
     case, <code>lseq-index</code> returns <code>#f</code>.
@@ -570,7 +571,7 @@ satisfy the predicate <var>pred</var>, and returns the rest of the lseq.</p>
     (lseq-memv 101 '(100 101 102))    =&gt;  (101 102)
 </pre>
 <p>
-    The comparison procedure is used to compare the elements <var>e<sub>i</sub></var> of <var>lseq</var>
+    The equality procedure is used to compare the elements <var>e<sub>i</sub></var> of <var>lseq</var>
     to the key <var>x</var> in this way:
     the first argument is always <var>x</var>, and the second argument is
     one of the lseq elements. Thus one can reliably find the first element
