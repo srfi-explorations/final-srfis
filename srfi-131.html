@@ -15,15 +15,6 @@
 
 <p>John Cowan, Will Clinger</p>
 
-<h1>Status</h1>
-
-<p>This SRFI is currently in <em>draft</em> status. Here is <a href="http://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+131+at+srfi+dotschemers+dot+org">srfi-131@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="http://srfi-email.schemers.org/srfi-131">archive</a>.</p>
-<ul>
-  <li>Received: 2015/12/7</li>
-  <li>60-day deadline: 2016/2/5</li>
-  <li>Draft #1 published: 2015/12/7</li>
-</ul>
-
 <h1>Abstract</h1>
 
 <p>This SRFI is a reduced version of the SRFI 99 syntactic layer
@@ -111,7 +102,7 @@ The syntax of a record-type definition is:
  &lt;field name&gt;       -&gt; &lt;identifier&gt;
 </pre>
 <p>
-The semantics of a record type definition is the same as in R7RS (or SRFI 9, except that record types are generative).
+The semantics of a record type definition is the same as in R7RS-small (or SRFI 9, except that record types are generative).
 The record type definition macro-expands into a cluster of definitions that:
 </p>
 <ul><li>define the <tt>&lt;type name&gt;</tt> as the record-type descriptor for the new record-type;
@@ -120,7 +111,7 @@ The record type definition macro-expands into a cluster of definitions that:
 </li><li>defines an accessor for each field name;
 </li><li>defines a mutator for each mutable field name.
 </li></ul><p>
-A record type definition extends SRFI 9 with the following additional options:
+A record type definition extends R7RS-small with the following additional options:
 </p>
 <ul><li>If a <tt>&lt;parent&gt;</tt> expression is specified, then it must evaluate to a record-type descriptor that serves as the parent record-type for the record-type being defined.
 </li><li>If <tt>#f</tt> is specified for the constructor or predicate, then no constructor or predicate procedure is defined.  (This is useful when the record-type being defined will be used as an abstract base class.)
@@ -130,7 +121,8 @@ A record type definition extends SRFI 9 with the following additional options:
 <h1>Implementation</h1>
 
 <p>The sample implementation, a single-file R7RS library, is in the code
-repository of this SRFI.  It was written by Will Clinger.</p>
+repository of this SRFI.  It was written by Will Clinger.
+It is built on top of the procedural parts of SRFI 99.
 </p>
 
 <h1>Copyright</h1>
