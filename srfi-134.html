@@ -35,18 +35,18 @@ None at this time.
 <h1>Rationale</h1>
 
 <p>
-A double-ended queue, or <em>deque</em> (pronounced "deck") is a sequential data structure which allows elements to be added or removed from either end in O(1) time.  It is a generalization of both a queue and a stack, and can be used as either by disregarding the irrelevant procedures.  
+A double-ended queue, or <em>deque</em> (pronounced "deck") is a sequential data structure which allows elements to be added or removed from either end in amortized O(1) time.  It is a generalization of both a queue and a stack, and can be used as either by disregarding the irrelevant procedures.  
 </p>
 <p>
 This SRFI describes immutable deques, or <em>ideques</em>.  Immutable structures are sometimes called <em>persistent</em> and are closely related to <em>pure functional</em> (a.k.a. <em>pure</em>) structures. The availability of immutable data structures facilitates writing efficient programs in the pure-functional style.  Unlike the immutable lists of <a href="http://srfi.schemers.org/srfi-116/srfi-116.html">SRFI 116</a>, it is efficient to produce modified versions of an ideque; unlike the list queues of <a class="ext-link" href="http://srfi.schemers.org/srfi-117/srfi-117.html">SRFI 117</a>, it is possible to efficiently return an updated version of an ideque without mutating any earlier versions of it.
 </p>
 <p>
-The specification was designed jointly by Kevin Wortman and John Cowan.  John Cowan is the editor and shepherd.  The sample implementation was written by ???.</p>
+The specification was designed jointly by Kevin Wortman and John Cowan.  John Cowan is the editor and shepherd.  The two-list implementation was written by John Cowan.</p>
 
 <h1>Specification</h1>
 
 <p>
-We specify required time efficiency upper bounds using big-O notation. We note when, in some cases, there is "slack" between the required bound and the theoretically optimal bound for an operation. Implementations may use data structures with amortized time bounds, but should document which bounds hold in only an amortized sense. The use of randomized data structures with expected time bounds is discouraged.
+We specify required time efficiency upper bounds using big-O notation. We note when, in some cases, there is "slack" between the required bound and the theoretically optimal bound for an operation. Implementations may use data structures with amortized time bounds, but should document which bounds hold in only an amortized sense. 
 </p>
 <p>
 Deques are disjoint from all other Scheme types.
@@ -56,7 +56,7 @@ Deques are disjoint from all other Scheme types.
 <tt>(ideque </tt>[ <em>element</em> ...]<tt>)</tt>
 </p>
 <p>
-Returns an ideque containing the <em>elements</em>. The leftmost element (if any) will be at the front of the ideque and the rightmost element (if any) will be at the back. Takes O(n) time, where <em>n</em> is the number of elements.
+Returns an ideque containing the <em>elements</em>. The first element (if any) will be at the front of the ideque and the last element (if any) will be at the back. Takes O(n) time, where <em>n</em> is the number of elements.
 </p>
 <p>
 <tt>(ideque-unfold </tt><em>stop? mapper successor seed</em><tt>)</tt>
@@ -109,7 +109,7 @@ Returns an ideque with the front/back element of <em>ideque</em> removed. It is 
 <tt>(ideque-add-back </tt><em>ideque obj</em><tt>)</tt>
 </p>
 <p>
-Returns an ideque with <em>obj</em> pushed to the front/back of <em>ideque</em>. Takes O(1) time.
+Returns an ideque with <em>obj</em> pushed to the front/back of <em>ideque</em>. Takes amortized O(1) time.
 </p>
 <h2 id="Otheraccessors">Other accessors</h2>
 <p>
@@ -150,11 +150,6 @@ Returns the length of <em>ideque</em> as an exact integer.  May take O(n) time, 
 Returns an ideque with the contents of the <em>ideque</em> followed by the others, or an empty ideque if there are none. Takes O(kn) time, where k is the number of ideques and n is the number of elements involved, though O(k log n) is possible.
 </p>
 <p>
-<tt>(ideque-concatenate </tt><em>list-of-ideques</em><tt>)</tt>
-</p>
-<p>
-Returns an ideque with the contents of the first ideque in <em>list-of-ideques</em> followed by the others. This is provided for Schemes in which the number of arguments which can be passed to <tt>apply</tt> is limited.  Takes O(kn) time, where k is the number of ideques and n is the number of elements involved, though O(k log n) is possible.
-</p>
 <p>
 <tt>(ideque-reverse </tt><em>ideque</em><tt>)</tt>
 </p>
@@ -273,19 +268,16 @@ Invokes <em>pred</em> on the elements of <em>ideque</em> in order until one of t
 <p>
 Conversion between ideque and list structures. FIFO order is preserved, so the front of a list corresponds to the front of an ideque. Each operation takes O(n) time.
 </p>
-<p>
-<tt>(generator-&gt;ideque </tt><em>generator</em>)
-</p>
-<p>
-<tt>(ideque-&gt;generator </tt><em>ideque</em><tt>)</tt>
-</p>
-<p>
-Converts a <a href="http://srfi.schemers.org/srfi-121/srfi-121.html">SRFI 121</a> generator to and from an ideque.
-</p>
 
 <h1>Implementation</h1>
 
-The sample implementation is (not yet) in the repository for this SRFI.
+<p>The sample implementation is (not yet) in the repository for
+this SRFI.  It is an implementation based on two Scheme lists, one
+for the front and another (in reverse element order) for the back.
+The cost of <code>ideque-front</code>, <code>ideque-back</code>,
+<code>ideque-remove-front</code>, and <code>ideque-remove-back</code>
+are amortized O(1).  An implementation based on finger trees will be
+added later.</p>
 
 <h1>Copyright</h1>
 Copyright (C) John Cowan, Kevin Wortman (2015).  All Rights Reserved. 
