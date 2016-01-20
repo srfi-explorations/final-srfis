@@ -93,7 +93,7 @@ more unspecified values, are now specified to return one value.  The multiple
 packages, most with only a few procedures, into which SRFI 32 is divided have been consolidated.
 References to
 <a href="http://srfi.schemers.org/srfi-95/srfi-95.html">SRFI 95</a> and
-<a href="http://www.r6rs.org/final/html/r6rs-lib/r6rs-lib-Z-H-5.html#node_chap_4">R6RS</a> equivalents added.
+<a href="http://www.r6rs.org/final/html/r6rs-lib/r6rs-lib-Z-H-5.html#node_chap_4">R6RS</a> equivalents have been added.
 </p>
 
 <h1>Design Rationale</h1>
@@ -129,14 +129,14 @@ to another.
 These procedures uniformly observe the following parameter order:
 the ordering, equality, or comparison argument
 precedes the argument(s) denoting the data to be sorted.
-In SRFI 32, the reverse convention was used, because it was
+In SRFI 32, the data-first convention was used, because it was
 consistent with all the implementations examined in 2002, with
 the sole exception of Chez Scheme.
 However, <a href="http://www.r6rs.org/final/html/r6rs-lib/r6rs-lib-Z-H-5.html#node_chap_4">R6RS</a> adopted
-the reverse convention, which is more consistent with other Scheme libraries that
+the procedure-first convention, which is more consistent with other Scheme libraries that
 put the procedure first — the "operation currying" convention,
 as in <tt>for-each</tt> or <tt>map</tt> or <tt>find</tt>.
-This SRFI uses the R6RS order throughout.
+This SRFI uses the R6RS convention throughout.
 </p>
 <h2 id="Stability">Stability</h2>
 <p>
@@ -151,7 +151,7 @@ not <tt>... -3 3 ...</tt>.
 <p>
 A "stable" merge is one that reliably favors one of its data sets
 when equal items appear in both data sets.
-All merge operations in this library are stable,
+All merge operations specified in this SRFI are stable,
 breaking ties between data sets in favor
 of the first data set — elements of the first list come before equal 
 elements in the second list.
@@ -168,7 +168,7 @@ of the second list: <tt>(0 -1 -2 4 -4 7 8 -10)</tt>.
 </p>
 <p>
 Here's a definition of <tt>abs&lt;</tt>, introduced just for the examples
-as it is not part of this SRFI or any SRFI:
+as it is not part of this SRFI:
 </p>
 <pre class="wiki">(define (abs&lt; x y) (&lt; (abs x) (abs y))))
 </pre><h2 id="Allvectoroperationsacceptoptionalsubrangeparameters">All vector operations accept optional subrange parameters</h2>
@@ -224,7 +224,7 @@ by composing a set of basic lexemes to indicate what they do.
 </td></tr></table>
 <h2 id="Typesofparametersandreturnvalues">Types of parameters and return values</h2>
 <p>
-In the procedures specified below,
+In the procedures specified below:
 </p>
 <ul><li>A <em>lis</em> parameter is a list.
 </li></ul><ul><li>A <em>v</em> parameter is a vector.
@@ -574,11 +574,13 @@ The <tt>sorting</tt> library includes the following additional procedures:
 <tt>(vector-merge-sort! </tt> <em>&lt; v</em> [ <em>start</em> [ <em>end</em> ] ]<tt>)</tt>
 </p>
 <p>
-Equivalent to <tt>list-sort</tt>, <tt>list-sort!</tt> <tt>vector-sort</tt>, and <tt>vector-sort!</tt> respectively,
-but explicitly use implementations of Olin's own merge sort algorithm.  They
-run in O(n lg n) worst case, O(n) best case, and require only a logarithmic
-number of stack frames. And they are stable. And the destructive-list variant
-allocates zero cons cells; it simply rearranges the cells of the input list.
+Equivalent to <tt>list-sort</tt>, <tt>list-sort!</tt>
+<tt>vector-sort</tt>, and <tt>vector-sort!</tt> respectively, but
+explicitly use implementations of Olin's own merge sort algorithm.
+They are stable, run in O(n lg n) worst case, O(n) best case, and require
+only a logarithmic number of stack frames. The destructive-list variant
+allocates zero cons cells; it simply rearranges the cells of the input
+list.
 </p>
 <p>
 <tt>(vector-insert-sort </tt> <em>&lt; v</em> [ <em>start</em> [ <em>end</em> ] ]<tt>)</tt>
