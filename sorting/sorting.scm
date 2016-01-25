@@ -9,7 +9,8 @@
           list-sort! vector-sort!
           list-stable-sort! vector-stable-sort!
           list-delete-neighbor-dups vector-delete-neighbor-dups
-          list-delete-neighbor-dups! vector-delete-neighbor-dups!)
+          list-delete-neighbor-dups! vector-delete-neighbor-dups!
+          vector-find-median vector-find-median!)
   (export vector-heap-sort vector-quick-sort vector-insert-sort
           list-merge-sort vector-merge-sort
           vector-heap-sort! vector-quick-sort! vector-insert-sort!
@@ -25,5 +26,7 @@
   (include "vmsort.scm")
   (include "vqsort2.scm")
   (include "vqsort3.scm")
+  (include "vbinsearch.scm")
+  (include "median.scm")
   (include "sort.scm")  ; must be last
 )
