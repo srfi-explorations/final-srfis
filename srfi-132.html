@@ -67,7 +67,7 @@ written, highly commented, portable code, available for free.
 </li><li>Merge procedures
 </li><li>Deleting duplicate neighbors
 </li><li>Finding the median
-</li><li>Partial sorting
+</li><li>Selection
 </li></ul></li><li>Porting and optimisation
 </li><li>Acknowledgements
 </li></ul>
@@ -185,7 +185,7 @@ This compensates for the absence in most Schemes of shared subvectors.
 to alter their arguments' cons cells to construct the result list.
 </p>
 <p>
-The <tt>list-delete-neighbor-dups!</tt>, <tt>list-merge!</tt> and <tt>list-sort!</tt> procedures,
+The <tt>list-delete-neighbor-dups!</tt>, <tt>list-merge!</tt> and <tt>list-merge-sort!</tt> procedures,
 on the other hand, explicitly
 commit to the use of side-effects on their input lists in order to guarantee
 their key algorithmic properties (e.g., linear-time operation, constant-space
@@ -503,27 +503,18 @@ This procedure reuses its input vector to hold the intermediate result,
 leaving it sorted, but is otherwise the same as <tt>vector-find-median</tt>.
 </p>
 
-<h2 id="Partialsorting">Partial sorting</h2>
+<h2 id="Selection">Selection</h2>
 <p>
-These procedures sort the smallest <i>k</i> elements of the region
-of a vector between <i>start</i> and <i>end</i> into the first <i>k</i>
-positions of that range, leaving the other elements of the range preserved
-but in an unspecified order.  Elements outside the range are left alone.
+<p>
+<tt>(vector-select! </tt><em>v k </em> [ <em>start</em> [ <em>end</em> ] ]</em> <tt>)</tt>
 </p>
 <p>
-<tt>(vector-partial-sort </tt><em> [ <em>start</em> [ <em>end</em> ] ]&lt; v k</em> <tt>)</tt>
+This procedure places the smallest <i>k</i> elements of the region of
+a vector between <i>start</i> and <i>end</i> into the first <i>k</i>
+positions of that range, and the remaining elements into the remaining
+positions.  Otherwise, the elements are not in any particular order.  Elements
+outside the range are left alone.  Runs in O(k) time.
 </p>
-<p>
-This procedure does not alter its input vector, but rather
-newly allocates a vector to hold the returned result.
-</p>
-<p>
-<tt>(vector-partial-sort! </tt><em> [ <em>start</em> [ <em>end</em> ] ]&lt; v k</em> <tt>)</tt>
-</p>
-<p>
-This procedure reuses its input vector to hold the returned result.
-</p>
-
 
 <h1>Implementation</h1>
 
@@ -535,14 +526,14 @@ The code is very portable and freely reusable.
 It is tightly bummed, as far as could be done in portable Scheme, and
 is commented in Olin's usual
 voluminous style, including notes on porting and implementation-specific
-optimizations.  The median and partial sort code is specific to this SRFI.
+optimizations.  The median and selection code is specific to this SRFI.
 </p>
 <h2 id="Files">Files</h2>
 <p>
 <tt>delndups.scm</tt> - the <tt>delete-neighbor-dups</tt> procedures <br />
 <tt>lmsort.scm</tt> - list merge sort <br />
 <tt>median.scm</tt> - the <tt>find-median</tt> procedures <br />
-<tt>partial.scm</tt> - the <tt>partial-sort</tt> procedures <br />
+<tt>selection.scm</tt> - the <tt>selection</tt> procedure <br />
 <tt>sort.scm</tt> - generic sort and merge procedures <br />
 <tt>sorting-test.scm</tt> - test file using the Chicken <tt>test</tt> egg 
 (<i>not yet converted from Scheme48</i>) <br />
@@ -561,7 +552,8 @@ optimizations.  The median and partial sort code is specific to this SRFI.
 </p>
 <h2 id="Additionalprocedures">Additional procedures</h2>
 <p>
-The <tt>sorting</tt> library includes the following additional procedures:
+The <tt>sorting</tt> library includes the following additional procedures
+which are <i>not</i> part of SRFI 132.
 </p>
 <p>
 <tt>(list-merge-sort </tt> <em>&lt; lis</em><tt>)</tt>
@@ -615,7 +607,7 @@ any textbook on sorting for explanations.
 Searches <em>v</em> between <em>start</em> and <em>end</em>, which must be in increasing
 order according to <tt>key&lt;</tt>, for an element which (after being transformed
 by the <tt>elt-&gt;key</tt> procedure) is equal to <em>key</em> in the sense of <em>key&lt;</em>.
-Returns the index of the matching element.
+Returns the index of the matching element, or <tt>#f</tt> if there is none.
 </p>
 <p>
 <tt>vector-binary-search3 </tt><em>compare v</em> [ <em>start</em> [ <em>end</em> ]]<tt>)</tt>)
