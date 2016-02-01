@@ -39,7 +39,9 @@ None at this time.
 A double-ended queue, or <em>deque</em> (pronounced "deck") is a sequential data structure which allows elements to be added or removed from either end in amortized O(1) time.  It is a generalization of both a queue and a stack, and can be used as either by disregarding the irrelevant procedures.  
 </p>
 <p>
-This SRFI describes immutable deques, or <em>ideques</em>.  Immutable structures are sometimes called <em>persistent</em> and are closely related to <em>pure functional</em> (a.k.a. <em>pure</em>) structures. The availability of immutable data structures facilitates writing efficient programs in the pure-functional style.  Unlike the immutable lists of <a href="http://srfi.schemers.org/srfi-116/srfi-116.html">SRFI 116</a>, it is efficient to produce modified versions of an ideque; unlike the list queues of <a class="ext-link" href="http://srfi.schemers.org/srfi-117/srfi-117.html">SRFI 117</a>, it is possible to efficiently return an updated version of an ideque without mutating any earlier versions of it.
+This SRFI describes immutable deques, or <em>ideques</em>.  Immutable structures are sometimes called <em>persistent</em> and are closely related to <em>pure functional</em> (a.k.a. <em>pure</em>) structures. The availability of immutable data structures facilitates writing efficient programs in the pure-functional style.
+Immutable deques can also be seen as a bidirectional generalization of immutable lists, and some of the procedures documented below are most useful in that context.
+Unlike the immutable lists of <a href="http://srfi.schemers.org/srfi-116/srfi-116.html">SRFI 116</a>, it is efficient to produce modified versions of an ideque; unlike the list queues of <a class="ext-link" href="http://srfi.schemers.org/srfi-117/srfi-117.html">SRFI 117</a>, it is possible to efficiently return an updated version of an ideque without mutating any earlier versions of it.
 </p>
 <p>
 The specification was designed jointly by Kevin Wortman and John Cowan.  John Cowan is the editor and shepherd.  The two-list implementation was written by John Cowan.</p>
@@ -58,6 +60,12 @@ Deques are disjoint from all other Scheme types.
 </p>
 <p>
 Returns an ideque containing the <em>elements</em>. The first element (if any) will be at the front of the ideque and the last element (if any) will be at the back. Takes O(n) time, where <em>n</em> is the number of elements.
+</p>
+<p>
+<tt>(ideque-tabulate </tt><em>n proc</em><tt>)</tt>
+</p>
+<p>
+Invokes the predicate <em>proc</em> on every exact integer from 0 (inclusive) to <em>n</em> (exclusive).  Returns an ideque containing the results in order of generation.  Takes O(n) time.
 </p>
 <p>
 <tt>(ideque-unfold </tt><em>stop? mapper successor seed</em><tt>)</tt>
@@ -83,6 +91,22 @@ Returns <tt>#t</tt> if <em>x</em> is an ideque, and <tt>#f</tt> otherwise.  Take
 </p>
 <p>
 Returns <tt>#t</tt> if <em>ideque</em> contains zero elements, and <tt>#f</tt> otherwise.  Takes O(1) time.
+</p>
+<p>
+<tt>(ideque-elt= </tt><em>ideque ...</em><tt>)</tt>
+</p>
+<p>
+Determines ideque equality, given an element-equality procedure. Ideque A equals ideque B if they are of the same length, and their corresponding elements are equal, as determined by elt=. If the element-comparison procedure's first argument is from <em>ideque<sub>i</sub></em>, then its second argument is from <em>ideque<sub>i+1</sub></em>, i.e. it is always called as <code>(elt= a b)</code> fors <em>a</em> an element of ideque A, ands <em>b</em> an element of ideque B. 
+</p>
+<p>
+In the n-ary case, every <em>ideque<sub>i</sub></em> is compared to <em>ideque<sub>i+1</sub></em> (as opposed, for example, to comparing <em>ideque<sub>1</sub></em> to every <em>ideque<sub>i</sub></em>, for i > 1). If there are no ideque arguments at all, <code>ideque=</code> simply returns true. 
+</p>
+<p>
+Note that the dynamic order in which the <em>elt=</em> procedure is applied to pairs of elements is not specified. For example, if <code>ideque=</code> is applied to three ideques, A, B, and C, it may first completely compare A to B, then compare B to C, or it may compare the first elements of A and B, then the first elements of B and C, then the second elements of A and B, and so forth. 
+</p>
+<p>
+The equality procedure must be consistent with <code>eq?</code>. 
+Note that this implies that two ideques which are <code>eq?</code> are always <code>ideque=</code>, as well; implementations may exploit this fact to "short-cut" the element-by-element comparisons. 
 </p>
 <h2 id="Queueoperations">Queue operations</h2>
 <p>
@@ -114,13 +138,18 @@ Returns an ideque with <em>obj</em> pushed to the front/back of <em>ideque</em>.
 </p>
 <h2 id="Otheraccessors">Other accessors</h2>
 <p>
+<tt>(ideque-ref </tt><em>ideque n</em><tt>)</tt>
+</p>
+<p>
+Returns the <em>nth</em> element of <em>ideque</em>.  It is an error if <em>n</em> is greater than the length of <em>ideque</em>.  Takes O(n) time.
+</p>
 <tt>(ideque-take </tt><em>ideque n</em><tt>)</tt>
 </p>
 <p>
 <tt>(ideque-take-right </tt><em>ideque n</em><tt>)</tt>
 </p>
 <p>
-Returns an ideque containing the first/last <em>n</em> elements of <em>ideque</em>.  Takes O(n) time.
+Returns an ideque containing the first/last <em>n</em> elements of <em>ideque</em>.  It is an error if <em>n</em> is greater than the length of <em>ideque</em>.  Takes O(n) time.
 </p>
 <p>
 <tt>(ideque-drop </tt><em>ideque n</em><tt>)</tt>
@@ -129,7 +158,7 @@ Returns an ideque containing the first/last <em>n</em> elements of <em>ideque</e
 <tt>(ideque-drop-right </tt><em>ideque n</em><tt>)</tt>
 </p>
 <p>
-Returns an ideque containing all but the first/last <em>n</em> elements of <em>ideque</em>.  Takes O(n) time.
+Returns an ideque containing all but the first/last <em>n</em> elements of <em>ideque</em>.  It is an error if <em>n</em> is greater than the length of <em>ideque</em>.  Takes O(n) time.
 </p>
 <p>
 <tt>(ideque-split-at </tt><em>ideque n</em><tt>)</tt>
@@ -158,41 +187,50 @@ Returns an ideque with the contents of the <em>ideque</em> followed by the other
 Returns an ideque containing the elements of <em>ideque</em> in reverse order.  Takes O(n) time.
 </p>
 <p>
-<tt>(ideque-count </tt><em>pred ideque</em><tt>)</tt>
+<tt>(ideque-count </tt><em>pred ideque<sub>1</sub> ideque<sub>2</sub> ...</em><tt>)</tt>
 </p>
 <p>
-Returns the number of elements of <em>ideque</em> which satisfy <em>pred</em> as an exact integer.  Takes O(n) time.
+<em>Pred</em> is a procedure taking as many arguments as there are <em>ideques</em> and returning a single value. It is applied element-wise to the elements of the lists, and a count is tallied of the number of elements that produce a true value. This count is returned.  Terminates when any ideque is finished.  Takes O(n) time.
 </p>
 <p>
-<tt>(ideque-zip </tt><em>ideque</em> ...<tt>)</tt>
+<tt>(ideque-zip </tt><em>ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
 </p>
 <p>
 Returns an ideque of lists (not ideques) each of which contains the corresponding elements of the argument ideques in the order specified.  Processing stops when all the elements of any ideque have been seen. Takes O(kn) time, where <em>k</em> is the number of ideques and <em>n</em> is the number of elements involved.
 </p>
 <h2 id="Mapping">Mapping</h2>
 <p>
-<tt>(ideque-map </tt><em>proc ideque</em> ...<tt>)</tt>
+<tt>(ideque-map </tt><em>proc ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
 </p>
 <p>
-Applies <em>proc</em> to the corresponding elements of <em>ideques</em> and returns an ideque containing the results in order.  Terminates when any ideque is finished.  Takes O(n) time.
+Applies <em>proc</em> to the corresponding elements of <em>ideques</em> and returns an ideque containing the results in order.  The dynamic order of calls to <em>proc</em> is unspecified.  Terminates when any ideque is finished.  Takes O(n) time.
 </p>
 <p>
-<tt>(ideque-for-each </tt><em>proc ideque</em> ...<tt>)</tt>
+<tt>(ideque-filter-map </tt><em>proc ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
 </p>
 <p>
-Applies <em>proc</em> to the corresponding elements of <em>ideques</em> in order and returns an unspecified result.  Terminates when any ideque is finished.  Takes O(n) time.
+Applies <em>proc</em> to the corresponding elements of <em>ideques</em> and returns an ideque containing the true (i.e. non-<code>#f</code>) results in order.  The dynamic order of calls to <em>proc</em> is unspecified.  Terminates when any ideque is finished.  Takes O(n) time.
 </p>
 <p>
-<tt>(ideque-fold </tt><em>proc nil ideque</em> ...<tt>)</tt>
+<tt>(ideque-for-each </tt><em>proc ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
 </p>
 <p>
-<tt>(ideque-fold-right </tt><em>proc nil ideque</em> ...<tt>)</tt>
+<tt>(ideque-for-each-right </tt><em>proc ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
 </p>
 <p>
-Invokes <em>proc</em> on the corresponding elements of <em>ideques</em> in forward/reverse order, passing the result of the previous invocation as a second argument. For the first invocation, <em>nil</em> is used as the second argument. Returns the result of the last invocation, or <em>nil</em> if there was no invocation.  Terminates when any ideque is finished.  Takes O(n) time.
+Applies <em>proc</em> to the corresponding elements of <em>ideques</em> in forward/reverse order and returns an unspecified result.  Terminates when any ideque is finished.  Takes O(n) time.
 </p>
 <p>
-<tt>(ideque-append-map </tt><em>proc ideque</em> ...<tt>)</tt>
+<tt>(ideque-fold </tt><em>proc nil ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
+</p>
+<p>
+<tt>(ideque-fold-right </tt><em>proc nil ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
+</p>
+<p>
+Invokes <em>proc</em> on the corresponding elements of <em>ideques</em> in forward/reverse order, passing the result of the previous invocation as a final argument. For the first invocation, <em>nil</em> is used as the final argument. Returns the result of the last invocation, or <em>nil</em> if there was no invocation.  Terminates when any ideque is finished.  Takes O(n) time.
+</p>
+<p>
+<tt>(ideque-append-map </tt><em>proc ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
 </p>
 <p>
 Applies <em>proc</em> to the corresponding elements of <em>ideques</em>.  It is an error if the result is not a list.  Returns an ideque containing the elements of the lists in order.  Terminates when any ideque is finished.  Takes O(n) time.
@@ -215,13 +253,13 @@ Returns two values, the results of <tt>(ideque-filter </tt><em>pred ideque</em><
 </p>
 <h2 id="Searching">Searching</h2>
 <p>
-<tt>(ideque-find </tt><em>pred ideque failure</em><tt>)</tt>
+<tt>(ideque-find </tt><em>pred ideque</em> [ <em>failure</em> ]<tt>)</tt>
 </p>
 <p>
-<tt>(ideque-find-right </tt><em>pred ideque failure</em><tt>)</tt>
+<tt>(ideque-find-right </tt><em>pred ideque</em> [ <em>failure</em> ]<tt>)</tt>
 </p>
 <p>
-Returns the first/last element of <em>ideque</em> that satisfies <em>pred</em>.  If there is no such element, returns the result of invoking the thunk <em>failure</em> .  Takes O(n) time.
+Returns the first/last element of <em>ideque</em> that satisfies <em>pred</em>.  If there is no such element, returns the result of invoking the thunk <em>failure</em>; the default thunk is <code>(lambda () #f)</code>.  Takes O(n) time.
 </p>
 <p>
 <tt>(ideque-take-while </tt><em>pred ideque</em><tt>)</tt>
@@ -251,13 +289,13 @@ Returns an ideque which omits the longest initial/final prefix of elements in <e
 Returns two values, the initial prefix of the elements of <em>ideque</em> which do/do not satisfy <em>pred</em>, and the remaining elements.  Takes O(n) time.
 </p>
 <p>
-<tt>(ideque-any </tt><em>pred ideque</em><tt>)</tt>
+<tt>(ideque-any </tt><em>pred ideque<sub>1</sub> ideque<sub>2</sub> ...</em><tt>)</tt>
 </p>
 <p>
-<tt>(ideque-every </tt><em>pred ideque</em><tt>)</tt>
+<tt>(ideque-every </tt><em>pred ideque<sub>1</sub> ideque<sub>2</sub> ...</em><tt>)</tt>
 </p>
 <p>
-Invokes <em>pred</em> on the elements of <em>ideque</em> in order until one of them returns a true/false value, which is then returned.  If there are no such elements, returns <tt>#f</tt>/<tt>#t</tt>.  Takes O(n) time.
+Invokes <em>pred</em> on the corresponding elements of the <em>ideques</em> in order until one call returns a true/false value; the value returned by <em>proc</em> is then returned.  If there are no such elements, returns <tt>#f</tt>/<tt>#t</tt>.; the value returned by <em>proc<akes O(n) time.
 </p>
 <h2 id="Conversion">Conversion</h2>
 <p>
@@ -268,6 +306,20 @@ Invokes <em>pred</em> on the elements of <em>ideque</em> in order until one of t
 </p>
 <p>
 Conversion between ideque and list structures. FIFO order is preserved, so the front of a list corresponds to the front of an ideque. Each operation takes O(n) time.
+</p>
+<p>
+<tt>(generator-&gt;ideque </tt><em>generator</em><tt>)</tt>
+</p>
+<p>
+<tt>(ideque-&gt;generator </tt><em>ideque</em><tt>)</tt>
+</p>
+<p>
+Conversion between
+<a href="http://srfi.schemers.org/srfi-121/srfi-121.html">SRFI 121</a>
+generators and ideques.  Each operation takes O(n) time.  A generator
+is a procedure that is called repeatedly with no arguments to generate
+consecutive values, and returns an end-of-file object when it has no
+more values to return.
 </p>
 
 <h1>Implementation</h1>
