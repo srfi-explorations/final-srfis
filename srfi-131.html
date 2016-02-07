@@ -128,6 +128,14 @@ A record type definition extends R7RS-small with the following additional option
 </li><li>If the constructor name is specified as an identifier, then the constructor's arguments correspond to the fields of the parent (if any) followed by the new fields added by this record-type definition in the specified order.
 </li></ul>
 
+<p>When a constructor spec is of the form <code>(&lt;constructor name&gt; &lt;field name&gt; ...)</code>:</p>
+<ul>
+<li>Each of the field names can be either a field name declared in the same <code>define-record-type</code> form, or any of its ancestors' field names.</li>
+<li>If the record definition contains the same field name as one of its ancestors, it shadows the ancestor's field name for the purposes of the constructor.  The constructor's argument initializes the child's slot, and the ancestor's slot of the same name is left uninitialized.</li>
+<li>It is an error if the same identifier appears more than once in the field names of the constructor spec.</li>
+</ul>
+<p>These are not explicit in SRFI 99's syntactic layer section, but can be inferred from its description of the procedural layer.</p>
+
 <h1>Implementation</h1>
 
 <p>The sample implementation, a single-file R7RS library, is in the code
