@@ -40,6 +40,7 @@
 ;;;   elements;
 ;;; - Needs no more than 1024 stack frames.
 
+#;
 ;;; Simplest version. 
 ;;; - Always allocates a fresh list / never shares storage.
 ;;; - Needs N stack frames, if answer is length N.
