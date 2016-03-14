@@ -15,7 +15,7 @@ Sort Libraries
 <h1>Author</h1>
 
 
-Olin Shivers (edited by John Cowan)
+John Cowan (based on SRFI 32 by Olin Shivers)
 
 
 <h1>Status</h1>
@@ -29,77 +29,48 @@ Olin Shivers (edited by John Cowan)
   <li>Draft #3 published: 2016/1/20</li>
   <li>Draft #4 published: 2016/1/24 (code changes only)</li>
   <li>Draft #5 published: 2016/2/1</li>
+  <li>Draft #6 published: 2016/3/13</li>
 </ul>
 
 <h1>Abstract</h1>
 
 <p>
 This SRFI describes the API for a full-featured sort toolkit.
-The spec comes with 1200 lines of high-quality reference code: tightly
-written, highly commented, portable code, available for free.
 </p>
 
 <h1>Issues</h1>
 
-<ol><li>Maybe <tt>vector-delete-neighbor-dups!</tt> should take a "target" vector to write?
-</li></ol>
+None at present.
 
-
-<h1>Table of Contents</h1>
-
-</p>
-<ul>
-<li>Procedure index
-</li><li>Editor's preface
-</li><li>Introduction
-</li><li>Design rationale
-<ul><li>What vs. how
-</li><li>Consistency across predicate signatures
-</li><li>Comparison parameter before data parameter
-</li><li>Stability
-</li><li>All vector operations accept optional subrange parameters
-</li><li>Required vs. allowed side-effects
-</li><li>List sorting
-</li></ul></li><li>Specification
-<ul><li>Procedure naming and functionality
-</li><li>Types of parameters and return values
-</li><li>Predicates
-</li><li>General sort procedures
-</li><li>Merge procedures
-</li><li>Deleting duplicate neighbors
-</li><li>Finding the median
-</li><li>Selection
-</li></ul></li><li>Porting and optimisation
-</li><li>Acknowledgements
-</li></ul>
 
 <h1>Rationale</h1>
 
+<h2>100 SRFIs later...</h2>
 <p>
-This SRFI is an edited version of <a href="http://srfi.schemers.org/srfi-32/srfi-32.txt">SRFI 32</a>
+This SRFI is based on <a href="http://srfi.schemers.org/srfi-32/srfi-32.txt">SRFI 32</a>
 by Olin Shivers, which was withdrawn twelve years ago.
 </p>
 <p>
-There are only two changes to the API.  The most important one is that the
+There are two backward incompatible changes to the API.  The most
+important one is that the
 comparison predicate now precedes the data rather than following it.
 Most of the SRFI 32 commenters thought that this is the better order, despite
-the widespread precedent.
-The second point is that the algorithm-specific
-procedures have been removed from the SRFI, though not from the sample implementation.
-Two libraries are provided: one for just the SRFI, one for all the sample implementation's
-public procedures.
+the then-widespread precedent.
+The other change is that the algorithm-specific
+procedures have been removed from the SRFI, though not necessarily from
+the sample implementation.
+For documentation on them, see SRFI 32 or the source code.
 </p>
 <p>
 Editorially, the text has been reorganized, removing the massive redundancies.
 As in R5RS and R7RS, procedures that return nothing of interest, and in SRFI 32 returned zero or
-more unspecified values, are now specified to return one value.  The multiple
+more unspecified values, are now specified to return one otherwise unspecified value.  The multiple
 packages, most with only a few procedures, into which SRFI 32 is divided have been consolidated.
 References to
 <a href="http://srfi.schemers.org/srfi-95/srfi-95.html">SRFI 95</a> and
 <a href="http://www.r6rs.org/final/html/r6rs-lib/r6rs-lib-Z-H-5.html#node_chap_4">R6RS</a> equivalents have been added.
 </p>
 
-<h1>Design Rationale</h1>
 
 <h2 id="Whatvs.how">What vs. how</h2>
 <p>
@@ -118,7 +89,7 @@ implement quick sort, is confusing.
 </p>
 <p>
 Therefore, only the "what" interface has been retained.  The sample implementation
-uses the original SRFI 32 algorithms, but this is not a requirement of this SRFI.
+uses some of the original SRFI 32 algorithms, but this is not a requirement of this SRFI.
 </p>
 <h2 id="Consistencyacrossproceduresignatures">Consistency across procedure signatures</h2>
 <p>
@@ -182,12 +153,12 @@ This compensates for the absence in most Schemes of shared subvectors.
 </p>
 <h2 id="Requiredvs.allowedside-effects">Required vs. allowed side-effects</h2>
 <p>
-<tt>list-sort!</tt> and <tt>list-stable-sort!</tt> are allowed, but not required,
+The <tt>list-sort!</tt> and <tt>list-stable-sort!</tt> procedures are
+allowed, but not required,
 to alter their arguments' cons cells to construct the result list.
 </p>
 <p>
-The <tt>list-delete-neighbor-dups!</tt>, <tt>list-merge!</tt> and <tt>list-merge-sort!</tt> procedures,
-on the other hand, explicitly
+The other procedures ending in <tt>!</tt>, on the other hand, explicitly
 commit to the use of side-effects on their input lists in order to guarantee
 their key algorithmic properties (e.g., linear-time operation, constant-space
 stack use).
@@ -200,6 +171,9 @@ page locality. Pointer <em>writing</em>, which is what the <tt>set-cdr!</tt>s of
 destructive list-sort algorithm do, is even worse, especially if your
 Scheme has a generational GC — the writes will thrash the write-barrier.
 Sorting vectors has inherently better locality.
+</p>
+<p>In particular, all complexity guarantees assume that the basic accessors
+and mutators of standard Scheme have O(1) space and time complexity.
 </p>
 <p>
 The reference implementation's destructive list merge and merge sort implementations are
@@ -275,7 +249,7 @@ i.e., what they do to the data (sort, stable sort, and so forth).
 </p>
 <p>
 These procedures
-do not alter their inputs and are allowed to return a value that shares 
+do not alter their inputs, but are allowed to return a value that shares 
 a common tail with a list argument.
 </p>
 <p>
@@ -291,9 +265,9 @@ procedure.
 </p>
 <p>
 These procedures
-are "linear update" operators — they are allowed, but not required, to
+are linear update operators — they are allowed, but not required, to
 alter the cons cells of their arguments to produce their results.
-They return an unspecified value.
+They return a sorted list containing the same elements as <i>lis</i>.
 </p>
 <p>
 The <tt>list-stable-sort!</tt> procedure is
@@ -308,7 +282,7 @@ procedure.
 </p>
 <p>
 These procedures
-do not alter their inputs, but allocate a fresh vector for their result,
+do not alter their inputs, but allocate a fresh vector as their result,
 of length <em>end</em> - <em>start</em>.
  
 The <tt>vector-stable-sort</tt> procedure with no optional arguments
@@ -358,9 +332,8 @@ except that it does not accept a key procedure.
 This procedure
 makes only a single, iterative, linear-time pass over its argument lists,
 using <tt>set-cdr!</tt>s to rearrange the cells of the lists into the list that is returned
-— they work "in place." Hence, any cons cell appearing in the result must
-have originally appeared in an input.  It returns the deduplicated input.
-It returns an unspecified value.
+— it works "in place." Hence, any cons cell appearing in the result must
+have originally appeared in an input.  It returns the sorted input.
 </p>
 <p>
 Additionally,
@@ -383,7 +356,6 @@ except that it does not accept a key procedure.
 This procedure does not alter its inputs,
 and returns a newly allocated vector
 of length (<em>end<sub>1</sub></em> - <em>start<sub>1</sub></em>) + (<em>end<sub>2</sub></em> - <em>start<sub>2</sub></em><tt>)</tt>.
-It returns an unspecified value.
 </p>
 <p>
 This procedure is equivalent to the SRFI 95 <tt>merge</tt> procedure when applied to vectors,
@@ -414,7 +386,7 @@ vector is not otherwise disordered.
 <p>
 These procedures are linear time — much faster than the O(n<sup>2</sup>) general
 duplicate-element deletion procedures that do not assume any "bunching" of elements
-(such as the ones provided by <a href="http://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>).
+provided by <a href="http://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.
 If you want to delete duplicate
 elements from a large list or vector, sort the elements to bring equal
 items together, then use one of these procedures, for a total time of
@@ -428,7 +400,7 @@ invoked as <tt>(= x y)</tt>, where <em>x</em> comes before <em>y</em> in the con
 <tt>(list-delete-neighbor-dups </tt><em>= lis</em><tt>)</tt>
 </p>
 <p>
-This procedure does not alter its input list; its result may share
+This procedure does not alter its input list, but its result may share
 storage with the input list.
 </p>
 <p>
@@ -479,12 +451,14 @@ Examples:
 
 <h2 id="Findingthemedian">Finding the median</h2>
 <p>
-These procedures find the median element of a vector after
+These procedures do not have SRFI 32 counterparts.
+They find the median element of a vector after
 sorting it in accordance with an ordering procedure.
 If the number of elements in <tt><i>v</i></tt> is odd, the middlemost
 element of the sorted result is returned.  If the number of elements is
 zero, <tt><i>knil</i></tt> is returned.  Otherwise, 
-<tt><i>mean</i></tt> is applied to the two middlemost elements, and
+<tt><i>mean</i></tt> is applied to the two middlemost elements
+in the order in which they appear in <tt><i>v</i></tt>, and
 whatever it returns is returned.  If <tt><i>mean</i></tt> is omitted,
 then the default mean procedure is <tt>(lambda (a b) (/ (+ a b) 2)</tt>,
 but this procedure is applicable to non-numeric values as well.
@@ -495,6 +469,7 @@ but this procedure is applicable to non-numeric values as well.
 <p>
 This procedure does not alter its input vector, but rather
 newly allocates a vector to hold the intermediate result.
+Runs in O(n) time.
 </p>
 <p>
 <tt>(vector-find-median! </tt><em>&lt; v knil</em> [ <em>mean</em> ]<tt>)</tt>
@@ -502,141 +477,51 @@ newly allocates a vector to hold the intermediate result.
 <p>
 This procedure reuses its input vector to hold the intermediate result,
 leaving it sorted, but is otherwise the same as <tt>vector-find-median</tt>.
+Runs in O(n ln n) time.
 </p>
 
 <h2 id="Selection">Selection</h2>
 <p>
-<p>
-<tt>(vector-select! </tt><em>v k </em> [ <em>start</em> [ <em>end</em> ] ]</em> <tt>)</tt>
+These procedures do not have SRFI 32 counterparts.
 </p>
 <p>
-This procedure places the smallest <i>k</i> elements of the region of
+<tt>(vector-select! </tt><em>&lt; v k </em> [ <em>start</em> [ <em>end</em> ] ]</em> <tt>)</tt>
+</p>
+<p>
+This procedure returns the <i>k</i>th smallest element (in the sense of
+the &lt; argument) of the region of
+a vector between <i>start</i> and <i>end</i>.
+Elements within the range may be reordered, whereas those
+outside the range are left alone.  Runs in O(n) time. 
+</p>
+
+<p>
+<tt>(vector-separate! </tt><em>&lt; v k </em> [ <em>start</em> [ <em>end</em> ] ]</em> <tt>)</tt>
+</p>
+<p>
+This procedure places the smallest <i>k</i> elements (in the sense of
+the &lt; argument) of the region of
 a vector between <i>start</i> and <i>end</i> into the first <i>k</i>
 positions of that range, and the remaining elements into the remaining
 positions.  Otherwise, the elements are not in any particular order.  Elements
-outside the range are left alone.  Runs in O(k) time.
+outside the range are left alone.  Runs in O(n) time.  Returns an unspecified value.
 </p>
 
 <h1>Implementation</h1>
 
-The sample implementation is the Scheme 48 implementation of the <tt>sorting</tt> structure,
-and is found in slightly modified form in the repository of this SRFI.
+<p>The sample implementation is a modified version of the Scheme 48
+implementation of the <tt>sorting</tt> structure,
+and is found in the repository of this SRFI.
+It will use the R6RS sorting library if it is available, but does not depend on it.
 This is close to the original SRFI 32 reference implementation, but includes some
 bug fixes and switches the &lt; and = arguments to the initial position.
+It also adds implementations for the median and selection procedures.
 The code is very portable and freely reusable.
 It is tightly bummed, as far as could be done in portable Scheme, and
 is commented in Olin's usual
 voluminous style, including notes on porting and implementation-specific
 optimizations.  The median and selection code is specific to this SRFI.
 </p>
-<h2 id="Files">Files</h2>
-<p>
-<tt>delndups.scm</tt> - the <tt>delete-neighbor-dups</tt> procedures <br />
-<tt>lmsort.scm</tt> - list merge sort <br />
-<tt>median.scm</tt> - the <tt>find-median</tt> procedures <br />
-<tt>selection.scm</tt> - the <tt>selection</tt> procedure <br />
-<tt>sort.scm</tt> - generic sort and merge procedures <br />
-<tt>sorting-test.scm</tt> - test file using the Chicken <tt>test</tt> egg 
-(<i>not yet converted from Scheme48</i>) <br />
-<tt>sorting.scm</tt> - a Chicken library providing this SRFI and additional procedures <br />
-<tt>sorting.sld</tt> - an R7RS counterpart of <tt>sorting.scm</tt> <br />
-<tt>sortp.scm</tt> - sort predicates <br />
-<tt>srfi-132.scm</tt> - a Chicken library providing this SRFI only <br />
-<tt>srfi-132.sld</tt> - an R7RS counterpart of <tt>srfi-132.scm</tt> <br />
-<tt>vbinsearch.scm</tt> - binary search routines for <tt>sorting</tt> library <br />
-<tt>vector-util.scm</tt> - vector utilities <br />
-<tt>vhsort.scm</tt> - vector heap sort <br />
-<tt>visort.scm</tt> - vector insert sort <br />
-<tt>vmsort.scm</tt> - vector merge sort <br />
-<tt>vqsort2.scm</tt> - vector quick sort <br />
-<tt>vqsort3.scm</tt> - vector quick sort using comparison procedures 
-</p>
-<h2 id="Additionalprocedures">Additional procedures</h2>
-<p>
-The <tt>sorting</tt> library includes the following additional procedures
-which are <i>not</i> part of SRFI 132.
-</p>
-<p>
-<tt>(list-merge-sort </tt> <em>&lt; lis</em><tt>)</tt>
-</p>
-<p>
-<tt>(list-merge-sort! </tt> <em>&lt; lis</em><tt>)</tt>
-</p>
-<p>
-<tt>(vector-merge-sort </tt> <em>&lt; v</em> [ <em>start</em> [ <em>end</em> ] ]<tt>)</tt>
-</p>
-<p>
-<tt>(vector-merge-sort! </tt> <em>&lt; v</em> [ <em>start</em> [ <em>end</em> ] ]<tt>)</tt>
-</p>
-<p>
-Equivalent to <tt>list-sort</tt>, <tt>list-sort!</tt>
-<tt>vector-sort</tt>, and <tt>vector-sort!</tt> respectively, but
-explicitly use implementations of Olin's own merge sort algorithm.
-They are stable, run in O(n lg n) worst case, O(n) best case, and require
-only a logarithmic number of stack frames. The destructive-list variant
-allocates zero cons cells; it simply rearranges the cells of the input
-list.
-</p>
-<p>
-<tt>(vector-insert-sort </tt> <em>&lt; v</em> [ <em>start</em> [ <em>end</em> ] ]<tt>)</tt>
-</p>
-<p>
-<tt>(vector-insert-sort! </tt> <em>&lt; v</em> [ <em>start</em> [ <em>end</em> ] ]<tt>)</tt>
-</p>
-<p>
-<tt>(vector-heap-sort </tt> <em>&lt; v</em> [ <em>start</em> [ <em>end</em> ] ]<tt>)</tt>
-</p>
-<p>
-<tt>(vector-heap-sort! </tt> <em>&lt; v</em> [ <em>start</em> [ <em>end</em> ] ]<tt>)</tt>
-</p>
-<p>
-<tt>(vector-quick-sort </tt> <em>&lt; v</em> [ <em>start</em> [ <em>end</em> ] ]<tt>)</tt>
-</p>
-<p>
-<tt>(vector-quick-sort! </tt> <em>&lt; v</em> [ <em>start</em> [ <em>end</em> ] ]<tt>)</tt>
-</p>
-<p>
-Equivalent to <tt>vector-sort</tt> and <tt>vector-sort!</tt>, but explicitly
-use implementations of insert sort, heap sort, and quick sort.
-See <a href="http://srfi.schemers.org/srfi-32/srfi-32.html">SRFI 32</a> or
-any textbook on sorting for explanations.
-</p>
-<p>
-<tt>(vector-binary-search </tt><em>key&lt; elt-&gt;key key v</em> [ <em>start</em> [ <em>end</em> ]]<tt>)</tt>
-</p>
-<p>
-Searches <em>v</em> between <em>start</em> and <em>end</em>, which must be in increasing
-order according to <tt>key&lt;</tt>, for an element which (after being transformed
-by the <tt>elt-&gt;key</tt> procedure) is equal to <em>key</em> in the sense of <em>key&lt;</em>.
-Returns the index of the matching element, or <tt>#f</tt> if there is none.
-</p>
-<p>
-<tt>vector-binary-search3 </tt><em>compare v</em> [ <em>start</em> [ <em>end</em> ]]<tt>)</tt>)
-</p>
-<p>
-Equivalent to <tt>vector-binary-search</tt>, except that it specifies the key
-implicitly using a comparison procedure which accepts an element of <em>v</em>.
-The comparison procedure returns a negative number if the key precedes the
-element, zero if they are equal, and a positive number if the key
-follows the element.
-Returns the index of the matching element.
-</p>
-<p>
-<tt>(vector-quick-sort3 </tt><em>compare v</em> [ <em>start</em> [ <em>end</em> ]]<tt>)</tt>)
-</p>
-<p>
-<tt>(vector-quick-sort3! </tt><em>compare v</em> [ <em>start</em> [ <em>end</em> ]]<tt>)</tt>)
-</p>
-<p>
-Equivalent to <tt>vector-quick-sort</tt> and <tt>vector-quick-sort!</tt> respectively,
-except that a comparison procedure is called which accepts two elements from <em>v</em>.
-This procedure returns a negative number if the first element precedes the
-second, zero if they are equal, and a positive number if the first element
-follows the second element.  This is more efficient than the standard
-quick sort if the ordering test is expensive and there are many equal elements
-in the vector.
-</p>
-<h2 id="Notes">Notes</h2>
 <p>
 The only non-R4RS features in the code
 are the use of R5RS/R6RS/R7RS multiple-value return, with <tt>values</tt> and <tt>call-with-values</tt> procedures,
@@ -661,17 +546,37 @@ for optimization rather than fully optimized.
 </p>
 <p>
 The optional-arg parsing, defaulting, and error checking is done with a
-portable R4RS macro. But if the target Scheme has a faster mechanism (e.g., Chez),
+portable <tt>syntax-rules</tt> macro. But if the target Scheme has a
+faster mechanism (e.g., Chez),
 it's definitely better to switch to using it. Note that argument defaulting and
 error-checking are interleaved — there's no need to error-check defaulted
 <em>start</em> and <em>end</em> args to see if they are fixnums that are legal vector indices for
 the corresponding vector, etc.
 </p>
+<h2 id="Files">Files</h2>
+<p>
+<tt>delndups.scm</tt> - the <tt>delete-neighbor-dups</tt> procedures <br />
+<tt>lmsort.scm</tt> - list merge sort <br />
+<tt>median.scm</tt> - the <tt>find-median</tt> procedures <br />
+<tt>selection.scm</tt> - the <tt>selection</tt> procedure <br />
+<tt>sort.scm</tt> - generic sort and merge procedures <br />
+<tt>sorting-test.scm</tt> - test file  <br />
+<tt>sortp.scm</tt> - sort predicates <br />
+<tt>srfi-132.scm</tt> - a Chicken library providing this SRFI <br />
+<tt>srfi-132.sld</tt> - an R7RS counterpart of <tt>srfi-132.scm</tt> <br />
+<tt>vector-util.scm</tt> - vector utilities <br />
+<tt>vhsort.scm</tt> - vector heap sort <br />
+<tt>visort.scm</tt> - vector insert sort <br />
+<tt>vmsort.scm</tt> - vector merge sort <br />
+<tt>vqsort2.scm</tt> - vector quick sort <br />
+</p>
 <h1>Acknowledgements</h1>
 
 <p>
-Olin thanks the authors of the open source consulted when designing this
+Olin thanked the authors of the open source consulted when designing this
 library, particularly Richard O'Keefe, Donovan Kolbly and the MIT Scheme Team.
+John thanks Will Clinger for his detailed comments, and both Will Clinger and
+Alex Shinn for their implementation efforts.
 </p>
 
 <h1>Copyright</h1>
