@@ -110,6 +110,15 @@ Note that the dynamic order in which the <em>elt=</em> procedure is applied to p
 The equality procedure must be consistent with <code>eq?</code>. 
 Note that this implies that two ideques which are <code>eq?</code> are always <code>ideque=</code>, as well; implementations may exploit this fact to "short-cut" the element-by-element comparisons. 
 </p>
+<p>
+<tt>(ideque-any </tt><em>pred ideque</em></em><tt>)</tt>
+</p>
+<p>
+<tt>(ideque-every </tt><em>pred ideque</em></em><tt>)</tt>
+</p>
+<p>
+Invokes <em>pred</em> on the elements of the <em>ideque</em> in order until one call returns a true/false value, which is then returned.  If there are no such elements, returns <tt>#f</tt>/<tt>#t</tt>.  Takes O(n) time.
+</p>
 <h2 id="Queueoperations">Queue operations</h2>
 <p>
 <tt>(ideque-front </tt><em>ideque</em><tt>)</tt>
@@ -182,60 +191,68 @@ Returns the length of <em>ideque</em> as an exact integer.  May take O(n) time, 
 Returns an ideque with the contents of the <em>ideque</em> followed by the others, or an empty ideque if there are none. Takes O(kn) time, where k is the number of ideques and n is the number of elements involved, though O(k log n) is possible.
 </p>
 <p>
-<p>
 <tt>(ideque-reverse </tt><em>ideque</em><tt>)</tt>
 </p>
 <p>
-Returns an ideque containing the elements of <em>ideque</em> in reverse order.  Takes O(1) time.
+Returns an ideque containing the elements of <em>ideque</em> in reverse order.  Takes O(n) time.
 </p>
 <p>
-<tt>(ideque-count </tt><em>pred ideque<sub>1</sub> ideque<sub>2</sub> ...</em><tt>)</tt>
+<tt>(ideque-count </tt><em>pred ideque</em><tt>)</tt>
 </p>
 <p>
-<em>Pred</em> is a procedure taking as many arguments as there are <em>ideques</em> and returning a single value. It is applied element-wise to the elements of the lists, and a count is tallied of the number of elements that produce a true value. This count is returned.  Terminates when any ideque is finished.  Takes O(n) time.
+<em>Pred</em> is a procedure taking a single value   The dynamic order of calls to <var>pred</var> is unspecified.and returning a single value. It is applied element-wise to the elements of <var>ideque</var>, and a count is tallied of the number of elements that produce a true value. This count is returned.  Takes O(n) time.
 </p>
 <p>
 <tt>(ideque-zip </tt><em>ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
 </p>
 <p>
-Returns an ideque of lists (not ideques) each of which contains the corresponding elements of the argument ideques in the order specified.  Processing stops when all the elements of any ideque have been seen. Takes O(kn) time, where <em>k</em> is the number of ideques and <em>n</em> is the number of elements involved.
+Returns an ideque of lists (not ideques) each of which contains the corresponding elements of <var>ideques</var> in the order specified.  Terminates when all the elements of any of the ideques have been processed. Takes O(kn) time, where <em>k</em> is the number of ideques and <em>n</em> is the number of elements involved.
+</p>
+<p>
+<tt>(ideque-delete-duplicates </tt><em>ideque</em> [ = ]<tt>)</tt>
+</p>
+<p>
+Removes duplicate elements from <em>ideque</em>. If there are multiple equal elements in <em>ideque</em>, the result ideque only contains the first or leftmost of these elements in the result. The order of these surviving elements is the same as in <em>ideque</em>.
+</p>
+<p>
+The = parameter is used to compare the elements of in <var>ideque</var>; it defaults to <code>equal?</code>. If <em>x</em> comes before <em>y</em> in <var>ideque</var>, then the comparison is performed <code>(= x y)</code>. The comparison procedure will be used to compare each pair of elements in <var>ideque</var> no more than once; the order in which it is applied to the various pairs is not specified.
 </p>
 <h2 id="Mapping">Mapping</h2>
 <p>
-<tt>(ideque-map </tt><em>proc ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
+<tt>(ideque-map </tt><em>proc ideque</em><tt>)</tt>
 </p>
 <p>
-Applies <em>proc</em> to the corresponding elements of <em>ideques</em> and returns an ideque containing the results in order.  The dynamic order of calls to <em>proc</em> is unspecified.  Terminates when any ideque is finished.  Takes O(n) time.
+Applies <em>proc</em> to the elements of <em>ideque</em> and returns an ideque containing the results in order.  The dynamic order of calls to <em>proc</em> is unspecified.  Takes O(n) time.
 </p>
 <p>
-<tt>(ideque-filter-map </tt><em>proc ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
+<tt>(ideque-filter-map </tt><em>proc ideque</em><tt>)</tt>
 </p>
 <p>
-Applies <em>proc</em> to the corresponding elements of <em>ideques</em> and returns an ideque containing the true (i.e. non-<code>#f</code>) results in order.  The dynamic order of calls to <em>proc</em> is unspecified.  Terminates when any ideque is finished.  Takes O(n) time.
+Applies <em>proc</em> to the elements of <em>ideque</em> and returns an ideque containing the true (i.e. non-<code>#f</code>) results in order.  The dynamic order of calls to <em>proc</em> is unspecified.  Takes O(n) time.
 </p>
 <p>
-<tt>(ideque-for-each </tt><em>proc ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
+<tt>(ideque-for-each </tt><em>proc ideque</em><tt>)</tt>
 </p>
 <p>
-<tt>(ideque-for-each-right </tt><em>proc ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
+<tt>(ideque-for-each-right </tt><em>proc ideque</em><tt>)</tt>
 </p>
 <p>
-Applies <em>proc</em> to the corresponding elements of <em>ideques</em> in forward/reverse order and returns an unspecified result.  Terminates when any ideque is finished.  Takes O(n) time.
+Applies <em>proc</em> to the elements of <em>ideque</em> in forward/reverse order and returns an unspecified result.  Takes O(n) time.
 </p>
 <p>
-<tt>(ideque-fold </tt><em>proc nil ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
+<tt>(ideque-fold </tt><em>proc nil ideque</em><tt>)</tt>
 </p>
 <p>
-<tt>(ideque-fold-right </tt><em>proc nil ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
+<tt>(ideque-fold-right </tt><em>proc nil ideque</em><tt>)</tt>
 </p>
 <p>
-Invokes <em>proc</em> on the corresponding elements of <em>ideques</em> in forward/reverse order, passing the result of the previous invocation as a final argument. For the first invocation, <em>nil</em> is used as the final argument. Returns the result of the last invocation, or <em>nil</em> if there was no invocation.  Terminates when any ideque is finished.  Takes O(n) time.
+Invokes <em>proc</em> on the elements of <em>ideque</em> in forward/reverse order, passing the result of the previous invocation as a second argument. For the first invocation, <em>nil</em> is used as the second argument. Returns the result of the last invocation, or <em>nil</em> if there was no invocation.  Takes O(n) time.
 </p>
 <p>
-<tt>(ideque-append-map </tt><em>proc ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
+<tt>(ideque-append-map </tt><em>proc ideque</em><tt>)</tt>
 </p>
 <p>
-Applies <em>proc</em> to the corresponding elements of <em>ideques</em>.  It is an error if the result is not a list.  Returns an ideque containing the elements of the lists in order.  Terminates when any ideque is finished.  Takes O(n) time.
+Applies <em>proc</em> to the elements of <em>ideque</em>.  It is an error if the result is not a list.  Returns an ideque containing the elements of the lists in order.  Takes O(n) time.
 </p>
 <h2 id="Filtering">Filtering</h2>
 <p>
@@ -245,7 +262,7 @@ Applies <em>proc</em> to the corresponding elements of <em>ideques</em>.  It is 
 <tt>(ideque-remove </tt><em>pred ideque</em><tt>)</tt>
 </p>
 <p>
-Returns an ideque which contains the elements of <em>ideque</em> that do/do not satisfy <em>pred</em>.  Takes O(n) time.
+Returns an ideque containing the elements of <em>ideque</em> that do/do not satisfy <em>pred</em>.  Takes O(n) time.
 </p>
 <p>
 <tt>(ideque-partition </tt><em>proc ideque</em><tt>)</tt>
@@ -289,15 +306,6 @@ Returns an ideque which omits the longest initial/final prefix of elements in <e
 </p>
 <p>
 Returns two values, the initial prefix of the elements of <em>ideque</em> which do/do not satisfy <em>pred</em>, and the remaining elements.  Takes O(n) time.
-</p>
-<p>
-<tt>(ideque-any </tt><em>pred ideque<sub>1</sub> ideque<sub>2</sub> ...</em><tt>)</tt>
-</p>
-<p>
-<tt>(ideque-every </tt><em>pred ideque<sub>1</sub> ideque<sub>2</sub> ...</em><tt>)</tt>
-</p>
-<p>
-Invokes <em>pred</em> on the corresponding elements of the <em>ideques</em> in order until one call returns a true/false value; the value returned by <em>proc</em> is then returned.  If there are no such elements, returns <tt>#f</tt>/<tt>#t</tt>.  Takes O(n) time.
 </p>
 <h2 id="Conversion">Conversion</h2>
 <p>
