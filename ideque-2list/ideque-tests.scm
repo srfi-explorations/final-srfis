@@ -56,8 +56,8 @@
 
 (test-group "ideque/other-accessors"
  (define (check name ideque-op list-op n)
-   (let* ([lis (iota n)]
-          [dq (list->ideque lis)])
+   (let* ((lis (iota n))
+          (dq (list->ideque lis)))
      (for-each (lambda (i)
                  (test (cons name i)
                        (receive xs (list-op lis i) xs)

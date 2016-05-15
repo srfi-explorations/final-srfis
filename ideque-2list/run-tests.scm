@@ -1,5 +1,5 @@
 (cond-expand
- [gauche
+ (gauche
   (use gauche.test)
   (use compat.chibi-test)
   (use srfi-121)
@@ -9,6 +9,6 @@
   (test-module 'ideque)
   (chibi-test
    (include "ideque-tests.scm"))
-  (test-end)]
- [else
-  (display "Add implementation-specific test runner.\n")])
+  (test-end))
+ (else
+  (display "Add implementation-specific test runner.\n")))
