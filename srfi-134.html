@@ -126,7 +126,8 @@ Returns <tt>#t</tt> if <em>ideque</em> contains zero elements, and <tt>#f</tt> o
 <p>
 Determines ideque equality, given an element-equality procedure. Ideque A equals ideque B if they are of the same length, and their corresponding elements are equal, as determined by <i>elt=</i>. If the element-comparison procedure's first argument is from <em>ideque<sub>i</sub></em>, then its second argument is from <em>ideque<sub>i+1</sub></em>, i.e. it is always called as <code>(</code><em>elt= a b</em><code>)</code> for <em>a</em> an element of ideque A, and <em>b</em> an element of ideque B.</p>
 <p>
-In the n-ary case, every <em>ideque<sub>i</sub></em> is compared to <em>ideque<sub>i+1</sub></em> (as opposed, for example, to comparing <em>ideque<sub>1</sub></em> to every <em>ideque<sub>i</sub></em>, for i > 1). If there are no ideque arguments at all, <code>ideque=</code> simply returns true. 
+In the n-ary case, every <em>ideque<sub>i</sub></em> is compared to <em>ideque<sub>i+1</sub></em> (as opposed, for example, to comparing <em>ideque<sub>1</sub></em> to every <em>ideque<sub>i</sub></em>, for i > 1). If there are zero or one ideque arguments, <code>ideque=</code> simply returns true. 
+The name does not end in a question mark for compatibility with the SRFI-1 procedure <code>list=</code>. 
 </p>
 <p>
 Note that the dynamic order in which the <em>elt=</em> procedure is applied to pairs of elements is not specified. For example, if <code>ideque=</code> is applied to three ideques, A, B, and C, it may first completely compare A to B, then compare B to C, or it may compare the first elements of A and B, then the first elements of B and C, then the second elements of A and B, and so forth. 
@@ -231,7 +232,7 @@ Returns an ideque containing the elements of <em>ideque</em> in reverse order.  
 <tt>(ideque-zip </tt><em>ideque<sub>1</sub> ideque<sub>2</sub></em> ...<tt>)</tt>
 </p>
 <p>
-Returns an ideque of lists (not ideques) each of which contains the corresponding elements of <var>ideques</var> in the order specified.  Terminates when all the elements of any of the ideques have been processed. Takes O(kn) time, where <em>k</em> is the number of ideques and <em>n</em> is the number of elements involved.
+Returns an ideque of lists (not ideques) each of which contains the corresponding elements of <var>ideques</var> in the order specified.  Terminates when all the elements of any of the ideques have been processed. Takes O(kn) time, where <em>k</em> is the number of ideques and <em>n</em> is the number of elements in the shortest ideque.
 </p>
 <h2 id="Mapping">Mapping</h2>
 <p>
