@@ -1,1 +1,1 @@
-This file [syntax-parameters.html](file) may become a SRFI.
+This [file](syntax-parameters.html) may become a SRFI.
