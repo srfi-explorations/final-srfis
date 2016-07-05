@@ -1,49 +1,220 @@
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <html>
   <head>
-    <title>SRFI ?: ???</title>
-    <link rel="stylesheet" href="http://srfi.schemers.org/srfi.css" type="text/css" />
+    <title>SRFI ?: Syntax parameters</title> <link rel="stylesheet"
+    href="http://srfi.schemers.org/srfi.css" type="text/css" />
   </head>
 
   <body>
 
 <h1>Title</h1>
 
-??? From above
+Syntax parameters
 
 <h1>Author</h1>
 
-??? The author(s)
+Marc Nieper-Wi&szlig;kirchen
 
 <h1>Abstract</h1>
 
-??? 200-500 word abstract
+<p>
+Syntax parameters are to the expansion process of a Scheme program
+what parameters are to the evaluation process of a Scheme program. They allow
+hygienic implementation of syntactic forms that would otherwise
+introduce implicit identifiers unhygienically.
+</p>
 
 <h1>Issues</h1>
 
-??? Optional section that may point out things to be resolved.  This
-will not appear in the final SRFI.
+<ul>
+  <li>The syntax parameters described by this SRFI are immutable. In
+    contrast to it, the parameter objects described by SRFI 39 (but
+    not by R7RS) are mutable. Shall syntax parameters be made mutable as
+    well? In contrast to parameter objects, multi-threaded evaluation
+    wouldn't pose a problem, but the precise order of expansion
+    would.</li>
+</ul>
 
 <h1>Rationale</h1>
 
-??? detailed rationale
+<p>
+Syntax parameters are a mechanism for rebinding a macro definition
+within the dynamic extent of a macro expansion. This provides a
+convenient solution to one of the most common types of unhygienic
+macro: those that introduce a unhygienic binding each time the macro
+is used. Examples include a lambda form with a return keyword,
+class macros that introduce a special self binding, or a while loop form
+that provides an escape procedure as a binding for an auxiliary abort
+keyword.
+</p>
+
+<p>
+  With the syntax-rule macro system, it is not possible to introduce bindings
+  unhygienically. With low-level macro systems like the sc-macro-transformer or the
+  syntax-case macro system, one can break hygiene by constructing new identifiers
+  in an existing syntactic closure. While use cases of introducing identifiers
+  unhygienically like in SRFI 99 seem unproblematic, the use cases
+  given above where bindings are based on identifiers that are
+  completely independent on the arguments of a macro are often
+  <a href="http://scheme2011.ucombinator.org/papers/Barzilay2011.pdf">severly
+  broken</a>.
+</p>
+
+<p>
+  With syntax parameters, instead of introducing the binding
+  unhygienically each time, one instead creates one binding for the
+  keyword, which is then adjusted later when the keyword to supposed
+  to have a different meaning. As no new bindings are introduced, hygiene
+  is preserved. This is similar to the dynamic binding mechanisms available
+  at run-time (in the form of parameters), except that the dynamic
+  binding only occurs during macro expansion. The code after macro
+  expansion remains lexically scoped.
+</p>
+
+<h1>Examples</h1>
+
+<p>
+  The first example is certainly not an example of good functional
+  programming style but it easily demonstrates how syntax parameters
+  are used and why
+  <code>call-with-current-continuation</code> is known as the
+  fundamental control-flow construct.
+</p>
+
+<pre>
+ (import (scheme base)
+         (scheme write)  
+         (srfi ???))
+ 
+ (define-syntax-parameter abort
+   (syntax-rules ()
+     ((_ . _)
+      (syntax-error "abort used outside of a loop"))))
+
+ (define-syntax forever
+   (syntax-rules ()
+     ((forever body1 body2 ...)
+      (call-with-current-continuation
+       (lambda (escape) 
+  	 (syntax-parameterize
+	     ((abort
+	      (syntax-rules ()
+	        ((abort value (... ...))
+	 	 (escape value (... ...))))))
+	   (let loop ()
+ 	     body1 body2 ... (loop))))))))
+
+ (define i 0)
+ (forever
+   (display i)
+   (newline)
+   (set! i (+ 1 i))
+   (when (= i 10)
+     (abort)))
+</pre>
+
+<p>
+  The following example is derived from an example given in the Guile
+  reference manual.
+</p>
+
+<pre>
+ (import (scheme base)
+         (scheme write)
+         (srfi 1)
+         (srfi ???))
+
+ (define-syntax-parameter return
+   (syntax-rules ()
+     ((_ . _)
+      (syntax-error "return used outside of a lambda^"))))
+
+ (define-syntax lambda^
+   (syntax-rules ()
+     ((lambda^ formals body1 body2 ...)
+      (lambda formals
+        (call-with-current-continuation
+         (lambda (escape)
+          (syntax-parameterize
+              ((return
+                (syntax-rules ()
+                  ((return value (... ...))
+                   (escape value (... ...))))))
+            body1 body2 ...)))))))
+
+ (define product
+   (lambda^ (list)
+     (fold (lambda (n o)
+             (if (zero? n)
+                 (return 0)
+                 (* n o)))
+           1 list)))
+
+ ...
+</pre>
 
 <h1>Specification</h1>
 
-??? detailed specification
+<h2>Syntax</h2>
+
+<pre>
+ (define-syntax-parameter &lt;keyword&gt; &lt;transformer spec&gt;)
+</pre>
+
+<p>
+Binds &lt;keyword&gt; to the transformer obtained by evaluating
+&lt;transformer spec&gt;. The
+transformer provides the default expansion for the syntax parameter,
+and in the absence of syntax-parameterize, is functionally equivalent
+to define-syntax. (For example, you may want to have the transformer
+throw a syntax error indicating that the keyword is supposed to be
+used in conjunction with another macro as in the examples above).
+</p>
+
+<pre>
+ (syntax-parameterize
+     ((&lt;keyword&gt; &lt;transformer spec&gt;) ...)
+   &lt;body&gt;)
+</pre>  
+
+<p>
+Adjusts the <code>&lt;keyword&gt;</code>s to use the transformer obtained
+by evaluating the corresponding <code>&lt;transformer&gt;</code>s, in
+the expansion of the <code>&lt;body&gt;</code>. Each keyword must be bound to a
+syntax parameter. <code>syntax-parameterize</code> differs from
+<code>let-syntax</code>, in that the binding is not shadowed, but
+adjusted, and so uses of the keyword in the expansion
+of <code>&lt;body&gt;</code> use the new transformers. This is
+somewhat similar to how parameterize adjusts the values of regular
+parameters, rather than creating new bindings.
 
 <h1>Implementation</h1>
 
-??? explanation of how it meets the reference implementation requirement, and the code, if possible
+<p>
+A sample implementation for an implementation of the R7RS is provided in form
+of the <a href="https://gitlab.com/nieper/rapid-scheme">Rapid Scheme</a>
+implementation, which implements this SRFI in the
+<code>(rapid syntax-parameters)</code> library. This implementation will follow
+any future changes in this specification.
+</p>
 
-<a href="srfi minus ???-reference.scm">Source for the reference implementation.</a>
+<p>
+Syntax parameters are also being implemented, at least, by Guile and Racket.
+</p>
 
 <h1>Acknowledgements</h1>
 
-??? credit where it is due
+This SRFI wouldn't probably exist if Eli Barzilay, Ryan Culpepper, and
+Matthew hadn't published their
+paper <em><a href="http://scheme2011.ucombinator.org/papers/Barzilay2011.pdf">Keeping
+it Clean with Syntax Parameters</a></em>, from which bits were
+shamelessly reused for this SRFI.
+
+Much of this specification is likewise derived from the Guile
+Reference Manual and the Racket documentation.
 
 <h1>Copyright</h1>
-Copyright (C) ??? (201?).  All Rights Reserved. 
+Copyright (C) Marc Nieper-Wi&szlig;kirchen (2016).  All Rights Reserved. 
 
 <p>
   Permission is hereby granted, free of charge, to any person
