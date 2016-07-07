@@ -49,13 +49,13 @@ keyword.
 </p>
 
 <p>
-  With the syntax-rule macro system, it is not possible to introduce bindings
+  With the syntax-rules macro system, it is not possible to introduce bindings
   unhygienically. With low-level macro systems like the sc-macro-transformer or the
   syntax-case macro system, one can break hygiene by constructing new identifiers
   in an existing syntactic closure. While use cases of introducing identifiers
   unhygienically like in SRFI 99 seem unproblematic, the use cases
   given above where bindings are based on identifiers that are
-  completely independent on the arguments of a macro are often
+  completely independent of the arguments of the macro are often
   <a href="http://scheme2011.ucombinator.org/papers/Barzilay2011.pdf">severly
   broken</a>.
 </p>
@@ -179,10 +179,10 @@ used in conjunction with another macro as in the examples above).
 
 <p>
 Adjusts the <code>&lt;keyword&gt;</code>s to use the transformer obtained
-by evaluating the corresponding <code>&lt;transformer&gt;</code>s, in
+by evaluating the corresponding <code>&lt;transformer&gt;</code>s in
 the expansion of the <code>&lt;body&gt;</code>. Each keyword must be bound to a
 syntax parameter. <code>syntax-parameterize</code> differs from
-<code>let-syntax</code>, in that the binding is not shadowed, but
+<code>let-syntax</code> in that the binding is not shadowed, but
 adjusted, and so uses of the keyword in the expansion
 of <code>&lt;body&gt;</code> use the new transformers. This is
 somewhat similar to how parameterize adjusts the values of regular
