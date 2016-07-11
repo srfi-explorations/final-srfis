@@ -1,0 +1,268 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>Strings for WG2</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+  div.title h1 { font-size: small; color: blue }
+  div.title { font-size: xx-large; color: blue; font-weight: bold }
+  h1 { font-size: x-large; color: blue }
+  h2 { font-size: large; color: blue }
+  /* So var inside pre gets same font as var in paragraphs. */
+  var { font-family: monospace; }
+  em.non-terminal { }
+  em.non-termina-def { }
+  code.literal { font-style: normal; }
+  code.literal:before { content: "“" }
+  code.literal:after { content: "”" }
+</style>
+  </head>
+
+<body>
+<div class="title">
+<h1>Title</h1>
+Strings for WG2
+</div>
+
+<h1>Author</h1>
+Per Bothner
+
+<h1>Abstract</h1>
+<p>This attempts to solve the same issues with R7RS strings raised by
+<a href="http://srfi.schemers.org/srfi-135/srfi-135.html">SRFI-135</a>:
+non-guaranteed O(1) indexing, limited sharing, in general the limited
+usefulness of mutable strings, especially fixed-size ones.
+Our solution is in concept the same, but the goal is better
+integration with the Scheme language.  Specifically, SRFI-135
+proposes new names for types and procedures in a way that is
+not integrated with Scheme tradition and existing code.
+It also adds a slew of new names for people to learn.
+While the relationship between old procedures and SRFI-135 procedures
+is natural and straightforward, it still adds a conceptual hurdle and wart
+to the Scheme language, complicating teaching and migration.
+<p>
+We propose to retain the name "string" as
+the type of sequences of Unicode chracters (scalar values).
+There are two standard subtypes of "string":
+<ul>
+<li>Immutable strings, also called "istrings", cannot be
+modified after they have been created.  Calling <code>string-set!</code>
+on an istring throws an error.  On the other hand,
+the core operations string-ref and string-length are guaranteed to be O(1).
+<li>Mutable strings can be modified "in-place" using <code>string-set!</code>
+and other operations.
+However, <code>string-ref</code>, <code>string-set!</code>,
+or <code>string-length</code> have no performance guarantees.
+On many implementation they may take time proportional to the
+length of the string.
+</ul>
+An implementation may support other kinds of "strings".
+For example on the Java platform it may be reasonable to
+consider any instance of <code>java.lang.CharSequence</code> to be a string.
+<p>
+The main part of the proposal specifies the default bindings of various procedure names,
+as might be pre-defined in a REPL.  Specifically, some procedures
+that traditionally return mutable strings are changed to return istrings.
+We later discuss compatibility and other library issues.
+<p>
+This combines
+<a href="http://srfi.schemers.org/srfi-13/srfi-13.html">SRFI-13</a>,
+<a href="http://srfi.schemers.org/srfi-135/srfi-135.html">SRFI-135</a>,
+and <a href="http://srfi.schemers.org/srfi-118/srfi-118.html">SRFI-118</a>.
+
+<h1>Issues</h1>
+<ul>
+<li>What name should be us for "immutable string" and
+corresponding predicate?
+Is "istring" and <code>istring?</code> a good choice?
+<li>Should two-argument <code>make-string</code> return a muttable or
+immutable string?  What about one-argument <code>make-string</code>?
+<li>What standard libraries should the language provide,
+and what should each library export?
+<li>Would an <code>mstring?</code> predicate be useful?
+In an implementation with immutable strings without a O(1) guarantee
+(such as <code>java.lang.String</code> on the Java platform)
+you can't assume that a non-istring string is mutable, so  
+it might be useful to be able to explicitly test for a mutable string.
+      
+</ul>
+
+<h1>Specification</h1>
+
+<h3><a name="Notation">Notation</a></h3>
+
+<p>
+In the following procedure specifications:
+<ul>
+    <li>An <var>istring</var> argument or result is an immutable string.</li>
+
+    <li>A <var>string</var> argument or result is any string (immutable or mutable).</li>
+</ul>
+The rest as in SRFI-135.
+
+<h3>Predicates</h3>
+
+<dt class="proc-def" id="string-p">
+<code class="proc-def">string?</code><var> obj → boolean</var>
+</dt>
+<dd class="proc-def">
+    Is <var>obj</var> a string?
+    Must return true if <code>istring?</code> returns true.
+    Must execute in O(1) time.
+</dd>
+
+<dt class="proc-def">
+<a name="text-p"></a>
+<code class="proc-def">istring?</code><var> obj → boolean</var>
+</dt>
+<dd class="proc-def">
+  Is <var>obj</var> an immutable string, with guaranteed
+  O(1) performance for string-ref and string-length?
+    Must execute in O(1) time.
+</dd>
+<p>
+It might be reasonable to add a <code>mstring?</code> predicate.
+
+<h3>Immutable string procedues, based on SRFI-135</h3>
+<p>
+All of the SRFI-135 procedures are renamed to start
+with <code>string-</code> rather than <code>textual-</code>
+or <code>text-</code>.
+Any argument or result type marked as "textual" is changed to "string",
+while the type "text" is changed to "istring".
+<p>
+For example:
+<dd><dt class="proc-def" id="string-map"></a>
+<code class="proc-def">string-map</code><var> proc string1 string2 ... → istring</var>
+</dt>
+<p>
+Possible exception: Should <code>make-string</code> return a
+mutable string or an istring?
+The one-argument version <code>(make-string N)</code> makes no sense unless it is mutable.
+
+<h3>String literals</h3>
+String literals have type istring.
+They have the same syntax as in R7RS (small).
+In an implementation that supports <a href="http://srfi.schemers.org/srfi-109/srfi-109.html">SRFI-109</a> string quasi-literals also evaluate to istrings.
+
+<h3>Conversions</h3>
+Note specifically:
+<dt class="proc-def1">
+<code class="proc-def">string-&gt;istring</code><var> string [start end] → istring</var>
+</dt>
+<p>
+SRFI-135's <code>textual->string</code> procedure is subsumed
+by <code>string-copy</code>.
+
+<h3>Mutable string procedure</h3>
+<p>
+The following returns a mutable string:
+<code>string-copy</code>; one-argument <code>make-string</code>;
+possibly also two-argument <code>make-string</code>.
+<p>
+The following require a mutable argument:
+<code>string-set!</code>, <code>string-fill!</code>,
+<code>string-copy!</code>,
+as do SRFI-118's <code>string-append!</code> and <code>string-replace!</code>.
+
+<h3>Libraries</h3>
+There is no reason - except backward compatibility - for a procedure
+such as string-upcase to return a mutable string.
+However, we need a mechanism to use the "old" immutable-string-returning
+string-upcase rather than the istring-returning version.
+<p>
+The details will be worked out as the the "large" language comes togather.
+However, for compatibility  
+<code>(scheme base)</code> and others R7RS-small libraries should
+remain as in R7RS-small - i.e. string-upcase returns a mutable string.
+We could deprecate <code>(scheme base)</code> and replace it
+with (for example) <code>(scheme common)</code>, which
+would define strings procedures as in this SRFI
+(e.g. <code>string-upcase</code> returns an istring).
+We also want a library that defines mutable-string-returning
+variants of the the various standard procedures, optionally
+with the imutable-string-returning procedurs renamed (for example
+to <code>istring-upcase</code>).  These can be trivially implemented:
+<pre>
+(define (string-upcase str)
+  (string-copy (istring-upcase str)))
+</pre>
+<p>To avoid confusion: The above definition of <code>string-upcase</code>
+is of course not the one in <code>(scheme common)</code>,
+which is the same as <code>istring-upcase</code>.
+
+<h1>Implementation</h1>
+<p>This is basically just SRFI-135 with different names.
+So we can re-use any suitable SRFI-135 implementation.
+However, here is a simple and fairly efficient implementation of
+istrings written for the Java platform, which uses UTF-16 chars:
+<pre>
+public class SchemeIString implements CharSequence {
+    String str;
+    int cplength; // number of codepoints
+
+    /* Index of every 16-th character.
+     * Null if all characters are in the basic plane. */
+    int[] offsets;
+
+    /** used for string-ref */
+    public int indexByCodePoints(int i) {
+        if (offsets == null)
+            return (int) str.charAt(i);
+        int pos = offsets[i&gt;&gt;4];
+        // Optimize if all characters between (i &amp; 15)
+        // and (i &amp; 15) + 16 are all in the basic plane:
+        if (pos + 16 == offsets[(i&gt;&gt;4) + 1])
+            return (int) str.charAt(pos + (i &amp; 15));
+        // scan linearly from pos, at most 15 characters forward:
+        return str.codePoinAt(pos + str.offsetByCodePoints(pos, i&amp;15));
+    }
+
+    /* used for string-length */
+    public int lengthByCodePoints() { return cplength; }
+
+    /** To implement CharSequence */
+    public char charAt(int i) { return str.charAt(i); }
+    public String toString() { return str; }
+    public int length() { return str.length(); }
+}
+</pre>
+This implementation doesn't support shared substrings,
+but that could be handled with a little more work and
+replacing the <code>String str</code> field with a
+char array field <code>char[] chars</code>.
+Sharing would be handled by re-using the <code>chars</code>
+and <code>offsets</code> fields, but adding start/end offsets.
+Of course that has the tradeoff of more garbage being retained.
+<p>
+Implementing mutable strings is trivial, since there is no performance
+expectation.  Just use a simple record which has a pointer
+to a data buffer, which can be reallocated as needed.
+
+<h1>Acknowledgements</h1>
+<p>To be filled in later.
+
+<h1>Copyright</h1>
+<p>
+Copyright (C) Per Bothner 2016</p>
+<p>
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:</p>
+<p>
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.</p>
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
+<hr>
+<address>Author: <a href="mailto:per@bothner.com">Per Bothner</a></address>
