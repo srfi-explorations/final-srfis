@@ -1,4 +1,4 @@
-(module lseqs ()
+(module srfi-127 ()
   (import scheme)
   ;; Provide necessary R7RS-small identifiers
   (import (only chicken
@@ -9,6 +9,6 @@
   (export lseq-map lseq-for-each lseq-filter lseq-remove)
   (export lseq-find lseq-find-tail lseq-take-while lseq-drop-while
           lseq-any lseq-every lseq-index lseq-member lseq-memq lseq-memv)
-  (include "r7rs-shim.scm")
-  (include "lseqs-impl.scm")
+  (include "lseqs/r7rs-shim.scm")
+  (include "lseqs/lseqs-impl.scm")
 )
