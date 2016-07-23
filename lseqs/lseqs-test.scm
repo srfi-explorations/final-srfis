@@ -1,6 +1,6 @@
 (use test)
-(use lseqs)
-(include "r7rs-shim.scm")
+(use srfi-127)
+(include "../lseqs/r7rs-shim.scm")
 
 ;; Make-generator for tests cloned from SRFI 121
 (define (make-generator . args)
