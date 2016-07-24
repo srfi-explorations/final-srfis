@@ -1,1 +1,0 @@
-This [file](syntax-parameters.html) may become a SRFI.
