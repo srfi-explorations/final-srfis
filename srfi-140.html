@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
-    <title>Strings for WG2</title>
+    <title>Immutable Strings</title>
     <link rel="stylesheet" href="http://srfi.schemers.org/srfi.css" type="text/css" />
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <style type="text/css">
@@ -16,13 +16,14 @@
   code.literal { font-style: normal; }
   code.literal:before { content: "“" }
   code.literal:after { content: "”" }
+  span.proc-def { font-weight: bold }
 </style>
   </head>
 
 <body>
 <div class="title">
 <h1>Title</h1>
-Strings for WG2
+Immutable Strings
 </div>
 
 <h1>Author</h1>
@@ -43,22 +44,23 @@ Per Bothner
   but with better integration with the Scheme language.</p>
 
 <p>
-We propose to retain the name "string" as
+We propose to retain the name <dfn>string</dfn> as
 the type of sequences of Unicode chracters (scalar values).
-There are two standard subtypes of "string":
+There are two standard subtypes of string:
 <ul>
-<li>Immutable strings, also called "istrings", cannot be
+<li>Immutable strings, also called <dfn>istrings</dfn>, cannot be
 modified after they have been created.  Calling <code>string-set!</code>
-on an istring throws an error.  On the other hand,
-the core operations string-ref and string-length are guaranteed to be O(1).
-<li>Mutable strings can be modified "in-place" using <code>string-set!</code>
-and other operations.
+on an istring throws an error.
+On the other hand, the core operations <code>string-ref</code> and
+<code>string-length</code> are guaranteed to be O(1).
+<li>Mutable strings can be modified <q>in-place</q> using
+<code>string-set!</code> and other operations.
 However, <code>string-ref</code>, <code>string-set!</code>,
 or <code>string-length</code> have no performance guarantees.
 On many implementation they may take time proportional to the
 length of the string.
 </ul>
-An implementation may support other kinds of "strings".
+An implementation may support other kinds of strings.
 For example on the Java platform it may be reasonable to
 consider any instance of <code>java.lang.CharSequence</code> to be a string.
 <p>
@@ -77,8 +79,6 @@ and <a href="http://srfi.schemers.org/srfi-118/srfi-118.html">SRFI-118</a>.
 <li>What name should we use for "immutable string" and
 corresponding predicate?
 Is "istring" and <code>istring?</code> a good choice?
-<li>Should two-argument <code>make-string</code> return a muttable or
-immutable string?  What about one-argument <code>make-string</code>?
 <li>What standard libraries should the language provide,
 and what should each library export?
 <li>Would an <code>mstring?</code> predicate be useful?
@@ -110,8 +110,28 @@ its own, rather than simply explaining the differences with SRFI 135.
   to the Scheme language, complicating teaching and migration.
 
 <h1>Specification</h1>
+<p>
+<em>Note:</em> This specification is intentionally an approximate
+clone of SRFI-135.
+However, what SRFI-135 calls <q>textual</q>, we call plain <q>string</q>.
+What SRFI-135 calls <q>text</q>, we call either <q>istring</q>
+(in type specifiers) or plain <q>string</q> (in most procedure names).
+Specifically,
+all of the SRFI-135 procedures are renamed to start
+with <code>string-</code> rather than <code>textual-</code>
+or <code>text-</code>.
+Any argument or result type marked as <q>textual</q> is changed to
+<q>string</q>, while the type <q>text</q> is changed to <q>istring</q>.
+<p>
+For example:
+<dd><dt class="proc-def" id="string-map"></a>
+<code class="proc-def">string-map</code><var> proc string1 string2 ... → istring</var>
+</dt>
+<p>
+One exception: <code>make-string</code> returns a
+mutable string, not an istring.
 
-<h3><a name="Notation">Notation</a></h3>
+<h3 id="Notation">Notation</h3>
 
 <p>
 In the following procedure specifications:
@@ -122,70 +142,333 @@ In the following procedure specifications:
 </ul>
 The rest as in SRFI-135.
 
+<h3>String literals</h3>
+String literals have type istring.
+They have the same syntax as in R7RS (small).
+In an implementation that supports <a href="http://srfi.schemers.org/srfi-109/srfi-109.html">SRFI-109</a> string quasi-literals also evaluate to istrings.
+
 <h3>Predicates</h3>
 
+<dl>
 <dt class="proc-def" id="string-p">
-<code class="proc-def">string?</code><var> obj → boolean</var>
-</dt>
+<code>(<span class="proc-def">string?</code><var> obj<code>)</code> → boolean</var></dt>
 <dd class="proc-def">
     Is <var>obj</var> a string?
     Must return true if <code>istring?</code> returns true.
     Must execute in O(1) time.
 </dd>
+</dl>
 
-<dt class="proc-def">
-<a name="text-p"></a>
-<code class="proc-def">istring?</code><var> obj → boolean</var>
+<dl>
+<dt class="proc-def" is="istring-p">
+<code>(<span class="proc-def">istring?</code><var> obj<code>)</code> → boolean</var>
 </dt>
 <dd class="proc-def">
   Is <var>obj</var> an immutable string, with guaranteed
   O(1) performance for string-ref and string-length?
     Must execute in O(1) time.
 </dd>
+</dl>
 <p>
 It might be reasonable to add a <code>mstring?</code> predicate.
 
-<h3>Immutable string procedues, based on SRFI-135</h3>
-<p>
-All of the SRFI-135 procedures are renamed to start
-with <code>string-</code> rather than <code>textual-</code>
-or <code>text-</code>.
-Any argument or result type marked as "textual" is changed to "string",
-while the type "text" is changed to "istring".
-<p>
-For example:
-<dd><dt class="proc-def" id="string-map"></a>
-<code class="proc-def">string-map</code><var> proc string1 string2 ... → istring</var>
-</dt>
-<p>
-Possible exception: Should <code>make-string</code> return a
-mutable string or an istring?
-The one-argument version <code>(make-string N)</code> makes no sense unless it is mutable.
-
-<h3>String literals</h3>
-String literals have type istring.
-They have the same syntax as in R7RS (small).
-In an implementation that supports <a href="http://srfi.schemers.org/srfi-109/srfi-109.html">SRFI-109</a> string quasi-literals also evaluate to istrings.
+<dl>
+<dt class="proc-def" id="string-null-p">
+<code>(<span class="proc-def">string-null?</span> <var>string</var><code>)</code> → <var>boolean</var>
+<dt class="proc-def" id="string-every">
+<code>(<span class="proc-def">string-every</code><var> pred string [start end]</code>)</code> → <var>value</var>
+<dt class="proc-def" id="string-any">
+<code>(<span class="proc-def">string-any</code><var> pred string [start end]</code>)</code> → <var>value</var>
+<dd>Same as corresponding SRFI-135 procedures.</dd>
+</dl>
 
 <h3>Conversions</h3>
-Note specifically:
+<dl>
+<dt class="proc-defi" id="string2vector">
 <dt class="proc-def1">
-<code class="proc-def">string-&gt;istring</code><var> string [start end] → istring</var>
+<code>(<span class="proc-def">string-&gt;vector</span></code><var> string [start end]</var><code>)</code><var> → char-vector</var>
 </dt>
+<dt class="proc-defi" id="string2list">
+<code>(<span class="proc-def">string-&gt;list</span></code><var> string [start end]</var><code>)</code><var> → char-list</var>
+</dt>
+<dt class="proc-defi" id="vector2string">
+<code>(<span class="proc-def">vector-&gt;string</span></code><var> char-vector [start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dt class="proc-defn" is="list2string">
+<code>(<span class="proc-def">list-&gt;string</span></code><var> char-list [start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dt class="proc-def" id="reverse-list2string"></a>
+<code>(<span class="proc-def">reverse-list-&gt;string</span></code><var> char-list</var><code>)</code><var> → string</var>
+</dt>
+<dt class="proc-def1" id="string2utf8">
+<code>(<span class="proc-def">string-&gt;utf8&nbsp;&nbsp;&nbsp;</span></code><var> string [start end]</var><code>)</code><var> → bytevector</var>
+</dt>
+<dt class="proc-defi" id="string2utf16">
+<code>(<span class="proc-def">string-&gt;utf16&nbsp;&nbsp;</code><var> string [start end]</var><code>)</code><var> → bytevector</var>
+</dt>
+<dt class="proc-defi" id="string2utf16be">
+<code>(<span class="proc-def">string-&gt;utf16be</span></code><var> string [start end]</var><code>)</code><var> → bytevector</var>
+</dt>
+<dt class="proc-defn" id="string2utf16le">
+<code>(<span class="proc-def">string-&gt;utf16le</span></code><var> string [start end]</var><code>)</code><var> → bytevector</var>
+</dt>
+<dt class="proc-def1" id="utf82string">
+<code>(<span class="proc-def">utf8-&gt;string&nbsp;&nbsp;&nbsp;</span></code><var> bytevector [start end]</var><code>)</code><var> → string</var>
+</dt>
+<dt class="proc-defi" id="utf162string">
+<code>(<span class="proc-def">utf16-&gt;string&nbsp;&nbsp;</span></code><var> bytevector [start end]</var><code>)</code><var> → string</var>
+</dt>
+<dt class="proc-defi" id="utf16be2string">
+<code>(<span class="proc-def">utf16be-&gt;string</span></code><var> bytevector [start end]</var><code>)</code><var> → string</var>
+</dt>
+<dt class="proc-defn" id="utf16le2string">
+<code>(<span class="proc-def">utf16le-&gt;string</span></code><var> bytevector [start end]</var><code>)</code><var> → string</var>
+</dt>
+<dd>As in SRFI-135.</dd>
+</dl>
 <p>
 SRFI-135's <code>textual->string</code> procedure is subsumed
-by <code>string-copy</code>.
+by <code>string-copy</code>, while <code>textual->text</code>
+is subsumed by <code>substring</code>.
 
-<h3>Mutable string procedure</h3>
+<h3>Immutable string constructors</h3>
+<dl><dt class="proc-def" id="string"></a>
+<code>(<span class="proc-def">string</span></code> <var>char</var><code>)</code><var> ... → string</var>
+</dt>
+<dd class="proc-def">
+    Returns a string consisting of the given characters.
+</dd>
+</dl>
+<dl>
+<dt class="proc-def" id="string-tabulate">
+<code>(<span class="proc-def">string-tabulate</span></code><var> proc len</var><code>)</code><var> → string</var>
+</dt>
+<dt class="proc-def" id="string-unfold">
+<code>(<span class="proc-def">string-unfold</span></code> <var> stop? mapper successor seed [base make-final]</var><code>)</code><var> → string</var>
+</dt>
+<dt class="proc-def" id="string-unfold-right">
+<code>(<span class="proc-def">string-unfold-right</span></code> <var> stop? mapper successor seed [base make-final]</var><code>)</code><var> → string</var>
+<dd>Same as corresponding SRFI-135 procedures.</dd>
+</dl>
+<p>For functionality similar to <a href="#make-string"><code>make-string</code></a>,
+but returning an immutable string,
+you can use <a href="#string-repeat"><code>string-repeat</code></a>.
+
+<h3>Selection</h3>
+<dl>
+<dt class="proc-def" id="string-length">
+<code>(<span class="proc-def">string-length</code></span><var> string</var><code>)</code><var> → len</var>
+</dt>
+<dt class="proc-def" id="string-ref">
+<code>(<span class="proc-def">string-ref</code></span><var> string idx</var><code>)</code><var> → char</var>
+</dt>
+<dd>As in R7RS.</dd>
+<dt class="proc-def" id="substring">
+<code>(<span class="proc-def">substring</code></span><var> string [start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dd class="proc-def">
+    This procedure returns a istring containing the characters of
+    <var>string</var> starting with index <var>start</var>
+    (inclusive) and ending with index <var>end</var> (exclusive).
+  <p>
+    If <var>string</var> is a mutable string, then that string does not
+    share any
+    storage with the result, so subsequent mutation of that string
+    will not affect the result returned by <code>substring</code>.
+    When the first argument is an istring, 
+    implementations are encouraged to return a result that shares storage with
+    that istring,
+    to whatever extent sharing is possible while maintaining some
+    small fixed bound on the ratio of storage used by the shared
+    representation divided by the storage that would be used by
+    an unshared representation.
+    In particular, these procedures should just return their first
+    argument when that argument is a string, <var>start</var> is 0, and
+    <var>end</var> is the length of that string.
+  </p>
+<p>For the functionality of <code>substring</code> with guaranteed no sharing
+use <code>string-replicate</code> for an immutable result,
+or <code>string-copy</code> for a mutable result.
+</dd>
+<dt class="proc-def1" id="string-take">
+<code>(<span class="proc-def">string-take&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> string nchars</var><code>)</span></code><var> → istring</var>
+</dt>
+<dt class="proc-defi" id="string-drop">
+<code>(<span class="proc-def">string-drop&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> string nchars</var><code>)</span></code><var> → istring</var>
+</dt>
+<dt class="proc-defi" id="string-take-right">
+<code>(<span class="proc-def">string-take-right</span></code><var> string nchars</var><code>)</code><var> → istring</var>
+</dt>
+<dt class="proc-defn" id="string-drop-right">
+<code>(<span class="proc-def">string-drop-right</span></code><var> string nchars</var><code>)</code><var> → istring</var>
+</dt>
+<dd>As in SRFI-135.</dd>
+</dl>
+
+<h3>Replacement</h3>
+<dl>
+<dt class="proc-def" id="string-replace">
+<code>(<span class="proc-def">string-replace</span></code><var> string11 string12 start1 end1 [start2 end2]</var><code>)</code><var> → istring</var>
+</dt>
+<dd>Same as in SRFI-135.</dd>
+</dl>
+ 
+<h3>Comparison</h3>
+<p>The SRFI-135 comparison procedures match (I believe) R7RS.
+
+<h3>Prefixes & suffixes</h3>
+<p>TODO - as in SRFI-135, with appropriate renaming.
+
+<h3>Searching</h3>
+<p>TODO - as in SRFI-135, with appropriate renaming.
+
+<h3>Case conversion</h3>
+<p>TODO - as in SRFI-135, with appropriate renaming.
+(Same as R7RS, but the result is immutable.)
+
+<h3>Concatenation</h3>
+<p>TODO - as in SRFI-135, with appropriate renaming.
+
+<h3>Fold & map & friends</h3>
+<p>TODO - as in SRFI-135, with appropriate renaming.
+
+<h3>Replication & splitting</h3>
+<dl><dt class="proc-def" id="string-repeat"></a>
+<code>(<span class="proc-def">string-repeat</span></code> <var>string-or-character len</var<code>)</code><var> → string</var>
+<dd>
+Create a string by repeating the first argument <var>len</var> times.
+If the first argument is a character, it is as if it were wrapped with
+the <code>string</code> constructor.
+We can define <code>string-repeat</code> in terms of the
+more general <code>string-replicate</code> procedure:
+<pre>
+(define (string-repeat S N)
+   (let ((T (if (character? S) (string S) S)))
+     (string-replicate T 0 (* N (string-length T))))
+</pre>
+</dd>
+<dt class="proc-def" id="string-replicate"></a>
+<code>(<span class="proc-def">string-replicate</span></code><var> string [from to [start end]]</var><code>)</code><var> → istring</var>
+</dt>
+<dd class="proc-def">
+    This is an <q>extended substring</q> procedure that implements replicated
+    copying of a substring.
+
+    <p>
+    <var>string</var> is a string;
+    <var>start</var> and <var>end</var> are optional arguments that specify
+    a substring of <var>string</var>,
+    defaulting to 0 and the length of <var>string</var>.
+    This substring is conceptually replicated both up and down the index space,
+    in both the positive and negative directions.
+    For example, if <var>string</var> is <code>"abcdefg"</code>,
+    <var>start</var> is 3, 
+    and <var>end</var> is6,
+    then we have the conceptual bidirectionally-infinite string
+<pre>
+    ...  d  e  f  d  e  f  d  e  f  d  e  f  d  e  f  d  e  f  d ...
+        -9 -8 -7 -6 -5 -4 -3 -2 -1  0 +1 +2 +3 +4 +5 +6 +7 +8 +9
+</pre>
+    <p>
+    <code>string-replicate</code> returns the subtext of this string
+    beginning at index <var>from</var>,
+    and ending at <var>to</var>.
+    It is an error if <var>from</var> is greater than <var>to</var>.
+    </p>
 <p>
-The following returns a mutable string:
-<code>string-copy</code>; one-argument <code>make-string</code>;
-possibly also two-argument <code>make-string</code>.
+If <var>from</var> and <var>to</var> are missing they default to 0
+and <code>(string-length</code> <var>string</var><code>)</code>,
+respectively.
+This variant is a generalization of using <code>substring</code>,
+but unlike <code>substring</code> never shares substructures that would
+retain characters or sequences of characters that are substructures of
+its first argument or previously allocated objects.
+(Hence it is equivalent to SRFI-135's <code>textual-copy</code>.)
+    <p>
+    You can use <code>string-replicate</code> to perform a variety of tasks:
+    </p>
+    <ul>
+    <li> To rotate a string left:
+        <code>(string-replicate "abcdef" 2 8)</code>
+        =&gt; <code>«cdefab»</code>
+    </li>
+    <li> To rotate a string right:
+        <code>(string-replicate "abcdef" -2 4)</code>
+        =&gt; <code>«efabcd»</code>
+    </li>
+    <li> To replicate a string:
+        <code>(string-replicate "abc" 0 7)</code>
+        =&gt; <code>«abcabca»</code>
+    </li>
+    </ul>
+
+    <p>
+    Note that 
+    </p>
+    <ul>
+      <li> The <var>from</var>/<var>to</var> arguments give a half-open range
+        containing the characters from
+        index <var>from</var> up to, but not including, index <var>to</var>.
+      </li>
+      <li> The <var>from</var>/<var>to</var> indexes are not expressed in
+        the index space of <var>textual</var>.
+        They refer instead to the replicated index space of the subtext
+        defined by <var>textual</var>, <var>start</var>, and <var>end</var>.
+      </li>
+    </ul>
+
+    <p>
+    It is an error if <var>start</var>=<var>end</var>,
+    unless <var>from</var>=<var>to</var>,
+    which is allowed as a special case.
+    </p>
+</dd>
+<dt class="proc-def" id="string-split"></a>
+<code>(<span class="proc-def">string-split</span></code><var> string delimiter [grammar limit start end]</var><code>)</code><var> → list</var>
+</dt>
+<dd>As in SRFI-135.</dd>
+</dl>
+
+<h3>Mutable string constructors</h3>
+<dl>
+<dt class="proc-def" id="make-string">
+<code>(<span class="proc-def">make-string</span></code> <var>[k [char]]</var><code>)</code><var> → string</var>
+<dd>
+Return a new allocated mutable string of length <var>k</var>,
+where <var>k</var> defaults to 0.
+If <var>char</var> is given, then all the characters
+of the string are initialized to <var>char</var>, otherwise the contents
+of the string are unspecified.
+The 1-argument version is deprecated as poor style,
+except when <var>k</var> is 0.
 <p>
-The following require a mutable argument:
-<code>string-set!</code>, <code>string-fill!</code>,
-<code>string-copy!</code>,
-as do SRFI-118's <code>string-append!</code> and <code>string-replace!</code>.
+To return an immutable string that repeats <var>k</var> times
+a character <var>char</var> use <code>string-repeat</code>.
+</dd>
+</dl>
+<dl>
+<dt class="proc-def" id="string-copy">
+<code>(<span class="proc-def">string-copy</span></code> <var>string [start [end]]</var><code>)</code> <var>→ string</var>
+<dd>As in R7RS.</dd>
+</dl>
+
+<h3>Procedures for mutating a string</h3>
+<dl>
+<dt class="proc-def" id="string-set!">
+<code>(<span class="proc-def">string-set!</span></code> <var>string k char</var><code>)</code> <var>→ unspecified</var>
+<dt class="proc-def" id="string-fill!">
+<code>(<span class="proc-def">string-fill!</span></code> <var>string fill [start [end]]</var><code>)</code> <var>→ unspecified</var>
+<dt class="proc-def" id="string-copy!">
+<code>(<span class="proc-def">string-copy!</span></code> <var>to at from [start [end]]</var><code>)</code> <var>→ unspecified</var>
+<dd>As in R7RS.</dd>
+</dl>
+<dl>
+<dt class="proc-def" id="string-append!">
+<code>(<span class="proc-def">string-append!</span></code> <var>string</var> <var>value</var> ...<code>)</code> <var>→ unspecified</var>
+<dt class="proc-def" id="string-replace!">
+<code>(<span class="proc-def">string-replace!</span></code> <var>string</var> <var>dst</var> <var>dst-start</var> <var>dst-end</var> <var>src</var> [<var>src-start</var> [<var>src-end</var>]] <var>→ unspecified</var>
+<dd>As in SRFI-118.</dd>
+</dl>
 
 <h3>Libraries</h3>
 There is no reason - except backward compatibility - for a procedure
