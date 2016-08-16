@@ -652,7 +652,7 @@
 
 (define-tag li start-newline?: #t attributes: (type value))
 
-(define-tag link end-tag?: #f attributes: (charset href hreflang media rel rev type))
+(define-tag link start-newline?: #t end-tag?: #f attributes: (charset href hreflang media rel rev type))
 
 (define-tag map attributes: (name))
 
@@ -689,7 +689,7 @@
 
 (define-tag samp)
 
-(define-tag script allow-core-attributes?: #f attributes: (charset language source type) single-attributes: (defer))
+(define-tag script start-newline?: #t allow-core-attributes?: #f attributes: (charset language src type) single-attributes: (defer))
 
 (define-tag select start-newline?: #t attributes: (name onblur onchange onfocus size tabindex) single-attributes: (disabled multiple))
 
