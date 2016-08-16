@@ -344,7 +344,7 @@ We can define <code>string-repeat</code> in terms of the
 more general <code>string-replicate</code> procedure:
 <pre>
 (define (string-repeat S N)
-   (let ((T (if (character? S) (string S) S)))
+   (let ((T (if (char? S) (string S) S)))
      (string-replicate T 0 (* N (string-length T))))
 </pre>
 </dd>
@@ -470,6 +470,11 @@ a character <var>char</var> use <code>string-repeat</code>.
 <code>(<span class="proc-def">string-replace!</span></code> <var>string</var> <var>dst</var> <var>dst-start</var> <var>dst-end</var> <var>src</var> [<var>src-start</var> [<var>src-end</var>]] <var>→ unspecified</var>
 <dd>As in SRFI-118.</dd>
 </dl>
+
+<h3>Other string-returning procedures</h3>
+The R7RS procedures <code>symbol-&gt;string</code>,
+<code>number-&gt;string</code>, and  <code>get-output-string</code>
+all return <var>istring</var>.
 
 <h3>Libraries</h3>
 There is no reason - except backward compatibility - for a procedure
