@@ -722,17 +722,6 @@
 	 (##interval-dimension (array-domain array)))))
 
 
-(define (array-extract Array new-domain)
-  (cond ((not (array? Array))
-	 (error "array-extract: The first argument is not an array: " Array new-domain))
-	((not (interval? new-domain))
-	 (error "array-extract: The second argument is not an interval: " Array new-domain))
-	((not (##interval-subset? new-domain (array-domain Array)))
-	 (error "array-extract: The second argument (an interval) is not a subset of the domain of the first argument (an array): " Array new-domain))
-	(else
-	 (array new-domain
-		(array-getter Array)))))
-
 ;;;
 ;;; A mutable array has, in addition a setter, that satisfies, roughly
 ;;;
@@ -955,7 +944,6 @@
 	 `(begin
 	    ,@(map construct
 		   '(32 64)))))
-    ;;(pp result)
     result))
 
 (make-complex-storage-classes)
@@ -1216,7 +1204,6 @@
 							(- (car multi-index)
 							   (car lower-bounds))))))
 	       ((null? multi-index) result)))))
-    ;;(trace result)
     result))
 
 
@@ -1436,7 +1423,6 @@
 			 indexer
 			 safe?))))
 
-;;(trace make-##array-base)
 
 
 (define (specialized-array domain #!optional (storage-class (macro-absent-obj)) (safe? (macro-absent-obj)))
@@ -1750,6 +1736,39 @@
 				       (##compose-indexers old-indexer new-domain new-domain->old-domain)
 				       safe?)))))
 
+(define (##immutable-array-extract Array new-domain)
+  (array new-domain
+	 (array-getter Array)))
+
+(define (##mutable-array-extract Array new-domain)
+  (array new-domain
+	 (array-getter Array)
+	 (array-setter Array)))
+
+(define (##specialized-array-extract Array new-domain)
+  ;; call ##finish-specialized-array instead of filling the entries of #array-base
+  ;; by hand because specialized-array-default-safe? may not be the same as
+  ;; (array-safe? Array)
+  (##finish-specialized-array new-domain
+			      (array-storage-class Array)
+			      (array-body Array)
+			      (array-indexer Array)
+			      specialized-array-default-safe?))
+
+(define (array-extract Array new-domain)
+  (cond ((not (array? Array))
+	 (error "array-extract: The first argument is not an array: " Array new-domain))
+	((not (interval? new-domain))
+	 (error "array-extract: The second argument is not an interval: " Array new-domain))
+	((not (##interval-subset? new-domain (array-domain Array)))
+	 (error "array-extract: The second argument (an interval) is not a subset of the domain of the first argument (an array): " Array new-domain))
+	((specialized-array? Array)
+	 (##specialized-array-extract Array new-domain))
+	((mutable-array? Array)
+	 (##mutable-array-extract Array new-domain))
+	(else
+	 (##immutable-array-extract Array new-domain))))
+
 (define (##getter-translate getter translation)
   (case (vector-length translation)
     ((1) (lambda (i)
@@ -1895,7 +1914,6 @@
 	 `(begin
 	    ,(permuter '##getter values)
 	    ,(permuter '##setter (lambda (args) (cons 'v args))))))
-      ;;(pp result)
     result))
 
 (setup-permuted-getters-and-setters)

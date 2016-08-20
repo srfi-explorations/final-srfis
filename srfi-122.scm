@@ -60,7 +60,6 @@ MathJax.Hub.Config({
 	      (<li> "Draft #4 published: 2015/9/03")
 	      (<li> "Draft #5 published: 2015/9/18")
 	      (<li> "Draft #6 published: 2015/10/19")
-	      (<li> "Draft #7 published: 2016/8/15")
 	      )
 	
 	(<h2> "Abstract")
@@ -69,30 +68,102 @@ MathJax.Hub.Config({
  called "(<i> 'intervals)", which encapsulate the cross product of nonempty intervals of exact integers. These intervals  specify the domain
 information for arrays. An array is then characterized as a mapping from multi-indices of exact integers $(i_0,\\ldots,i_{d-1})$ 
 contained in an interval to Scheme values. Additionally, specialized variants of arrays are specified to provide portable programs with efficient representations for common use cases.")
-	
-	(<h2> "Rationale")
-	(<p> "An array, as commonly understood, provides a mapping from multi-indices  $(i_0,\\ldots,i_{d-1})$ of exact integers 
-in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\\times[l_1,u_2)\\times\\cdots\\times[l_{d-1},u_{d-1})$ to Scheme objects.
+	(<h2> "Overview")
+	(<h3> "Bawden-style arrays")
+	(<p>  "In a "(<a> href: "https://groups.google.com/forum/?hl=en#!msg/comp.lang.scheme/7nkx58Kv6RI/a5hdsduFL2wJ" "1993 post")
+	      " to the news group comp.lang.scheme, Alan Bawden gave a simple implementation of multi-dimensional arrays in R4RS scheme. "
+	      "The only constructor of new arrays required specifying an initial value, and he provided the three low-level primitives "
+	      (<code>'array-ref)", "(<code>'array-set!)", and "(<code>'array?)".  His arrays were defined on rectangular intervals in "
+	      "$\\mathbb Z^d$ of the form $[0,u_0)\\times\\cdots\\times [0,u_{d-1})$.  I'll note that his function "(<code>'array-set!)
+	      " put the value to be entered into the array at the front of the variable-length list of indices that indicate where to "
+	      "place the new value.  He offered an intriguing way to \"share\" arrays "
+	      "in the form of a routine "(<code>'make-shared-array)" that took a mapping from a new interval of indices into the domain "
+	      "of the array to be shared.  His implementation incorporated what he called an "(<i>'indexer)", which was a function from "
+	      "the interval $[0,u_0)\\times\\cdots\\times [0,u_{d-1})$ to an interval $[0,N)$, where the "(<i>'body)" of the array consisted of "
+	      "a single Scheme vector of length $N$.  Bawden required that the mapping specified in "(<code>'make-shared-array)" be "
+	      (<i>'linear)", but I prefer the term "(<i>'affine)", as I explain later.")
+	(<p> "Mathematically, Bawden's arrays can be described as follows.  We'll use the vector notation $\\vec i$ for a multi-index "
+	     "$i_0,\\ldots,i_{d-1}$, which will correspond to Scheme "(<code>'values)".  Arrays will be denoted by capital letters "
+	     "$A,B,\\ldots$, the domain of the array $A$ (in Bawden's case $[0,u_0)\\times \\cdots\\times [0,u_{d-1})$) will be denoted by $D_A$, "
+	     "and the indexer of $A$, mapping $D_A$ to the interval $[0,N)$ will be denoted by $I_A$.  Initially, Bawden constructs "
+	     "$I_A$ such that $I_A(\\vec i)$ steps consecutively through the values $0,1,\\ldots,N-1$ as $\\vec i$ steps through the "
+	     "multi-indices $(0,\\ldots,0,0)$, $(0,\\ldots,0,1)$, $\\ldots$, $(0,\\ldots,1,0)$, etc., in lexicographical order, which means "
+	     "that if $\\vec i$ and $\\vec j$ are two multi-indices, then $\\vec i<\\vec j$ iff the first coordinate $k$ where $\\vec i$ and $\\vec j$ "
+	     "differ satisfies $\\vec i_k<\\vec j_k$. In fact, $I_A(\\vec i)=\\vec v\\cdot\\vec i$ for some specially-constructed vector $\\vec v$ "
+	     "that depends only on $D_A$, the domain of $A$, and $\\vec v\\cdot\\vec i$ is the dot product of $\\vec v$ and $\\vec i$.")
+	(<p> "In "(<code>'make-shared-array)", Bawden allows you to specify a new $r$-dimensional interval $D_B$ as the domain of a new array $B$, and a "
+	     "mapping $T_{BA}:D_B\\to D_A$ of the form $T_{BA}(\\vec i)=M\\vec i+\\vec b$; here $M$ is a $d\\times r$ matrix of integer values and "
+	     "$\\vec b$ is a $d$-vector.  So this mapping $T_{BA}$ is "(<i>'affine)", in that $T_{BA}(\\vec i)-T_{BA}(\\vec j)=M(\\vec i-\\vec j)$ is "
+	     (<i>'linear)" (in a linear algebra sense) in $\\vec i-\\vec j$.  The new indexer of $B$ satisfies $I_B(\\vec i)=I_A(T_{BA}(\\vec i))$.")
+	(<p> "A fact Bawden exploits in the code, but doesn't point out in the short post, is that $I_B$ is again an affine map, and indeed, the composition "
+	     "of "(<i>'any)" two affine maps is again affine.")
+	(<h3> "Our extensions of Bawden-style arrays")
+	(<p> "We incorporate Bawden-style arrays into this SRFI, but extend them in two relatively minor ways that we find quite useful.")
+	(<p> "First, we allow the intervals of multi-indices that form the domains of arrays to have nonzero lower bounds as "
+	     "well as upper bounds, so domains are rectangular, $d$-dimensional interval $[l_0,u_0)\\times\\cdots\\times[l_{d-1},u_{d-1})$.")
+	(<p> "Second, we introduce the notion of a "(<i>"storage class")", an object that contains functions that manipulate, store, check, etc., different tyes of values. "
+	     "A "(<code>'generic-storage-class)" can manipulate any Scheme value, "
+	     "whereas,e.g., a "(<code>'u1-storage-class)" can store only the values 0 and 1 in each element of a body.")
+	(<p> "We also require that our affine maps be one-to-one, so that if $\\vec i\\neq\\vec j$ then $T(\\vec i)\\neq T(\\vec j)$.  Without this property, modifying "
+	     "the $\\vec i$th component of $A$ would cause the $\\vec j$th component to change, an unfortunate circumstance indeed.")
+	(<h3> "Common transformations on Bawden-style arrays")
+	(<p> "Requiring the transformations $T_{BA}:D_B\\to D_A$ to be affine may seem  esoteric and restricting, but in fact many common and useful array transformations "
+	     "can be expressed in this way.  We give several examples below: ")
+	(<ul>
+	 (<li> (<b> "Restricting the domain of an array: ")
+	       "  If the domain of $B$ is a subset of the domain of $A$ ( $D_B\\subseteq D_A$), then $T_{BA}(\\vec i)=\\vec i$ is a one-to-one affine mapping.  We define "
+	       (<code>'array-extract)" to define this common operation; it's like looking at a rectangular sub-part of a spreadsheet. We use it to extract the common part of overlapping domains of three arrays in an image processing example below. ")
+	 (<li> (<b> "Translating the domain of an array: ")
+	       "If $\\vec d$ is a vector of integers, then $T_{BA}(\\vec i)=\\vec i-\\vec d$ is a one-to-one affine map of $D_B=\\{\\vec i+\\vec d\\mid \\vec i\\in D_A\\}$ into $D_A$. "
+	       "We call $D_B$ the "(<i>'translate)" of $D_A$, and we define "(<code>'array-translate)" to provide this operation.")
+	 (<li> (<b> "Permuting the coordinates of an array: ")
+	       "If $\\pi$ "(<a> href: "https://en.wikipedia.org/wiki/Permutation" 'permutes)" the coordinates of a multi-index $\\vec i$, and $\\pi^{-1}$ is the inverse of $\\pi$, then "
+	       "$T_{BA}(\\vec i)=\\pi (\\vec i)$ is again a one-to-one affine map from $D_B=\\{\\pi^{-1}(\\vec i)\\mid \\vec i\\in D_A\\}$ to $D_A$.  We provide "(<code>'array-permute)" for this operation. "
+	       "The only nonidentity permutation of a two-dimensional spreadsheet turns rows into columns and vice versa.")
+	 (<li> (<b> "\"Currying\" an array: ")
+	       "Let's denote the cross product of two intervals $\\text{Int}_1$ and $\\text{Int}_2$ by $\\text{Int}_1\\times\\text{Int}_2$; "
+	       "if $\\vec j=(j_0,\\ldots,j_{r-1})\\in \\text{Int}_1$ and $\\vec i=(i_0,\\ldots,i_{s-1})\\in \\text{Int}_2$, then "
+	       "$\\vec j\\times\\vec i$, which we define to be $(j_0,\\ldots,j_{r-1},i_0,\\ldots,i_{s-1})$, is in $\\text{Int}_1\\times\\text{Int}_2$. "
+	       "If $D_A=\\text{Int}_1\\times\\text{Int}_2$ and $\\vec j\\in\\text{Int}_1$, then $T_{BA}(\\vec i)=\\vec j\\times\\vec i$ "
+	       "is, once again, a one-to-one affine mapping from $D_B=\\text{Int}_2$ into $D_A$.  For each vector $\\vec j$ we can compute a new array in this way; we provide "
+	       (<code>'array-curry)" for this operation, which returns an array whose domain is $\\text{Int}_1$ and whose elements are themselves arrays, each of which is defined on $\\text{Int}_2$. "
+	       "Currying a two-dimensional array would be like organizing a spreadsheet into a one-dimensional array of rows of the spreadsheet."))
+	(<p> "We make several remarks.  First, all these operations could have been computed by specifying the particular mapping $T_{BA}$ explicitly, so that these routines, "
+	     "where one specifies the translation $\\vec d$ or the permutation $\\pi$ or the outer dimension $r$ of $D_A$ (in the currying example) are simply "
+	     "\"convenience\" procedures.  Second, because the composition of any number of affine mappings are again affine, accessing or changing the elements of a "
+	     "restricted, translated, curried, permuted array is no slower than accessing or changing the elements of the original array itself. "
+	     "Finally, we note that by combining array currying and permuting, say, one can come up with simple expressions of powerful algorithms, such as extending "
+	     "one-dimensional tranforms to multi-dimensional separable transforms, or quickly generating two-dimensional slices of three-dimensional image data. "
+	     "Examples are given below.")
+	(<h3> "Generalized arrays")
+	(<p> "Bawden-style arrays are clearly useful as a programming construct, but they do not fulfill all our needs in this area. "
+	     "An array, as commonly understood, provides a mapping from multi-indices  $(i_0,\\ldots,i_{d-1})$ of exact integers 
+in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\\times[l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$ to Scheme objects.
 Thus, two things are necessary to specify an array: an interval and a mapping.")
        (<p> "Since these two things are often sufficient for certain algorithms, we introduce in this SRFI a minimal set of interfaces for dealing with such arrays.")
-       (<p> "Specifically, an array specifies a nonempty, multi-dimensional interval, called its "(<i> "domain")", and a mapping from this domain to (single) Scheme objects.  This mapping is called the "(<i> 'getter)" of the array.")
+       (<p> "Specifically, an array specifies a nonempty, multi-dimensional interval, called its "(<i> "domain")", and a mapping from this domain to (single) Scheme objects.  This mapping is called the "(<i> 'getter)" of the array, accessed with the procedure "(<code>'array-getter)"; the domain of the array is accessed with the procedure "(<code>'array-domain)".")
        (<p> "If this mapping can be changed, the array is said to be "(<i> 'mutable)" and the mutation is effected
-by the array's "(<i> 'setter)".  We call an object of this type a mutable array. Note: If an array does not have a setter, then we call it immutable even though the array's getter might not be a \"pure\" function, i.e., the value it returns may not depend solely on the arguments.")
-       (<p> "In general, we leave the implementation of arrays completely open.  They may be defined simply by closures, or
-they may have hash tables or databases behind an implementation.  If the getter and setter functions of a mutable array are
-defined by accessing and setting elements  of a one-dimensional (heterogeneous or homogeneous) vector that are determined by a one-to-one affine function from
-the domain of the array into the integers between 0 (inclusive) and the length of the backing-store vector (exclusive),
-the array is said to be "(<i> 'specialized)". A specialized array is an example of a mutable array.")
+by the array's "(<i> 'setter)", accessed by the procedure "(<code>'array-setter)".  We call an object of this type a mutable array. Note: If an array does not have a setter, then we call it immutable even though the array's getter might not be a \"pure\" function, i.e., the value it returns may not depend solely on the arguments.")
+       (<p> "In general, we leave the implementation of generalized arrays completely open.  They may be defined simply by closures, or
+they may have hash tables or databases behind an implementation.")
+       (<p> "In this SRFI, Bawden-style arrays are called "(<i> 'specialized)". A specialized array is an example of a mutable array.")
+       (<h3> "Sharing generalized arrays")
+       (<p> "Even if an array is not a specialized array, then it could be \"shared\" by specifying a new domain $D_B$ and an affine map $T_{BA}:D_B\\to D_A$.  However the indexer of $B$, $I_B$, "
+	    "must be computed explicitly each time, as $I_B(\\vec i)=I_A(T_{BA}(\\vec i))$ cannot be further simplified.  If one applied a series of transformations on a single array, then a simple "
+	    "array evaluation would require calling a series of those transformation each time an element of an array is accessed.  This cost may not be explicitly known to the programmer, and this SRFI does not provide such an operation.")
+       (<p> "Certain ways of sharing generalized arrays, however, are not that expensive.  If we denote "(<code>"(array-getter A)")" by "(<code>'A-getter)", then if B is the result of "(<code>'array-extract)" applied to A, then "
+	    (<code>"(array-getter B)")" is simply "(<code>'A-getter)".  Similarly, if A is a two-dimensional array, and B is derived from A by applying the permutation $\\pi((i,j))=(j,i)$, then "(<code>"(array-getter B)")" is "
+	    (<code>"(lambda (i j) (A-getter j i))")".  Translation and currying also lead to transformed arrays whose getters are relatively efficiently derived from "(<code>'A-getter)", at least for arrays of small dimension.")
+       (<p> "Thus, while we do not provide for sharing of generalized arrays for general one-to-one affine maps $T$, we do allow it for the specific functions "(<code>'array-extract)", "(<code>'array-translate)", "(<code>'array-permute)", and "
+	    (<code>'array-curry)", and we provide relatively efficient implementations of these functions for arrays of dimension no greater than four.")
+       (<h3> "Array-map does not produce a specialized array")
+       (<p> "Daniel Friedman and David Wise wrote a famous paper "(<a> href: "http://www.cs.indiana.edu/cgi-bin/techreports/TRNNN.cgi?trnum=TR44" "CONS should not Evaluate its Arguments")". "
+	    "In the spirit of that paper, our procedure "(<code>'array-map)" does not immediately produce a specialized array, but a simple immutable array, whose elements are recomputed from the arguments of "(<code>'array-map)
+	    " each time they are accessed.   This immutable array can be passed on to further applications of "(<code>'array-map)" for further processing, without generating the storage bodies for intermediate arrays.")
+       (<p> "We provide the procedure "(<code>'array->specialized-array)" to transform a generalized array (like that returned by "(<code>'array-map)
+	    ") to a specialized, Bawden-style array, for which accessing each element again takes $O(1)$ instructions.")
 
-(<p> "Thus,  we  need the concept of an "(<i> 'indexer)", which is a one-to-one mapping whose domain is an interval and whose range is
-contained in another interval.  Conceptually, an indexer is itself an array that returns multiple values.  An
-important subset of indexers are affine mappings (linear mappings plus constants) from one domain to another.  We do not
-encapsulate indexers, with their domain interval, range interval, and multi-valued mapping, into a distinct type.
-Thus our specialized arrays are very similar to "
-     (<a> href: "#bawden" "Bawden-style arrays")". (If you want to specify a non-affine indexer into a body, it can be done by constructing a mutable array.)")
-(<p> "The backing store of a specialized array, which may be a heterogeneous or homogeneous vector,
-is created, accessed, etc., via the components of an object we call a "(<i> 'storage-class)".  We define their properties below.")
-(<p> "The API of this SRFI uses keywords from SRFI-88 and the calling convention from SRFI-89 for optional and keyword arguments (although the implementation defines functions with keyword and optional arguments using DSSSL's notation, not the notation from SRFI-89).")
+
 
 
 (<h2> "Examples of application areas")
@@ -712,6 +783,30 @@ of whose elements is itself an (immutable) array and ")
 
 
 
+(format-lambda-list '(array-extract array new-domain))
+(<p> "Returns a new array with the same getter (and setter, if appropriate) of the first argument, defined on the second argument.")
+(<p> "Assumes that "(<code>(<var> 'array))" is an array and "(<code>(<var> 'new-domain))" is an interval that is a sub-interval of "(<code> "(array-domain "(<var> 'array)")")".  If "(<code>(<var>'array))" is a specialized array, then returns ")
+(<pre>"
+ (specialized-array-share array
+			  new-domain
+			  values)
+")
+(<p> "Otherwise, if "(<code>(<var>'array))" is a mutable array, then "(<code> 'array-extract)" returns ")
+(<pre>"
+ (array new-domain
+	(array-getter array)
+	(array-setter array))
+"
+)
+(<p> "Finally, if "(<code>(<var>'array))" is an immutable array, then "(<code> 'array-extract)" returns ")
+(<pre>"
+ (array new-domain
+	(array-getter array))
+"
+)
+(<p> "It is an error if the arguments of "(<code>'array-extract)" do not satisfy these conditions.")
+
+
 (format-lambda-list '(array-translate array translation))
 (<p> "Assumes that "(<code>(<var>'array))" is a valid array, "(<code>(<var>'translation))" is a valid translation, and that the dimensions of the array and the translation are the same. The resulting array will have domain "(<code>"(interval-translate (array-domain Array) translation)")".")
 (<p> "If "(<code>(<var>'array))" is a specialized array, returns a new specialized array")
@@ -800,14 +895,8 @@ calls")
 (<p> "It is an error if "(<code>(<var>'array))" is not a valid array, or if "(<code>(<var>'operator))" is not a procedure.")
 
 (format-lambda-list '(array-every? proc array))
-(<p> "Returns "(<code> #f)" if "(<code>(<var>'proc))" is not true of every element of array, and another, non-false, value otherwise.")
+(<p> "Returns "(<code> #f)" if "(<code>(<var>'proc))" is not true of every element of array, and another, nonfalse, value otherwise.")
 (<p> "It is an error if "(<code>(<var>'array))" is not an array or if "(<code>(<var>'proc))" is not a procedure.")
-
-(format-lambda-list '(array-extract array new-domain))
-(<p> "If "(<code>(<var> 'array))" is an array and "(<code>(<var> 'new-domain))" is an interval that is a sub-interval of "(<code> "(array-domain "(<var> 'array)")")", then "(<code> 'array-extract)" returns a new array")
-(<blockquote>
- (<code> "(array "(<var> 'new-domain)" (array-getter "(<var>'array)"))"))
-(<p> "It is an error if the arguments of "(<code>'array-extract)" do not satisfy these conditions.")
 
 
 (<h3> "Global Variable")
