@@ -1,6 +1,6 @@
 ;;(declare (standard-bindings)(extended-bindings)(block)(not safe) (fixnum))
 (declare (inlining-limit 0))
-(define tests 100)
+(define tests 10000)
 
 (define-macro (test expr value)
   `(let* (;(ignore (pretty-print ',expr))
@@ -704,7 +704,7 @@
 
 (pp "array->specialized-array result tests")
 
-(specialized-array-default-safe?-set! #t)
+(specialized-array-default-safe? #t)
 
 (pp "Safe tests")
 
@@ -751,7 +751,7 @@
     (or (myarray= (array->specialized-array        array1 generic-storage-class ) array2) (pp "test3"))
     ))
 
-(specialized-array-default-safe?-set! #f)
+(specialized-array-default-safe? #f)
 
 (pp "Unsafe tests")
 
@@ -851,7 +851,7 @@
 
 (pp "array-map, array-reduce, and array-for-each result tests")
 
-(specialized-array-default-safe?-set! #t)
+(specialized-array-default-safe? #t)
 
 (let ((array-builders (vector (list u1-storage-class      (lambda indices (random 0 (expt 2 1))))
 			      (list u8-storage-class      (lambda indices (random 0 (expt 2 8))))
@@ -925,7 +925,7 @@
 	  (pp "Arghh"))
       )))
 
-(specialized-array-default-safe?-set! #f)
+(specialized-array-default-safe? #f)
 
 (let ((array-builders (vector (list u1-storage-class      (lambda indices (random (expt 2 1))))
 			      (list u8-storage-class      (lambda indices (random (expt 2 8))))
@@ -1209,7 +1209,7 @@
 
 
 
-(specialized-array-default-safe?-set! #t)
+(specialized-array-default-safe? #t)
 
 (do ((i 0 (+ i 1)))
     ((= i tests))
@@ -1260,7 +1260,7 @@
 	  (pp (list "piffle"
 		    a b c))))))
 
-(specialized-array-default-safe?-set! #f)
+(specialized-array-default-safe? #f)
 
 (do ((i 0 (+ i 1)))
     ((= i tests))
@@ -1487,7 +1487,7 @@
 	       (not (mutable-array? immutable-result)))
 	  #t))
   
-  (specialized-array-default-safe?-set! #t)
+  (specialized-array-default-safe? #t)
 
   (do ((i 0 (+ i 1)))
       ((= i tests))
@@ -1544,7 +1544,7 @@
 			my-permuted-array)
 	      #t))))
 
-  (specialized-array-default-safe?-set! #f)
+  (specialized-array-default-safe? #f)
 
   (do ((i 0 (+ i 1)))
       ((= i tests))

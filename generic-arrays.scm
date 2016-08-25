@@ -670,16 +670,16 @@
   safe?                   ;; do we check whether bounds (in getters and setters) and values (in setters) are valid
   )
 
-(define ##specialized-array-default-safe? #f)
+(define specialized-array-default-safe?
+  (let ((##specialized-array-default-safe? #f))
+    (lambda (#!optional (bool (macro-absent-obj)))
+      (cond ((eq? bool (macro-absent-obj))
+	     ##specialized-array-default-safe?)
+	    ((not (boolean? bool))
+	     (error "specialized-array-default-safe?: The argument is not a boolean: " bool))
+	    (else
+	     (set! ##specialized-array-default-safe? bool))))))
 
-(define (specialized-array-default-safe?)
-  ##specialized-array-default-safe?)
-
-(define (specialized-array-default-safe?-set! bool)
-  (cond ((not (boolean? bool))
-	 (error "specialized-array-default-safe?-set!: The argument is not a boolean: " bool))
-	(else
-	 (set! ##specialized-array-default-safe? bool))))
 
 (declare (not inline))
 
@@ -1287,8 +1287,9 @@
       
       (define (replace old-symbol new-symbol expr)
 	(let loop ((expr expr))
-	  (cond ((pair? expr)
-		 (map loop expr))
+	  (cond ((pair? expr)           ;; we don't use map because of dotted argument list in general setter
+		 (cons (loop (car expr))
+		       (loop (cdr expr))))
 		((eq? expr old-symbol)
 		 new-symbol)
 		(else
@@ -1360,7 +1361,7 @@
 			((2)  (expand-getters (lambda (i j)       (storage-class-getter body (indexer i j)))))
 			((3)  (expand-getters (lambda (i j k)     (storage-class-getter body (indexer i j k)))))
 			((4)  (expand-getters (lambda (i j k l)   (storage-class-getter body (indexer i j k l)))))
-			(else (lambda multi-index (storage-class-getter body (apply indexer multi-index)))))))
+			(else (expand-getters (lambda multi-index (storage-class-getter body (apply indexer multi-index))))))))
 	  (setter (if safe?
 		      (case (##interval-dimension domain)
 			((1)  (lambda (value i)
@@ -1421,7 +1422,7 @@
 			((2)  (expand-setters (lambda (value i j)           (storage-class-setter body (indexer i j)               value))))
 			((3)  (expand-setters (lambda (value i j k)         (storage-class-setter body (indexer i j k)             value))))
 			((4)  (expand-setters (lambda (value i j k l)       (storage-class-setter body (indexer i j k l)           value))))
-			(else (lambda (value . multi-index) (storage-class-setter body (apply indexer multi-index) value)))))))
+			(else (expand-setters (lambda (value . multi-index) (storage-class-setter body (apply indexer multi-index) value))))))))
       (make-##array-base domain
 			 getter
 			 setter
@@ -1432,25 +1433,15 @@
 
 
 
-(define (specialized-array domain #!optional (storage-class (macro-absent-obj)) (safe? (macro-absent-obj)))
+(define (specialized-array domain #!optional (storage-class generic-storage-class) (safe? (specialized-array-default-safe?)))
   (cond ((not (interval? domain))
 	 (error "specialized-array: The first argument is not an interval: " domain))
-	((not (or (eq? storage-class (macro-absent-obj))
-		  (storage-class? storage-class)))
+	((not (storage-class? storage-class))
 	 (error "specialized-array: The second argument is not a storage-class: " domain storage-class))
-	((not (or (eq? safe? (macro-absent-obj))
-		  (boolean? safe?)))
+	((not (boolean? safe?))
 	 (error "specialized-array: The third argument is not a boolean: " domain storage-class safe?))
 	(else
-	 (let* ((storage-class
-		 (if (eq? storage-class (macro-absent-obj))
-		     generic-storage-class
-		     storage-class))
-		(safe?
-		 (if (eq? safe? (macro-absent-obj))
-		     ##specialized-array-default-safe?
-		     safe?))
-		(body
+	 (let* ((body
 		 ((storage-class-maker storage-class)
 		  (##interval-volume domain)
 		  (storage-class-default storage-class)))
@@ -1519,23 +1510,15 @@
 ;;; (array-getter array) applied to the elementf of (array-domain array)
 
 
-(define (array->specialized-array array #!optional (result-storage-class (macro-absent-obj)) (safe? (macro-absent-obj)))
+(define (array->specialized-array array #!optional (result-storage-class generic-storage-class) (safe? (specialized-array-default-safe?)))
   (cond ((not (array? array))
 	 (error "array->specialized-array: Argument is not an array: " array))
-	((not (or (eq? result-storage-class (macro-absent-obj))
-		  (storage-class? result-storage-class)))
+	((not (storage-class? result-storage-class))
 	 (error "array->specialized-array: result-storage-class is not a storage-class: " result-storage-class))
-	((not (or (eq? safe? (macro-absent-obj))
-		  (boolean? safe?)))
+	((not (boolean? safe?))
 	 (error "array->specialized-array: safe? is not a boolean: " safe?))
 	(else
 	 (let* ((domain               (array-domain array))
-		(result-storage-class (if (eq? result-storage-class (macro-absent-obj))
-					  generic-storage-class
-					  result-storage-class))
-		(safe?                (if (eq? safe? (macro-absent-obj))
-					  ##specialized-array-default-safe?
-					  safe?))
 		(result               (specialized-array domain
 							 result-storage-class
 							 safe?))
@@ -1721,22 +1704,20 @@
 (define (specialized-array-share array
 				 new-domain
 				 new-domain->old-domain
-				 #!optional (safe? (macro-absent-obj)))
+				 #!optional (safe? (specialized-array-default-safe?)))
   (cond ((not (specialized-array? array))
 	 (error "specialized-array-share: array is not a specialized-array: " array))
 	((not (interval? new-domain))
 	 (error "specialized-array-share: new-domain is not an interval: " new-domain))
 	((not (procedure? new-domain->old-domain))
 	 (error "specialized-array-share: new-domain->old-domain is not a procedure: " new-domain->old-domain))
-	((not (or (eq? safe? (macro-absent-obj))
-		  (boolean? safe?)))
+	((not (boolean? safe?))
 	 (error "specialized-array-share: safe? is not a boolean: " safe?))
 	(else
 	 (let ((old-domain        (array-domain       array))
 	       (old-indexer       (array-indexer      array))
 	       (body              (array-body         array))
-	       (storage-class     (array-storage-class array))
-	       (safe?             (if (eq? safe? (macro-absent-obj)) ##specialized-array-default-safe? safe?)))
+	       (storage-class     (array-storage-class array)))
 	   (##finish-specialized-array new-domain
 				       storage-class
 				       body
@@ -1760,7 +1741,7 @@
 			      (array-storage-class Array)
 			      (array-body Array)
 			      (array-indexer Array)
-			      ##specialized-array-default-safe?))
+			      (specialized-array-default-safe?)))
 
 (define (array-extract Array new-domain)
   (cond ((not (array? Array))
@@ -2026,23 +2007,22 @@
   (call-with-values
       (lambda () (interval-curry (array-domain Array) left-dimension))
     (lambda (left-interval right-interval)
-      (let ((safe? ##specialized-array-default-safe?))
-	(make-array left-interval
-		    (case (##interval-dimension left-interval)
-		      ((1)  (case (##interval-dimension right-interval)
-			      ((1)  (lambda (i)     (specialized-array-share Array right-interval (lambda (j)                         (values i j    )) safe?)))
-			      ((2)  (lambda (i)     (specialized-array-share Array right-interval (lambda (j k)                       (values i j k  )) safe?)))
-			      ((3)  (lambda (i)     (specialized-array-share Array right-interval (lambda (j k l)                     (values i j k l)) safe?)))
-			      (else (lambda (i)     (specialized-array-share Array right-interval (lambda multi-index (apply values i     multi-index)) safe?)))))
-		      ((2)  (case (##interval-dimension right-interval)
-			      ((1)  (lambda (i j)   (specialized-array-share Array right-interval (lambda (  k)                       (values i j k  )) safe?)))
-			      ((2)  (lambda (i j)   (specialized-array-share Array right-interval (lambda (  k l)                     (values i j k l)) safe?)))
-			      (else (lambda (i j)   (specialized-array-share Array right-interval (lambda multi-index (apply values i j   multi-index)) safe?)))))
-		      ((3)  (case (##interval-dimension right-interval)
-			      ((1)  (lambda (i j k) (specialized-array-share Array right-interval (lambda (    l)                    (values i j k l)) safe?)))
-			      (else (lambda (i j k) (specialized-array-share Array right-interval (lambda multi-index (apply values i j k multi-index)) safe?)))))
-		      (else (lambda left-multi-index 
-			      (specialized-array-share Array right-interval (lambda right-multi-index (apply values (append left-multi-index right-multi-index))) safe?)))))))))
+      (make-array left-interval
+		  (case (##interval-dimension left-interval)
+		    ((1)  (case (##interval-dimension right-interval)
+			    ((1)  (lambda (i)     (specialized-array-share Array right-interval (lambda (j)                         (values i j    )))))
+			    ((2)  (lambda (i)     (specialized-array-share Array right-interval (lambda (j k)                       (values i j k  )))))
+			    ((3)  (lambda (i)     (specialized-array-share Array right-interval (lambda (j k l)                     (values i j k l)))))
+			    (else (lambda (i)     (specialized-array-share Array right-interval (lambda multi-index (apply values i     multi-index)))))))
+		    ((2)  (case (##interval-dimension right-interval)
+			    ((1)  (lambda (i j)   (specialized-array-share Array right-interval (lambda (  k)                       (values i j k  )))))
+			    ((2)  (lambda (i j)   (specialized-array-share Array right-interval (lambda (  k l)                     (values i j k l)))))
+			    (else (lambda (i j)   (specialized-array-share Array right-interval (lambda multi-index (apply values i j   multi-index)))))))
+		    ((3)  (case (##interval-dimension right-interval)
+			    ((1)  (lambda (i j k) (specialized-array-share Array right-interval (lambda (    l)                    (values i j k l)))))
+			    (else (lambda (i j k) (specialized-array-share Array right-interval (lambda multi-index (apply values i j k multi-index)))))))
+		    (else (lambda left-multi-index 
+			    (specialized-array-share Array right-interval (lambda right-multi-index (apply values (append left-multi-index right-multi-index)))))))))))
 
 (define (array-curry Array left-dimension)
   (cond ((not (array? Array))
@@ -2183,27 +2163,17 @@
 				'()
 				array)))))
 
-(define (list->specialized-array l interval #!optional (result-storage-class (macro-absent-obj)) (safe? (macro-absent-obj)))
+(define (list->specialized-array l interval #!optional (result-storage-class generic-storage-class) (safe? (specialized-array-default-safe?)))
   (cond ((not (list? l))
 	 (error "list->specialized-array: First argument is not a list: " l interval))
 	((not (interval? interval))
 	 (error "list->specialized-array: Second argument is not an interval: " l interval))
-	((not (or (eq? result-storage-class (macro-absent-obj))
-		  (storage-class? result-storage-class)))
+	((not (storage-class? result-storage-class))
 	 (error "list->specialized-array: Third argument is not a storage-class: " l interval result-storage-class))
-	((not (or (eq? safe? (macro-absent-obj))
-		  (boolean? safe?)))
+	((not (boolean? safe?))
 	 (error "list->specialized-array: Fourth argument is not a boolean: " l interval result-storage-class safe?))
 	(else
-	 (let* ((safe?
-		 (if (eq? safe? (macro-absent-obj))
-		     ##specialized-array-default-safe?
-		     safe?))
-		(result-storage-class
-		 (if (eq? result-storage-class (macro-absent-obj))
-		     generic-storage-class
-		     result-storage-class))
-		(checker
+	 (let* ((checker
 		 (storage-class-checker  result-storage-class))
 		(setter
 		 (storage-class-setter   result-storage-class))

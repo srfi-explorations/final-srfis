@@ -283,7 +283,6 @@ they may have hash tables or databases behind an implementation.")
 	 (<a> href: "#array-every?" "array-every?")END
 	 (<a> href: "#array-extract" "array-extract") END
 	 (<a> href: "#specialized-array-default-safe?" "specialized-array-default-safe?") END
-	 (<a> href: "#specialized-array-default-safe?-set!" "specialized-array-default-safe?-set!") END
 	 (<a> href: "#array->specialized-array" "array->specialized-array")END
 	 (<a> href: "#array-translate" "array-translate")END
 	 (<a> href: "#array-permute" "array-permute")END
@@ -902,10 +901,8 @@ calls")
 (<p> "It is an error if "(<code>(<var>'array))" is not an array or if "(<code>(<var>'proc))" is not a procedure.")
 
 
-(format-lambda-list '(specialized-array-default-safe?))
-(<p> "Returns "(<code>'#t)" if specialized arrays check the arguments of setters and getters by default, and "(<code>'#f)" otherwise.")
-
-(format-lambda-list '(specialized-array-default-safe?-set! bool))
+(format-lambda-list '(specialized-array-default-safe? #\[ bool #\]))
+(<p> "With no argument, Returns "(<code>'#t)" if newly-constructed specialized arrays check the arguments of setters and getters by default, and "(<code>'#f)" otherwise.")
 (<p> "If "(<code>(<var>'bool))" is "(<code>'#t)" then the next call to "(<code>'specialized-array-default-safe?)" will return "(<code>'#t)";
 if "(<code>(<var>'bool))" is "(<code>'#f)" then the next call to "(<code>'specialized-array-default-safe?)" will return "(<code>'#f)";
 otherwise it is an error.")
