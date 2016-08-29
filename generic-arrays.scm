@@ -981,10 +981,10 @@
   (if (zero? base)
       (if (zero? low-0)
 	  (cond ((= 1 increment-0)    (lambda (i) i))
-		((= -1 increment-0)   (lambda (i) (- i)))               ;; an impossible case
+		;;((= -1 increment-0)   (lambda (i) (- i)))               ;; an impossible case
 		(else                 (lambda (i) (* i increment-0))))
 	  (cond ((= 1 increment-0)    (lambda (i) (- i low-0)))
-		((= -1 increment-0)   (lambda (i) (- low-0 i)))         ;; an impossible case
+		;;((= -1 increment-0)   (lambda (i) (- low-0 i)))         ;; an impossible case
 		(else                 (lambda (i) (* increment-0 (- i low-0))))))
       (if (zero? low-0)
 	  (cond ((= 1 increment-0)    (lambda (i) (+ base i)))
@@ -1007,7 +1007,7 @@
 		     (cond ((= 1 increment-1)    (lambda (i j) (+ i (- j low-1))))
 			   ((= -1 increment-1)   (lambda (i j) (+ i (- low-1 j))))
 			   (else                 (lambda (i j) (+ i (* increment-1 (- j low-1))))))))
-		((= -1 increment-0)         ;; an impossible case
+		#;((= -1 increment-0)         ;; an impossible case
 		 (if (zero? low-1)
 		     (cond ((= 1 increment-1)   (lambda (i j) (- j                           i)))
 			   ((= -1 increment-1)  (lambda (i j) (- (- j)                       i)))
@@ -1031,7 +1031,7 @@
 		     (cond ((= 1 increment-1)    (lambda (i j) (+ (- i low-0) (- j low-1))))
 			   ((= -1 increment-1)   (lambda (i j) (+ (- i low-0) (- low-1 j))))
 			   (else                 (lambda (i j) (+ (- i low-0) (* increment-1 (- j low-1))))))))
-		((= -1 increment-0)         ;; an impossible case
+		#;((= -1 increment-0)         ;; an impossible case
 		 (if (zero? low-1)
 		     (cond ((= 1 increment-1)   (lambda (i j) (- j                           (- i low-0))))
 			   ((= -1 increment-1)  (lambda (i j) (- (- j)                       (- i low-0))))

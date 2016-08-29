@@ -701,6 +701,9 @@
 				u16-storage-class)
       "array->specialized-array: not all elements of the array can be manipulated by the storage class: ")
 
+(test (specialized-array-default-safe? 'a)
+      "specialized-array-default-safe?: The argument is not a boolean: ")
+
 
 (pp "array->specialized-array result tests")
 
@@ -1656,17 +1659,40 @@
 (pp "test array-extract")
 
 (let* ((domain (make-interval '#(0 0) '#(10 10)))
-       (Array (make-array domain
-			  list)))
+       (array (make-array domain
+			  list))
+       (specialized-array (array->specialized-array array))
+       (mutable-array (let ((copy (array->specialized-array specialized-array)))
+			(make-array domain
+				    (array-getter copy)
+				    (array-setter copy)))))
   (test (array-extract 'a 10)
 	"array-extract: The first argument is not an array: ")
-  (test (array-extract Array 10)
+  (test (array-extract array 10)
 	"array-extract: The second argument is not an interval: ")
-  (test (array-extract Array (make-interval '#(1 1) '#(11 11)))
+  (test (array-extract array (make-interval '#(1 1) '#(11 11)))
 	"array-extract: The second argument (an interval) is not a subset of the domain of the first argument (an array): ")
-  (let ((sub-interval (make-interval '#(0 0) '#(5 5))))
-    (test (myarray= (array-extract Array sub-interval)
+  (let* ((sub-interval (make-interval '#(0 0) '#(5 5)))
+	 (specialized-subarray (array-extract specialized-array sub-interval))
+	 (mutable-subarray     (array-extract mutable-array sub-interval)))
+    (test (myarray= (array-extract array sub-interval)
 		    (make-array sub-interval list))
+	  #t)
+    (do ((i 0 (fx+ i 1)))
+	((fx= i 100))
+      (call-with-values
+	  (lambda ()
+	    (random-multi-index domain))
+	(lambda args
+	  (let ((v (random-real)))
+	    (apply (array-setter specialized-subarray)
+		   v
+		   args)
+	    (apply (array-setter mutable-subarray)
+		   v
+		   args)))))
+    (test (myarray= specialized-subarray
+		    mutable-subarray)
 	  #t)))
 
 (pp "Miscellaneous error tests")
