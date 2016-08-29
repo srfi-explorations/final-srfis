@@ -62,6 +62,7 @@ MathJax.Hub.Config({
 	      (<li> "Draft #6 published: 2015/10/19")
 	      (<li> "Draft #7 published: 2016/8/15")
 	      (<li> "Draft #8 published: 2016/8/19")
+	      (<li> "Draft #9 published: 2016/8/25")
 	      )
 	
 	(<h2> "Abstract")
