@@ -1,0 +1,11 @@
+(define-library srfi-141
+  (import (scheme base))
+  (export ceiling/ ceiling-quotient ceiling-remainder)
+  (export floor/ floor-quotient floor-remainder)
+  (export truncate/ truncate-quotient truncate-remainder)
+  (export round/ round-quotient round-remainder)
+  (export euclidean/ euclidean-quotient euclidean-remainder)
+  (export balanced/ balanced-quotient balanced-remainder)
+  (export ceiling/ ceiling-quotient ceiling-remainder)
+  (include "srfi-141-impl.scm")
+)
