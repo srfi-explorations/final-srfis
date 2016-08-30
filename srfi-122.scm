@@ -63,6 +63,7 @@ MathJax.Hub.Config({
 	      (<li> "Draft #7 published: 2016/8/15")
 	      (<li> "Draft #8 published: 2016/8/19")
 	      (<li> "Draft #9 published: 2016/8/25")
+	      (<li> "Draft #10 published: 2016/8/30")
 	      )
 	
 	(<h2> "Abstract")
@@ -151,10 +152,10 @@ by the array's "(<i> 'setter)", accessed by the procedure "(<code>'array-setter)
 they may have hash tables or databases behind an implementation.")
 	(<p> "In this SRFI, Bawden-style arrays are called "(<i> 'specialized)". A specialized array is an example of a mutable array.")
 	(<h3> "Sharing generalized arrays")
-	(<p> "Even if an array is not a specialized array, then it could be \"shared\" by specifying a new domain $D_B$ and an affine map $T_{BA}:D_B\\to D_A$.  However the indexer of $B$, $I_B$, "
-	     "must be computed explicitly each time, as $I_B(\\vec i)=I_A(T_{BA}(\\vec i))$ cannot be further simplified.  If one applied a series of transformations on a single array, then a simple "
-	     "array evaluation would require calling a series of those transformation each time an element of an array is accessed.  This cost may not be explicitly known to the programmer, and this SRFI does not provide such an operation.")
-	(<p> "Certain ways of sharing generalized arrays, however, are not that expensive.  If we denote "(<code>"(array-getter A)")" by "(<code>'A-getter)", then if B is the result of "(<code>'array-extract)" applied to A, then "
+	(<p> "Even if an array $A$ is not a specialized array, then it could be \"shared\" by specifying a new domain $D_B$ and an affine map $T_{BA}:D_B\\to D_A$.  Each call to $B$ must be computed as $B(\\vec i)=A(T_{BA}(\\vec i))$.")
+	(<p> "One could again \"share\" $B$, given a new domain $D_C$ and a new affine transform $T_{CB}:D_C\\to D_B$, and then each access $C(\\vec i)=A(T_{BA}(T_{CB}(\\vec i)))$.  The composition $T_{BA}\\circ T_{CB}:D_C\\to D_A$, being itself affine, could be precomputed and stored as $T_{CA}:D_C\\to D_A$, and $C(\\vec i)=A(T_{CA}(\\vec i))$ can be computed with the overhead of computing a single affine transformation.")
+	(<p> "So, if we wanted, we could share generalized arrays with constant overhead by adding a single layer of multi-valued affine transformations on top of evaluating generalized arrays.  Even though this could be done transparently to the user, we do not do that here; it would be a compatible extension of this SRFI to do so.  We provide only the routine "(<code>'specialized-array-share)", not a more general "(<code>'array-share)".")
+	(<p> "Certain ways of sharing generalized arrays, however, are relatively easy to code and not that expensive.  If we denote "(<code>"(array-getter A)")" by "(<code>'A-getter)", then if B is the result of "(<code>'array-extract)" applied to A, then "
 	     (<code>"(array-getter B)")" is simply "(<code>'A-getter)".  Similarly, if A is a two-dimensional array, and B is derived from A by applying the permutation $\\pi((i,j))=(j,i)$, then "(<code>"(array-getter B)")" is "
 	     (<code>"(lambda (i j) (A-getter j i))")".  Translation and currying also lead to transformed arrays whose getters are relatively efficiently derived from "(<code>'A-getter)", at least for arrays of small dimension.")
 	(<p> "Thus, while we do not provide for sharing of generalized arrays for general one-to-one affine maps $T$, we do allow it for the specific functions "(<code>'array-extract)", "(<code>'array-translate)", "(<code>'array-permute)", and "
@@ -1333,6 +1334,7 @@ Array reconstructed from Haar wavelet coefficients:
   -.9999999999999993))
 " )
 (<p> "In perfect arithmetic, this Haar transform is "(<i>'orthonormal)", in that the sum of the squares of the elements of the image is the same as the sum of the squares of the Haar coefficients of the image.  We can see that this is approximately true here.")
+
 (<h2> "References")
 (<ol>
  (<li> (<a> name: 'bawden href: "http://groups-beta.google.com/group/comp.lang.scheme/msg/6c2f85dbb15d986b?hl=en&" "\"multi-dimensional arrays in R5RS?\"")
