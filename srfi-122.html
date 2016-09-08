@@ -27,23 +27,21 @@
       <li>Draft #7 published: 2016/8/15</li>
       <li>Draft #8 published: 2016/8/19</li>
       <li>Draft #9 published: 2016/8/25</li>
-      <li>Draft #10 published: 2016/8/30</li></ul>
+      <li>Draft #10 published: 2016/8/30</li>
+      <li>Draft #11 published: 2016/9/7</li></ul>
     <h2>Abstract</h2>
-    <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general, and benefit from a data type
-       called <i>intervals</i>, which encapsulate the cross product of nonempty intervals of exact integers. These intervals  specify the domain
-      information for arrays. An array is then characterized as a mapping from multi-indices of exact integers $(i_0,\ldots,i_{d-1})$ 
-      contained in an interval to Scheme values. Additionally, specialized variants of arrays are specified to provide portable programs with efficient representations for common use cases.</p>
+    <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general; at their most basic, an array is simply a mapping, or function, from multi-indices of exact integers $i_0,\ldots,i_{d-1}$ to Scheme values.  The set of multi-indices $i_0,\ldots,i_{d-1}$ that are valid for a given array form the <i>domain</i> of the array.  In this SRFI, each array's domain consists  of a rectangular interval $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$, a subset of $\mathbb Z^d$, $d$-tuples of integers.  Thus, we introduce a data type called <i>intervals</i>, which encapsulate the cross product of nonempty intervals of exact integers. Specialized variants of arrays are specified to provide portable programs with efficient representations for common use cases.</p>
     <h2>Overview</h2>
     <h3>Bawden-style arrays</h3>
-    <p>In a <a href="https://groups.google.com/forum/?hl=en#!msg/comp.lang.scheme/7nkx58Kv6RI/a5hdsduFL2wJ">1993 post</a> to the news group comp.lang.scheme, Alan Bawden gave a simple implementation of multi-dimensional arrays in R4RS scheme. The only constructor of new arrays required specifying an initial value, and he provided the three low-level primitives <code>array-ref</code>, <code>array-set!</code>, and <code>array?</code>.  His arrays were defined on rectangular intervals in $\mathbb Z^d$ of the form $[0,u_0)\times\cdots\times [0,u_{d-1})$.  I'll note that his function <code>array-set!</code> put the value to be entered into the array at the front of the variable-length list of indices that indicate where to place the new value.  He offered an intriguing way to &quot;share&quot; arrays in the form of a routine <code>make-shared-array</code> that took a mapping from a new interval of indices into the domain of the array to be shared.  His implementation incorporated what he called an <i>indexer</i>, which was a function from the interval $[0,u_0)\times\cdots\times [0,u_{d-1})$ to an interval $[0,N)$, where the <i>body</i> of the array consisted of a single Scheme vector of length $N$.  Bawden required that the mapping specified in <code>make-shared-array</code> be <i>linear</i>, but I prefer the term <i>affine</i>, as I explain later.</p>
-    <p>Mathematically, Bawden's arrays can be described as follows.  We'll use the vector notation $\vec i$ for a multi-index $i_0,\ldots,i_{d-1}$, which will correspond to Scheme <code>values</code>.  Arrays will be denoted by capital letters $A,B,\ldots$, the domain of the array $A$ (in Bawden's case $[0,u_0)\times \cdots\times [0,u_{d-1})$) will be denoted by $D_A$, and the indexer of $A$, mapping $D_A$ to the interval $[0,N)$ will be denoted by $I_A$.  Initially, Bawden constructs $I_A$ such that $I_A(\vec i)$ steps consecutively through the values $0,1,\ldots,N-1$ as $\vec i$ steps through the multi-indices $(0,\ldots,0,0)$, $(0,\ldots,0,1)$, $\ldots$, $(0,\ldots,1,0)$, etc., in lexicographical order, which means that if $\vec i$ and $\vec j$ are two multi-indices, then $\vec i&lt;\vec j$ iff the first coordinate $k$ where $\vec i$ and $\vec j$ differ satisfies $\vec i_k&lt;\vec j_k$. In fact, $I_A(\vec i)=\vec v\cdot\vec i$ for some specially-constructed vector $\vec v$ that depends only on $D_A$, the domain of $A$, and $\vec v\cdot\vec i$ is the dot product of $\vec v$ and $\vec i$.</p>
+    <p>In a <a href="https://groups.google.com/forum/?hl=en#!msg/comp.lang.scheme/7nkx58Kv6RI/a5hdsduFL2wJ">1993 post</a> to the news group comp.lang.scheme, Alan Bawden gave a simple implementation of multi-dimensional arrays in R4RS scheme. The only constructor of new arrays required specifying an initial value, and he provided the three low-level primitives <code>array-ref</code>, <code>array-set!</code>, and <code>array?</code>.  His arrays were defined on rectangular intervals in $\mathbb Z^d$ of the form $[0,u_0)\times\cdots\times [0,u_{d-1})$.  I'll note that his function <code>array-set!</code> put the value to be entered into the array at the front of the variable-length list of indices that indicate where to place the new value.  He offered an intriguing way to &quot;share&quot; arrays in the form of a routine <code>make-shared-array</code> that took a mapping from a new interval of indices into the domain of the array to be shared.  His implementation incorporated what he called an <i>indexer</i>, which was a function from the interval $[0,u_0)\times\cdots\times [0,u_{d-1})$ to an interval $[0,N)$, where the <i>body</i> of the array consisted of a single Scheme vector of length $N$.  Bawden called the mapping specified in <code>make-shared-array</code> <i>linear</i>, but I prefer the term <i>affine</i>, as I explain later.</p>
+    <p>Mathematically, Bawden's arrays can be described as follows.  We'll use the vector notation $\vec i$ for a multi-index $i_0,\ldots,i_{d-1}$. (Multi-indices correspond to Scheme <code>values</code>.)  Arrays will be denoted by capital letters $A,B,\ldots$, the domain of the array $A$ (in Bawden's case $[0,u_0)\times \cdots\times [0,u_{d-1})$) will be denoted by $D_A$, and the indexer of $A$, mapping $D_A$ to the interval $[0,N)$ will be denoted by $I_A$.  Initially, Bawden constructs $I_A$ such that $I_A(\vec i)$ steps consecutively through the values $0,1,\ldots,N-1$ as $\vec i$ steps through the multi-indices $(0,\ldots,0,0)$, $(0,\ldots,0,1)$, $\ldots$, $(0,\ldots,1,0)$, etc., in lexicographical order, which means that if $\vec i$ and $\vec j$ are two multi-indices, then $\vec i&lt;\vec j$ iff the first coordinate $k$ where $\vec i$ and $\vec j$ differ satisfies $\vec i_k&lt;\vec j_k$. In fact, $I_A(\vec i)=\vec v\cdot\vec i$ for some specially-constructed vector $\vec v$ that depends only on $D_A$, the domain of $A$, where $\vec v\cdot\vec i$ is the dot product of $\vec v$ and $\vec i$.</p>
     <p>In <code>make-shared-array</code>, Bawden allows you to specify a new $r$-dimensional interval $D_B$ as the domain of a new array $B$, and a mapping $T_{BA}:D_B\to D_A$ of the form $T_{BA}(\vec i)=M\vec i+\vec b$; here $M$ is a $d\times r$ matrix of integer values and $\vec b$ is a $d$-vector.  So this mapping $T_{BA}$ is <i>affine</i>, in that $T_{BA}(\vec i)-T_{BA}(\vec j)=M(\vec i-\vec j)$ is <i>linear</i> (in a linear algebra sense) in $\vec i-\vec j$.  The new indexer of $B$ satisfies $I_B(\vec i)=I_A(T_{BA}(\vec i))$.</p>
     <p>A fact Bawden exploits in the code, but doesn't point out in the short post, is that $I_B$ is again an affine map, and indeed, the composition of <i>any</i> two affine maps is again affine.</p>
     <h3>Our extensions of Bawden-style arrays</h3>
     <p>We incorporate Bawden-style arrays into this SRFI, but extend them in two relatively minor ways that we find quite useful.</p>
-    <p>First, we allow the intervals of multi-indices that form the domains of arrays to have nonzero lower bounds as well as upper bounds, so domains are rectangular, $d$-dimensional interval $[l_0,u_0)\times\cdots\times[l_{d-1},u_{d-1})$.</p>
+    <p>First, we allow the intervals of multi-indices that form the domains of arrays to have nonzero lower bounds as well as upper bounds, so domains are rectangular, $d$-dimensional intervals $[l_0,u_0)\times\cdots\times[l_{d-1},u_{d-1})$.</p>
     <p>Second, we introduce the notion of a <i>storage class</i>, an object that contains functions that manipulate, store, check, etc., different tyes of values. A <code>generic-storage-class</code> can manipulate any Scheme value, whereas,e.g., a <code>u1-storage-class</code> can store only the values 0 and 1 in each element of a body.</p>
-    <p>We also require that our affine maps be one-to-one, so that if $\vec i\neq\vec j$ then $T(\vec i)\neq T(\vec j)$.  Without this property, modifying the $\vec i$th component of $A$ would cause the $\vec j$th component to change, an unfortunate circumstance indeed.</p>
+    <p>We also require that our affine maps be one-to-one, so that if $\vec i\neq\vec j$ then $T(\vec i)\neq T(\vec j)$.  Without this property, modifying the $\vec i$th component of $A$ would cause the $\vec j$th component to change.</p>
     <h3>Common transformations on Bawden-style arrays</h3>
     <p>Requiring the transformations $T_{BA}:D_B\to D_A$ to be affine may seem  esoteric and restricting, but in fact many common and useful array transformations can be expressed in this way.  We give several examples below: </p>
     <ul>
@@ -54,24 +52,24 @@
     <p>We make several remarks.  First, all these operations could have been computed by specifying the particular mapping $T_{BA}$ explicitly, so that these routines, where one specifies the translation $\vec d$ or the permutation $\pi$ or the outer dimension $r$ of $D_A$ (in the currying example) are simply &quot;convenience&quot; procedures.  Second, because the composition of any number of affine mappings are again affine, accessing or changing the elements of a restricted, translated, curried, permuted array is no slower than accessing or changing the elements of the original array itself. Finally, we note that by combining array currying and permuting, say, one can come up with simple expressions of powerful algorithms, such as extending one-dimensional tranforms to multi-dimensional separable transforms, or quickly generating two-dimensional slices of three-dimensional image data. Examples are given below.</p>
     <h3>Generalized arrays</h3>
     <p>Bawden-style arrays are clearly useful as a programming construct, but they do not fulfill all our needs in this area. An array, as commonly understood, provides a mapping from multi-indices  $(i_0,\ldots,i_{d-1})$ of exact integers 
-      in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$ to Scheme objects.
-      Thus, two things are necessary to specify an array: an interval and a mapping.</p>
+      in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$ (the <i>domain</i> of the array) to Scheme objects.
+      Thus, two things are necessary to specify an array: an interval and a mapping that has that interval as its domain.</p>
     <p>Since these two things are often sufficient for certain algorithms, we introduce in this SRFI a minimal set of interfaces for dealing with such arrays.</p>
-    <p>Specifically, an array specifies a nonempty, multi-dimensional interval, called its <i>domain</i>, and a mapping from this domain to (single) Scheme objects.  This mapping is called the <i>getter</i> of the array, accessed with the procedure <code>array-getter</code>; the domain of the array is accessed with the procedure <code>array-domain</code>.</p>
+    <p>Specifically, an array specifies a nonempty, multi-dimensional interval, called its <i>domain</i>, and a mapping from this domain to Scheme objects.  This mapping is called the <i>getter</i> of the array, accessed with the procedure <code>array-getter</code>; the domain of the array (more precisely, the domain of the array's getter) is accessed with the procedure <code>array-domain</code>.</p>
     <p>If this mapping can be changed, the array is said to be <i>mutable</i> and the mutation is effected
-      by the array's <i>setter</i>, accessed by the procedure <code>array-setter</code>.  We call an object of this type a mutable array. Note: If an array does not have a setter, then we call it immutable even though the array's getter might not be a &quot;pure&quot; function, i.e., the value it returns may not depend solely on the arguments.</p>
+      by the array's <i>setter</i>, accessed by the procedure <code>array-setter</code>.  We call an object of this type a mutable array. Note: If an array does not have a setter, then we call it immutable even though the array's getter might not be a &quot;pure&quot; function, i.e., the value it returns may not depend solely on the arguments passed to the getter.</p>
     <p>In general, we leave the implementation of generalized arrays completely open.  They may be defined simply by closures, or
-      they may have hash tables or databases behind an implementation.</p>
+      they may have hash tables or databases behind an implementation, one may read the values from a file, etc.</p>
     <p>In this SRFI, Bawden-style arrays are called <i>specialized</i>. A specialized array is an example of a mutable array.</p>
     <h3>Sharing generalized arrays</h3>
-    <p>Even if an array $A$ is not a specialized array, then it could be &quot;shared&quot; by specifying a new domain $D_B$ and an affine map $T_{BA}:D_B\to D_A$.  Each call to $B$ must be computed as $B(\vec i)=A(T_{BA}(\vec i))$.</p>
-    <p>One could again &quot;share&quot; $B$, given a new domain $D_C$ and a new affine transform $T_{CB}:D_C\to D_B$, and then each access $C(\vec i)=A(T_{BA}(T_{CB}(\vec i)))$.  The composition $T_{BA}\circ T_{CB}:D_C\to D_A$, being itself affine, could be precomputed and stored as $T_{CA}:D_C\to D_A$, and $C(\vec i)=A(T_{CA}(\vec i))$ can be computed with the overhead of computing a single affine transformation.</p>
-    <p>So, if we wanted, we could share generalized arrays with constant overhead by adding a single layer of multi-valued affine transformations on top of evaluating generalized arrays.  Even though this could be done transparently to the user, we do not do that here; it would be a compatible extension of this SRFI to do so.  We provide only the routine <code>specialized-array-share</code>, not a more general <code>array-share</code>.</p>
+    <p>Even if an array $A$ is not a specialized array, then it could be &quot;shared&quot; by specifying a new interval $D_B$ as the domain of a new array $B$ and an affine map $T_{BA}:D_B\to D_A$.  Each call to $B$ would then be computed as $B(\vec i)=A(T_{BA}(\vec i))$.</p>
+    <p>One could again &quot;share&quot; $B$, given a new interval $D_C$ as the domain of a new array $C$ and an affine transform $T_{CB}:D_C\to D_B$, and then each access $C(\vec i)=A(T_{BA}(T_{CB}(\vec i)))$.  The composition $T_{BA}\circ T_{CB}:D_C\to D_A$, being itself affine, could be precomputed and stored as $T_{CA}:D_C\to D_A$, and $C(\vec i)=A(T_{CA}(\vec i))$ can be computed with the overhead of computing a single affine transformation.</p>
+    <p>So, if we wanted, we could share generalized arrays with constant overhead by adding a single layer of (multi-valued) affine transformations on top of evaluating generalized arrays.  Even though this could be done transparently to the user, we do not do that here; it would be a compatible extension of this SRFI to do so.  We provide only the routine <code>specialized-array-share</code>, not a more general <code>array-share</code>.</p>
     <p>Certain ways of sharing generalized arrays, however, are relatively easy to code and not that expensive.  If we denote <code>(array-getter A)</code> by <code>A-getter</code>, then if B is the result of <code>array-extract</code> applied to A, then <code>(array-getter B)</code> is simply <code>A-getter</code>.  Similarly, if A is a two-dimensional array, and B is derived from A by applying the permutation $\pi((i,j))=(j,i)$, then <code>(array-getter B)</code> is <code>(lambda (i j) (A-getter j i))</code>.  Translation and currying also lead to transformed arrays whose getters are relatively efficiently derived from <code>A-getter</code>, at least for arrays of small dimension.</p>
     <p>Thus, while we do not provide for sharing of generalized arrays for general one-to-one affine maps $T$, we do allow it for the specific functions <code>array-extract</code>, <code>array-translate</code>, <code>array-permute</code>, and <code>array-curry</code>, and we provide relatively efficient implementations of these functions for arrays of dimension no greater than four.</p>
     <h3>Array-map does not produce a specialized array</h3>
     <p>Daniel Friedman and David Wise wrote a famous paper <a href="http://www.cs.indiana.edu/cgi-bin/techreports/TRNNN.cgi?trnum=TR44">CONS should not Evaluate its Arguments</a>. In the spirit of that paper, our procedure <code>array-map</code> does not immediately produce a specialized array, but a simple immutable array, whose elements are recomputed from the arguments of <code>array-map</code> each time they are accessed.   This immutable array can be passed on to further applications of <code>array-map</code> for further processing, without generating the storage bodies for intermediate arrays.</p>
-    <p>We provide the procedure <code>array-&gt;specialized-array</code> to transform a generalized array (like that returned by <code>array-map</code>) to a specialized, Bawden-style array, for which accessing each element again takes $O(1)$ instructions.</p>
+    <p>We provide the procedure <code>array-&gt;specialized-array</code> to transform a generalized array (like that returned by <code>array-map</code>) to a specialized, Bawden-style array, for which accessing each element again takes $O(1)$ operations.</p>
     <h2>Examples of application areas</h2>
     <ul>
       <li>Many applications have multi-dimensional data that behave differently in different coordinate directions.  For example, one might have a time series of maps, which can be stored in a single three-dimensional array.  Or one might have one-dimensional spectral data assigned to each pixel on a map.  The data cube as a whole is considered three-dimensional <i>hyperspectral</i> data, but for processing the spectra separately one would apply a function to the spectrum at each pixel.  This corresponds to <i>currying</i> arguments in programming languages, so we include such procedures here.</li>
@@ -97,7 +95,7 @@
         </blockquote>(the inverse of <code>interval-curry</code>),
                which don't seem terribly natural for arrays.</li>
       <li><b>No empty intervals. </b>This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.</li>
-      <li><b>Multi-valued arrays. </b>While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing mutli-valued arrays is a compatible extension of this SRFI.</li>
+      <li><b>Multi-valued arrays. </b>While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing multi-valued arrays is a compatible extension of this SRFI.</li>
       <li><b>No low-level specialized-array constructor. </b>While the author of the SRFI uses mainly <code>(make-array ...)</code>, <code>array-map</code>, and <code>array-&gt;specialized-array</code> to construct arrays, and while there are several other ways to construct arrays, there is no really low-level interface given for constructing specialized arrays (where one specifies a body, an indexer, etc.).  It was felt that certain difficulties, some surmountable (such as checking that a given body is compatible with a given storage class) and some not (such as checking that an indexer is indeed affine), made a low-level interface less useful.  At the same time, the simple <code>(make-array ...)</code> mechanism is so general, allowing one to specify getters and setters as general functions, as to cover nearly all needs.</li></ul>
     <h2>Specification</h2>
     <dl>
@@ -110,8 +108,6 @@
         <a href="#interval-dimension">interval-dimension</a>,
         <a href="#interval-lower-bound">interval-lower-bound</a>,
         <a href="#interval-upper-bound">interval-upper-bound</a>,
-        <a href="#interval-lower-bounds-&gt;list">interval-lower-bounds-&gt;list</a>,
-        <a href="#interval-upper-bounds-&gt;list">interval-upper-bounds-&gt;list</a>,
         <a href="#interval-lower-bounds-&gt;vector">interval-lower-bounds-&gt;vector</a>,
         <a href="#interval-upper-bounds-&gt;vector">interval-upper-bounds-&gt;vector</a>,
         <a href="#interval=">interval=</a>,
@@ -186,17 +182,18 @@
     <p><b>Procedure: </b><code><a name="permutation?">permutation?</a> <var>object</var></code></p>
     <p>Returns <code>#t</code> if <code><var>object</var></code> is a permutation, and <code>#f</code> otherwise.</p>
     <h2>Intervals</h2>
-    <p>Intervals are sets of all multi-indices
-      $(i_0,\ldots,i_{d-1})$
-      such that
+    <p>An interval represents the set of all multi-indices of exact integers
+      $i_0,\ldots,i_{d-1}$
+      satisfying
       $l_0\leq i_0&lt;u_0,\ldots,l_{d-1}\leq i_{d-1}&lt;u_{d-1}$,
       where the <i>lower bounds</i>
-      $(l_0,\ldots,l_{d-1})$
+      $l_0,\ldots,l_{d-1}$
       and the <i>upper bounds</i>
-      $(u_0,\ldots,u_{d-1})$
-      are specified as multi-indices of exact integers.  The positive integer $d$ is the <i>dimension</i>
+      $u_0,\ldots,u_{d-1}$
+      are specified multi-indices of exact integers.  The positive integer $d$ is the <i>dimension</i>
       of the interval.  It is required that
       $l_0&lt;u_0,\ldots,l_{d-1}&lt;u_{d-1}$.</p>
+    <p>Intervals are a data type distinct from other Scheme data types.</p>
     <h3>Procedures</h3>
     <p><b>Procedure: </b><code><a name="make-interval">make-interval</a> <var>lower-bounds</var> <var>upper-bounds</var></code></p>
     <p>Create a new interval; <code><var>lower-bounds</var></code> and <code><var>upper-bounds</var></code>
@@ -226,13 +223,6 @@
       <code>(vector-ref <var>lower-bounds</var> <var>i</var>)</code> and <code>interval-upper-bound</code> returns
       <code>(vector-ref <var>upper-bounds</var> <var>i</var>)</code>.  It is an error to call <code>interval-lower-bound</code> or <code>interval-upper-bound</code>
       if <code><var>interval</var></code> and <code><var>i</var></code> do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="interval-lower-bounds-&gt;list">interval-lower-bounds-&gt;list</a> <var>interval</var></code></p>
-    <p><b>Procedure: </b><code><a name="interval-upper-bounds-&gt;list">interval-upper-bounds-&gt;list</a> <var>interval</var></code></p>
-    <p>If <code><var>interval</var></code> is an interval built with </p>
-    <blockquote><code>(make-interval <var>lower-bounds</var> <var>upper-bounds</var>)</code>
-    </blockquote>
-    <p> then <code>interval-lower-bounds-&gt;list</code> returns <code>(vector-&gt;list <var>lower-bounds</var>)</code> and  <code>interval-upper-bounds-&gt;list</code> returns <code>(vector-&gt;list <var>upper-bounds</var>)</code>. It is an error to call
-      <code>interval-lower-bounds-&gt;list</code> or <code>interval-upper-bounds-&gt;list</code> if <code><var>interval</var></code> does not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a name="interval-lower-bounds-&gt;vector">interval-lower-bounds-&gt;vector</a> <var>interval</var></code></p>
     <p><b>Procedure: </b><code><a name="interval-upper-bounds-&gt;vector">interval-upper-bounds-&gt;vector</a> <var>interval</var></code></p>
     <p>If <code><var>interval</var></code> is an interval built with </p>
@@ -244,8 +234,8 @@
     <p>If <code><var>interval</var></code> is an interval built with </p>
     <blockquote><code>(make-interval <var>lower-bounds</var> <var>upper-bounds</var>)</code>
     </blockquote>
-    <p>then <code>interval-volume</code> returns </p>
-    <blockquote><code>(apply * (map - (interval-upper-bounds-&gt;list <var>interval</var>) (interval-lower-bounds-&gt;list <var>interval</var>))</code>
+    <p>then, assuming the existence of <code>vector-map</code>, <code>interval-volume</code> returns </p>
+    <blockquote><code>(apply * (vector-&gt;list (vector-map - (interval-upper-bounds-&gt;vector <var>interval</var>) (interval-lower-bounds-&gt;vector <var>interval</var>)))</code>
     </blockquote>
     <p>It is an error to call <code>interval-volume</code> if <code><var>interval</var></code> does not satisfy this condition.</p>
     <p><b>Procedure: </b><code><a name="interval=">interval=</a> <var>interval1</var> <var>interval2</var></code></p>
@@ -260,27 +250,19 @@
     </blockquote>
     <p>It is an error to call <code>interval=</code> if <code><var>interval1</var></code> or <code><var>interval2</var></code> do not satisfy this condition.</p>
     <p><b>Procedure: </b><code><a name="interval-subset?">interval-subset?</a> <var>interval1</var> <var>interval2</var></code></p>
-    <p>If <code><var>interval1</var></code> and <code><var>interval2</var></code> are intervals of the same dimension built with </p>
-    <blockquote><code>(make-interval <var>lower-bounds1</var> <var>upper-bounds1</var>)</code>
+    <p>If <code><var>interval1</var></code> and <code><var>interval2</var></code> are intervals of the same dimension $d$, then <code>interval-subset?</code> returns <code>#t</code> if </p>
+    <blockquote><code>(interval-lower-bound <var>interval1</var> j)</code>${}\geq{}$<code>(interval-lower-bound <var>interval2</var> j)</code>
     </blockquote>
     <p>and</p>
-    <blockquote><code>(make-interval <var>lower-bounds2</var> <var>upper-bounds2</var>)</code>
+    <blockquote><code>(interval-upper-bound <var>interval1</var> j)</code>${}\leq{}$<code>(interval-upper-bound <var>interval2</var> j)</code>
     </blockquote>
-    <p>respectively, then <code>interval-subset?</code> returns</p>
-    <pre>
-(and (equal? (map &gt;= (vector-&gt;list lower-bounds1) (vector-&gt;list lower-bounds2))
-	     (map (lambda (x) #t) (vector-&gt;list lower-bounds1)))
-     (equal? (map &lt;= (vector-&gt;list upper-bounds1) (vector-&gt;list upper-bounds2))
-	     (map (lambda (x) #t) (vector-&gt;list lower-bounds1))))
-</pre>
-    <p>In other words, it returns #t if interval1 is a subset of interval2, and #f othewise.</p>
-    <p>It is an error to call <code>interval-subset?</code> if <code><var>interval1</var></code> or <code><var>interval2</var></code> do not satisfy this condition.</p>
+    <p>for all $0\leq j&lt;d$, otherwise it returns <code>#f</code>.  It is an error if the arguments do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a name="interval-contains-multi-index?">interval-contains-multi-index?</a> <var>interval</var> <var>index-0</var> <var>...</var></code></p>
-    <p>If <code><var>interval</var></code> is an interval with dimension d and <code><var>index-0</var></code>, ..., form a multi-index of length d,
-      then <code>interval-contains-multi-index?</code> returns <code>#t</code> if and only if</p>
-    <blockquote><code>(interval-lower-bound <var>interval</var> j</code> $\leq$ <code><var>index-j</var></code> $&lt;$ <code>(interval-upper-bound <var>interval</var> j)</code>
+    <p>If <code><var>interval</var></code> is an interval with dimension $d$ and <code><var>index-0</var></code>, ..., is a multi-index of length $d$,
+      then <code>interval-contains-multi-index?</code> returns <code>#t</code> if </p>
+    <blockquote><code>(interval-lower-bound <var>interval</var> j)</code> $\leq$ <code><var>index-j</var></code> $&lt;$ <code>(interval-upper-bound <var>interval</var> j)</code>
     </blockquote>
-    <p>for $0\leq j &lt; d$.</p>
+    <p>for $0\leq j &lt; d$, and <code>#f</code> otherwise.</p>
     <p>It is an error to call <code>interval-contains-multi-index?</code> if <code><var>interval</var></code> and <code><var>index-0</var></code>,..., do not satisfy this condition.</p>
     <p><b>Procedure: </b><code><a name="interval-curry">interval-curry</a> <var>interval</var> <var>left-dimension</var></code></p>
     <p>Conceptually, <code>interval-curry</code> takes a $d$-dimensional interval 
@@ -359,7 +341,7 @@
     <p>We have chosen the following convention: If the permutation is $(\pi_0,\ldots,\pi_{d-1})$, and the argument interval
       represents the cross product
       $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$,
-      then the result is the cross product
+      then the result represents the cross product
       $[l_{\pi_0},u_{\pi_0})\times[l_{\pi_1},u_{\pi_1})\times\cdots\times[l_{\pi_{d-1}},u_{\pi_{d-1}})$.</p>
     <p>For example, if the argument interval represents $[0,4)\times[0,8)\times[0,21)\times [0,16)$ and the
       permutation is <code>#(3 0 1 2)</code>, then the result of <code>(interval-dilate <var>interval</var> <var>translation</var>)</code> will be
@@ -417,18 +399,19 @@
     could be defined simply as <code>generic-storage-class</code>, but it is assumed that implementations with homogeneous arrays will give definitions
     that either save space, avoid boxing, etc., for the specialized arrays.
     <h2>Arrays</h2>
+    <p>Arrays are a data type distinct from other Scheme data types.</p>
     <h3>Procedures</h3>
-    <p><b>Procedure: </b><code><a name="make-array">make-array</a> <var>domain</var> <var>getter</var> [ <var>setter</var> ]</code></p>
+    <p><b>Procedure: </b><code><a name="make-array">make-array</a> <var>interval</var> <var>getter</var> [ <var>setter</var> ]</code></p>
     <p>Assume first that the optional argument <code>setter</code> is not given.</p>
-    <p>If <code><var>domain</var></code> is an interval and <code><var>getter</var></code> is a function from
-      <code><var>domain</var></code> to Scheme objects, then <code>array</code> returns an array with domain <code><var>domain</var></code>
+    <p>If <code><var>interval</var></code> is an interval and <code><var>getter</var></code> is a function from
+      <code><var>interval</var></code> to Scheme objects, then <code>array</code> returns an array with domain <code><var>interval</var></code>
       and getter <code><var>getter</var></code>.</p>
-    <p>It is an error to call <code>array</code> if <code><var>domain</var></code> and <code><var>getter</var></code>
+    <p>It is an error to call <code>array</code> if <code><var>interval</var></code> and <code><var>getter</var></code>
       do not satisfy these conditions.</p>
     <p>If now <code><var>setter</var></code> is specified, assume that it is a procedure such that getter and setter satisfy: If</p>
     <blockquote><code>(<var>i</var><sub>1</sub>,...,<var>i</var><sub>n</sub>)</code> $\neq$ <code>(<var>j</var><sub>1</sub>,...,<var>j</var><sub>n</sub>)</code>
     </blockquote>
-    <p>are elements of <code><var>domain</var></code> and </p>
+    <p>are elements of <code><var>interval</var></code> and </p>
     <blockquote><code>(getter <var>j</var><sub>1</sub> ... <var>j</var><sub>n</sub>) =&gt; x</code>
     </blockquote>
     <p>then &quot;after&quot;</p>
@@ -440,7 +423,7 @@
     <p>and</p>
     <blockquote><code>(getter <var>i</var><sub>1</sub>,...,<var>i</var><sub>n</sub>) =&gt; v</code>
     </blockquote>
-    <p>Then <code>array</code> builds a mutable array with domain <code><var>domain</var></code>, getter <code><var>getter</var></code>, and
+    <p>Then <code>array</code> builds a mutable array with domain <code><var>interval</var></code>, getter <code><var>getter</var></code>, and
       setter <code><var>setter</var></code>.  It is an error to call <code>array</code> if its arguments do not satisfy these conditions.</p>
     <p>Example: </p>
     <pre>
@@ -477,9 +460,9 @@
     <p><b>Procedure: </b><code><a name="array-domain">array-domain</a> <var>array</var></code></p>
     <p><b>Procedure: </b><code><a name="array-getter">array-getter</a> <var>array</var></code></p>
     <p>If <code><var>array</var></code> is an array built by</p>
-    <blockquote><code>(make-array <var>domain</var> <var>getter</var>)</code>
+    <blockquote><code>(make-array <var>interval</var> <var>getter</var>)</code>
     </blockquote>
-    <p>then <code>array-domain</code> returns <code><var>domain</var></code> and <code>array-getter</code> returns  <code><var>getter</var></code>.
+    <p>then <code>array-domain</code> returns <code><var>interval</var></code> and <code>array-getter</code> returns  <code><var>getter</var></code>.
       It is an error to call <code>array-domain</code> or <code>array-getter</code> if <code><var>array</var></code> is not an array.</p>
     <p>Example: </p>
     <pre>
@@ -497,7 +480,7 @@
     <p>Returns <code>#t</code> if and only if <code><var>obj</var></code> is a mutable array.</p>
     <p><b>Procedure: </b><code><a name="array-setter">array-setter</a> <var>array</var></code></p>
     <p>If <code><var>array</var></code> is an array built by</p>
-    <blockquote><code>(make-array <var>domain</var> <var>getter</var> <var>setter</var>)</code>
+    <blockquote><code>(make-array <var>interval</var> <var>getter</var> <var>setter</var>)</code>
     </blockquote>
     <p>then <code>array-setter</code> returns <code><var>setter</var></code>. It is an error to call <code>array-setter</code>
       if <code><var>array</var></code> is not a mutable array.</p>
@@ -509,12 +492,12 @@
   (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))</pre>
     <p>It is an error to call <code>array-map</code> if its arguments do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a name="array-curry">array-curry</a> <var>array</var> <var>outer-dimension</var></code></p>
-    <p>If <code><var>array</var></code> is an array whose domain is an interval  [l<sub>0</sub>, u<sub>0</sub>) x  ... x [l<sub>d-1</sub>, u<sub>d-1</sub>) and <code><var>outer-dimension</var></code> is an exact integer strictly between 0 and d, then array-curry returns an (immutable) array with domain [l<sub>0</sub>, u<sub>0</sub>) x ...x [l<sub>outer-dimension-1</sub>, u<sub>outer-dimension-1</sub>), each of whose entries is in itself an array with domain [l<sub>outer-dimension</sub>, u<sub>outer-dimension</sub>) x ... x [l<sub>d-1</sub>, u<sub>d-1</sub>).</p>
+    <p>If <code><var>array</var></code> is an array whose domain is an interval  $[l_0,u_0)\times\cdots\times[l_{d-1},u_{d-1})$, and <code><var>outer-dimension</var></code> is an exact integer strictly between $0$ and $d$, then <code>array-curry</code> returns an immutable array with domain $[l_0,u_0)\times\cdots\times[l_{\text{outer-dimension}-1},u_{\text{outer-dimension}-1})$, each of whose entries is in itself an array with domain $[l_{\text{outer-dimension}},u_{\text{outer-dimension}})\times\cdots\times[l_{d-1},u_{d-1})$.</p>
     <p>For example, if <code>A</code> and <code>B</code> are defined by </p>
     <pre>
-(define domain (make-interval '#(0 0 0 0)
-			      '#(10 10 10 10)))
-(define A (make-array domain list))
+(define interval (make-interval '#(0 0 0 0)
+			        '#(10 10 10 10)))
+(define A (make-array interval list))
 (define B (array-curry A 3))
 </pre>
     <p>so</p>
@@ -526,7 +509,7 @@
 (equal? ((array-getter A) i j k l)
 	(array-getter ((array-getter B) i j k) l)) =&gt; #t
 </pre>
-    <p>for all multi-indices <code>(i,j,k,l)</code> in <code>domain</code>.</p>
+    <p>for all multi-indices <code>i j k l</code> in <code>interval</code>.</p>
     <p>The type of the subarrays is the same as the type of the input array.</p>
     <p>More precisely, if </p>
     <blockquote><code>0 &lt; <var>outer-dimension</var> &lt; (interval-dimension (array-domain <var>array</var>))</code>
@@ -584,13 +567,14 @@
     <p>Otherwise, if <code><var>array</var></code> is a mutable array, then <code>array-extract</code> returns </p>
     <pre>
  (make-array new-domain
-	(array-getter array)
-	(array-setter array))
+	     (array-getter array)
+	     (array-setter array))
+
 </pre>
     <p>Finally, if <code><var>array</var></code> is an immutable array, then <code>array-extract</code> returns </p>
     <pre>
  (make-array new-domain
-	(array-getter array))
+	     (array-getter array))
 </pre>
     <p>It is an error if the arguments of <code>array-extract</code> do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a name="array-translate">array-translate</a> <var>array</var> <var>translation</var></code></p>
@@ -605,28 +589,28 @@
     <p>If <code><var>array</var></code> is not a specialized array but is a mutable array, returns a new mutable array</p>
     <pre>
  (make-array (interval-translate (array-domain Array) translation)
-	(lambda multi-index
-	  (apply (array-getter array) (map - multi-index (vector-&gt;list translation))))
-	(lambda (val . multi-index)
-	  (apply (array-setter array) val (map - multi-index (vector-&gt;list translation)))))
-</pre>
+	     (lambda multi-index
+	       (apply (array-getter array) (map - multi-index (vector-&gt;list translation))))
+	     (lambda (val . multi-index)
+	       (apply (array-setter array) val (map - multi-index (vector-&gt;list translation)))))
+ </pre>
     <p>that employs the same getter and setter as the original array argument.</p>
     <p>If <code><var>array</var></code> is not a mutable array, returns a new array</p>
     <pre>
  (make-array (interval-translate (array-domain Array) translation)
-	(lambda multi-index
-	  (apply (array-getter array) (map - multi-index (vector-&gt;list translation)))))
-</pre>
+	     (lambda multi-index
+	       (apply (array-getter array) (map - multi-index (vector-&gt;list translation)))))
+ </pre>
     <p>that employs the same getter as the original array.</p>
     <p>It is an error if the arguments do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a name="array-permute">array-permute</a> <var>array</var> <var>permutation</var></code></p>
     <p>Assumes that <code><var>array</var></code> is a valid array, <code><var>permutation</var></code> is a valid permutation, and that the dimensions of the array and the permutation are the same. The resulting array will have domain <code>(interval-permute (array-domain Array) permutation)</code>.</p>
-    <p>We begin with an example.  Assume that the domain of <code><var>array</var></code> represents the argument interval  $[0,4)\times[0,8)\times[0,21)\times [0,16)$, as in the example for <code>interval-permute</code>, and the permutation is <code>#(3 0 1 2)</code>.  Then the domain of the new array is the interval $[0,16)\times [0,4)\times[0,8)\times[0,21)$.</p>
+    <p>We begin with an example.  Assume that the domain of <code><var>array</var></code> is represented by the interval  $[0,4)\times[0,8)\times[0,21)\times [0,16)$, as in the example for <code>interval-permute</code>, and the permutation is <code>#(3 0 1 2)</code>.  Then the domain of the new array is the interval $[0,16)\times [0,4)\times[0,8)\times[0,21)$.</p>
     <p>So the multi-index argument of the <code>getter</code> of the result of <code>array-permute</code> must lie in the new domain of the array, the interval  $[0,16)\times [0,4)\times[0,8)\times[0,21)$.  So if we define <code><var>old-getter</var></code> as <code>(array-getter <var>array</var>)</code>, the definition of the new array must be in fact</p>
     <pre>
  (make-array (interval-permute (array-domain array) '#(3 0 1 2))
-	(lambda (l i j k)
-	  (old-getter i j k l)))
+	     (lambda (l i j k)
+	       (old-getter i j k l)))
 </pre>
     <p>So you see that if the first argument if the new getter is in $[0,16)$, then indeed the fourth argument of <code><var>old-getter</var></code> is also in $[0,16)$, as it should be. This is a subtlety that I don't see how to overcome.  It is the listing of the arguments of the new getter, the <code>lambda</code>, that must be permuted.</p>
     <p>Mathematically, we can define $\pi^{-1}$, the inverse of a permutation $\pi$, such that $\pi^{-1}$ composed with $\pi$ gives the identity permutation.  Then the getter of the new array is, in pseudo-code, <code>(lambda multi-index (apply <var>old-getter</var> (</code>$\pi^{-1}$<code> multi-index)))</code>.  We have assumed that $\pi^{-1}$ takes a list as an argument and returns a list as a result.</p>
@@ -640,23 +624,22 @@
       a mutable-array, then <code>array-permute</code> returns the new mutable</p>
     <p><code>
        (make-array (interval-permute (array-domain <var>array</var>) </code>$\pi$)<code>
-              (lambda multi-index (apply (array-getter <var>array</var>) (</code>$\pi^{-1}$<code>multi-index)))
-              (lambda (val . multi-index) (apply (array-setter <var>array</var>) val (</code>$\pi^{-1}$<code>multi-index))))</code></p>
+                   (lambda multi-index (apply (array-getter <var>array</var>) (</code>$\pi^{-1}$<code>multi-index)))
+                   (lambda (val . multi-index) (apply (array-setter <var>array</var>) val (</code>$\pi^{-1}$<code>multi-index))))</code></p>
     <p>which employs the setter and the getter of the argument to <code>array-permute</code>.</p>
     <p>Finally, if <code><var>array</var></code> is not a mutable array, then <code>array-permute</code> returns</p>
     <p><code>
        (make-array (interval-permute (array-domain <var>array</var>) </code>$\pi$)<code>
-              (lambda multi-index (apply (array-getter <var>array</var>) (</code>$\pi^{-1}$<code>multi-index))))</code></p>
+                   (lambda multi-index (apply (array-getter <var>array</var>) (</code>$\pi^{-1}$<code>multi-index))))</code></p>
     <p>It is an error to call <code>array-permute</code> if its arguments do not satisfy these conditions.</p>
     <p><b>Procedure: </b><code><a name="array-for-each">array-for-each</a> <var>f</var> <var>array</var> . <var>arrays</var></code></p>
-    <p>If <code><var>array</var></code>, <code>(car <var>arrays</var>)</code>, ... all have the same domain <code><var>domain</var></code> and <code><var>f</var></code> is an appropriate function, then <code>array-for-each</code>
+    <p>If <code><var>array</var></code>, <code>(car <var>arrays</var>)</code>, ... all have the same domain  and <code><var>f</var></code> is an appropriate function, then <code>array-for-each</code>
       calls</p>
     <pre>
-(interval-for-each  (lambda multi-index
-		      (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))
-		    (array-domain array)
-		    #t)</pre>
-    <p>In particular, <code>array-for-each</code> always calls walks the indices of the arrays in lexicographical order.</p>
+(interval-for-each (lambda multi-index
+		     (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))
+		   (array-domain array))</pre>
+    <p>In particular, <code>array-for-each</code> always walks the indices of the arrays in lexicographical order.</p>
     <p>It is expected that <code>array-map</code> and <code>array-for-each</code> will specialize the construction of</p>
     <pre>
 (lambda multi-index
@@ -673,16 +656,16 @@
     <p>If <code><var>bool</var></code> is <code>#t</code> then the next call to <code>specialized-array-default-safe?</code> will return <code>#t</code>;
       if <code><var>bool</var></code> is <code>#f</code> then the next call to <code>specialized-array-default-safe?</code> will return <code>#f</code>;
       otherwise it is an error.</p>
-    <p><b>Procedure: </b><code><a name="specialized-array">specialized-array</a> <var>domain</var> [ <var>storage-class</var> generic-storage-class ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
+    <p><b>Procedure: </b><code><a name="specialized-array">specialized-array</a> <var>interval</var> [ <var>storage-class</var> generic-storage-class ] [ <var>safe?</var> (specialized-array-default-safe?) ]</code></p>
     <p>Constructs a specialized-array from its arguments.</p>
-    <p><code><var>domain</var></code> must be given as a nonempty interval. If given, <code><var>storage-class</var></code> must be a storage class; if it is not given it defaults to <code>generic-storage-class</code>. If given, <code><var>safe?</var></code> must be a boolean; if it is not given it defaults to the current value of <code>(specialized-array-default-safe?)</code>.</p>
+    <p><code><var>interval</var></code> must be given as a nonempty interval. If given, <code><var>storage-class</var></code> must be a storage class; if it is not given it defaults to <code>generic-storage-class</code>. If given, <code><var>safe?</var></code> must be a boolean; if it is not given it defaults to the current value of <code>(specialized-array-default-safe?)</code>.</p>
     <p>The body of the result is constructed as </p>
     <pre>
  ((storage-class-maker storage-class)
-  (interval-volume domain)
+  (interval-volume interval)
   (storage-class-default storage-class))
 </pre>
-    <p>The indexer of the resulting array is constructed as the lexicographical mapping of <code><var>domain</var></code> onto the interval <code>[0,(interval-volume <var>domain</var>)</code>.</p>
+    <p>The indexer of the resulting array is constructed as the lexicographical mapping of <code><var>interval</var></code> onto the interval <code>[0,(interval-volume <var>interval</var>)</code>.</p>
     <p>If <code><var>safe</var></code> is <code>#t</code>, then the arguments of the getter and setter (including the value to be stored) of the resulting array are checked for correctness.  If not, then <code>(array-getter array)</code> is defined simply as </p>
     <pre>
  (lambda multi-index
@@ -701,8 +684,8 @@
     <p>It is an error if the arguments of <code>specialized-array</code> do not satisfy these conditions.</p>
     <p><b>Examples. </b>A simple array that can hold any type of element can be defined with <code>(specialized-array (make-interval '#(0 0) '#(3 3)))</code>.  If you find that you're using a lot of unsafe arrays of unsigned 16-bit integers, one could define </p>
     <pre>
- (define (u16-array domain)
-   (specialized-array domain u16-storage-class #f))
+ (define (u16-array interval)
+   (specialized-array interval u16-storage-class #f))
 </pre>
     <p>and then simply call, e.g., <code>(u16-array (make-interval '#(0 0) '#(3 3)))</code>.</p>
     <p><b>Procedure: </b><code><a name="specialized-array?">specialized-array?</a> <var>obj</var></code></p>
@@ -726,8 +709,8 @@
 		      (lambda ()
 			(apply new-domain-&gt;old-domain multi-index))
 		    (specialized-array-indexer array)))</pre>
-    <p><code><var>new-domain-&gt;old-domain</var></code> must be an affine one-to-one mapping from <code>(array-domain <var>array</var>)</code> to
-      <code><var>new-domain</var></code>.</p>
+    <p><code><var>new-domain-&gt;old-domain</var></code> must be an affine one-to-one mapping from <code><var>new-domain</var></code> to
+      <code>(array-domain <var>array</var>)</code>.</p>
     <p>Note: It is assumed that affine structure of the composition of <code><var>new-domain-&gt;old-domain</var></code> and <code>(specialized-array-indexer <var>array</var></code> will be used to simplify:</p>
     <pre>
 (lambda multi-index
@@ -766,8 +749,8 @@
     <dl>
       <dt><code>(array? obj)</code></dt>
       <dd><code>(array? obj)</code></dd>
-      <dt><code>(Array-rank a)</code></dt>
-      <dd><code>(interval-dimension (array-domain obj))</code></dd>
+      <dt><code>(array-rank a)</code></dt>
+      <dd><code>(array-dimension obj)</code></dd>
       <dt><code>(make-array prototype k1 ...)</code></dt>
       <dd><code>(specialized-array (make-interval (vector 0 ...) (vector k1 ...)) storage-class)</code>.</dd>
       <dt><code>(make-shared-array array mapper k1 ...)</code></dt>
@@ -785,10 +768,13 @@
         of arrays and the arrays themselves.</li>
       <li>Intervals can have nonzero lower bounds in each dimension.</li>
       <li>Intervals cannot be empty.</li>
-      <li>Arrays must have a getter, but may have no setter.  For example, on a system with eight-bit chars, one
-        can write a function to read greyscale images in the PGM format of the netpbm package as follows.  The  lexicographical
-        order in array-&gt;specialized-array guarantees the the correct order of execution of the input procedures:
-        <pre>
+      <li>Arrays must have a getter, but may have no setter.</li></ul>
+    <h2>Other examples</h2>
+    <p>Image processing applications provided significant motivation for this SRFI.</p>
+    <p><b>Reading an image file in PGM format. </b>On a system with eight-bit chars, one
+      can write a function to read greyscale images in the PGM format of the netpbm package as follows.  The  lexicographical
+      order in array-&gt;specialized-array guarantees the the correct order of execution of the input procedures:</p>
+    <pre>
 (define make-pgm   cons)
 (define pgm-greys  car)
 (define pgm-pixels cdr)
@@ -864,9 +850,7 @@
 			   (lambda (i j)
 			     (read port)))
 			  (else
-			   (error &quot;read-pgm: not a pgm file&quot;))))))))))</pre></li></ul>
-    <h2>Other examples</h2>
-    <p>Image processing applications provided significant motivation for this SRFI.</p>
+			   (error &quot;read-pgm: not a pgm file&quot;))))))))))</pre>
     <p><b>Viewing two-dimensional slices of three-dimensional data. </b>One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \times 512\times 512$ 3D image of the body stored as a variable <code><var>body</var></code>, then one could get 1024 axial views, each $512\times512$, of this 3D body by <code>(array-curry <var>body</var> 1)</code>; or 512 median views, each $1024\times512$, by <code>(array-curry (array-permute <var>body</var> '#(1 0 2)) 1)</code>; or finally 512 frontal views, each again $1024\times512$ pixels, by <code>(array-curry (array-permute <var>body</var> '#(2 0 1)) 1)</code>; see <a href="https://en.wikipedia.org/wiki/Anatomical_plane">Anatomical plane</a>.</p>
     <p><b>Calculating second differences of images. </b>For another example, if a real-valued function is defined
       on a two-dimensional interval $I$, its second difference in the direction $d$ at the point $x$ is defined as $\Delta^2_df(x)=f(x+2d)-2f(x+d)+f(x)$,

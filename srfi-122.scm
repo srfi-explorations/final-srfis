@@ -64,14 +64,18 @@ MathJax.Hub.Config({
 	      (<li> "Draft #8 published: 2016/8/19")
 	      (<li> "Draft #9 published: 2016/8/25")
 	      (<li> "Draft #10 published: 2016/8/30")
+	      (<li> "Draft #11 published: 2016/9/7")
 	      )
 	
 	(<h2> "Abstract")
 	(<p> 
-	 "This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general, and benefit from a data type
- called "(<i> 'intervals)", which encapsulate the cross product of nonempty intervals of exact integers. These intervals  specify the domain
-information for arrays. An array is then characterized as a mapping from multi-indices of exact integers $(i_0,\\ldots,i_{d-1})$ 
-contained in an interval to Scheme values. Additionally, specialized variants of arrays are specified to provide portable programs with efficient representations for common use cases.")
+	 "This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general; at their most basic, an array is simply a "
+	 "mapping, or function, from multi-indices of exact integers $i_0,\\ldots,i_{d-1}$ to Scheme values.  The set of multi-indices "
+	 "$i_0,\\ldots,i_{d-1}$ that are valid for a given array form the "(<i>'domain)" of the array.  In this SRFI, each array's domain consists "
+	 " of a rectangular interval $[l_0,u_0)\\times[l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$, a subset of $\\mathbb Z^d$, $d$-tuples of "
+	 "integers.  Thus, we introduce a data type "
+	 "called "(<i> 'intervals)", which encapsulate the cross product of nonempty intervals of exact integers. "
+	 "Specialized variants of arrays are specified to provide portable programs with efficient representations for common use cases.")
 	(<h2> "Overview")
 	(<h3> "Bawden-style arrays")
 	(<p>  "In a "(<a> href: "https://groups.google.com/forum/?hl=en#!msg/comp.lang.scheme/7nkx58Kv6RI/a5hdsduFL2wJ" "1993 post")
@@ -84,17 +88,17 @@ contained in an interval to Scheme values. Additionally, specialized variants of
 	      "in the form of a routine "(<code>'make-shared-array)" that took a mapping from a new interval of indices into the domain "
 	      "of the array to be shared.  His implementation incorporated what he called an "(<i>'indexer)", which was a function from "
 	      "the interval $[0,u_0)\\times\\cdots\\times [0,u_{d-1})$ to an interval $[0,N)$, where the "(<i>'body)" of the array consisted of "
-	      "a single Scheme vector of length $N$.  Bawden required that the mapping specified in "(<code>'make-shared-array)" be "
+	      "a single Scheme vector of length $N$.  Bawden called the mapping specified in "(<code>'make-shared-array)" "
 	      (<i>'linear)", but I prefer the term "(<i>'affine)", as I explain later.")
 	(<p> "Mathematically, Bawden's arrays can be described as follows.  We'll use the vector notation $\\vec i$ for a multi-index "
-	     "$i_0,\\ldots,i_{d-1}$, which will correspond to Scheme "(<code>'values)".  Arrays will be denoted by capital letters "
+	     "$i_0,\\ldots,i_{d-1}$. (Multi-indices correspond to Scheme "(<code>'values)".)  Arrays will be denoted by capital letters "
 	     "$A,B,\\ldots$, the domain of the array $A$ (in Bawden's case $[0,u_0)\\times \\cdots\\times [0,u_{d-1})$) will be denoted by $D_A$, "
 	     "and the indexer of $A$, mapping $D_A$ to the interval $[0,N)$ will be denoted by $I_A$.  Initially, Bawden constructs "
 	     "$I_A$ such that $I_A(\\vec i)$ steps consecutively through the values $0,1,\\ldots,N-1$ as $\\vec i$ steps through the "
 	     "multi-indices $(0,\\ldots,0,0)$, $(0,\\ldots,0,1)$, $\\ldots$, $(0,\\ldots,1,0)$, etc., in lexicographical order, which means "
 	     "that if $\\vec i$ and $\\vec j$ are two multi-indices, then $\\vec i<\\vec j$ iff the first coordinate $k$ where $\\vec i$ and $\\vec j$ "
 	     "differ satisfies $\\vec i_k<\\vec j_k$. In fact, $I_A(\\vec i)=\\vec v\\cdot\\vec i$ for some specially-constructed vector $\\vec v$ "
-	     "that depends only on $D_A$, the domain of $A$, and $\\vec v\\cdot\\vec i$ is the dot product of $\\vec v$ and $\\vec i$.")
+	     "that depends only on $D_A$, the domain of $A$, where $\\vec v\\cdot\\vec i$ is the dot product of $\\vec v$ and $\\vec i$.")
 	(<p> "In "(<code>'make-shared-array)", Bawden allows you to specify a new $r$-dimensional interval $D_B$ as the domain of a new array $B$, and a "
 	     "mapping $T_{BA}:D_B\\to D_A$ of the form $T_{BA}(\\vec i)=M\\vec i+\\vec b$; here $M$ is a $d\\times r$ matrix of integer values and "
 	     "$\\vec b$ is a $d$-vector.  So this mapping $T_{BA}$ is "(<i>'affine)", in that $T_{BA}(\\vec i)-T_{BA}(\\vec j)=M(\\vec i-\\vec j)$ is "
@@ -104,12 +108,12 @@ contained in an interval to Scheme values. Additionally, specialized variants of
 	(<h3> "Our extensions of Bawden-style arrays")
 	(<p> "We incorporate Bawden-style arrays into this SRFI, but extend them in two relatively minor ways that we find quite useful.")
 	(<p> "First, we allow the intervals of multi-indices that form the domains of arrays to have nonzero lower bounds as "
-	     "well as upper bounds, so domains are rectangular, $d$-dimensional interval $[l_0,u_0)\\times\\cdots\\times[l_{d-1},u_{d-1})$.")
+	     "well as upper bounds, so domains are rectangular, $d$-dimensional intervals $[l_0,u_0)\\times\\cdots\\times[l_{d-1},u_{d-1})$.")
 	(<p> "Second, we introduce the notion of a "(<i>"storage class")", an object that contains functions that manipulate, store, check, etc., different tyes of values. "
 	     "A "(<code>'generic-storage-class)" can manipulate any Scheme value, "
 	     "whereas,e.g., a "(<code>'u1-storage-class)" can store only the values 0 and 1 in each element of a body.")
 	(<p> "We also require that our affine maps be one-to-one, so that if $\\vec i\\neq\\vec j$ then $T(\\vec i)\\neq T(\\vec j)$.  Without this property, modifying "
-	     "the $\\vec i$th component of $A$ would cause the $\\vec j$th component to change, an unfortunate circumstance indeed.")
+	     "the $\\vec i$th component of $A$ would cause the $\\vec j$th component to change.")
 	(<h3> "Common transformations on Bawden-style arrays")
 	(<p> "Requiring the transformations $T_{BA}:D_B\\to D_A$ to be affine may seem  esoteric and restricting, but in fact many common and useful array transformations "
 	     "can be expressed in this way.  We give several examples below: ")
@@ -139,22 +143,25 @@ contained in an interval to Scheme values. Additionally, specialized variants of
 	     "Finally, we note that by combining array currying and permuting, say, one can come up with simple expressions of powerful algorithms, such as extending "
 	     "one-dimensional tranforms to multi-dimensional separable transforms, or quickly generating two-dimensional slices of three-dimensional image data. "
 	     "Examples are given below.")
+	
 	(<h3> "Generalized arrays")
 	(<p> "Bawden-style arrays are clearly useful as a programming construct, but they do not fulfill all our needs in this area. "
 	     "An array, as commonly understood, provides a mapping from multi-indices  $(i_0,\\ldots,i_{d-1})$ of exact integers 
-in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\\times[l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$ to Scheme objects.
-Thus, two things are necessary to specify an array: an interval and a mapping.")
+in a nonempty, rectangular, $d$-dimensional interval $[l_0,u_0)\\times[l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$ (the "(<i>'domain)" of the array) to Scheme objects.
+Thus, two things are necessary to specify an array: an interval and a mapping that has that interval as its domain.")
 	(<p> "Since these two things are often sufficient for certain algorithms, we introduce in this SRFI a minimal set of interfaces for dealing with such arrays.")
-	(<p> "Specifically, an array specifies a nonempty, multi-dimensional interval, called its "(<i> "domain")", and a mapping from this domain to (single) Scheme objects.  This mapping is called the "(<i> 'getter)" of the array, accessed with the procedure "(<code>'array-getter)"; the domain of the array is accessed with the procedure "(<code>'array-domain)".")
+	(<p> "Specifically, an array specifies a nonempty, multi-dimensional interval, called its "(<i> "domain")", and a mapping from this domain to Scheme objects.  This mapping is called the "(<i> 'getter)" of the array, accessed with the procedure "(<code>'array-getter)"; the domain of the array (more precisely, the domain of the array's getter) is accessed with the procedure "(<code>'array-domain)".")
 	(<p> "If this mapping can be changed, the array is said to be "(<i> 'mutable)" and the mutation is effected
-by the array's "(<i> 'setter)", accessed by the procedure "(<code>'array-setter)".  We call an object of this type a mutable array. Note: If an array does not have a setter, then we call it immutable even though the array's getter might not be a \"pure\" function, i.e., the value it returns may not depend solely on the arguments.")
+by the array's "(<i> 'setter)", accessed by the procedure "(<code>'array-setter)".  We call an object of this type a mutable array. Note: If an array does not have a setter, then we call it immutable even though the array's getter might not be a \"pure\" function, i.e., the value it returns may not depend solely on the arguments passed to the getter.")
 	(<p> "In general, we leave the implementation of generalized arrays completely open.  They may be defined simply by closures, or
-they may have hash tables or databases behind an implementation.")
+they may have hash tables or databases behind an implementation, one may read the values from a file, etc.")
 	(<p> "In this SRFI, Bawden-style arrays are called "(<i> 'specialized)". A specialized array is an example of a mutable array.")
+	
 	(<h3> "Sharing generalized arrays")
-	(<p> "Even if an array $A$ is not a specialized array, then it could be \"shared\" by specifying a new domain $D_B$ and an affine map $T_{BA}:D_B\\to D_A$.  Each call to $B$ must be computed as $B(\\vec i)=A(T_{BA}(\\vec i))$.")
-	(<p> "One could again \"share\" $B$, given a new domain $D_C$ and a new affine transform $T_{CB}:D_C\\to D_B$, and then each access $C(\\vec i)=A(T_{BA}(T_{CB}(\\vec i)))$.  The composition $T_{BA}\\circ T_{CB}:D_C\\to D_A$, being itself affine, could be precomputed and stored as $T_{CA}:D_C\\to D_A$, and $C(\\vec i)=A(T_{CA}(\\vec i))$ can be computed with the overhead of computing a single affine transformation.")
-	(<p> "So, if we wanted, we could share generalized arrays with constant overhead by adding a single layer of multi-valued affine transformations on top of evaluating generalized arrays.  Even though this could be done transparently to the user, we do not do that here; it would be a compatible extension of this SRFI to do so.  We provide only the routine "(<code>'specialized-array-share)", not a more general "(<code>'array-share)".")
+	(<p> "Even if an array $A$ is not a specialized array, then it could be \"shared\" by specifying a new interval $D_B$ as the domain of "
+	     "a new array $B$ and an affine map $T_{BA}:D_B\\to D_A$.  Each call to $B$ would then be computed as $B(\\vec i)=A(T_{BA}(\\vec i))$.")
+	(<p> "One could again \"share\" $B$, given a new interval $D_C$ as the domain of a new array $C$ and an affine transform $T_{CB}:D_C\\to D_B$, and then each access $C(\\vec i)=A(T_{BA}(T_{CB}(\\vec i)))$.  The composition $T_{BA}\\circ T_{CB}:D_C\\to D_A$, being itself affine, could be precomputed and stored as $T_{CA}:D_C\\to D_A$, and $C(\\vec i)=A(T_{CA}(\\vec i))$ can be computed with the overhead of computing a single affine transformation.")
+	(<p> "So, if we wanted, we could share generalized arrays with constant overhead by adding a single layer of (multi-valued) affine transformations on top of evaluating generalized arrays.  Even though this could be done transparently to the user, we do not do that here; it would be a compatible extension of this SRFI to do so.  We provide only the routine "(<code>'specialized-array-share)", not a more general "(<code>'array-share)".")
 	(<p> "Certain ways of sharing generalized arrays, however, are relatively easy to code and not that expensive.  If we denote "(<code>"(array-getter A)")" by "(<code>'A-getter)", then if B is the result of "(<code>'array-extract)" applied to A, then "
 	     (<code>"(array-getter B)")" is simply "(<code>'A-getter)".  Similarly, if A is a two-dimensional array, and B is derived from A by applying the permutation $\\pi((i,j))=(j,i)$, then "(<code>"(array-getter B)")" is "
 	     (<code>"(lambda (i j) (A-getter j i))")".  Translation and currying also lead to transformed arrays whose getters are relatively efficiently derived from "(<code>'A-getter)", at least for arrays of small dimension.")
@@ -165,7 +172,7 @@ they may have hash tables or databases behind an implementation.")
 	     "In the spirit of that paper, our procedure "(<code>'array-map)" does not immediately produce a specialized array, but a simple immutable array, whose elements are recomputed from the arguments of "(<code>'array-map)
 	     " each time they are accessed.   This immutable array can be passed on to further applications of "(<code>'array-map)" for further processing, without generating the storage bodies for intermediate arrays.")
 	(<p> "We provide the procedure "(<code>'array->specialized-array)" to transform a generalized array (like that returned by "(<code>'array-map)
-	     ") to a specialized, Bawden-style array, for which accessing each element again takes $O(1)$ instructions.")
+	     ") to a specialized, Bawden-style array, for which accessing each element again takes $O(1)$ operations.")
 
 
 
@@ -204,7 +211,7 @@ they may have hash tables or databases behind an implementation.")
        "(the inverse of "(<code> 'interval-curry)"),
        which don't seem terribly natural for arrays.")
  (<li> (<b> "No empty intervals. ")"This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.")
- (<li> (<b> "Multi-valued arrays. ")"While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing mutli-valued arrays is a compatible extension of this SRFI.")
+ (<li> (<b> "Multi-valued arrays. ")"While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing multi-valued arrays is a compatible extension of this SRFI.")
  (<li> (<b> "No low-level specialized-array constructor. ")
        "While the author of the SRFI uses mainly "(<code>"(make-array ...)")", "(<code>'array-map)", and "(<code>'array->specialized-array)" to construct arrays, and while there are several other ways to construct arrays, there is no really low-level interface given for constructing specialized arrays (where one specifies a body, an indexer, etc.).  It was felt that certain difficulties, some surmountable (such as checking that a given body is compatible with a given storage class) and some not (such as checking that an indexer is indeed affine), made a low-level interface less useful.  At the same time, the simple "(<code>"(make-array ...)")" mechanism is so general, allowing one to specify getters and setters as general functions, as to cover nearly all needs.")
  
@@ -223,8 +230,8 @@ they may have hash tables or databases behind an implementation.")
 	 (<a> href: "#interval-dimension" "interval-dimension")END
 	 (<a> href: "#interval-lower-bound" "interval-lower-bound")END
 	 (<a> href: "#interval-upper-bound" "interval-upper-bound")END
-	 (<a> href: "#interval-lower-bounds->list" "interval-lower-bounds->list")END
-	 (<a> href: "#interval-upper-bounds->list" "interval-upper-bounds->list")END
+	 ;;(<a> href: "#interval-lower-bounds->list" "interval-lower-bounds->list")END
+	 ;;(<a> href: "#interval-upper-bounds->list" "interval-upper-bounds->list")END
 	 (<a> href: "#interval-lower-bounds->vector" "interval-lower-bounds->vector")END
 	 (<a> href: "#interval-upper-bounds->vector" "interval-upper-bounds->vector")END
 	 (<a> href: "#interval=" "interval=")END
@@ -302,17 +309,18 @@ is a vector whose entries are the exact integers $0,1,\\ldots,n-1$, each occurin
 (format-lambda-list '(permutation? object))
 (<p> "Returns "(<code> '#t)" if "(<code>(<var>'object))" is a permutation, and "(<code> '#f)" otherwise.")
 (<h2> "Intervals")
-(<p> "Intervals are sets of all multi-indices
-$(i_0,\\ldots,i_{d-1})$
-such that
+(<p> "An interval represents the set of all multi-indices of exact integers
+$i_0,\\ldots,i_{d-1}$
+satisfying
 $l_0\\leq i_0<u_0,\\ldots,l_{d-1}\\leq i_{d-1}<u_{d-1}$,
 where the "(<i>"lower bounds")"
-$(l_0,\\ldots,l_{d-1})$
+$l_0,\\ldots,l_{d-1}$
 and the "(<i>"upper bounds")"
-$(u_0,\\ldots,u_{d-1})$
-are specified as multi-indices of exact integers.  The positive integer $d$ is the "(<i>"dimension")"
+$u_0,\\ldots,u_{d-1}$
+are specified multi-indices of exact integers.  The positive integer $d$ is the "(<i>"dimension")"
 of the interval.  It is required that
 $l_0<u_0,\\ldots,l_{d-1}<u_{d-1}$.")
+(<p> "Intervals are a data type distinct from other Scheme data types.")
 
 (<h3> "Procedures")
 (format-lambda-list '(make-interval lower-bounds upper-bounds))
@@ -347,15 +355,15 @@ if "(<code>(<var>"interval"))" is not an interval.")
 "(<code>"(vector-ref "(<var>"upper-bounds")" "(<var>"i")")")".  It is an error to call "(<code> 'interval-lower-bound)" or "(<code> 'interval-upper-bound)"
 if "(<code>(<var>"interval"))" and "(<code>(<var>"i"))" do not satisfy these conditions.")
 
-
-(format-lambda-list '(interval-lower-bounds->list interval))
-(format-lambda-list '(interval-upper-bounds->list interval))
-(<p> "If "(<code>(<var>"interval"))" is an interval built with ")
-(<blockquote>
- (<code>"(make-interval "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
-(<p> " then "(<code> 'interval-lower-bounds->list)" returns "(<code> "(vector->list "(<var>"lower-bounds")")")
-     " and  "(<code> 'interval-upper-bounds->list)" returns "(<code> "(vector->list "(<var>"upper-bounds")")")". It is an error to call
-"(<code> 'interval-lower-bounds->list)" or "(<code> 'interval-upper-bounds->list)" if "(<code>(<var>"interval"))" does not satisfy these conditions.")
+;;; 
+;;; (format-lambda-list '(interval-lower-bounds->list interval))
+;;; (format-lambda-list '(interval-upper-bounds->list interval))
+;;; (<p> "If "(<code>(<var>"interval"))" is an interval built with ")
+;;; (<blockquote>
+;;;  (<code>"(make-interval "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
+;;; (<p> " then "(<code> 'interval-lower-bounds->list)" returns "(<code> "(vector->list "(<var>"lower-bounds")")")
+;;;      " and  "(<code> 'interval-upper-bounds->list)" returns "(<code> "(vector->list "(<var>"upper-bounds")")")". It is an error to call
+;;; "(<code> 'interval-lower-bounds->list)" or "(<code> 'interval-upper-bounds->list)" if "(<code>(<var>"interval"))" does not satisfy these conditions.;;; ")
 
 (format-lambda-list '(interval-lower-bounds->vector interval))
 (format-lambda-list '(interval-upper-bounds->vector interval))
@@ -371,9 +379,9 @@ if "(<code>(<var>"interval"))" and "(<code>(<var>"i"))" do not satisfy these con
 (<p> "If "(<code>(<var>"interval"))" is an interval built with ")
 (<blockquote>
  (<code>"(make-interval "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
-(<p> "then "(<code> 'interval-volume)" returns ")
+(<p> "then, assuming the existence of "(<code>'vector-map)", "(<code> 'interval-volume)" returns ")
 (<blockquote>
- (<code> "(apply * (map - (interval-upper-bounds->list "(<var> 'interval)") (interval-lower-bounds->list "(<var> 'interval)"))"))
+ (<code> "(apply * (vector->list (vector-map - (interval-upper-bounds->vector "(<var> 'interval)") (interval-lower-bounds->vector "(<var> 'interval)")))"))
 (<p> "It is an error to call "(<code> 'interval-volume)" if "(<code>(<var> 'interval))" does not satisfy this condition.")
 
 (format-lambda-list '(interval= interval1 interval2))
@@ -389,28 +397,21 @@ if "(<code>(<var>"interval"))" and "(<code>(<var>"i"))" do not satisfy these con
 (<p> "It is an error to call "(<code> 'interval=)" if "(<code>(<var> 'interval1))" or "(<code>(<var> 'interval2))" do not satisfy this condition.")
 
 (format-lambda-list '(interval-subset? interval1 interval2))
-(<p> "If "(<code>(<var>"interval1"))" and "(<code>(<var>"interval2"))" are intervals of the same dimension built with ")
+(<p> "If "(<code>(<var>"interval1"))" and "(<code>(<var>"interval2"))" are intervals of the same dimension $d$, "
+     "then "(<code>'interval-subset?)" returns "(<code>'#t)" if ")
 (<blockquote>
- (<code>"(make-interval "(<var>"lower-bounds1")" "(<var>"upper-bounds1")")"))
+ (<code>"(interval-lower-bound "(<var>'interval1)" j)")"${}\\geq{}$"(<code>"(interval-lower-bound "(<var>'interval2)" j)"))
 (<p> "and")
 (<blockquote>
- (<code>"(make-interval "(<var>"lower-bounds2")" "(<var>"upper-bounds2")")"))
-(<p> "respectively, then "(<code> 'interval-subset?)" returns")
-(<pre>"
-(and (equal? (map >= (vector->list lower-bounds1) (vector->list lower-bounds2))
-	     (map (lambda (x) #t) (vector->list lower-bounds1)))
-     (equal? (map <= (vector->list upper-bounds1) (vector->list upper-bounds2))
-	     (map (lambda (x) #t) (vector->list lower-bounds1))))
-")
-(<p> "In other words, it returns #t if interval1 is a subset of interval2, and #f othewise.")
-(<p> "It is an error to call "(<code> 'interval-subset?)" if "(<code>(<var> 'interval1))" or "(<code>(<var> 'interval2))" do not satisfy this condition.")
+ (<code>"(interval-upper-bound "(<var>'interval1)" j)")"${}\\leq{}$"(<code>"(interval-upper-bound "(<var>'interval2)" j)"))
+(<p> "for all $0\\leq j<d$, otherwise it returns "(<code>'#f)".  It is an error if the arguments do not satisfy these conditions.")
 
 (format-lambda-list '(interval-contains-multi-index? interval index-0 ...))
-(<p> "If "(<code>(<var> 'interval))" is an interval with dimension d and "(<code>(<var> 'index-0))", ..., form a multi-index of length d,
-then "(<code> 'interval-contains-multi-index?)" returns "(<code> #t)" if and only if")
+(<p> "If "(<code>(<var> 'interval))" is an interval with dimension $d$ and "(<code>(<var> 'index-0))", ..., is a multi-index of length $d$,
+then "(<code> 'interval-contains-multi-index?)" returns "(<code> #t)" if ")
 (<blockquote>
- (<code> "(interval-lower-bound "(<var> 'interval)" j")" $\\leq$ "(<code> (<var> 'index-j))" $<$ "(<code> "(interval-upper-bound "(<var> 'interval)" j)"))
-(<p>"for $0\\leq j < d$.")
+ (<code> "(interval-lower-bound "(<var> 'interval)" j)")" $\\leq$ "(<code> (<var> 'index-j))" $<$ "(<code> "(interval-upper-bound "(<var> 'interval)" j)"))
+(<p>"for $0\\leq j < d$, and "(<code>'#f)" otherwise.")
 (<p> "It is an error to call "(<code> 'interval-contains-multi-index?)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'index-0))",..., do not satisfy this condition.")
 
 (format-lambda-list '(interval-curry interval left-dimension))
@@ -516,7 +517,7 @@ But we have to say how the entries of "(<code>(<var>'permutation))" are associat
 (<p> "We have chosen the following convention: If the permutation is $(\\pi_0,\\ldots,\\pi_{d-1})$, and the argument interval
 represents the cross product
 $[l_0,u_0)\\times[l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$,
-then the result is the cross product
+then the result represents the cross product
 $[l_{\\pi_0},u_{\\pi_0})\\times[l_{\\pi_1},u_{\\pi_1})\\times\\cdots\\times[l_{\\pi_{d-1}},u_{\\pi_{d-1}})$.")
 (<p> "For example, if the argument interval represents $[0,4)\\times[0,8)\\times[0,21)\\times [0,16)$ and the
 permutation is "(<code>'#(3 0 1 2))", then the result of "(<code> "(interval-dilate "(<var>'interval)" "(<var>' translation)")")" will be
@@ -593,20 +594,21 @@ could be defined simply as "(<code>'generic-storage-class)", but it is assumed t
 that either save space, avoid boxing, etc., for the specialized arrays."
 
 (<h2> "Arrays")
+(<p> "Arrays are a data type distinct from other Scheme data types.")
 
 (<h3> "Procedures")
 
-(format-lambda-list '(make-array domain getter #\[ setter #\]))
+(format-lambda-list '(make-array interval getter #\[ setter #\]))
 (<p> "Assume first that the optional argument "(<code>'setter)" is not given.")
-(<p> "If "(<code>(<var> 'domain))" is an interval and "(<code>(<var> 'getter))" is a function from
-"(<code>(<var> 'domain))" to Scheme objects, then "(<code> 'array)" returns an array with domain "(<code>(<var> 'domain))"
+(<p> "If "(<code>(<var> 'interval))" is an interval and "(<code>(<var> 'getter))" is a function from
+"(<code>(<var> 'interval))" to Scheme objects, then "(<code> 'array)" returns an array with domain "(<code>(<var> 'interval))"
 and getter "(<code>(<var> 'getter))".")
-(<p> "It is an error to call "(<code> 'array)" if "(<code>(<var> 'domain))" and "(<code>(<var> 'getter))"
+(<p> "It is an error to call "(<code> 'array)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'getter))"
 do not satisfy these conditions.")
 (<p> "If now "(<code>(<var> 'setter))" is specified, assume that it is a procedure such that getter and setter satisfy: If")
 (<blockquote>
  (<code>"("(<var> 'i)(<sub> '1)",...,"(<var> 'i)(<sub> 'n)")")" $\\neq$ "(<code> "("(<var> 'j)(<sub> '1)",...,"(<var> 'j)(<sub> 'n)")"))
-(<p> "are elements of "(<code>(<var> 'domain))" and ")
+(<p> "are elements of "(<code>(<var> 'interval))" and ")
 (<blockquote>
  (<code> "(getter "(<var> 'j)(<sub> '1)" ... "(<var> 'j)(<sub> 'n)") => x"))
 (<p> "then \"after\"")
@@ -618,7 +620,7 @@ do not satisfy these conditions.")
 (<p> "and")
 (<blockquote>
  (<code> "(getter "(<var> 'i)(<sub> '1)",...,"(<var> 'i)(<sub> 'n)") => v"))
-(<p> "Then "(<code> 'array)" builds a mutable array with domain "(<code>(<var> 'domain))", getter "(<code>(<var> 'getter))", and
+(<p> "Then "(<code> 'array)" builds a mutable array with domain "(<code>(<var> 'interval))", getter "(<code>(<var> 'getter))", and
 setter "(<code>(<var> 'setter))".  It is an error to call "(<code> 'array)" if its arguments do not satisfy these conditions.")
 
 
@@ -661,8 +663,8 @@ setter "(<code>(<var> 'setter))".  It is an error to call "(<code> 'array)" if i
 (format-lambda-list '(array-getter array))
 (<p> "If "(<code>(<var> 'array))" is an array built by")
 (<blockquote>
- (<code> "(make-array "(<var> 'domain)" "(<var> 'getter)")"))
-(<p> "then "(<code> 'array-domain)" returns "(<code>(<var> 'domain))
+ (<code> "(make-array "(<var> 'interval)" "(<var> 'getter)")"))
+(<p> "then "(<code> 'array-domain)" returns "(<code>(<var> 'interval))
      " and "(<code> 'array-getter)" returns  "(<code>(<var> 'getter))".
 It is an error to call "(<code> 'array-domain)" or "(<code> 'array-getter)" if "(<code>(<var> 'array))" is not an array.")
 (<p> "Example: ")
@@ -685,7 +687,7 @@ It is an error to call "(<code> 'array-domain)" or "(<code> 'array-getter)" if "
 (format-lambda-list '(array-setter array))
 (<p> "If "(<code>(<var> 'array))" is an array built by")
 (<blockquote>
- (<code> "(make-array "(<var> 'domain)" "(<var> 'getter)" "(<var> 'setter)")"))
+ (<code> "(make-array "(<var> 'interval)" "(<var> 'getter)" "(<var> 'setter)")"))
 (<p> "then "(<code> 'array-setter)" returns "(<code>(<var> 'setter))". It is an error to call "(<code> 'array-setter)"
 if "(<code>(<var> 'array))" is not a mutable array.")
 
@@ -700,30 +702,16 @@ returns a new array with the same domain and getter")
 (format-lambda-list '(array-curry array outer-dimension))
 (<p> "If "
      (<code>(<var> 'array))
-     " is an array whose domain is an interval  [l"
-     (<sub> '0)
-     ", u"
-     (<sub> '0)
-     ") x  ... x [l"
-     (<sub> 'd-1)
-     ", u"
-     (<sub> 'd-1)
-     ") and "
+     " is an array whose domain is an interval  $[l_0,u_0)\\times\\cdots\\times[l_{d-1},u_{d-1})$, and "
      (<code>(<var> 'outer-dimension))
-     " is an exact integer strictly between 0 and d, then array-curry returns an (immutable) array with domain [l"
-     (<sub> '0)
-     ", u"
-     (<sub> '0)
-     ") x ...x [l"
-     (<sub> 'outer-dimension-1)
-     ", u"
-     (<sub> 'outer-dimension-1)
-     "), each of whose entries is in itself an array with domain [l"(<sub> 'outer-dimension)", u"(<sub> 'outer-dimension)") x ... x [l"(<sub> 'd-1)", u"(<sub> 'd-1)").")
+     " is an exact integer strictly between $0$ and $d$, then "(<code>'array-curry)" returns an immutable array with domain "
+     "$[l_0,u_0)\\times\\cdots\\times[l_{\\text{outer-dimension}-1},u_{\\text{outer-dimension}-1})$"
+     ", each of whose entries is in itself an array with domain $[l_{\\text{outer-dimension}},u_{\\text{outer-dimension}})\\times\\cdots\\times[l_{d-1},u_{d-1})$.")
 (<p> "For example, if "(<code>'A)" and "(<code> 'B)" are defined by ")
 (<pre>"
-(define domain (make-interval '#(0 0 0 0)
-			      '#(10 10 10 10)))
-(define A (make-array domain list))
+(define interval (make-interval '#(0 0 0 0)
+			        '#(10 10 10 10)))
+(define A (make-array interval list))
 (define B (array-curry A 3))
 ")
 (<p> "so")
@@ -735,7 +723,7 @@ of whose elements is itself an (immutable) array and ")
 (equal? ((array-getter A) i j k l)
 	(array-getter ((array-getter B) i j k) l)) => #t
 ")
-(<p> "for all multi-indices "(<code> "(i,j,k,l)")" in "(<code> 'domain)".")
+(<p> "for all multi-indices "(<code> "i j k l")" in "(<code> 'interval)".")
 (<p> "The type of the subarrays is the same as the type of the input array.")
 (<p> "More precisely, if ")
 (<blockquote>
@@ -798,16 +786,16 @@ of whose elements is itself an (immutable) array and ")
 (<p> "Otherwise, if "(<code>(<var>'array))" is a mutable array, then "(<code> 'array-extract)" returns ")
 (<pre>"
  (make-array new-domain
-	(array-getter array)
-	(array-setter array))
-"
-      )
+	     (array-getter array)
+	     (array-setter array))
+
+" )
 (<p> "Finally, if "(<code>(<var>'array))" is an immutable array, then "(<code> 'array-extract)" returns ")
 (<pre>"
  (make-array new-domain
-	(array-getter array))
+	     (array-getter array))
 "
-      )
+ )
 (<p> "It is an error if the arguments of "(<code>'array-extract)" do not satisfy these conditions.")
 
 
@@ -823,30 +811,30 @@ of whose elements is itself an (immutable) array and ")
 (<p> "If "(<code>(<var>'array))" is not a specialized array but is a mutable array, returns a new mutable array")
 (<pre>"
  (make-array (interval-translate (array-domain Array) translation)
-	(lambda multi-index
-	  (apply (array-getter array) (map - multi-index (vector->list translation))))
-	(lambda (val . multi-index)
-	  (apply (array-setter array) val (map - multi-index (vector->list translation)))))
-")
+	     (lambda multi-index
+	       (apply (array-getter array) (map - multi-index (vector->list translation))))
+	     (lambda (val . multi-index)
+	       (apply (array-setter array) val (map - multi-index (vector->list translation)))))
+ ")
 (<p> "that employs the same getter and setter as the original array argument.")
 (<p> "If "(<code>(<var>'array))" is not a mutable array, returns a new array")
 (<pre>"
  (make-array (interval-translate (array-domain Array) translation)
-	(lambda multi-index
-	  (apply (array-getter array) (map - multi-index (vector->list translation)))))
-")
+	     (lambda multi-index
+	       (apply (array-getter array) (map - multi-index (vector->list translation)))))
+ ")
 (<p> "that employs the same getter as the original array.")
 (<p> "It is an error if the arguments do not satisfy these conditions.")
 
 (format-lambda-list '(array-permute array permutation))
 (<p> "Assumes that "(<code>(<var>'array))" is a valid array, "(<code>(<var>'permutation))" is a valid permutation, and that the dimensions of the array and the permutation are the same. The resulting array will have domain "(<code>"(interval-permute (array-domain Array) permutation)")".")
-(<p> "We begin with an example.  Assume that the domain of "(<code>(<var>'array))" represents the argument interval  $[0,4)\\times[0,8)\\times[0,21)\\times [0,16)$, as in the example for "(<code>'interval-permute)", and the permutation is "(<code>'#(3 0 1 2))".  Then the domain of the new array is the interval $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
+(<p> "We begin with an example.  Assume that the domain of "(<code>(<var>'array))" is represented by the interval  $[0,4)\\times[0,8)\\times[0,21)\\times [0,16)$, as in the example for "(<code>'interval-permute)", and the permutation is "(<code>'#(3 0 1 2))".  Then the domain of the new array is the interval $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
 (<p> "So the multi-index argument of the "(<code>'getter)" of the result of "(<code>'array-permute)" must lie in the new domain of the array, the interval  $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.  So if we define "(<code>(<var>'old-getter))" as "(<code>"(array-getter "(<var>'array)")")", the definition of the new array must be in fact")
 (<pre>"
  (make-array (interval-permute (array-domain array) '#(3 0 1 2))
-	(lambda (l i j k)
-	  (old-getter i j k l)))
-")
+	     (lambda (l i j k)
+	       (old-getter i j k l)))
+" )
 (<p> "So you see that if the first argument if the new getter is in $[0,16)$, then indeed the fourth argument of "(<code>(<var>'old-getter))" is also in $[0,16)$, as it should be. This is a subtlety that I don't see how to overcome.  It is the listing of the arguments of the new getter, the "(<code>'lambda)", that must be permuted.")
 
 (<p> "Mathematically, we can define $\\pi^{-1}$, the inverse of a permutation $\\pi$, such that $\\pi^{-1}$ composed with $\\pi$ gives the identity permutation.  Then the getter of the new array is, in pseudo-code, "(<code>"(lambda multi-index (apply "(<var>'old-getter)" (")"$\\pi^{-1}$"(<code>" multi-index)))")".  We have assumed that $\\pi^{-1}$ takes a list as an argument and returns a list as a result.")
@@ -864,28 +852,27 @@ of whose elements is itself an (immutable) array and ")
 a mutable-array, then "(<code>'array-permute)" returns the new mutable")
 (<p>(<code>"
  (make-array (interval-permute (array-domain "(<var>'array)") ")"$\\pi$)"(<code>"
-        (lambda multi-index (apply (array-getter "(<var>'array)") (")"$\\pi^{-1}$"(<code>"multi-index)))
-        (lambda (val . multi-index) (apply (array-setter "(<var>'array)") val (")"$\\pi^{-1}$"(<code>"multi-index))))"))
+             (lambda multi-index (apply (array-getter "(<var>'array)") (")"$\\pi^{-1}$"(<code>"multi-index)))
+             (lambda (val . multi-index) (apply (array-setter "(<var>'array)") val (")"$\\pi^{-1}$"(<code>"multi-index))))"))
 (<p> "which employs the setter and the getter of the argument to "(<code>'array-permute)".")
 
 (<p> "Finally, if "(<code>(<var>'array))" is not a mutable array, then "(<code>'array-permute)" returns")
 (<p>(<code>"
  (make-array (interval-permute (array-domain "(<var>'array)") ")"$\\pi$)"(<code>"
-        (lambda multi-index (apply (array-getter "(<var>'array)") (")"$\\pi^{-1}$"(<code>"multi-index))))"))
+             (lambda multi-index (apply (array-getter "(<var>'array)") (")"$\\pi^{-1}$"(<code>"multi-index))))"))
 (<p>"It is an error to call "(<code>'array-permute)" if its arguments do not satisfy these conditions.")
 
 
 
 
 (format-lambda-list '(array-for-each f array #\. arrays))
-(<p> "If "(<code>(<var> 'array))", "(<code>"(car "(<var> 'arrays)")")", ... all have the same domain "(<code>(<var> 'domain))" and "(<code>(<var> 'f))" is an appropriate function, then "(<code> 'array-for-each)"
+(<p> "If "(<code>(<var> 'array))", "(<code>"(car "(<var> 'arrays)")")", ... all have the same domain  and "(<code>(<var> 'f))" is an appropriate function, then "(<code> 'array-for-each)"
 calls")
 (<pre>"
-(interval-for-each  (lambda multi-index
-		      (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))
-		    (array-domain array)
-		    #t)")
-(<p> "In particular, "(<code> 'array-for-each)" always calls walks the indices of the arrays in lexicographical order.")
+(interval-for-each (lambda multi-index
+		     (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))
+		   (array-domain array))")
+(<p> "In particular, "(<code> 'array-for-each)" always walks the indices of the arrays in lexicographical order.")
 
 (<p> "It is expected that "(<code> 'array-map)" and "(<code> 'array-for-each)" will specialize the construction of")
 (<pre>"
@@ -909,17 +896,17 @@ calls")
 if "(<code>(<var>'bool))" is "(<code>'#f)" then the next call to "(<code>'specialized-array-default-safe?)" will return "(<code>'#f)";
 otherwise it is an error.")
 
-(format-lambda-list '(specialized-array domain #\[ storage-class "generic-storage-class" #\] #\[ safe? "(specialized-array-default-safe?)"#\]))
+(format-lambda-list '(specialized-array interval #\[ storage-class "generic-storage-class" #\] #\[ safe? "(specialized-array-default-safe?)"#\]))
 (<p> "Constructs a specialized-array from its arguments.")
-(<p> (<code>(<var>'domain))" must be given as a nonempty interval. If given, "(<code>(<var>'storage-class))" must be a storage class; if it is not given it defaults to "(<code>'generic-storage-class)". If given, "(<code>(<var>'safe?))" must be a boolean; if it is not given it defaults to the current value of "(<code>"(specialized-array-default-safe?)")".")
+(<p> (<code>(<var>'interval))" must be given as a nonempty interval. If given, "(<code>(<var>'storage-class))" must be a storage class; if it is not given it defaults to "(<code>'generic-storage-class)". If given, "(<code>(<var>'safe?))" must be a boolean; if it is not given it defaults to the current value of "(<code>"(specialized-array-default-safe?)")".")
 
 (<p>"The body of the result is constructed as ")
 (<pre>"
  ((storage-class-maker storage-class)
-  (interval-volume domain)
+  (interval-volume interval)
   (storage-class-default storage-class))
 ")
-(<p> "The indexer of the resulting array is constructed as the lexicographical mapping of "(<code>(<var>'domain))" onto the interval "(<code> "[0,(interval-volume "(<var>'domain)")")".")
+(<p> "The indexer of the resulting array is constructed as the lexicographical mapping of "(<code>(<var>'interval))" onto the interval "(<code> "[0,(interval-volume "(<var>'interval)")")".")
 
 (<p> "If "(<code>(<var>'safe))" is "(<code>'#t)", then the arguments of the getter and setter (including the value to be stored) of the resulting array are checked for correctness.  If not, then "(<code>"(array-getter array)")" is defined simply as ")
 (<pre>"
@@ -940,8 +927,8 @@ otherwise it is an error.")
 (<p> "It is an error if the arguments of "(<code>'specialized-array)" do not satisfy these conditions.")
 (<p> (<b> "Examples. ")"A simple array that can hold any type of element can be defined with "(<code>"(specialized-array (make-interval '#(0 0) '#(3 3)))")".  If you find that you're using a lot of unsafe arrays of unsigned 16-bit integers, one could define ")
 (<pre>"
- (define (u16-array domain)
-   (specialized-array domain u16-storage-class #f))
+ (define (u16-array interval)
+   (specialized-array interval u16-storage-class #f))
 ")
 (<p> "and then simply call, e.g., "(<code>"(u16-array (make-interval '#(0 0) '#(3 3)))")".")
 
@@ -968,8 +955,8 @@ Returns an object that is behaviorally equivalent to a specialized array with th
 		      (lambda ()
 			(apply new-domain->old-domain multi-index))
 		    (specialized-array-indexer array)))")
-(<p> (<code>(<var> 'new-domain->old-domain))" must be an affine one-to-one mapping from "(<code>"(array-domain "(<var> 'array)")")" to
-"(<code>(<var> 'new-domain))".")
+(<p> (<code>(<var> 'new-domain->old-domain))" must be an affine one-to-one mapping from "(<code>(<var> 'new-domain))" to
+"(<code>"(array-domain "(<var> 'array)")")".")
 
 (<p> "Note: It is assumed that affine structure of the composition of "(<code>(<var> 'new-domain->old-domain))" and "(<code>"(specialized-array-indexer "(<var> 'array))" will be used to simplify:")
 (<pre>"
@@ -1017,19 +1004,19 @@ specialized-arrays.  Many of the functions in these previous SRFIs  have corresp
 translate: ")
 (<dl>
  (<dt> (<code> "(array? obj)"))
- (<dd> (<code> "(array? obj)"))
- (<dt> (<code> "(Array-rank a)"))
- (<dd> (<code> "(interval-dimension (array-domain obj))"))
+   (<dd> (<code> "(array? obj)"))
+ (<dt> (<code> "(array-rank a)"))
+   (<dd> (<code> "(array-dimension obj)"))
  (<dt> (<code> "(make-array prototype k1 ...)"))
- (<dd> (<code> "(specialized-array (make-interval (vector 0 ...) (vector k1 ...)) storage-class)")".")
+   (<dd> (<code> "(specialized-array (make-interval (vector 0 ...) (vector k1 ...)) storage-class)")".")
  (<dt> (<code> "(make-shared-array array mapper k1 ...)"))
- (<dd> (<code> "(specialized-array-share array (make-interval (vector 0 ...) (vector k1 ...)) mapper)"))
+   (<dd> (<code> "(specialized-array-share array (make-interval (vector 0 ...) (vector k1 ...)) mapper)"))
  (<dt> (<code> "(array-in-bounds? array index1 ...)"))
- (<dd> (<code> "(interval-contains-multi-index? (array-domain array) index1 ...)"))
+   (<dd> (<code> "(interval-contains-multi-index? (array-domain array) index1 ...)"))
  (<dt> (<code> "(array-ref array k1 ...)"))
- (<dd> (<code> "((array-getter array) k1 ...)"))
+   (<dd> (<code> "((array-getter array) k1 ...)"))
  (<dt> (<code> "(array-set! array obj k1 ...)"))
- (<dd> (<code> "((array-setter array) obj k1 ...)"))
+   (<dd> (<code> "((array-setter array) obj k1 ...)"))
  )
 (<p> "At the same time, this SRFI has some special features:")
 (<ul>
@@ -1038,10 +1025,14 @@ objects in their own rights, with their own procedures.  We make a sharp distinc
 of arrays and the arrays themselves.")
  (<li> "Intervals can have nonzero lower bounds in each dimension.")
  (<li> "Intervals cannot be empty.")
- (<li> "Arrays must have a getter, but may have no setter.  For example, on a system with eight-bit chars, one
+ (<li> "Arrays must have a getter, but may have no setter."))
+
+(<h2> "Other examples")
+(<p> "Image processing applications provided significant motivation for this SRFI.")
+(<p> (<b> "Reading an image file in PGM format. ")"On a system with eight-bit chars, one
 can write a function to read greyscale images in the PGM format of the netpbm package as follows.  The  lexicographical
-order in array->specialized-array guarantees the the correct order of execution of the input procedures:"
-       (<pre>"
+order in array->specialized-array guarantees the the correct order of execution of the input procedures:")
+(<pre>"
 (define make-pgm   cons)
 (define pgm-greys  car)
 (define pgm-pixels cdr)
@@ -1117,11 +1108,9 @@ order in array->specialized-array guarantees the the correct order of execution 
 			   (lambda (i j)
 			     (read port)))
 			  (else
-			   (error \"read-pgm: not a pgm file\"))))))))))"))
+			   (error \"read-pgm: not a pgm file\"))))))))))"
 )
 					
-(<h2> "Other examples")
-(<p> "Image processing applications provided significant motivation for this SRFI.")
 (<p> (<b> "Viewing two-dimensional slices of three-dimensional data. ")"One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \\times 512\\times 512$ 3D image of the body stored as a variable "(<code>(<var>'body))", then one could get 1024 axial views, each $512\\times512$, of this 3D body by "(<code> "(array-curry "(<var>'body)" 1)")"; or 512 median views, each $1024\\times512$, by "(<code> "(array-curry (array-permute "(<var>'body)" '#(1 0 2)) 1)")"; or finally 512 frontal views, each again $1024\\times512$ pixels, by "(<code> "(array-curry (array-permute "(<var>'body)" '#(2 0 1)) 1)")"; see "(<a> href: "https://en.wikipedia.org/wiki/Anatomical_plane" "Anatomical plane")".")
 (<p> (<b> "Calculating second differences of images. ")"For another example, if a real-valued function is defined
 on a two-dimensional interval $I$, its second difference in the direction $d$ at the point $x$ is defined as $\\Delta^2_df(x)=f(x+2d)-2f(x+d)+f(x)$,
