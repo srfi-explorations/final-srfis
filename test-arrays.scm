@@ -1,6 +1,6 @@
 ;;(declare (standard-bindings)(extended-bindings)(block)(not safe) (fixnum))
 (declare (inlining-limit 0))
-(define tests 10000)
+(define tests 10)
 
 (define-macro (test expr value)
   `(let* (;(ignore (pretty-print ',expr))
@@ -227,11 +227,12 @@
     ((= i tests))
   (let* ((lower (map (lambda (x) (random 10)) (vector->list (make-vector (random 3 11)))))
 	 (upper (map (lambda (x) (+ (random 1 11) x)) lower))
-	 (left-dimension (random 1 (- (length lower) 1))))
+	 (left-dimension (random 1 (- (length lower) 1)))
+	 (right-dimension (- (length lower) left-dimension)))
     (test-multiple-values
      (interval-curry (make-interval (list->vector lower)
 				    (list->vector upper))
-		     left-dimension)
+		     right-dimension)
      (list (make-interval (list->vector (reverse (list-tail (reverse lower) (- (length lower) left-dimension))))
 			  (list->vector (reverse (list-tail (reverse upper) (- (length upper) left-dimension)))))
 	   (make-interval (list->vector (list-tail lower left-dimension))
@@ -1045,10 +1046,10 @@
 	   (copied-array
 	    (array->specialized-array Array
 				      storage-class))
-	   (outer-dimension
+	   (inner-dimension
 	    (random 1 (interval-dimension domain)))
 	   (domains
-	    (call-with-values (lambda ()(interval-curry domain outer-dimension)) list))
+	    (call-with-values (lambda ()(interval-curry domain inner-dimension)) list))
 	   (outer-domain
 	    (car domains))
 	   (inner-domain
@@ -1056,17 +1057,17 @@
 	   (immutable-curry
 	    (array-curry (make-array (array-domain Array)
 				     (array-getter Array))
-			 outer-dimension))
+			 inner-dimension))
 	   (mutable-curry
 	    (array-curry (make-array (array-domain Array)
 				     (array-getter Array)
 				     (array-setter Array))
-			 outer-dimension))
+			 inner-dimension))
 	   (specialized-curry
-	    (array-curry Array outer-dimension))
+	    (array-curry Array inner-dimension))
 	   (immutable-curry-from-definition
 	    (call-with-values
-		(lambda () (interval-curry (array-domain Array) outer-dimension))
+		(lambda () (interval-curry (array-domain Array) inner-dimension))
 	      (lambda (outer-interval inner-interval)
 		(make-array outer-interval
 			    (lambda outer-multi-index
@@ -1075,7 +1076,7 @@
 					    (apply (array-getter Array) (append outer-multi-index inner-multi-index)))))))))
 	   (mutable-curry-from-definition
 	    (call-with-values
-		(lambda () (interval-curry (array-domain Array) outer-dimension))
+		(lambda () (interval-curry (array-domain Array) inner-dimension))
 	      (lambda (outer-interval inner-interval)
 		(make-array outer-interval
 			    (lambda outer-multi-index
@@ -1086,7 +1087,7 @@
 					    (apply (array-setter Array) v (append outer-multi-index inner-multi-index)))))))))
 	   (specialized-curry-from-definition
 	    (call-with-values
-		(lambda () (interval-curry (array-domain Array) outer-dimension))
+		(lambda () (interval-curry (array-domain Array) inner-dimension))
 	      (lambda (outer-interval inner-interval)
 		(make-array outer-interval
 			    (lambda outer-multi-index
@@ -2093,7 +2094,7 @@
 	;; one-dimensional sub-arrays.
 	(array-for-each 1D-transform
 			(array-curry (array-permute array permutation)
-				     (fx- n 1)))
+				     1))
 	;; return the permutation to the identity
 	(vector-set! permutation d d)
 	(vector-set! permutation (fx- n 1) (fx- n 1))))))

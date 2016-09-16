@@ -192,38 +192,39 @@
 	(else
 	 (##interval-upper-bounds->list interval))))
 
-(define (interval-curry interval left-dimension)
+(define (interval-curry interval right-dimension)
   (cond ((not (interval? interval))
-	 (error "interval-curry: argument is not an interval: " interval left-dimension))
+	 (error "interval-curry: argument is not an interval: " interval right-dimension))
 	((not (< 1 (##interval-dimension interval)))  ;; redundant check, but useful error message
-	 (error "interval-curry: the dimension of the interval is not greater than 1: " interval left-dimension))
-	((not (##exact-integer? left-dimension))
-	 (error "interval-curry: argument is not an exact integer: " interval left-dimension))
-	((not (< 0 left-dimension (##interval-dimension interval)))
-	 (error "interval-curry: argument is not between 0 and (interval-dimension interval) (exclusive): " interval left-dimension))
+	 (error "interval-curry: the dimension of the interval is not greater than 1: " interval right-dimension))
+	((not (##exact-integer? right-dimension))
+	 (error "interval-curry: argument is not an exact integer: " interval right-dimension))
+	((not (< 0 right-dimension (##interval-dimension interval)))
+	 (error "interval-curry: argument is not between 0 and (interval-dimension interval) (exclusive): " interval right-dimension))
 	(else
-	 (##interval-curry interval left-dimension))))
+	 (##interval-curry interval right-dimension))))
 
-(define (##interval-curry interval left-dimension)
-  (let ((n (##interval-dimension interval)))
-    (let ((lower-bounds (##interval-lower-bounds interval))
-	  (upper-bounds (##interval-upper-bounds interval))
-	  (left-lower-bounds (make-vector left-dimension))
-	  (left-upper-bounds (make-vector left-dimension))
-	  (right-lower-bounds (make-vector (- n left-dimension)))
-	  (right-upper-bounds (make-vector (- n left-dimension))))
-      (do ((i 0 (+ i 1)))
-	  ((= i left-dimension)
-	   (do ((i i (+ i 1)))
-	       ((= i n)
-		(values (make-##interval left-lower-bounds
-					 left-upper-bounds)
-			(make-##interval right-lower-bounds
-					 right-upper-bounds)))
-	     (vector-set! right-lower-bounds (- i left-dimension) (vector-ref lower-bounds i))
-	     (vector-set! right-upper-bounds (- i left-dimension) (vector-ref upper-bounds i))))
-	(vector-set! left-lower-bounds i (vector-ref lower-bounds i))
-	(vector-set! left-upper-bounds i (vector-ref upper-bounds i))))))
+(define (##interval-curry interval right-dimension)
+  (let* ((n (##interval-dimension interval))
+	 (left-dimension (fx- n right-dimension))
+	 (lower-bounds (##interval-lower-bounds interval))
+	 (upper-bounds (##interval-upper-bounds interval))
+	 (left-lower-bounds (make-vector left-dimension))
+	 (left-upper-bounds (make-vector left-dimension))
+	 (right-lower-bounds (make-vector (- n left-dimension)))
+	 (right-upper-bounds (make-vector (- n left-dimension))))
+    (do ((i 0 (+ i 1)))
+	((= i left-dimension)
+	 (do ((i i (+ i 1)))
+	     ((= i n)
+	      (values (make-##interval left-lower-bounds
+				       left-upper-bounds)
+		      (make-##interval right-lower-bounds
+				       right-upper-bounds)))
+	   (vector-set! right-lower-bounds (- i left-dimension) (vector-ref lower-bounds i))
+	   (vector-set! right-upper-bounds (- i left-dimension) (vector-ref upper-bounds i))))
+      (vector-set! left-lower-bounds i (vector-ref lower-bounds i))
+      (vector-set! left-upper-bounds i (vector-ref upper-bounds i)))))
 
 (define (permutation? permutation)
   (and (vector? permutation)
@@ -1936,9 +1937,9 @@
 	 (##immutable-array-permute Array permutation))))
 
 
-(define (##immutable-array-curry Array left-dimension)
+(define (##immutable-array-curry Array right-dimension)
   (call-with-values
-      (lambda () (interval-curry (array-domain Array) left-dimension))
+      (lambda () (interval-curry (array-domain Array) right-dimension))
     (lambda (left-interval right-interval)
       (let ((getter (array-getter Array)))
 	(make-array left-interval
@@ -1960,9 +1961,9 @@
 					  (lambda right-multi-index
 					    (apply getter (append left-multi-index right-multi-index))))))))))))
 
-(define (##mutable-array-curry Array left-dimension)
+(define (##mutable-array-curry Array right-dimension)
   (call-with-values
-      (lambda () (interval-curry (array-domain Array) left-dimension))
+      (lambda () (interval-curry (array-domain Array) right-dimension))
     (lambda (left-interval right-interval)
       (let ((getter (array-getter Array))
 	    (setter   (array-setter   Array)))
@@ -2003,9 +2004,9 @@
 					  (lambda      right-multi-index  (apply getter   (append left-multi-index right-multi-index)))
 					  (lambda (v . right-multi-index) (apply setter v (append left-multi-index right-multi-index))))))))))))
 
-(define (##specialized-array-curry Array left-dimension)
+(define (##specialized-array-curry Array right-dimension)
   (call-with-values
-      (lambda () (interval-curry (array-domain Array) left-dimension))
+      (lambda () (interval-curry (array-domain Array) right-dimension))
     (lambda (left-interval right-interval)
       (make-array left-interval
 		  (case (##interval-dimension left-interval)
@@ -2024,19 +2025,19 @@
 		    (else (lambda left-multi-index 
 			    (specialized-array-share Array right-interval (lambda right-multi-index (apply values (append left-multi-index right-multi-index)))))))))))
 
-(define (array-curry Array left-dimension)
+(define (array-curry Array right-dimension)
   (cond ((not (array? Array))
-	 (error "array-curry: The first argument is not an array: " Array left-dimension))
-	((not (##exact-integer? left-dimension))
-	 (error "array-curry: The second argument is not an exact integer: " Array left-dimension))
-	((not (< 0 left-dimension (##interval-dimension (array-domain Array))))
-	 (error "array-curry: The second argument is not between 0 and (interval-dimension (array-domain array)) (exclusive): " Array left-dimension))
+	 (error "array-curry: The first argument is not an array: " Array right-dimension))
+	((not (##exact-integer? right-dimension))
+	 (error "array-curry: The second argument is not an exact integer: " Array right-dimension))
+	((not (< 0 right-dimension (##interval-dimension (array-domain Array))))
+	 (error "array-curry: The second argument is not between 0 and (interval-dimension (array-domain array)) (exclusive): " Array right-dimension))
 	((specialized-array? Array)
-	 (##specialized-array-curry Array left-dimension))
+	 (##specialized-array-curry Array right-dimension))
 	((mutable-array? Array)
-	 (##mutable-array-curry Array left-dimension))
+	 (##mutable-array-curry Array right-dimension))
 	(else ; immutable array
-	 (##immutable-array-curry Array left-dimension))))
+	 (##immutable-array-curry Array right-dimension))))
 
 ;;; 
 ;;; array-map returns an array whose domain is the same as the common domain of (cons array arrays)

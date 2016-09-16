@@ -28,7 +28,8 @@
       <li>Draft #8 published: 2016/8/19</li>
       <li>Draft #9 published: 2016/8/25</li>
       <li>Draft #10 published: 2016/8/30</li>
-      <li>Draft #11 published: 2016/9/7</li></ul>
+      <li>Draft #11 published: 2016/9/7</li>
+      <li>Draft #12 published: 2016/9/16</li></ul>
     <h2>Abstract</h2>
     <p>This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general; at their most basic, an array is simply a mapping, or function, from multi-indices of exact integers $i_0,\ldots,i_{d-1}$ to Scheme values.  The set of multi-indices $i_0,\ldots,i_{d-1}$ that are valid for a given array form the <i>domain</i> of the array.  In this SRFI, each array's domain consists  of a rectangular interval $[l_0,u_0)\times[l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$, a subset of $\mathbb Z^d$, $d$-tuples of integers.  Thus, we introduce a data type called <i>intervals</i>, which encapsulate the cross product of nonempty intervals of exact integers. Specialized variants of arrays are specified to provide portable programs with efficient representations for common use cases.</p>
     <h2>Overview</h2>
@@ -264,14 +265,14 @@
     </blockquote>
     <p>for $0\leq j &lt; d$, and <code>#f</code> otherwise.</p>
     <p>It is an error to call <code>interval-contains-multi-index?</code> if <code><var>interval</var></code> and <code><var>index-0</var></code>,..., do not satisfy this condition.</p>
-    <p><b>Procedure: </b><code><a name="interval-curry">interval-curry</a> <var>interval</var> <var>left-dimension</var></code></p>
+    <p><b>Procedure: </b><code><a name="interval-curry">interval-curry</a> <var>interval</var> <var>right-dimension</var></code></p>
     <p>Conceptually, <code>interval-curry</code> takes a $d$-dimensional interval 
       $[l_0,u_0)\times [l_1,u_1)\times\cdots\times[l_{d-1},u_{d-1})$
       and splits it into two parts</p>
-    <blockquote>$[l_0,u_0)\times\cdots\times[l_{\text{left-dimension}-1},u_{\text{left-dimension}-1})$
+    <blockquote>$[l_0,u_0)\times\cdots\times[l_{d-\text{right-dimension}-1},u_{d-\text{right-dimension}-1})$
     </blockquote>
     <p>and</p>
-    <blockquote>$[l_{\text{left-dimension}},u_{\text{left-dimension}})\times\cdots\times[l_{d-1},u_{d-1})$
+    <blockquote>$[l_{d-\text{right-dimension}},u_{d-\text{right-dimension}})\times\cdots\times[l_{d-1},u_{d-1})$
     </blockquote>
     <p>This function, the inverse of Cartesian products or cross products of intervals, is used to keep track of the domains of curried arrays.</p>
     <p>More precisely, if <code><var>interval</var></code> is an interval and <code><var>left-dimension</var></code> is an exact integer that satisfies</p>
@@ -281,14 +282,14 @@
     <pre>
 (values (make-interval (vector (interval-lower-bound interval 0)
 			       ...
-			       (interval-lower-bound interval (- left-dimension 1)))
+			       (interval-lower-bound interval (- d right-dimension 1)))
 		       (vector (interval-upper-bound interval 0)
 			       ...
-			       (interval-upper-bound interval (- left-dimension 1))))
-	(make-interval (vector (interval-lower-bound interval left-dimension)
+			       (interval-upper-bound interval (- d right-dimension 1))))
+	(make-interval (vector (interval-lower-bound interval (- d right-dimension))
 			       ...
 			       (interval-lower-bound interval (- (interval-dimension interval) 1)))
-		       (vector (interval-upper-bound interval left-dimension)
+		       (vector (interval-upper-bound interval (- d right-dimension))
 			       ...
 			       (interval-upper-bound interval (- (interval-dimension interval) 1)))))</pre>
     <p>It is an error to call <code>interval-curry</code> if its arguments do not satisfy these conditions.</p>
@@ -491,8 +492,8 @@
 (lambda multi-index
   (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))</pre>
     <p>It is an error to call <code>array-map</code> if its arguments do not satisfy these conditions.</p>
-    <p><b>Procedure: </b><code><a name="array-curry">array-curry</a> <var>array</var> <var>outer-dimension</var></code></p>
-    <p>If <code><var>array</var></code> is an array whose domain is an interval  $[l_0,u_0)\times\cdots\times[l_{d-1},u_{d-1})$, and <code><var>outer-dimension</var></code> is an exact integer strictly between $0$ and $d$, then <code>array-curry</code> returns an immutable array with domain $[l_0,u_0)\times\cdots\times[l_{\text{outer-dimension}-1},u_{\text{outer-dimension}-1})$, each of whose entries is in itself an array with domain $[l_{\text{outer-dimension}},u_{\text{outer-dimension}})\times\cdots\times[l_{d-1},u_{d-1})$.</p>
+    <p><b>Procedure: </b><code><a name="array-curry">array-curry</a> <var>array</var> <var>inner-dimension</var></code></p>
+    <p>If <code><var>array</var></code> is an array whose domain is an interval  $[l_0,u_0)\times\cdots\times[l_{d-1},u_{d-1})$, and <code><var>inner-dimension</var></code> is an exact integer strictly between $0$ and $d$, then <code>array-curry</code> returns an immutable array with domain $[l_0,u_0)\times\cdots\times[l_{d-\text{inner-dimension}-1},u_{d-\text{inner-dimension}-1})$, each of whose entries is in itself an array with domain $[l_{d-\text{inner-dimension}},u_{d-\text{inner-dimension}})\times\cdots\times[l_{d-1},u_{d-1})$.</p>
     <p>For example, if <code>A</code> and <code>B</code> are defined by </p>
     <pre>
 (define interval (make-interval '#(0 0 0 0)
@@ -512,13 +513,13 @@
     <p>for all multi-indices <code>i j k l</code> in <code>interval</code>.</p>
     <p>The type of the subarrays is the same as the type of the input array.</p>
     <p>More precisely, if </p>
-    <blockquote><code>0 &lt; <var>outer-dimension</var> &lt; (interval-dimension (array-domain <var>array</var>))</code>
+    <blockquote><code>0 &lt; <var>inner-dimension</var> &lt; (interval-dimension (array-domain <var>array</var>))</code>
     </blockquote>
     <p>then <code>array-curry</code> returns a result as follows.</p>
     <p>If the input array is specialized, then array-curry returns</p>
     <pre>
 (call-with-values
-    (lambda () (interval-curry (array-domain array) outer-dimension))
+    (lambda () (interval-curry (array-domain array) inner-dimension))
   (lambda (outer-interval inner-interval)
     (make-array outer-interval
 		(lambda outer-multi-index
@@ -529,7 +530,7 @@
     <p>Otherwise, if the input array is mutable, then array-curry returns</p>
     <pre>
 (call-with-values
-    (lambda () (interval-curry (array-domain array) outer-dimension))
+    (lambda () (interval-curry (array-domain array) inner-dimension))
   (lambda (outer-interval inner-interval)
     (make-array outer-interval
 		(lambda outer-multi-index
@@ -541,7 +542,7 @@
     <p>Otherwise, array-curry returns</p>
     <pre>
 (call-with-values
-    (lambda () (interval-curry (array-domain array) outer-dimension))
+    (lambda () (interval-curry (array-domain array) inner-dimension))
   (lambda (outer-interval inner-interval)
     (make-array outer-interval
 		(lambda outer-multi-index
@@ -851,7 +852,7 @@
 			     (read port)))
 			  (else
 			   (error &quot;read-pgm: not a pgm file&quot;))))))))))</pre>
-    <p><b>Viewing two-dimensional slices of three-dimensional data. </b>One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \times 512\times 512$ 3D image of the body stored as a variable <code><var>body</var></code>, then one could get 1024 axial views, each $512\times512$, of this 3D body by <code>(array-curry <var>body</var> 1)</code>; or 512 median views, each $1024\times512$, by <code>(array-curry (array-permute <var>body</var> '#(1 0 2)) 1)</code>; or finally 512 frontal views, each again $1024\times512$ pixels, by <code>(array-curry (array-permute <var>body</var> '#(2 0 1)) 1)</code>; see <a href="https://en.wikipedia.org/wiki/Anatomical_plane">Anatomical plane</a>.</p>
+    <p><b>Viewing two-dimensional slices of three-dimensional data. </b>One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \times 512\times 512$ 3D image of the body stored as a variable <code><var>body</var></code>, then one could get 1024 axial views, each $512\times512$, of this 3D body by <code>(array-curry <var>body</var> 2)</code>; or 512 median views, each $1024\times512$, by <code>(array-curry (array-permute <var>body</var> '#(1 0 2)) 2)</code>; or finally 512 frontal views, each again $1024\times512$ pixels, by <code>(array-curry (array-permute <var>body</var> '#(2 0 1)) 2)</code>; see <a href="https://en.wikipedia.org/wiki/Anatomical_plane">Anatomical plane</a>.</p>
     <p><b>Calculating second differences of images. </b>For another example, if a real-valued function is defined
       on a two-dimensional interval $I$, its second difference in the direction $d$ at the point $x$ is defined as $\Delta^2_df(x)=f(x+2d)-2f(x+d)+f(x)$,
       and this function is defined only for those $x$ for which $x$, $x+d$, and $x+2d$ are all in $I$. See the beginning of the section on &quot;Moduli of smoothness&quot; in <a href="http://www.math.purdue.edu/~lucier/692/related_papers_summaries.html#Wavelets-and-approximation-theory">these notes on wavelets and approximation theory</a> for more details.</p>
@@ -965,7 +966,7 @@ Second-difference images in the direction $k\times (1,-1)$, $k=1,2,...$, whereve
 	 ;; one-dimensional sub-arrays.
 	 (array-for-each 1D-transform
 			 (array-curry (array-permute array permutation)
-				      (fx- n 1)))
+				      1))
 	 ;; return the permutation to the identity
 	 (vector-set! permutation d d)
 	 (vector-set! permutation (fx- n 1) (fx- n 1))))))
