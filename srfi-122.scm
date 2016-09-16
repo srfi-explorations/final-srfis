@@ -65,6 +65,7 @@ MathJax.Hub.Config({
 	      (<li> "Draft #9 published: 2016/8/25")
 	      (<li> "Draft #10 published: 2016/8/30")
 	      (<li> "Draft #11 published: 2016/9/7")
+	      (<li> "Draft #12 published: 2016/9/16")
 	      )
 	
 	(<h2> "Abstract")
@@ -414,13 +415,13 @@ then "(<code> 'interval-contains-multi-index?)" returns "(<code> #t)" if ")
 (<p>"for $0\\leq j < d$, and "(<code>'#f)" otherwise.")
 (<p> "It is an error to call "(<code> 'interval-contains-multi-index?)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'index-0))",..., do not satisfy this condition.")
 
-(format-lambda-list '(interval-curry interval left-dimension))
+(format-lambda-list '(interval-curry interval right-dimension))
 (<p> "Conceptually, "(<code> 'interval-curry)" takes a $d$-dimensional interval 
 $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
      "and splits it into two parts")
-(<blockquote> "$[l_0,u_0)\\times\\cdots\\times[l_{\\text{left-dimension}-1},u_{\\text{left-dimension}-1})$")
+(<blockquote> "$[l_0,u_0)\\times\\cdots\\times[l_{d-\\text{right-dimension}-1},u_{d-\\text{right-dimension}-1})$")
 (<p> "and")
-(<blockquote> "$[l_{\\text{left-dimension}},u_{\\text{left-dimension}})\\times\\cdots\\times[l_{d-1},u_{d-1})$")
+(<blockquote> "$[l_{d-\\text{right-dimension}},u_{d-\\text{right-dimension}})\\times\\cdots\\times[l_{d-1},u_{d-1})$")
 (<p> "This function, the inverse of Cartesian products or cross products of intervals, is used to keep track of the domains of curried arrays.")
 (<p> "More precisely, if "(<code>(<var> 'interval))" is an interval and "(<code>(<var> 'left-dimension))" is an exact integer that satisfies")
 (<blockquote>
@@ -429,14 +430,14 @@ $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
 (<pre>"
 (values (make-interval (vector (interval-lower-bound interval 0)
 			       ...
-			       (interval-lower-bound interval (- left-dimension 1)))
+			       (interval-lower-bound interval (- d right-dimension 1)))
 		       (vector (interval-upper-bound interval 0)
 			       ...
-			       (interval-upper-bound interval (- left-dimension 1))))
-	(make-interval (vector (interval-lower-bound interval left-dimension)
+			       (interval-upper-bound interval (- d right-dimension 1))))
+	(make-interval (vector (interval-lower-bound interval (- d right-dimension))
 			       ...
 			       (interval-lower-bound interval (- (interval-dimension interval) 1)))
-		       (vector (interval-upper-bound interval left-dimension)
+		       (vector (interval-upper-bound interval (- d right-dimension))
 			       ...
 			       (interval-upper-bound interval (- (interval-dimension interval) 1)))))")
 (<p> "It is an error to call "(<code> 'interval-curry)" if its arguments do not satisfy these conditions.")
@@ -699,14 +700,14 @@ returns a new array with the same domain and getter")
   (apply f (map (lambda (g) (apply g multi-index)) (map array-getter (cons array arrays)))))")
 (<p> "It is an error to call "(<code> 'array-map)" if its arguments do not satisfy these conditions.")
 
-(format-lambda-list '(array-curry array outer-dimension))
+(format-lambda-list '(array-curry array inner-dimension))
 (<p> "If "
      (<code>(<var> 'array))
      " is an array whose domain is an interval  $[l_0,u_0)\\times\\cdots\\times[l_{d-1},u_{d-1})$, and "
-     (<code>(<var> 'outer-dimension))
+     (<code>(<var> 'inner-dimension))
      " is an exact integer strictly between $0$ and $d$, then "(<code>'array-curry)" returns an immutable array with domain "
-     "$[l_0,u_0)\\times\\cdots\\times[l_{\\text{outer-dimension}-1},u_{\\text{outer-dimension}-1})$"
-     ", each of whose entries is in itself an array with domain $[l_{\\text{outer-dimension}},u_{\\text{outer-dimension}})\\times\\cdots\\times[l_{d-1},u_{d-1})$.")
+     "$[l_0,u_0)\\times\\cdots\\times[l_{d-\\text{inner-dimension}-1},u_{d-\\text{inner-dimension}-1})$"
+     ", each of whose entries is in itself an array with domain $[l_{d-\\text{inner-dimension}},u_{d-\\text{inner-dimension}})\\times\\cdots\\times[l_{d-1},u_{d-1})$.")
 (<p> "For example, if "(<code>'A)" and "(<code> 'B)" are defined by ")
 (<pre>"
 (define interval (make-interval '#(0 0 0 0)
@@ -727,12 +728,12 @@ of whose elements is itself an (immutable) array and ")
 (<p> "The type of the subarrays is the same as the type of the input array.")
 (<p> "More precisely, if ")
 (<blockquote>
- (<code> "0 < "(<var> 'outer-dimension)" < (interval-dimension (array-domain "(<var> 'array)"))"))
+ (<code> "0 < "(<var> 'inner-dimension)" < (interval-dimension (array-domain "(<var> 'array)"))"))
 (<p> "then "(<code> 'array-curry)" returns a result as follows.")
 (<p> "If the input array is specialized, then array-curry returns")
 (<pre>"
 (call-with-values
-    (lambda () (interval-curry (array-domain array) outer-dimension))
+    (lambda () (interval-curry (array-domain array) inner-dimension))
   (lambda (outer-interval inner-interval)
     (make-array outer-interval
 		(lambda outer-multi-index
@@ -744,7 +745,7 @@ of whose elements is itself an (immutable) array and ")
 (<p> "Otherwise, if the input array is mutable, then array-curry returns")
 (<pre>"
 (call-with-values
-    (lambda () (interval-curry (array-domain array) outer-dimension))
+    (lambda () (interval-curry (array-domain array) inner-dimension))
   (lambda (outer-interval inner-interval)
     (make-array outer-interval
 		(lambda outer-multi-index
@@ -756,7 +757,7 @@ of whose elements is itself an (immutable) array and ")
 (<p> "Otherwise, array-curry returns")
 (<pre>"
 (call-with-values
-    (lambda () (interval-curry (array-domain array) outer-dimension))
+    (lambda () (interval-curry (array-domain array) inner-dimension))
   (lambda (outer-interval inner-interval)
     (make-array outer-interval
 		(lambda outer-multi-index
@@ -1111,7 +1112,7 @@ order in array->specialized-array guarantees the the correct order of execution 
 			   (error \"read-pgm: not a pgm file\"))))))))))"
 )
 					
-(<p> (<b> "Viewing two-dimensional slices of three-dimensional data. ")"One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \\times 512\\times 512$ 3D image of the body stored as a variable "(<code>(<var>'body))", then one could get 1024 axial views, each $512\\times512$, of this 3D body by "(<code> "(array-curry "(<var>'body)" 1)")"; or 512 median views, each $1024\\times512$, by "(<code> "(array-curry (array-permute "(<var>'body)" '#(1 0 2)) 1)")"; or finally 512 frontal views, each again $1024\\times512$ pixels, by "(<code> "(array-curry (array-permute "(<var>'body)" '#(2 0 1)) 1)")"; see "(<a> href: "https://en.wikipedia.org/wiki/Anatomical_plane" "Anatomical plane")".")
+(<p> (<b> "Viewing two-dimensional slices of three-dimensional data. ")"One example might be viewing two-dimensional slices of three-dimensional data in different ways.  If one has a $1024 \\times 512\\times 512$ 3D image of the body stored as a variable "(<code>(<var>'body))", then one could get 1024 axial views, each $512\\times512$, of this 3D body by "(<code> "(array-curry "(<var>'body)" 2)")"; or 512 median views, each $1024\\times512$, by "(<code> "(array-curry (array-permute "(<var>'body)" '#(1 0 2)) 2)")"; or finally 512 frontal views, each again $1024\\times512$ pixels, by "(<code> "(array-curry (array-permute "(<var>'body)" '#(2 0 1)) 2)")"; see "(<a> href: "https://en.wikipedia.org/wiki/Anatomical_plane" "Anatomical plane")".")
 (<p> (<b> "Calculating second differences of images. ")"For another example, if a real-valued function is defined
 on a two-dimensional interval $I$, its second difference in the direction $d$ at the point $x$ is defined as $\\Delta^2_df(x)=f(x+2d)-2f(x+d)+f(x)$,
 and this function is defined only for those $x$ for which $x$, $x+d$, and $x+2d$ are all in $I$. See the beginning of the section on \"Moduli of smoothness\" in "(<a> href: "http://www.math.purdue.edu/~lucier/692/related_papers_summaries.html#Wavelets-and-approximation-theory" "these notes on wavelets and approximation theory")" for more details.")
@@ -1225,7 +1226,7 @@ Second-difference images in the direction $k\\times (1,-1)$, $k=1,2,...$, wherev
 	 ;; one-dimensional sub-arrays.
 	 (array-for-each 1D-transform
 			 (array-curry (array-permute array permutation)
-				      (fx- n 1)))
+				      1))
 	 ;; return the permutation to the identity
 	 (vector-set! permutation d d)
 	 (vector-set! permutation (fx- n 1) (fx- n 1))))))
