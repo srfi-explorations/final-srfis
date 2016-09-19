@@ -1,0 +1,618 @@
+﻿<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 144: Flonums</title>
+    <link rel="stylesheet" href="http://srfi.schemers.org/srfi.css" type="text/css" />
+  </head>
+
+  <body>
+
+<h1>Title</h1>
+
+SRFI 144: Flonums
+
+<h1>Author</h1>
+
+John Cowan
+
+<h1>Status</h1>
+
+
+<h1>Abstract</h1>
+
+<p>
+<em>Flonums</em> are a subset of the inexact real numbers provided by a Scheme implementation.  In most Schemes, the flonums and the inexact reals are the same.  
+</p>
+
+<h1>Issues</h1>
+
+None at present.
+
+<h1>Rationale</h1>
+
+<p>
+Flonum arithmetic is already supported by many systems, mainly to remove
+type-dispatching overhead. Standardizing flonum arithmetic increases
+the portability of code that uses it. Standardizing the range or precision
+of flonums would make flonum operations inefficient on some systems, which
+would defeat their purpose. Therefore, this SRFI specifies some of the semantics
+of flonums, but makes the range and precision implementation-dependent.
+</p>
+<p>
+The sources of the procedures in this SRFI are R7RS-small, 
+<a href="http://srfi.schemers.org/srfi-141/srfi-141.html">
+SRFI 141</a>,
+<a href="http://www.r6rs.org/final/html/r6rs-lib/r6rs-lib-Z-H-12.html#node_sec_11.3">
+the R6RS flonum library</a>,
+and the <a href="http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/math.h.html">
+C99/Posix library</a> <tt>&lt;math.h&gt;</tt>,
+which should be available directly or indirectly to Scheme implementers.
+(The C90 version of <tt>&lt;math.h&gt;</tt> lacks <tt></tt>arcsinh<tt></tt>,
+<tt></tt>arccosh<tt></tt>, <tt></tt>arctanh<tt></tt>, <tt></tt>erf<tt></tt>,
+and <tt></tt>tgamma<tt></tt>.)
+</p>
+<p>
+Scheme implementations that use IEEE 754 floating point numbers should follow
+the specifications of that standard.
+</p>
+<h1>Specification</h1>
+
+<p>
+It is required that if two flonums are equal in the sense of <tt>=</tt>, they are also equal in the sense of <tt>eqv?</tt>.  That is, if 12.0f0 is a 32-bit inexact number, and 12.0 is a 64-bit inexact number, they cannot both be flonums.  In this situation, it is recommended that the 64-bit numbers be flonums.
+</p>
+<p>
+It is an error, except as otherwise noted, for an argument not to be a flonum.  If the mathematically correct result is a non-real number, the result is <tt>+nan.0</tt> if the implementation supports that number, or an arbitrary flonum if not.
+</p>
+<p>
+Flonum operations must be at least as accurate as their generic counterparts applied to flonum arguments.  In some cases, operations should be more accurate than their naive generic expansions because they have a smaller total roundoff error.
+</p>
+<p>
+This SRFI uses <em>x, y, z</em> as
+parameter names for flonum arguments, and <em>ix</em>
+as a name for an integer-valued flonum argument, i.e., a flonum for which the
+<tt>integer?</tt> predicate returns true.
+</p>
+<h2 id="Constants">Constants</h2>
+<p>
+The following (mostly C99) constants are provided as Scheme variables.
+</p>
+<p>
+<tt>fl-e</tt>
+</p>
+<p>
+Bound to the value of the mathematical constant <em>e</em>.  (C99 <tt>M_E</tt>)
+</p>
+<p>
+<tt>fl-log2-e</tt>
+</p>
+<p>
+Bound to the value of <tt>(fllog fl-e 2.0)</tt>.  (C99 <tt>M_LOG2E</tt>)
+</p>
+<p>
+<tt>fl-log10-e</tt>
+</p>
+<p>
+Bound to the value of <tt>(fllog fl-e 10.0)</tt>.  (C99 <tt>M_LOG10E</tt>)
+</p>
+<p>
+<tt>fl-ln-2</tt>
+</p>
+<p>
+Bound to the value of <tt>(fllog 2.0)</tt>  (C99 <tt>M_LN2</tt>)
+</p>
+<p>
+<tt>fl-ln-10</tt>
+</p>
+<p>
+Bound to the value of <tt>(fllog 10.0)</tt>  (C99 <tt>M_LN10</tt>)
+</p>
+<p>
+<tt>fl-pi</tt>
+</p>
+<p>
+Bound to the value of the mathematical constant π.  (C99 <tt>M_PI</tt>)
+</p>
+<p>
+<tt>fl-pi/2</tt>
+</p>
+<p>
+Bound to the value of <tt>(fl/ fl-pi 2.0)</tt>  (C99 <tt>M_PI_2</tt>)
+</p>
+<p>
+<tt>fl-pi/4</tt>
+</p>
+<p>
+Bound to the value of <tt>(fl/ fl-pi 4.0)</tt>  (C99 <tt>M_PI_4</tt>)
+</p>
+<p>
+<tt>fl-1/pi</tt>
+</p>
+<p>
+Bound to the value of <tt>(fl/ 1.0 fl-pi)</tt>.  (C99 <tt>M_1_PI</tt>)
+</p>
+<p>
+<tt>fl-2/pi</tt>
+</p>
+<p>
+Bound to the value of <tt>(fl/ 2.0 fl-pi)</tt>.  (C99 <tt>M_2_PI</tt>)
+</p>
+<p>
+<tt>fl-2/sqrt-pi</tt>
+</p>
+<p>
+Bound to the value of <tt>(fl/ 2.0 (flsqrt fl-pi))</tt>.  (C99 <tt>M_2_SQRTPI</tt>)
+</p>
+<p>
+<tt>fl-sqrt-2</tt>
+</p>
+<p>
+Bound to the value of <tt>(flsqrt 2.0)</tt>.  (C99 <tt>M_SQRT2</tt>)
+</p>
+<p>
+<tt>fl-1/sqrt-2</tt>
+</p>
+<p>
+Bound to the value of <tt>(fl/ 1,0 (flsqrt 2.0))</tt>.  (C99 <tt>M_SQRT1_2</tt>)
+</p>
+<p>
+<tt>fl-maximum</tt>
+</p>
+<p>
+Bound to the value of the largest finite flonum.
+</p>
+<p>
+<tt>fl-fast-+*</tt>
+</p>
+<p>
+Bound to <tt>#t</tt> if <tt>(fl+* x y z)</tt> is known to be faster than <tt>(fl+ (fl* x y) z), or </tt>#f<tt> otherwise.  (C99 </tt>FP_FAST_FMA`)
+</p>
+<p>
+<tt>fl-integer-exponent-zero</tt>
+</p>
+<p>
+Bound to whatever exact integer is returned by <tt>(flinteger-binary-log 0)</tt>.  (C99 <tt>FP_ILOGB0</tt>)
+</p>
+<p>
+<tt>fl-integer-exponent-nan</tt>
+</p>
+<p>
+Bound to whatever exact integer is returned by <tt>(flinteger-binary-log +0.nan)</tt>.  (C99 <tt>FP_ILOGBNAN</tt>)
+</p>
+<p>
+<tt>fl-radix</tt>
+</p>
+<p>
+Bound to the floating-point radix as an exact integer (2 on most machines).  (C99 <tt>FLT_RADIX</tt>)
+</p>
+<h2 id="Constructors">Constructors</h2>
+<p>
+<tt>(flonum </tt><em>number</em><tt>)</tt>
+</p>
+<p>
+Returns the closest flonum equivalent to <em>number</em> in the sense of <tt>=</tt> and <tt>&lt;</tt>.
+</p>
+<p>
+<tt>(fladjacent </tt><em>x y</em><tt>)</tt>
+</p>
+<p>
+Returns a flonum adjacent to <em>x</em> in the direction of <em>y</em>.  Specifically: if <em>x &lt; y</em>, returns the smallest flonum larger than <em>x</em>; if <em>x &gt; y</em>, returns the largest flonum smaller than <em>x</em>; if <em>x = y</em>, returns <em>x</em>.  (C99 <tt>nextafter</tt>)
+</p>
+<p>
+<tt>(flcopysign </tt><em>x y</em><tt>)</tt>
+</p>
+<p>
+Returns a flonum whose magnitude is the magnitude of <em>x</em> and whose sign is the sign of <em>y</em>.  (C99 <tt>copysign</tt>)
+</p>
+<p>
+<tt>(make-flonum </tt><em>x n</em><tt>)</tt>
+</p>
+<p>
+Returns the flonum <tt>(fl* x (expt 2 n))</tt>, where <em>n</em> is a non-negative integer with an implementation-dependent maximum value.  (C99 <tt>ldexp</tt>)
+</p>
+<p>
+<tt>(make-binary-flonum </tt><em>x n</em><tt>)</tt>
+</p>
+<p>
+Returns the flonum <tt>(fl* x (expt fl-radix n))</tt>, where <em>n</em> is a non-negative integer with an implementation-dependent maximum value.  (C99 <tt>scalbn</tt>)
+</p>
+<h2 id="Accessors">Accessors</h2>
+<p>
+<tt>(flinteger-fraction </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns two values, the integral part of <em>x</em> as a flonum and the fractional part of <em>x</em> as a flonum.  (C99 <tt>modf</tt>)
+</p>
+<p>
+<tt>(flexponent </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns the value of <tt>(* (fltrunc (fllog (flabs x) fl-radix)) (flsgn x))</tt>.  (C99 <tt>logb</tt>)
+</p>
+<p>
+<tt>(flinteger-exponent </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns the same as <tt>flexponent</tt> as an exact integer.  If <em>x</em> is zero, returns <tt>fl-integer-exponent-zero</tt>; if <em>x</em> is a NaN, returns <tt>fl-integer-exponent-nan</tt>; if <em>x</em> is infinite, returns a large implementation-dependent exact integer.  (C99 <tt>ilogb</tt>)
+</p>
+<p>
+<tt>(flnormalized-fraction-exponent </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns two values, a correctly signed fraction <em>y</em> whose absolute value is between 0.5 (inclusive) and 1.0 (exclusive), and an exponent <em>n</em> such that <tt>(fl* y (flexpt 2 n))</tt> is equal to <em>x</em>.  (C99 <tt>frexp</tt>)
+</p>
+<h2 id="Predicates">Predicates</h2>
+<p>
+<tt>(flonum? </tt><em>obj</em><tt>)</tt>
+</p>
+<p>
+Returns <tt>#t</tt> if <em>obj</em> is a flonum and <tt>#f</tt> otherwise.
+</p>
+<p>
+<tt>(fl= </tt><em>x y z</em> ...<tt>)</tt>
+</p>
+<p>
+<tt>(fl&lt; </tt><em>x y z</em> ...<tt>)</tt>
+</p>
+<p>
+<tt>(fl&gt; </tt><em>x y z</em> ...<tt>)</tt>
+</p>
+<p>
+<tt>(fl&lt;= </tt><em>x y z</em> ...<tt>)</tt>
+</p>
+<p>
+<tt>(fl&gt;= </tt><em>x y z</em> ...<tt>)</tt>
+</p>
+<p>
+These procedures return <tt>#t</tt> if their arguments are (respectively): equal, monotonically increasing, monotonically decreasing, monotonically nondecreasing, or monotonically nonincreasing; they return <tt>#f</tt> otherwise. These predicates must be transitive.
+</p>
+<p>
+<tt>(flinteger? </tt><em>x</em>`)‌‌
+</p>
+<p>
+<tt>(flzero? </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(flpositive? </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(flnegative? </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(flodd? </tt><em>ix</em><tt>)</tt>
+</p>
+<p>
+<tt>(fleven? </tt><em>ix</em><tt>)</tt>
+</p>
+<p>
+<tt>(flfinite? </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(flinfinite? </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(flnan? </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+These numerical predicates test a flonum for a particular property, returning <tt>#t</tt> or <tt>#f</tt>. The <tt>flinteger?</tt> procedure tests whether the flonum is an integer, <tt>flzero?</tt> tests whether it is <tt>fl=?</tt> to zero, <tt>flpositive?</tt> tests whether it is greater than zero, <tt>flnegative?</tt> tests whether it is less than zero, <tt>flodd?</tt> tests whether it is odd, <tt>fleven?</tt> tests whether it is even, <tt>flfinite?</tt> tests whether it is not an infinity and not a NaN, <tt>flinfinite?</tt> tests whether it is an infinity, and <tt>flnan?</tt> tests whether it is a NaN.
+</p>
+<p>
+Note that <tt>(flnegative? -0.0)</tt> must return <tt>#f</tt>;
+otherwise it would lose the correspondence with
+<tt>(fl&lt; -0.0 0.0)</tt>, which is <tt>#f</tt>
+according to IEEE 754.
+</p>
+<h2 id="Arithmetic">Arithmetic</h2>
+<p>
+<tt>(fl+ </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(fl* </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Return the flonum sum or product of their flonum
+arguments.  In general, they should return the flonum that best
+approximates the mathematical sum or product.
+</p>
+<p>
+<tt>(fl+* </tt><em>x y z</em><tt>)</tt>
+</p>
+<p>
+Returns <tt>(fl+ (fl* x y) z)</tt>, possibly faster.  If the constant <tt>fl-fast-fl+*</tt>
+is <tt>#t</tt>, it will definitely be faster.  (C99 <tt>fma</tt>)
+</p>
+<p>
+<tt>(fl- </tt><em>x y</em> ...<tt>)</tt>
+</p>
+<p>
+<tt>(fl/ </tt><em>x y</em> ...<tt>)</tt>
+</p>
+<p>
+With two or more arguments, these procedures return the 
+difference or quotient of their arguments, associating to the
+left.  With one argument, however, they return the additive or
+multiplicative inverse of their argument.
+</p>
+<p>
+In general, they
+should return the flonum that best approximates the mathematical
+difference or quotient.
+</p>
+<p>
+<tt>(flmax </tt><em>x</em> ...<tt>)</tt>
+</p>
+<p>
+<tt>(flmin </tt><em>x</em> ...<tt>)</tt>
+</p>
+<p>
+Return the maximum/minimum argument.  If there are no arguments,
+these procedures return <tt>+inf.0</tt>/<tt>-inf.0</tt> if the implementation
+provides these numbers, and <tt>fl-maximum</tt> / its negation otherwise.
+</p>
+<p>
+<tt>(flabs </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns the absolute value of <em>x</em>.
+</p>
+<p>
+<tt>(flabsdiff </tt><em>x y</em><tt>)</tt>
+</p>
+<p>
+Returns <tt>(flabs (fl- x y))</tt> without internal overflow.  (C99 <tt>fdim</tt>)
+</p>
+<p>
+<tt>(flsgn </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns <tt>(flcopy-sign 1.0 x)</tt>.
+</p>
+<p>
+<tt>(flnumerator </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(fldenominator </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns the numerator/denominator of <em>x</em>
+as a flonum; the result is computed as if <em>x</em> was represented as
+a fraction in lowest terms.  The denominator is always positive.  The
+denominator of 0.0 is defined to be 1.0.
+</p>
+<p>
+<tt>(flfloor </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(flceiling </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(flround </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(fltruncate </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+These procedures return integral flonums for flonum arguments that are
+not infinities or NaNs.  For such arguments, <tt>flfloor</tt> returns the
+largest integral flonum not larger than <em>x</em>.  The <tt>flceiling</tt>
+procedure
+returns the smallest integral flonum not smaller than <em>x</em>.
+The <tt>fltruncate</tt> procedure returns the integral flonum closest to <em>x</em> whose
+absolute value is not larger than the absolute value of <em>x</em>.
+The <tt>flround</tt> procedure returns the closest integral flonum to <em>x</em>,
+rounding to even when <em>x</em> represents a number halfway between two integers.
+</p>
+<p>
+Although infinities and NaNs are not integers, these procedures return
+an infinity when given an infinity as an argument, and a NaN when
+given a NaN.
+</p>
+<h2 id="Exponentsandlogarithms">Exponents and logarithms</h2>
+<p>
+<tt>(flexp </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Corresponds to <tt>exp</tt>.
+</p>
+<p>
+<tt>(flexp2 </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Corresponds to <tt>(expt 2.0 x)</tt>.  (C99 <tt>exp2</tt>)
+</p>
+<p>
+<tt>(flexp-1 </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Equivalent to <tt>(flexp (fl- x 1))</tt>, but is much more accurate for values of x near 1.  It is recommended for use in algorithms where accuracy is important.  (C99 <tt>expm1</tt>)
+</p>
+<p>
+<tt>(flsquare </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns the square of <em>x</em>.
+</p>
+<p>
+<tt>(flsqrt </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns the principal square root of <em>x</em>. For -0.0,
+<tt>flsqrt</tt> should return -0.0.
+</p>
+<p>
+<tt>(flcbrt </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns the cube root of <em>x</em>.
+</p>
+<p>
+<tt>(flhypot </tt><em>x y</em><tt>)</tt>
+</p>
+<p>
+Returns <tt>(flsqrt (+ (flsquare x) (flsquare y)))</tt>.
+</p>
+<p>
+<tt>(flexpt </tt><em>x y</em><tt>)</tt>
+</p>
+<p>
+Returns <em>x</em> raised to the power <em>y</em>.  If <em>x</em> is zero, then
+the result is zero.
+</p>
+<p>
+<tt>(fllog </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns the natural logarithm of <em>x</em>.
+</p>
+<p>
+<tt>(fllog1+ </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Equivalent to <tt>(fllog (fl+ 1 x))</tt>, but is much more accurate for values of x near 1.  It is recommended for use in algorithms where accuracy is important.  (C99 <tt>log1p</tt>)
+</p>
+<p>
+<tt>(fllog2 </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns the base-2 logarithm of <em>x</em>.
+</p>
+<p>
+<tt>(fllog10 </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns the base-10 logarithm of <em>x</em>.
+</p>
+<h2 id="Trigonometricfunctions">Trigonometric functions</h2>
+<p>
+<tt>(flsin </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(flcos </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(fltan </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(flasin </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(flacos </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(flatan </tt><em>x</em> [<em>y</em>]<tt>)</tt>
+</p>
+<p>
+<tt>(flsinh </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(flcosh </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(fltanh </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(flasinh </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(flacosh </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+<tt>(flatanh </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+These are the usual trigonometric functions. The <tt>flatan</tt> function, when passed two arguments, returns <tt>(flatan (/ y x))</tt> without requiring the use of complex numbers (C99 <tt>atan2</tt>).
+</p>
+<h2 id="Integerdivision">Integer division</h2>
+<p>
+The following procedures are the flonum counterparts of procedures from <a href="http://srfi.schemers.org/srfi-141/srfi-141.html">SRFI 141</a>:
+</p>
+<pre>flfloor/ flfloor-quotient flfloor-remainder
+flceiling/ flceiling-quotient flceiling-remainder
+fltruncate/ fltruncate-quotient fltruncate-remainder
+flround/ flround-quotient flround-remainder
+fleuclidean/ fleuclidean-quotient fleuclidean-remainder
+flbalanced/ flbalanced-quotient flbalanced-remainder
+</pre><p>
+They have the same arguments and semantics as their generic counterparts,
+except that it is an error if the arguments are not flonums.
+</p>
+<p>
+<tt>(flremquo </tt><em>x y</em><tt>)</tt>
+</p>
+<p>
+Returns two values, the result of <tt>(flround-remainder x y)</tt> and the low-order <em>n</em> bits (as a correctly signed exact integer) of the rounded quotient.  The value of <em>n</em> is implementation-dependent but at least 3.  This function can be used to reduce the argument of the inverse trigonometric functions, while preserving the correct quadrant or octant.
+</p>
+<h2 id="Specialfunctions">Special functions</h2>
+<p>
+<tt>(flgamma </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns Γ(<em>x</em>), the gamma function applied to <em>x</em>.  This is equal to (<em>x</em>-1)! for
+integers.  (C99 <tt>tgamma</tt>)
+</p>
+<p>
+<tt>(flloggamma </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns two values, log Γ(|<em>x</em>|) without internal overflow, and sgn(Γ(<em>x</em>)).  (C99 <tt>lgamma</tt>)
+</p>
+<p>
+<tt>(first-bessel </tt><em>x n</em><tt>)</tt>
+</p>
+<p>
+Returns the <em>n</em>th order Bessel function of the first kind applied to <em>x</em>, J<sub>n</sub>(x).  (C99 <tt>j0</tt>, <tt>j1</tt>, <tt>jn</tt>)
+</p>
+<p>
+<tt>(second-bessel </tt><em>x n</em><tt>)</tt>
+</p>
+<p>
+Returns the <em>n</em>th order Bessel function of the second kind applied to <em>x</em>, Y<sub>n</sub>(x).  (C99 <tt>y0</tt>, <tt>y1</tt>, <tt>yn</tt>)
+</p>
+<p>
+<tt>(erf </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns the error function erf(<em>x</em>).  (C99 <tt>erf</tt>)
+</p>
+<p>
+<tt>(erfc </tt><em>x</em><tt>)</tt>
+</p>
+<p>
+Returns the complementary error function, <tt>(- 1 (erf x))</tt>.  (C99 <tt>erfc</tt>)
+</p>
+
+<h1>Implementation</h1>
+
+TBD
+
+<h1>Acknowledgements</h1>
+
+This SRFI would not have been possible without Taylor Campbell, the R6RS editors, and the ISO C Working Group.
+
+<h1>Copyright</h1>
+<p>Copyright (C) John Cowan (2016).  All Rights Reserved.</p>
+
+<p>
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:</p>
+
+<p>
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.</p>
+
+<p>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.</p>
+
+  <hr>
+  <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>
