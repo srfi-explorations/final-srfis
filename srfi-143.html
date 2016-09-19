@@ -1,0 +1,264 @@
+﻿<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 143: Fixnums</title>
+    <link rel="stylesheet" href="http://srfi.schemers.org/srfi.css" type="text/css" />
+  </head>
+
+  <body>
+
+<h1>Title</h1>
+
+SRFI 143: Fixnums
+
+<h1>Author</h1>
+
+John Cowan
+
+<h1>Status</h1>
+
+
+<h1>Abstract</h1>
+
+<p>
+Fixnums are an implementation-defined subset of the exact integers.
+Every implementation of this SRFI must define its fixnum range as a closed
+interval [-2<sup><em>w</em>-1</sup>, 2<sup><em>w</em>-1</sup>-1], 
+where <em>w</em> is an integer greater than or equal to 24.  Every
+mathematical integer within an implementation's fixnum range must
+correspond to an exact integer that is representable within the
+implementation.
+A fixnum is an exact integer whose value lies within this
+fixnum range.
+</p>
+
+<h1>Issues</h1>
+
+None at present.
+
+<h1>Rationale</h1>
+
+<p>
+Fixnum arithmetic is already supported by many systems, mainly
+for efficiency. Standardizing fixnum arithmetic increases
+the portability of code that uses it. Standardizing the range
+of fixnums would make fixnum operations inefficient on some systems,
+which would defeat their purpose. Therefore, this SRFI specifies
+some of the semantics of fixnums, but makes the range implementation-dependent.
+</p>
+<p>
+Existing implementations employ different implementation strategies
+for fixnums: Some implement the model specified by R6RS (overflows
+cause exceptions), some implement modular arithmetic (overflows
+ “wrap around”), and others do not handle arithmetic overflows at all.
+In programs that use fixnums instead of generic arithmetic,
+overflows are typically programming mistakes.
+</p>
+
+<h1>Specification</h1>
+
+<p>
+Fixnum operations perform integer arithmetic on their fixnum
+arguments.  If any argument is not a fixnum, or if the mathematical result
+is not representable as a fixnum, it is an error: this is known as the
+<em>fixnum rule</em>.  In particular, this means
+that fixnum operations may return a mathematically incorrect fixnum in these
+situations without raising an error.  Exceptions to the fixnum rule
+are noted below.
+</p>
+<p>
+This SRFI uses <em>fx</em>, <em>fx<sub>1</sub></em>, <em>fx<sub>2</sub></em>, etc., as parameter
+names for fixnum arguments.  Except as noted, the name of fixnum procedures begin with
+the letters <tt>fx</tt>.  In most cases they correspond to an R7RS-small or
+<a href="http://srfi.schemers.org/srfi-141/srfi-141.html">SRFI 141</a>
+or
+<a href="http://srfi.schemers.org/srfi-142/srfi-142.html">SRFI 142</a>
+on general integers.
+</p>
+<h2 id="Constants">Constants</h2>
+<p>
+<tt>fx-width</tt>
+</p>
+<p>
+Bound to the value <em>w</em> that specifies the implementation-defined range.
+(R6RS <tt>fixnum-width</tt> is a procedure that always returns this value.)
+</p>
+<p>
+<tt>fx-greatest</tt>
+</p>
+<p>
+Bound to the value 2<sup><em>w</em>-1</sup>-1, the largest representable fixnum.
+(R6RS <tt>greatest-fixnum</tt> is a procedure that always returns this value.)
+</p>
+<p>
+<tt>fx-least</tt>
+</p>
+<p>
+Bound to the value -2<sup><em>w</em>-1</sup>, the smallest representable fixnum.
+(R6RS <tt>least-fixnum</tt> is a procedure that always returns this value.)
+</p>
+<h2 id="Predicate">Predicate</h2>
+<p>
+<tt>(fixnum? </tt><em>obj</em><tt>)</tt>
+</p>
+<p>
+Returns <tt>#t</tt> if <em>obj</em> is an exact integer within the fixnum range,
+and <tt>#f</tt> otherwise.
+</p>
+<h2 id="Basicarithmetic">Basic arithmetic</h2>
+<p>
+The following procedures are the fixnum counterparts of procedures from R7RS-small:
+</p>
+<pre>fxzero? fxpositive? fxnegative? fxodd? fxeven?
+fx= fx&lt; fx&gt; fx&lt;= fx&gt;=
+fxmax fxmin
+fx+ fx- fx*
+fxabs fxsquare fxsqrt fxexpt
+</pre><p>
+Except for the effects of the fixnum rule, the <tt>fx</tt> versions
+have the same arguments and semantics as their generic counterparts,
+with the following additional modifications:
+</p>
+<ul><li>The procedures <tt>fx+</tt> and <tt>fx*</tt> accept exactly two arguments.
+</li></ul><ul><li>The procedure <tt>fx-</tt> accepts either one or two arguments.
+</li></ul><ul><li>The <tt>fxsqrt</tt> procedure is the counterpart of <tt>exact-integer-sqrt</tt> rather than <tt>sqrt</tt>.
+</li></ul><p>
+Note that in accordance with the fixnum rule the procedure <tt>fxabs</tt> has undefined
+results when applied to <tt>fx-least</tt>.
+</p>
+<h2 id="Arithmeticwithcarry">Arithmetic with carry</h2>
+<p>
+<tt>(fx+/carry </tt><em>fx<sub>1</sub> fx<sub>2</sub> fx<sub>3</sub></em><tt>)‌‌</tt>
+</p>
+<p>
+Returns the two fixnum results of the following computation:
+</p>
+<pre>(let* ((s (+ fx1 fx2 fx3))
+       (s0 (balanced-remainder s (expt 2 (fixnum-width))))
+       (s1 (balanced-quotient s (expt 2 (fixnum-width)))))
+  (values s0 s1))
+</pre><p>
+<tt>(fx-/carry </tt><em>fx<sub>1</sub> fx<sub>2</sub> fx<sub>3</sub></em><tt>)‌‌</tt>
+</p>
+<p>
+Returns the two fixnum results of the following computation:
+</p>
+<pre>(let* ((d (- fx1 fx2 fx3))
+       (d0 (balanced-remainder d (expt 2 (fixnum-width))))
+       (d1 (balanced-quotient d (expt 2 (fixnum-width)))))
+  (values d0 d1))
+</pre><p>
+<tt>(fx*/carry </tt><em>fx<sub>1</sub> fx<sub>2</sub> fx<sub>3</sub></em><tt>)‌‌</tt>
+</p>
+<p>
+Returns the two fixnum results of the following computation:
+</p>
+<pre>(let* ((s (+ (* fx1, fx1)) fx3))
+       (s0 (balanced-remainder s (expt 2 (fixnum-width))))
+       (s1 (balanced-quotient s (expt 2 (fixnum-width)))))
+  (values s0 s1))
+</pre><h2 id="Integerdivision">Integer division</h2>
+<p>
+The following procedures are the fixnum counterparts of procedures
+from <a href="http://srfi.schemers.org/srfi-141/srfi-141.html">SRFI 141</a>:
+</p>
+<pre>fxfloor/ fxfloor-quotient fxfloor-remainder
+fxceiling/ fxceiling-quotient fxceiling-remainder
+fxtruncate/ fxtruncate-quotient fxtruncate-remainder
+fxround/ fxround-quotient fxround-remainder
+fxeuclidean/ fxeuclidean-quotient fxeuclidean-remainder
+fxbalanced/ fxbalanced-quotient fxbalanced-remainder
+</pre><p>
+Except for the effects of the fixnum rule, the <tt>fx</tt> versions
+have the same arguments and semantics as their generic counterparts.
+</p>
+<h2 id="Bitwiseoperations">Bitwise operations</h2>
+<p>
+The following procedures are the fixnum counterparts of procedures
+from <a href="http://srfi.schemers.org/srfi-141/srfi-141.html">SRFI 141</a>:
+</p>
+<pre>fxnot
+fxand   fxior   fxxor   fxeqv
+fxnand  fxnor 
+fxandc1 fxandc2 fxorc1  fxorc2 
+
+farithmetic-shift fxbit-count fxinteger-length
+
+fxif 
+fxbit-set? fxcopy-bit fxbit-swap
+fxany-bit-set? fxevery-bit-set?
+fxfirst-set-bit
+
+fxbit-field fxbit-field-any? fxbit-field-every?
+fxbit-field-clear fxbit-field-set
+fxbit-field-replace  fbit-field-replace-same
+fxbit-field-rotate fxbit-field-reverse
+fxbit-field-append
+
+fixnum-&gt;list list-&gt;fixnum
+fixnum-&gt;vector vector-&gt;fixnum
+fxbits
+fxfold fxfor-each fxunfold
+</pre><p>
+Except for the effects of the fixnum rule, the <tt>fx</tt> versions
+have the same arguments and semantics as their generic counterparts,
+with the following additional modifications:
+</p>
+<ul><li>The prefix <tt>bitwise-</tt> in the SRFI 141 functions is dropped for brevity and compatibility.
+</li></ul><ul><li>Despite the fixnum rule, the <tt>fxarithmetic-shift</tt> procedure produces a defined result on all fixnums by discarding any higher-order bits that do not fit into the fixnum width.
+</li></ul><ul><li>The <tt>fixnum-&gt;list</tt> and <tt>list-&gt;fixnum</tt> procedures correspond to the <tt>integer-&gt;list</tt> and <tt>list-&gt;integer</tt> procedures respectively, and the same for their vector analogues.
+</li></ul><p>
+The following additional bitwise procedure is provided:
+</p>
+<p>
+<tt>(fxlogical-shift </tt><em>i count</em><tt>)</tt>
+</p>
+<p>
+When left shifting (<em>count</em> &gt; 0), returns the same result
+as <tt>fxarithmetic-shift</tt>.  When right shifting,
+always inserts 0 bits at the most significant end
+rather than copies of the sign bit.
+</p>
+<p>
+The result of a logical shift depends on the value of <tt>fx-width</tt>.
+This means that if <tt>fx-width</tt> were 8 (which this SRFI does not permit),
+<tt>(fxlogical-shift -8 -1)</tt> would be <tt>#x74</tt>, or 116, rather than -4.
+</p>
+
+<h1>Implementation</h1>
+
+TBD
+
+<h1>Acknowledgements</h1>
+
+This SRFI would not be possible without the efforts of Olin Shivers, Audrey Jaffer, Taylor Campbell,
+and the R6RS editors.
+
+<h1>Copyright</h1>
+<p>Copyright (C) John Cowan (2016).  All Rights Reserved. </p>
+
+<p>
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:</p>
+
+<p>
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.</p>
+
+<p>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.</p>
+
+  <hr>
+  <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>
