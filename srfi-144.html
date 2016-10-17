@@ -54,8 +54,9 @@ the R6RS flonum library</a>,
 and the <a href="http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/math.h.html">
 C99/Posix library</a> <tt>&lt;math.h&gt;</tt>,
 which should be available directly or indirectly to Scheme implementers.
-(The C90 version of <tt>&lt;math.h&gt; lacks <tt>arcsinh, arccosh, arctanh, erf,
-and tgamma</tt>.)
+(The C90 version of <tt>&lt;math.h&gt;</tt> lacks
+<tt>arcsinh</tt>, <tt>arccosh</tt>, <tt>arctanh</tt>,
+<tt>erf</tt>, and <tt>tgamma</tt>.)
 </p>
 <p>
 Scheme implementations that use IEEE 754 floating point numbers should follow
@@ -66,6 +67,13 @@ the specifications of that standard.
 <p>
 It is required that if two flonums are equal in the sense of <tt>=</tt>, they are also equal in the sense of <tt>eqv?</tt>.  That is, if 12.0f0 is a 32-bit inexact number, and 12.0 is a 64-bit inexact number, they cannot both be flonums.  In this situation, it is recommended that the 64-bit numbers be flonums.
 </p>
+
+<p>Detailed specifications for the behavior of these functions on <tt>-0.0</tt>, <tt>+inf.0</tt>,
+<tt>-inf.0</tt>, and <tt>+nan.0</tt> for functions with C equivalents can be found in the C and
+Posix specifications.  However, conformance to this SRFI does not require that these numbers exist
+or are flonums.
+Note that if a function has the same name as its C equivalent (except for the <tt>fl-</tt> prefix),
+the C equivalent is not written here.
 <p>
 It is an error, except as otherwise noted, for an argument not to be a flonum.  If the mathematically correct result is a non-real number, the result is <tt>+nan.0</tt> if the implementation supports that number, or an arbitrary flonum if not.
 </p>
@@ -77,6 +85,7 @@ This SRFI uses <em>x, y, z</em> as
 parameter names for flonum arguments, and <em>ix</em>
 as a name for an integer-valued flonum argument, i.e., a flonum for which the
 <tt>integer?</tt> predicate returns true.
+Exact integer parameters are designated <em>n</em>.
 </p>
 <h2 id="Constants">Constants</h2>
 <p>
@@ -196,7 +205,11 @@ Bound to the floating-point radix as an exact integer (2 on most machines).  (C9
 <tt>(flonum </tt><em>number</em><tt>)</tt>
 </p>
 <p>
-Returns the closest flonum equivalent to <em>number</em> in the sense of <tt>=</tt> and <tt>&lt;</tt>.
+If <em>number</em> is inexact and there exists a flonum that is the same
+(in the sense of <tt>=</tt>) to <em>number</em>, returns that flonum. If
+there does not exist such a flonum, returns the nearest flonum, where
+"nearest" is implementation-dependent. If <em>number</em> is exact,
+applies <tt>inexact</tt> or <tt>exact->inexact</tt> to <em>number</em> first.
 </p>
 <p>
 <tt>(fladjacent </tt><em>x y</em><tt>)</tt>
@@ -214,13 +227,13 @@ Returns a flonum whose magnitude is the magnitude of <em>x</em> and whose sign i
 <tt>(make-flonum </tt><em>x n</em><tt>)</tt>
 </p>
 <p>
-Returns the flonum <tt>(fl* x (expt 2 n))</tt>, where <em>n</em> is a non-negative integer with an implementation-dependent maximum value.  (C99 <tt>ldexp</tt>)
+Returns the flonum <tt>(fl* x (expt fl-radix n))</tt>, where <em>n</em> is a non-negative integer with an implementation-dependent maximum value.  (C99 <tt>scalbn</tt>)
 </p>
 <p>
 <tt>(make-binary-flonum </tt><em>x n</em><tt>)</tt>
 </p>
 <p>
-Returns the flonum <tt>(fl* x (expt fl-radix n))</tt>, where <em>n</em> is a non-negative integer with an implementation-dependent maximum value.  (C99 <tt>scalbn</tt>)
+Returns the flonum <tt>(fl* x (expt 2 n))</tt>, where <em>n</em> is a non-negative integer with an implementation-dependent maximum value.  (C99 <tt>ldexp</tt>)
 </p>
 <h2 id="Accessors">Accessors</h2>
 <p>
@@ -245,7 +258,7 @@ Returns the same as <tt>flexponent</tt> as an exact integer.  If <em>x</em> is z
 <tt>(flnormalized-fraction-exponent </tt><em>x</em><tt>)</tt>
 </p>
 <p>
-Returns two values, a correctly signed fraction <em>y</em> whose absolute value is between 0.5 (inclusive) and 1.0 (exclusive), and an exponent <em>n</em> such that <tt>(fl* y (flexpt 2 n))</tt> is equal to <em>x</em>.  (C99 <tt>frexp</tt>)
+Returns two values, a correctly signed fraction <em>y</em> whose absolute value is between 0.5 (inclusive) and 1.0 (exclusive), and an exact integer exponent <em>n</em> such that <tt>(* y (expt 2 n))</tt> is equal to <em>x</em>.  (C99 <tt>frexp</tt>)
 </p>
 <h2 id="Predicates">Predicates</h2>
 <p>
@@ -324,7 +337,7 @@ approximates the mathematical sum or product.
 <tt>(fl+* </tt><em>x y z</em><tt>)</tt>
 </p>
 <p>
-Returns <tt>(fl+ (fl* x y) z)</tt>, possibly faster.  If the constant <tt>fl-fast-fl+*</tt>
+Returns <tt>(fl+ (fl* x y) z)</tt>, only more precisely and possibly faster.  If the constant <tt>fl-fast-fl+*</tt>
 is <tt>#t</tt>, it will definitely be faster.  (C99 <tt>fma</tt>)
 </p>
 <p>
@@ -382,8 +395,10 @@ Returns <tt>(flcopy-sign 1.0 x)</tt>.
 <p>
 Returns the numerator/denominator of <em>x</em>
 as a flonum; the result is computed as if <em>x</em> was represented as
-a fraction in lowest terms.  The denominator is always positive.  The
-denominator of 0.0 is defined to be 1.0.
+a fraction in lowest terms.  The numerator of an infinite flonum is itself.
+The denominator is always positive.
+The denominator of an infinite or zero flonum is 1.0.
+The numerator and denominator of a NaN is a NaN.
 </p>
 <p>
 <tt>(flfloor </tt><em>x</em><tt>)</tt>
@@ -430,7 +445,7 @@ Corresponds to <tt>(expt 2.0 x)</tt>.  (C99 <tt>exp2</tt>)
 <tt>(flexp-1 </tt><em>x</em><tt>)</tt>
 </p>
 <p>
-Equivalent to <tt>(flexp (fl- x 1))</tt>, but is much more accurate for values of x near 1.  It is recommended for use in algorithms where accuracy is important.  (C99 <tt>expm1</tt>)
+Equivalent to <tt>(- (exp x) 1)</tt>, but is much more accurate for values of x near 1.  It is recommended for use in algorithms where accuracy is important.  (C99 <tt>expm1</tt>)
 </p>
 <p>
 <tt>(flsquare </tt><em>x</em><tt>)</tt>
@@ -563,25 +578,25 @@ integers.  (C99 <tt>tgamma</tt>)
 Returns two values, log Γ(|<em>x</em>|) without internal overflow, and sgn(Γ(<em>x</em>)).  (C99 <tt>lgamma</tt>)
 </p>
 <p>
-<tt>(first-bessel </tt><em>x n</em><tt>)</tt>
+<tt>(flfirst-bessel </tt><em>x n</em><tt>)</tt>
 </p>
 <p>
 Returns the <em>n</em>th order Bessel function of the first kind applied to <em>x</em>, J<sub>n</sub>(x).  (C99 <tt>j0</tt>, <tt>j1</tt>, <tt>jn</tt>)
 </p>
 <p>
-<tt>(second-bessel </tt><em>x n</em><tt>)</tt>
+<tt>(flsecond-bessel </tt><em>x n</em><tt>)</tt>
 </p>
 <p>
 Returns the <em>n</em>th order Bessel function of the second kind applied to <em>x</em>, Y<sub>n</sub>(x).  (C99 <tt>y0</tt>, <tt>y1</tt>, <tt>yn</tt>)
 </p>
 <p>
-<tt>(erf </tt><em>x</em><tt>)</tt>
+<tt>(flerf </tt><em>x</em><tt>)</tt>
 </p>
 <p>
-Returns the error function erf(<em>x</em>).  (C99 <tt>erf</tt>)
+Returns the error function erf(<em>x</em>).
 </p>
 <p>
-<tt>(erfc </tt><em>x</em><tt>)</tt>
+<tt>(flerfc </tt><em>x</em><tt>)</tt>
 </p>
 <p>
 Returns the complementary error function, <tt>(- 1 (erf x))</tt>.  (C99 <tt>erfc</tt>)
