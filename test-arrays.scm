@@ -1,6 +1,6 @@
 ;;(declare (standard-bindings)(extended-bindings)(block)(not safe) (fixnum))
 (declare (inlining-limit 0))
-(define tests 10)
+(define tests 1000)
 
 (define-macro (test expr value)
   `(let* (;(ignore (pretty-print ',expr))
@@ -46,28 +46,28 @@
 (pp "Interval error tests")
 
 (test (make-interval 1 '#(3 4))
-      "make-interval: lower-bounds must be a vector: ")
+      "make-interval: The first argument is not a nonempty vector of exact integers: ")
 
 (test (make-interval '#(1 1)  3)
-      "make-interval: upper-bounds must be a vector: ")
+      "make-interval: The second argument is not a nonempty vector of exact integers: ")
 
 (test (make-interval '#(1 1)  '#(3))
-      "make-interval: lower-bounds and upper-bounds must be the same length: ")
+      "make-interval: The first and second arguments are not the same length: ")
 
 (test (make-interval '#()  '#())
-      "make-interval: lower-bounds and upper-bounds must be nonempty vectors: ")
+      "make-interval: The first argument is not a nonempty vector of exact integers: ")
 
 (test (make-interval '#(1.)  '#(1))
-      "make-interval: All lower-bounds must be exact integers: ")
+      "make-interval: The first argument is not a nonempty vector of exact integers: ")
 
 (test (make-interval '#(1 #f)  '#(1 2))
-      "make-interval: All lower-bounds must be exact integers: ")
+      "make-interval: The first argument is not a nonempty vector of exact integers: ")
 
 (test (make-interval '#(1)  '#(1.))
-      "make-interval: All upper-bounds must be exact integers: ")
+      "make-interval: The second argument is not a nonempty vector of exact integers: ")
 
 (test (make-interval '#(1 1)  '#(1 #f))
-      "make-interval: All upper-bounds must be exact integers: ")
+      "make-interval: The second argument is not a nonempty vector of exact integers: ")
 
 (test (make-interval '#(1)  '#(1))
       "make-interval: Each lower-bound must be less than the associated upper-bound: ")
@@ -319,17 +319,15 @@
 
 (let ((interval   (make-interval '#(1 2 3) '#(4 5 6)))
       (interval-2 (make-interval '#(10 11 12) '#(13 14 15))))
-  (if (not (interval-reduce list
-			    (lambda (result x)
-			      (and result (apply interval-contains-multi-index? interval x)))
-			    #t
-			    interval))
+  (if (not (array-fold (lambda (x result)
+                         (and result (apply interval-contains-multi-index? interval x)))
+                       #t
+                       (make-array interval list)))
       (error "these should all be true"))
-  (if (not (interval-reduce list
-			    (lambda (result x)
-			      (and result (not (apply interval-contains-multi-index? interval x))))
-			    #t
-			    interval-2))
+  (if (not (array-fold (lambda (x result)
+                         (and result (not (apply interval-contains-multi-index? interval x))))
+                       #t
+                       (make-array interval-2 list)))
       (error "these should all be false")))
 
 (pp "interval-for-each error tests")
@@ -374,46 +372,6 @@
 	      result)
 	    (reverse (all-elements lower upper))))))
 
-;;; can't come up with a reasonable test for interval-for-each
-
-(pp "interval-reduce error tests")
-
-(test (interval-reduce #t #t #t #t)
-      "interval-reduce: Argument is not a interval: ")
-
-(test (interval-reduce #f #f #f (make-interval '#(2 3) '#(4 5)))
-      "interval-reduce: Argument is not a procedure: ")
-
-(test (interval-reduce (lambda (x) x) #f #f (make-interval '#(2 3) '#(4 5)))
-      "interval-reduce: Operator is not a procedure: ")
-
-
-(pp "interval-reduce result tests")
-
-(do ((i 0 (+ i 1)))
-    ((= i tests))
-  (let* ((lower (map (lambda (x) (random 10))
-		     (vector->list (make-vector (random 1 7)))))
-	 (upper (map (lambda (x) (+ (random 1 4) x))
-		     lower))
-	 (result (reverse (all-elements lower upper))))
-    
-    (define (f . args)
-      args)
-    
-    (test (interval-reduce list
-			   (lambda (x y) (cons y x))
-			   '()
-			   (make-interval (list->vector lower)
-					  (list->vector upper)))
-	  result)
-    (test (interval-reduce list
-			   (lambda (x y) (cons y x))
-			   '()
-			   (make-interval (list->vector lower)
-					  (list->vector upper))
-			   #f)
-	  result)))
 
 (pp "interval-dilate error tests")
 
@@ -461,15 +419,35 @@
     (make-interval (list->vector lower)
 		   (list->vector upper))))
 
+(define (random-nonnegative-interval #!optional (min 1) (max 11) )
+  ;; a random interval with min <= dimension < max
+  ;; positive and negative lower bounds
+  (let* ((lower
+	  (map (lambda (x)
+		 0)
+	       (vector->list (make-vector (random min max)))))
+	 (upper
+	  (map (lambda (x)
+		 (+ (random 1 11) x))
+	       lower)))
+    (make-interval (list->vector lower)
+		   (list->vector upper))))
 
+(define (random-positive-vector n #!optional (max 5))
+  (##vector-map (lambda (x)
+                  (random 1 max))
+                (make-vector n)))
+
+(define (random-boolean)
+  (zero? (random 2)))
 
 (pp "array error tests")
 
 (test (make-array 1 values)
-      "make-array: domain is not an interval: ")
+      "make-array: The first argument is not an interval: ")
 
 (test (make-array (make-interval '#(3) '#(4)) 1)
-      "make-array: getter is not a procedure: ")
+      "make-array: The second argument is not a procedure: ")
 
 (pp "array result tests")
 
@@ -550,12 +528,12 @@
 	    domain))))
 
 (define (myindexer= indexer1 indexer2 interval)
-  (interval-reduce (lambda args
-		     (= (apply indexer1 args)
-			(apply indexer2 args)))
-		   (lambda (x y) (and x y))
-		   #t
-		   interval))
+  (array-fold (lambda (x y) (and x y))
+              #t
+              (make-array interval
+                          (lambda args
+                            (= (apply indexer1 args)
+                               (apply indexer2 args))))))
 
 
 (define (my-indexer base lower-bounds increments)
@@ -618,16 +596,12 @@
 (define (myarray= array1 array2)
   (and (interval= (array-domain array1)
 		  (array-domain array2))
-       (let ((getter1 (array-getter array1))
-	     (getter2 (array-getter array2)))
-	 (interval-reduce
-	  (lambda indices
-	    (equal? (apply getter1 indices)
-		    (apply getter2 indices)))
-	  (lambda (x y)
-	    (and x y))
-	  #t
-	  (array-domain array1)))))
+       (array-fold (lambda (vs result)
+                     (and (equal? (car vs)
+                                  (cadr vs))
+                          result))
+                   #t
+                   (array-map list array1 array2))))
 
 (pp "array body, indexer, storage-class, and safe? error tests")
 
@@ -823,14 +797,19 @@
       "array-map: Not all arrays have the same domain: ")
 
 
-(pp "array-reduce error tests")
+(pp "array-fold error tests")
 
-(test (array-reduce 1 1 1)
-      "array-reduce: operator is not a procedure: ")
+(test (array-fold 1 1 1)
+      "array-fold: The first argument is not a procedure: ")
 
-(test (array-reduce list 1 1)
-      "array-reduce: argument is not an array: ")
+(test (array-fold list 1 1)
+      "array-fold: The third argument is not an array: ")
 
+(test (array-fold-right 1 1 1)
+      "array-fold-right: The first argument is not a procedure: ")
+
+(test (array-fold-right list 1 1)
+      "array-fold-right: The third argument is not an array: ")
 
 (pp "array-for-each error tests")
 
@@ -853,7 +832,7 @@
       "array-for-each: Not all arrays have the same domain: ")
 
 
-(pp "array-map, array-reduce, and array-for-each result tests")
+(pp "array-map, array-fold, and array-for-each result tests")
 
 (specialized-array-default-safe? #t)
 
@@ -913,7 +892,7 @@
       (if (not (and (myarray= result-array-1 result-array-2)
 		    (myarray= result-array-2 result-array-3)
 		    (equal? (vector->list (array-body result-array-2))
-			    (reverse (array-reduce (lambda (x y) (cons y x))
+			    (reverse (array-fold (lambda (x y) (cons x y))
 						   '()
 						   result-array-2)))
 		    (equal? (vector->list (array-body result-array-2))
@@ -982,9 +961,9 @@
       (if (not (and (myarray= result-array-1 result-array-2)
 		    (myarray= result-array-2 result-array-3)
 		    (equal? (vector->list (array-body result-array-2))
-			    (reverse (array-reduce (lambda (x y) (cons y x))
-						   '()
-						   result-array-2)))
+			    (reverse (array-fold cons
+                                                 '()
+                                                 result-array-2)))
 		    (equal? (vector->list (array-body result-array-2))
 			    (reverse (let ((result '()))
 				       (array-for-each (lambda (f)
@@ -1657,6 +1636,119 @@
     (test (apply my-interval-intersect? intervals)
 	  (apply interval-intersect? intervals))))
 
+(pp "test interval-scale and array-scale")
+
+(test (interval-scale 1 'a)
+      "interval-scale: The first argument is not an interval with all lower bounds zero: ")
+
+(test (interval-scale (make-interval '#(1) '#(2)) 'a)
+      "interval-scale: The first argument is not an interval with all lower bounds zero: ")
+
+(test (interval-scale (make-interval '#(0) '#(1))
+                      'a)
+      "interval-scale: The second argument is not a vector of positive, exact, integers: ")
+
+(test (interval-scale (make-interval '#(0) '#(1))
+                      '#(a))
+      "interval-scale: The second argument is not a vector of positive, exact, integers: ")
+
+(test (interval-scale (make-interval '#(0) '#(1))
+                      '#(0))
+      "interval-scale: The second argument is not a vector of positive, exact, integers: ")
+
+(test (interval-scale (make-interval '#(0) '#(1))
+                      '#(1.))
+      "interval-scale: The second argument is not a vector of positive, exact, integers: ")
+
+(test (interval-scale (make-interval '#(0) '#(1))
+                      '#(1 2))
+      "interval-scale: The dimension of the first argument (an interval) is not equal to the length of the second (a vector): ")
+
+(define (myinterval-scale interval scales)
+  (make-interval (interval-lower-bounds->vector interval)
+                 (##vector-map (lambda (u s)
+                                 (quotient (+ u s -1) s))
+                               (interval-upper-bounds->vector interval)
+                               scales)))
+
+(do ((i 0 (fx+ i 1)))
+    ((fx= i tests))
+  (let* ((interval (random-nonnegative-interval))
+         (scales   (random-positive-vector (interval-dimension interval))))
+    (test (  interval-scale interval scales)
+          (myinterval-scale interval scales))))
+
+(test (array-sample 'a 'a)
+      "array-sample: The first argument is an array whose domain has nonzero lower bounds: ")
+
+(test (array-sample (make-array (make-interval '#(1) '#(2)) list) 'a)
+      "array-sample: The first argument is an array whose domain has nonzero lower bounds: ")
+
+(test (array-sample (make-array (make-interval '#(0) '#(2)) list) 'a)
+      "array-sample: The second argument is not a vector of positive, exact, integers: ")
+
+(test (array-sample (make-array (make-interval '#(0) '#(2)) list) '#(1.))
+      "array-sample: The second argument is not a vector of positive, exact, integers: ")
+
+(test (array-sample (make-array (make-interval '#(0) '#(2)) list) '#(0))
+      "array-sample: The second argument is not a vector of positive, exact, integers: ")
+
+(test (array-sample (make-array (make-interval '#(0) '#(2)) list) '#(2 1))
+      "array-sample: The dimension of the first argument (an array) is not equal to the length of the second (a vector): ")
+
+(define (myarray-sample array scales)
+  (let ((scales-list (vector->list scales)))
+    (cond ((specialized-array? array)
+           (specialized-array-share array
+                                    (interval-scale (array-domain array) scales)
+                                    (lambda multi-index
+                                      (apply values (map * multi-index scales-list)))))
+          ((mutable-array? array)
+           (let ((getter (array-getter array))
+                 (setter (array-setter array)))
+             (make-array (interval-scale (array-domain array) scales)
+                         (lambda multi-index
+                           (apply getter (map * multi-index scales-list)))
+                         (lambda (v . multi-index)
+                           (apply setter v (map * multi-index scales-list))))))
+          (else
+           (let ((getter (array-getter array)))
+             (make-array (interval-scale (array-domain array) scales)
+                         (lambda multi-index
+                           (apply getter (map * multi-index scales-list)))))))))
+    
+                                                       
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((domain (random-nonnegative-interval 1 6))
+         (Array (let ((temp (make-array domain list)))
+                  (case (random-integer 3)
+                    ((0) temp)
+                    ((1) (array->specialized-array temp))
+                    ((2) (let ((temp (array->specialized-array temp)))
+                           (make-array (array-domain temp)
+                                       (array-getter temp)
+                                       (array-setter temp)))))))
+         (scales (random-positive-vector (interval-dimension domain)))
+         (sampled-array (array-sample Array scales))
+         (my-sampled-array (myarray-sample Array scales)))
+        
+      (if (mutable-array? Array)
+          (let ((scaled-domain (interval-scale domain scales)))
+            (do ((j 0 (+ j 1)))
+                ((= j 50))
+              (call-with-values
+                  (lambda ()
+                    (random-multi-index scaled-domain))
+                (lambda multi-index
+                  (let ((value (random-integer 10000)))
+                    (apply (array-setter sampled-array) value multi-index)
+                    (apply (array-setter my-sampled-array) value multi-index)))))))
+      (test (myarray= sampled-array
+                      my-sampled-array)
+            #t)))
+
 (pp "test array-extract")
 
 (let* ((domain (make-interval '#(0 0) '#(10 10)))
@@ -1696,12 +1788,91 @@
 		    mutable-subarray)
 	  #t)))
 
+(pp "array-reverse tests")
+
+(test (array-reverse 'a 'a)
+      "array-reverse: the first argument is not an array: ")
+
+(test (array-reverse (make-array (make-interval '#(0 0) '#(2 2)) list)
+                     'a)
+      "array-reverse: the second argument is not a vector of booleans: ")
+
+(test (array-reverse (make-array (make-interval '#(0 0) '#(2 2)) list)
+                     '#(1 0))
+      "array-reverse: the second argument is not a vector of booleans: ")
+
+(test (array-reverse (make-array (make-interval '#(0 0) '#(2 2)) list)
+                     '#(#t))
+      "array-reverse: the dimension of the first argument (an array) does not equal the dimension of the second argument (a vector of booleans): ")
+
+
+(define (myarray-reverse array flip?)
+  (let* ((flips (vector->list flip?))
+         (domain (array-domain array))
+         (lowers (##interval-lower-bounds->list domain))
+         (uppers (##interval-upper-bounds->list domain))
+         (transform
+          (lambda (multi-index)
+            (map (lambda (i_k l_k u_k f_k?)
+                   (if f_k?
+                       (- (+ u_k l_k -1) i_k)
+                       i_k))
+                 multi-index lowers uppers flips))))
+    (cond ((specialized-array? array)
+           (specialized-array-share array
+                                    domain
+                                    (lambda multi-index
+                                      (apply values (transform multi-index)))))
+          ((mutable-array? array)
+           (let ((getter (array-getter array))
+                 (setter (array-setter array)))
+             (make-array domain
+                         (lambda multi-index
+                           (apply getter (transform multi-index)))
+                         (lambda (v . multi-index)
+                           (apply setter v (transform multi-index))))))
+          (else
+           (let ((getter (array-getter array)))
+             (make-array domain
+                         (lambda multi-index
+                           (apply getter (transform multi-index)))))))))
+                                                       
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((domain (random-interval 1 6))
+         (Array (let ((temp (make-array domain list)))
+                  (case (random-integer 3)
+                    ((0) temp)
+                    ((1) (array->specialized-array temp))
+                    ((2) (let ((temp (array->specialized-array temp)))
+                           (make-array (array-domain temp)
+                                       (array-getter temp)
+                                       (array-setter temp)))))))
+         (flips (##vector-map (lambda (x) (random-boolean)) (make-vector (interval-dimension domain))))
+         (reversed-array (array-reverse Array flips))
+         (my-reversed-array (myarray-reverse Array flips)))
+    
+    (if (mutable-array? Array)
+        (do ((j 0 (+ j 1)))
+            ((= j 50))
+          (call-with-values
+              (lambda ()
+                (random-multi-index domain))
+            (lambda multi-index
+              (let ((value (random-integer 10000)))
+                (apply (array-setter reversed-array) value multi-index)
+                (apply (array-setter my-reversed-array) value multi-index))))))
+    (test (myarray= reversed-array
+                    my-reversed-array)
+          #t)))
+
 (pp "Miscellaneous error tests")
 
 (test (make-array (make-interval '#(0 0) '#(10 10))
 		  list
 		  'a)
-      "make-array: setter is not a procedure: ")
+      "make-array: The third argument is not a procedure: ")
 
 (test (array-dimension 'a)
       "array-dimension: argument is not an array: ")
@@ -1961,9 +2132,9 @@
 (define m (array->specialized-array (make-array (make-interval '#(0 0) '#(40 30)) (lambda (i j) (exact->inexact (+ i j))))))
 
 (define (array-sum a)
-  (array-reduce + 0 a))
+  (array-fold + 0 a))
 (define (array-max a)
-  (array-reduce max -inf.0 a))
+  (array-fold max -inf.0 a))
 
 (define (max-norm a)
   (array-max (array-map abs a)))
@@ -2050,10 +2221,7 @@
 	  ;; calculate the scaled sums and differences
 	  (1D-Haar-loop a)
 	  ;; Apply the transform to the subarray of scaled sums
-	  (1D-Haar-transform (specialized-array-share a
-						      (make-interval '#(0) (vector (quotient n 2)))
-						      (lambda (i)
-							(fx* 2 i))))))))
+	  (1D-Haar-transform (array-sample a '#(2)))))))
 
 (define (1D-Haar-inverse-transform a)
   ;; works only on specialized arrays with domains $[0, 2^k)$ for some $k$
@@ -2061,10 +2229,7 @@
     (if (fx< 1 n)
 	(begin
 	  ;; Apply the inverse transform to get the array of scaled sums
-	  (1D-Haar-inverse-transform (specialized-array-share a
-							      (make-interval '#(0) (vector (quotient n 2)))
-							      (lambda (i)
-								(fx* 2 i))))
+	  (1D-Haar-inverse-transform (array-sample a '#(2)))
 	  ;; reconstruct the array values from the scaled sums and differences
 	  (1D-Haar-loop a)))))
 
@@ -2104,9 +2269,16 @@
 (define Haar-inverse-transform
   (make-separable-transform 1D-Haar-inverse-transform))
 
-(let ((image (array->specialized-array (make-array (make-interval '#(0 0) '#(4 4))
-						   (lambda (i j)
-						     (if (fx< i 2) 1. -1.))))))
+(let* ((image
+        (array->specialized-array
+         (make-array (make-interval '#(0 0) '#(4 4))
+                     (lambda (i j)
+                       (if (fx< i 2) 1. -1.)))))
+       (image-copy (array->specialized-array image))
+       (mutable-image
+        (make-array (array-domain image-copy)
+                    (array-getter image-copy)
+                    (array-setter image-copy))))
   (display "\nInitial image: \n")
   (pretty-print (list (array-domain image)
 		      (array->list image)))
@@ -2117,4 +2289,52 @@
   (Haar-inverse-transform image)
   (display "\nArray reconstructed from Haar wavelet coefficients: \n")
   (pretty-print (list (array-domain image)
-		      (array->list image))))
+		      (array->list image)))
+  (display "\nInitial image: \n")
+  (pretty-print (list (array-domain mutable-image)
+		      (array->list mutable-image)))
+  (Haar-transform mutable-image)
+  (display "\nArray of Haar wavelet coefficients: \n")
+  (pretty-print (list (array-domain mutable-image)
+		      (array->list mutable-image)))
+  (Haar-inverse-transform mutable-image)
+  (display "\nArray reconstructed from Haar wavelet coefficients: \n")
+  (pretty-print (list (array-domain mutable-image)
+		      (array->list mutable-image))))
+
+;;; Some timings
+
+(pp "Timing generic storage class")
+
+(let* ((rows 1024)
+       (specialized-image
+        (array->specialized-array
+         (make-array (make-interval '#(0 0) (vector rows rows))
+                     (lambda (i j)
+                       (if (fx< (* 2 i) rows) 1. -1.)))))
+       (mutable-image
+        (make-array (array-domain specialized-image)
+                    (array-getter specialized-image)
+                    (array-setter specialized-image))))
+  (time (begin (Haar-transform specialized-image)
+               (Haar-inverse-transform specialized-image)))
+  (time (begin (Haar-transform mutable-image)
+               (Haar-inverse-transform mutable-image))))
+
+(pp "Timing f64 storage class")
+
+(let* ((rows 1024)
+       (specialized-image
+        (array->specialized-array
+         (make-array (make-interval '#(0 0) (vector rows rows))
+                     (lambda (i j)
+                       (if (fx< (* 2 i) rows) 1. -1.)))
+         f64-storage-class))
+       (mutable-image
+        (make-array (array-domain specialized-image)
+                    (array-getter specialized-image)
+                    (array-setter specialized-image))))
+  (time (begin (Haar-transform specialized-image)
+               (Haar-inverse-transform specialized-image)))
+  (time (begin (Haar-transform mutable-image)
+               (Haar-inverse-transform mutable-image))))
