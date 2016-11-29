@@ -112,7 +112,7 @@ MathJax.Hub.Config({
 	(<p> "We incorporate Bawden-style arrays into this SRFI, but extend them in two relatively minor ways that we find quite useful.")
 	(<p> "First, we allow the intervals of multi-indices that form the domains of arrays to have nonzero lower bounds as "
 	     "well as upper bounds, so domains are rectangular, $d$-dimensional intervals $[l_0,u_0)\\times\\cdots\\times[l_{d-1},u_{d-1})$.")
-	(<p> "Second, we introduce the notion of a "(<i>"storage class")", an object that contains functions that manipulate, store, check, etc., different tyes of values. "
+	(<p> "Second, we introduce the notion of a "(<i>"storage class")", an object that contains functions that manipulate, store, check, etc., different types of values. "
 	     "A "(<code>'generic-storage-class)" can manipulate any Scheme value, "
 	     "whereas,e.g., a "(<code>'u1-storage-class)" can store only the values 0 and 1 in each element of a body.")
 	(<p> "We also require that our affine maps be one-to-one, so that if $\\vec i\\neq\\vec j$ then $T(\\vec i)\\neq T(\\vec j)$.  Without this property, modifying "
@@ -156,7 +156,7 @@ MathJax.Hub.Config({
 	     "\"convenience\" procedures.  Second, because the composition of any number of affine mappings are again affine, accessing or changing the elements of a "
 	     "restricted, translated, curried, permuted array is no slower than accessing or changing the elements of the original array itself. "
 	     "Finally, we note that by combining array currying and permuting, say, one can come up with simple expressions of powerful algorithms, such as extending "
-	     "one-dimensional tranforms to multi-dimensional separable transforms, or quickly generating two-dimensional slices of three-dimensional image data. "
+	     "one-dimensional transforms to multi-dimensional separable transforms, or quickly generating two-dimensional slices of three-dimensional image data. "
 	     "Examples are given below.")
 	
 	(<h3> "Generalized arrays")
@@ -303,7 +303,7 @@ they may have hash tables or databases behind an implementation, one may read th
         (<h2> "Miscellaneous Functions")
         (<p> "This document refers to "(<i> 'translations)" and "(<i> 'permutations)".
  A translation is a vector of exact integers.  A permutation of dimension $n$
-is a vector whose entries are the exact integers $0,1,\\ldots,n-1$, each occuring once, in any order.")
+is a vector whose entries are the exact integers $0,1,\\ldots,n-1$, each occurring once, in any order.")
         (<h3> "Procedures")
         (format-lambda-list '(translation? object))
         (<p> "Returns "(<code> '#t)" if "(<code>(<var>'object))" is a translation, and "(<code> '#f)" otherwise.")
@@ -527,7 +527,7 @@ the representation of $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
 
 (<h2> "Storage classes")
 (<p> "Conceptually, a storage-class is a set of functions to manage the backing store of a specialized-array.
-The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogenous) vector.")
+The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.")
 (<h3> "Procedures")
 
 (format-lambda-list '(make-storage-class getter setter checker maker length default))
@@ -765,7 +765,7 @@ otherwise it is an error.")
 (format-lambda-list '(array-safe? array))
 (<p> (<code>'array-storage-class)" returns the storage-class of "(<code>(<var> 'array))". "
      (<code>'array-safe?)" is true if and only if the arguments of "(<code> "(array-getter "(<var> 'array)")")" and "(<code> "(array-setter "(<var> 'array)")")" (including the value to be stored in the array) are checked for correctness.")
-(<p> (<code>"(array-indexer "(<var> 'array)")")" is asssumed to be a one-to-one, but not necessarily onto,  affine mapping from "(<code> "(array-domain "(<var> 'array)")")" into "(<code>"(array-body "(<var> 'array)")")".")
+(<p> (<code>"(array-indexer "(<var> 'array)")")" is assumed to be a one-to-one, but not necessarily onto,  affine mapping from "(<code> "(array-domain "(<var> 'array)")")" into "(<code>"(array-body "(<var> 'array)")")".")
 (<p> "It is an error to call any of these routines if "(<code>(<var> 'array))" is not a specialized-array.")
 
 (format-lambda-list '(specialized-array-share array new-domain new-domain->old-domain))
@@ -847,7 +847,7 @@ indexer:       (lambda multi-index
                      domain)
   result)"))
 (<p> "It is guaranteed that "(<code>"(array-getter "(<var>'array)")")" is called precisely once for each multi-index in "(<code>"(array-domain "(<var>'array)")")" in lexicographical order.")
-(<p> "It is an error if "(<code>(<var>'result-storage-class))" does not safisfy these conditions, or if "(<code>(<var>'safe?))" is not a boolean.")
+(<p> "It is an error if "(<code>(<var>'result-storage-class))" does not satisfy these conditions, or if "(<code>(<var>'safe?))" is not a boolean.")
 
 
 (format-lambda-list '(array-curry array inner-dimension))
