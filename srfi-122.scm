@@ -67,6 +67,7 @@ MathJax.Hub.Config({
 	      (<li> "Draft #11 published: 2016/9/7")
 	      (<li> "Draft #12 published: 2016/9/17")
 	      (<li> "Draft #13 published: 2016/11/18")
+	      (<li> "Draft #14 published: 2016/11/28")
 	      )
 	
 	(<h2> "Abstract")
@@ -138,7 +139,7 @@ MathJax.Hub.Config({
 	       "is a one-to-one affine mapping from $D_B=\\text{Int}_2$ into $D_A$.  For each vector $\\vec j$ we can compute a new array in this way; we provide "
 	       (<code>'array-curry)" for this operation, which returns an array whose domain is $\\text{Int}_1$ and whose elements are themselves arrays, each of which is defined on $\\text{Int}_2$. "
 	       "Currying a two-dimensional array would be like organizing a spreadsheet into a one-dimensional array of rows of the spreadsheet.")
-	 (<li> (<b> "Traversing the order of some indices in a multi-index in reverse order: ")
+	 (<li> (<b> "Traversing some indices in a multi-index in reverse order: ")
 	       "Consider an array $A$ with domain $D_A=[l_0,u_0)\\times\\cdots\\times[l_{d-1},u_{d-1})$. Fix $D_B=D_A$ and assume we're given a vector of booleans $F$ ($F$ for \"flip?\"). "
                "Then define $T_{BA}:D_B\\to D_A$ by $i_j\\to i_j$ if $F_j$ is "(<code>'#f)" and $i_j\\to u_j+l_j-1-i_j$ if  $F_j$ is "(<code>'#t)"." 
 	       "In other words,  we reverse the ordering of the $j$th coordinate of $\\vec i$ if and only if $F_j$ is true. "
@@ -204,7 +205,7 @@ they may have hash tables or databases behind an implementation, one may read th
                "characteristic function of the interval,  encapsulated here as "(<code> 'interval-contains-multi-index?)").")
          (<li> (<b> "Choice of functions on intervals. ")"The choice of functions for both arrays and intervals was motivated almost solely by what I needed for arrays.  There are " #\newline
                "natural operations on intervals, like "
-               (<blockquote> (<code>"(interval-cross-product interval1 interval2 ...)"))
+               (<pre> (<code>"(interval-cross-product interval1 interval2 ...)"))
                "(the inverse of "(<code> 'interval-curry)"),
        which don't seem terribly natural for arrays.")
          (<li> (<b> "No empty intervals. ")"This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.")
@@ -428,18 +429,27 @@ $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
              (<code> "0 < "(<var> 'right-dimension)" < "(<var>'d))" then "(<code> 'interval-curry)" returns two intervals:")
         (<pre>
          (<code> "
-(values (make-interval (vector (interval-lower-bound "(<var>'interval)" 0)
-			       ...
-			       (interval-lower-bound "(<var>'interval)" (- "(<var>'d)" "(<var>'right-dimension)" 1)))
-		       (vector (interval-upper-bound "(<var>'interval)" 0)
-			       ...
-			       (interval-upper-bound "(<var>'interval)" (- "(<var>'d)" "(<var>'right-dimension)" 1))))
-	(make-interval (vector (interval-lower-bound "(<var>'interval)" (- "(<var>'d)" "(<var>'right-dimension)"))
-			       ...
-			       (interval-lower-bound "(<var>'interval)" (- "(<var>'d)" 1)))
-		       (vector (interval-upper-bound "(<var>'interval)" (- "(<var>'d)" "(<var>'right-dimension)"))
-			       ...
-			       (interval-upper-bound "(<var>'interval)" (- "(<var>'d)" 1)))))"))
+(values
+ (make-interval
+  (vector (interval-lower-bound "(<var>'interval)" 0)
+          ...
+          (interval-lower-bound "(<var>'interval)"
+                                (- "(<var>'d)" "(<var>'right-dimension)" 1)))
+  (vector (interval-upper-bound "(<var>'interval)" 0)
+          ...
+          (interval-upper-bound "(<var>'interval)"
+                                (- "(<var>'d)" "(<var>'right-dimension)" 1))))
+ (make-interval
+  (vector (interval-lower-bound "(<var>'interval)"
+                                (- "(<var>'d)" "(<var>'right-dimension)"))
+          ...
+          (interval-lower-bound "(<var>'interval)"
+                                (- "(<var>'d)" 1)))
+  (vector (interval-upper-bound "(<var>'interval)"
+                                (- "(<var>'d)" "(<var>'right-dimension)"))
+          ...
+          (interval-upper-bound "(<var>'interval)"
+                                (- "(<var>'d)" 1)))))"))
 (<p> "It is an error to call "(<code> 'interval-curry)" if its arguments do not satisfy these conditions.")
 
 
@@ -462,13 +472,21 @@ upper bounds u"(<sub>"0")"+U"(<sub>"0")", ..., u"(<sub>"d-1")"+U"(<sub>"d-1")", 
 nonempty interval.  It is an error if the arguments do not satisfy these conditions.")
 (<p> "Examples:")
 (<pre>(<code>"
-(interval= (interval-dilate (make-interval '#(0 0) '#(100 100)) '#(1 1) '#(1 1))
-	   (make-interval '#(1 1) '#(101 101))) => #t
-(interval= (interval-dilate (make-interval '#(0 0) '#(100 100)) '#(-1 -1) '#(1 1))
-	   (make-interval '#(-1 -1) '#(101 101))) => #t
-(interval= (interval-dilate (make-interval '#(0 0) '#(100 100))  '#(0 0) '#(-50 -50))
-	   (make-interval '#(0 0) '#(50 50))) => #t
-(interval-dilate (make-interval '#(0 0) '#(100 100)) '#(0 0) '#(-500 -50)) => error
+(interval= 
+ (interval-dilate (make-interval '#(0 0) '#(100 100))
+                  '#(1 1) '#(1 1))
+ (make-interval '#(1 1) '#(101 101))) => #t
+(interval= 
+ (interval-dilate (make-interval '#(0 0) '#(100 100))
+                  '#(-1 -1) '#(1 1))
+ (make-interval '#(-1 -1) '#(101 101))) => #t
+(interval= 
+ (interval-dilate (make-interval '#(0 0) '#(100 100))
+                  '#(0 0) '#(-50 -50))
+ (make-interval '#(0 0) '#(50 50))) => #t
+(interval-dilate
+ (make-interval '#(0 0) '#(100 100))
+ '#(0 0) '#(-500 -50)) => error
 "))
 
 (format-lambda-list '(interval-intersect? interval-1 interval-2 ...))
@@ -565,8 +583,15 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
 (format-global-variable 'c128-storage-class)
 
 (<p> (<code> 'generic-storage-class)" is defined as if by")
-(<blockquote>
- (<code> "(define generic-storage-class (make-storage-class vector-ref vector-set! (lambda (arg) #t) make-vector vector-length #f))"))
+(<pre>
+ (<code> "
+(define generic-storage-class
+  (make-storage-class vector-ref
+                      vector-set!
+                      (lambda (arg) #t)
+                      make-vector
+                      vector-length 
+                      #f))"))
 "Furthermore, "(<code> "s"(<var> 'X)"-storage-class")" is defined for "(<code>(<var> 'X))"=8, 16, 32, and 64 (which have default values 0 and
 manipulate exact integer values between -2"(<sup>(<var> 'X)"-1")" and
 2"(<sup> (<var> 'X)"-1")"-1 inclusive),
@@ -621,21 +646,29 @@ setter "(<code>(<var> 'setter))".  It is an error to call "(<code> 'make-array)"
 (<p> "Example: ")
 (<pre>
  (<code>"
-  (define sparse-array
-    (let ((domain (make-interval '#(0 0) '#(1000000 1000000)))
-          (sparse-rows (make-vector 1000000 '())))
-      (make-array domain
-                  (lambda (i j)
-                    (cond ((assv j (vector-ref sparse-rows i))
-                           => cdr)
-                          (else
-                           0.0)))
-                  (lambda (v i j)
-                    (cond ((assv j (vector-ref sparse-rows i))
-                           => (lambda (pair)
-                                (set-cdr! pair v)))
-                          (else
-                           (vector-set! sparse-rows i (cons (cons j v) (vector-ref sparse-rows i)))))))))
+(define sparse-array
+  (let ((domain
+         (make-interval '#(0 0)
+                        '#(1000000 1000000)))
+        (sparse-rows
+         (make-vector 1000000 '())))
+    (make-array
+     domain
+     (lambda (i j)
+       (cond ((assv j (vector-ref sparse-rows i))
+              => cdr)
+             (else
+              0.0)))
+     (lambda (v i j)
+       (cond ((assv j (vector-ref sparse-rows i))
+              => (lambda (pair)
+                   (set-cdr! pair v)))
+             (else
+              (vector-set!
+               sparse-rows
+               i
+               (cons (cons j v)
+                     (vector-ref sparse-rows i)))))))))
   ((array-getter sparse-array) 12345 6789)  => 0.
   ((array-getter sparse-array) 0 0) => 0.
   ((array-setter sparse-array) 1.0 0 0) => undefined
@@ -648,7 +681,7 @@ setter "(<code>(<var> 'setter))".  It is an error to call "(<code> 'make-array)"
 (format-lambda-list '(array-domain array))
 (format-lambda-list '(array-getter array))
 (<p> "If "(<code>(<var> 'array))" is an array built by")
-(<blockquote>
+(<pre>
  (<code> "(make-array "(<var> 'interval)" "(<var> 'getter)")"))
 (<p> "then "(<code> 'array-domain)" returns "(<code>(<var> 'interval))
      " and "(<code> 'array-getter)" returns  "(<code>(<var> 'getter))".
@@ -663,7 +696,7 @@ It is an error to call "(<code> 'array-domain)" or "(<code> 'array-getter)" if "
                               0))))
   ((array-getter a) 3 3) => 1
   ((array-getter a) 2 3) => 0
-  ((array-getter a) 11 0) => is an error, which may be signaled"))
+  ((array-getter a) 11 0) => is an error"))
 
 (format-lambda-list '(array-dimension array))
 (<p> "Shorthand for "(<code>"(interval-dimension (array-domain "(<var>'array)"))")".  It is an error to call this function if "(<code>(<var>'array))" is not an array")
@@ -673,7 +706,7 @@ It is an error to call "(<code> 'array-domain)" or "(<code> 'array-getter)" if "
 
 (format-lambda-list '(array-setter array))
 (<p> "If "(<code>(<var> 'array))" is an array built by")
-(<blockquote>
+(<pre>
  (<code> "(make-array "(<var> 'interval)" "(<var> 'getter)" "(<var> 'setter)")"))
 (<p> "then "(<code> 'array-setter)" returns "(<code>(<var> 'setter))". It is an error to call "(<code> 'array-setter)"
 if "(<code>(<var> 'array))" is not a mutable array.")
@@ -740,14 +773,15 @@ otherwise it is an error.")
 Returns an object that is behaviorally equivalent to a specialized array with the following fields:")
 (<pre>
  (<code>"
-  domain:        new-domain
-  storage-class: (array-storage-class "(<var> 'array)")
-  body:          (array-body "(<var> 'array)")
-  indexer:       (lambda multi-index
-                   (call-with-values
-                       (lambda ()
-                         (apply "(<var>'new-domain->old-domain)" multi-index))
-                     (specialized-array-indexer "(<var> 'array)")))"))
+domain:        new-domain
+storage-class: (array-storage-class "(<var> 'array)")
+body:          (array-body "(<var> 'array)")
+indexer:       (lambda multi-index
+                 (call-with-values
+                     (lambda ()
+                       (apply "(<var>'new-domain->old-domain)"
+                              multi-index))
+                   (specialized-array-indexer "(<var> 'array)")))"))
 (<p> (<code>(<var> 'new-domain->old-domain))" must be an affine one-to-one mapping from "(<code>(<var> 'new-domain))" to
 "(<code>"(array-domain "(<var> 'array)")")".")
 
@@ -762,18 +796,56 @@ Returns an object that is behaviorally equivalent to a specialized array with th
       ))
 (<p> "It is an error if "(<code>(<var>'array))" is not a specialized array, or if "(<code>(<var>'new-domain))" is not an interval, or if "(<code>(<var>'new-domain->old-domain))" is not a one-to-one affine mapping with the appropriate domain and range.")
 
+(<p> (<b> "Example: ")
+     "One can apply a \"shearing\" operation to an array as follows: ")
+(<pre>
+ (<code>"
+(define a
+  (array->specialized-array
+   (make-array (make-interval '#(0 0) '#(5 10))
+               list)))
+  (define b
+    (specialized-array-share
+     a
+     (make-interval '#(0 0) '#(5 5))
+     (lambda (i j)
+       (values i (+ i j)))))
+;; Print the \"rows\" of b
+(array-for-each (lambda (row)
+                  (pretty-print (array->list row)))
+                (array-curry b 1))
+  
+;; which prints
+;; ((0 0) (0 1) (0 2) (0 3) (0 4))
+;; ((1 1) (1 2) (1 3) (1 4) (1 5))
+;; ((2 2) (2 3) (2 4) (2 5) (2 6))
+;; ((3 3) (3 4) (3 5) (3 6) (3 7))
+;; ((4 4) (4 5) (4 6) (4 7) (4 8))
+"
+  ))
+(<p> "This \"shearing\" operation cannot be achieved by combining the procedures "(<code>'array-extract)", "(<code>'array-translate)", "(<code>'array-permute)", "(<code>'array-translate)", "(<code>'array-curry)", "(<code>'array-reverse)", and "(<code>'array-sample)".")
 (format-lambda-list '(array->specialized-array array #\[ result-storage-class "generic-storage-class" #\] #\[ safe? "(specialized-array-default-safe?)" #\]))
 (<p> "If "(<code>(<var> 'array))" is an array whose elements can be manipulated by the storage-class
 "(<code>(<var> 'result-storage-class))", then the specialized-array returned by "(<code> 'array->specialized-array)" can be defined by:")
 (<pre>
  (<code>"
-  (let ((result (specialized-array (array-domain "(<var>'array)")
-                                   "(<var>'result-storage-class)"
-                                   "(<var>'safe?)"))
-        (interval-for-each (lambda multi-index
-                             (apply (array-setter result) (apply (array-getter "(<var>'array)") multi-index) multi-index))
-                           (array-domain "(<var>'array)"))
-        result)"))
+(let* ((domain
+        (array-domain "(<var>'array)"))
+       (getter
+        (array-getter "(<var>'array)"))
+       (result
+        (specialized-array domain
+                           "(<var>'result-storage-class)"
+                           "(<var>'safe?)"))
+       (result-setter
+        (array-setter result)))
+  (interval-for-each (lambda multi-index
+                       (apply result-setter
+                              (apply getter
+                                     multi-index)
+                              multi-index))
+                     domain)
+  result)"))
 (<p> "It is guaranteed that "(<code>"(array-getter "(<var>'array)")")" is called precisely once for each multi-index in "(<code>"(array-domain "(<var>'array)")")" in lexicographical order.")
 (<p> "It is an error if "(<code>(<var>'result-storage-class))" does not safisfy these conditions, or if "(<code>(<var>'safe?))" is not a boolean.")
 
@@ -802,62 +874,83 @@ Returns an object that is behaviorally equivalent to a specialized array with th
 of whose elements is itself an (immutable) array and ")
 (<pre>
  (<code>"
-  (equal? ((array-getter A) i j k l)
-          ((array-getter ((array-getter B) i j k)) l)) => #t
+(equal?
+ ((array-getter A) i j k l)
+ ((array-getter ((array-getter B) i j k)) l)) => #t
 "))
 (<p> "for all multi-indices "(<code> "i j k l")" in "(<code> 'interval)".")
 (<p> "The subarrays are immutable, mutable, or specialized according to whether the array argument is immutable, mutable, or specialized.")
 (<p> "More precisely, if ")
-(<blockquote>
+(<pre>
  (<code> "0 < "(<var> 'inner-dimension)" < (interval-dimension (array-domain "(<var> 'array)"))"))
 (<p> "then "(<code> 'array-curry)" returns a result as follows.")
 (<p> "If the input array is specialized, then array-curry returns")
 (<pre>
  (<code>"
-  (call-with-values
-      (lambda () (interval-curry (array-domain "(<var> 'array)") "(<var> 'inner-dimension)"))
-    (lambda (outer-interval inner-interval)
-      (make-array outer-interval
-                  (lambda outer-multi-index
-                    (specialized-array-share "(<var> 'array)"
-                                             inner-interval
-                                             (lambda inner-multi-index
-                                               (apply values (append outer-multi-index inner-multi-index))))))))"))
+(call-with-values
+    (lambda () (interval-curry (array-domain "(<var> 'array)")
+                               "(<var> 'inner-dimension)"))
+  (lambda (outer-interval inner-interval)
+    (make-array
+     outer-interval
+     (lambda outer-multi-index
+       (specialized-array-share
+        "(<var> 'array)"
+        inner-interval
+        (lambda inner-multi-index
+          (apply values
+                 (append outer-multi-index
+                         inner-multi-index))))))))"))
 
 (<p> "Otherwise, if the input array is mutable, then array-curry returns")
 (<pre>
  (<code>"
-  (call-with-values
-      (lambda () (interval-curry (array-domain "(<var> 'array)") "(<var> 'inner-dimension)"))
-    (lambda (outer-interval inner-interval)
-      (make-array outer-interval
-                  (lambda outer-multi-index
-                    (make-array inner-interval
-                                (lambda inner-multi-index
-                                  (apply (array-getter "(<var> 'array)") (append outer-multi-index inner-multi-index)))
-                                (lambda (v . inner-multi-index)
-                                  (apply (array-setter "(<var> 'array)") v (append outer-multi-index inner-multi-index))))))))"))
+(call-with-values
+    (lambda () (interval-curry (array-domain "(<var> 'array)")
+                               "(<var> 'inner-dimension)"))
+  (lambda (outer-interval inner-interval)
+    (make-array
+     outer-interval
+     (lambda outer-multi-index
+       (make-array
+        inner-interval
+        (lambda inner-multi-index
+          (apply (array-getter "(<var> 'array)")
+                 (append outer-multi-index
+                         inner-multi-index)))
+        (lambda (v . inner-multi-index)
+          (apply (array-setter "(<var> 'array)")
+                 v
+                 (append outer-multi-index
+                         inner-multi-index))))))))"))
 (<p> "Otherwise, array-curry returns")
 (<pre>
  (<code>"
-  (call-with-values
-      (lambda () (interval-curry (array-domain "(<var> 'array)") "(<var> 'inner-dimension)"))
-    (lambda (outer-interval inner-interval)
-      (make-array outer-interval
-                  (lambda outer-multi-index
-                    (make-array inner-interval
-                                (lambda inner-multi-index
-                                  (apply (array-getter "(<var> 'array)") (append outer-multi-index inner-multi-index))))))))"))
+(call-with-values
+    (lambda () (interval-curry (array-domain "(<var> 'array)")
+                               "(<var> 'inner-dimension)"))
+  (lambda (outer-interval inner-interval)
+    (make-array
+     outer-interval
+     (lambda outer-multi-index
+       (make-array
+        inner-interval
+        (lambda inner-multi-index
+          (apply (array-getter "(<var> 'array)")
+                 (append outer-multi-index
+                         inner-multi-index))))))))"))
 (<p> "It is an error to call "(<code> 'array-curry)" if its arguments do not satisfy these conditions.")
 
 (<p>"Example:")
 (<pre>
  (<code>"
-  (define a (make-array (make-interval '#(0 0) '#(10 10))
-                        list))
-  ((array-getter a) 3 4)  => (3 4)
-  (define curried-a (array-curry a 1))
-  ((array-getter ((array-getter curried-a) 3)) 4) => (3 4)"))
+(define a (make-array (make-interval '#(0 0)
+                                     '#(10 10))
+                      list))
+((array-getter a) 3 4)  => (3 4)
+(define curried-a (array-curry a 1))
+((array-getter ((array-getter curried-a) 3)) 4)
+                    => (3 4)"))
 
 
 
@@ -893,28 +986,46 @@ of whose elements is itself an (immutable) array and ")
 (<p> "If "(<code>(<var>'array))" is a specialized array, returns a new specialized array")
 (<pre>
  (<code>"
-  (specialized-array-share "(<var>'array)"
-                           (interval-translate (array-domain "(<var>'array)") "(<var>'translation)")
-                           (lambda multi-index (apply values (map - multi-index (vector->list "(<var>'translation)")))))
+(specialized-array-share
+ "(<var>'array)"
+ (interval-translate (array-domain "(<var>'array)")
+                     "(<var>'translation)")
+ (lambda multi-index 
+   (apply values
+          (map -
+               multi-index
+               (vector->list "(<var>'translation)")))))
 ")
  (<p>"that shares the body of "(<code>(<var>'array))"."))
 (<p> "If "(<code>(<var>'array))" is not a specialized array but is a mutable array, returns a new mutable array")
 (<pre>
  (<code>"
-  (make-array (interval-translate (array-domain "(<var>'array)") "(<var>'translation)")
-              (lambda multi-index
-                (apply (array-getter "(<var>'array)") (map - multi-index (vector->list "(<var>'translation)"))))
-              (lambda (val . multi-index)
-                (apply (array-setter "(<var>'array)") val (map - multi-index (vector->list "(<var>'translation)")))))
+(make-array 
+ (interval-translate (array-domain "(<var>'array)")
+                     "(<var>'translation)")
+ (lambda multi-index
+   (apply (array-getter "(<var>'array)")
+          (map -
+               multi-index
+               (vector->list "(<var>'translation)"))))
+ (lambda (val . multi-index)
+   (apply (array-setter "(<var>'array)")
+          val
+          (map -
+               multi-index
+               (vector->list "(<var>'translation)")))))
  "))
 (<p> "that employs the same getter and setter as the original array argument.")
 (<p> "If "(<code>(<var>'array))" is not a mutable array, returns a new array")
 (<pre>
  (<code>"
-  (make-array (interval-translate (array-domain "(<var>'array)") "(<var>'translation)")
-              (lambda multi-index
-                (apply (array-getter "(<var>'array)") (map - multi-index (vector->list "(<var>'translation)")))))
- "))
+(make-array
+ (interval-translate (array-domain "(<var>'array)")
+                     "(<var>'translation)")
+ (lambda multi-index
+   (apply (array-getter "(<var>'array)")
+          (map - multi-index (vector->list "(<var>'translation)")))))
+"))
 (<p> "that employs the same getter as the original array.")
 (<p> "It is an error if the arguments do not satisfy these conditions.")
 
@@ -924,9 +1035,10 @@ of whose elements is itself an (immutable) array and ")
 (<p> "So the multi-index argument of the "(<code>'getter)" of the result of "(<code>'array-permute)" must lie in the new domain of the array, the interval  $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.  So if we define "(<code>(<var>'old-getter))" as "(<code>"(array-getter "(<var>'array)")")", the definition of the new array must be in fact")
 (<pre>
  (<code>"
-  (make-array (interval-permute (array-domain "(<var>'array)") '#(3 0 1 2))
-              (lambda (l i j k)
-                (old-getter i j k l)))
+(make-array (interval-permute (array-domain "(<var>'array)")
+                              '#(3 0 1 2))
+            (lambda (l i j k)
+              (old-getter i j k l)))
 " ))
 (<p> "So you see that if the first argument if the new getter is in $[0,16)$, then indeed the fourth argument of "(<code>(<var>'old-getter))" is also in $[0,16)$, as it should be. This is a subtlety that I don't see how to overcome.  It is the listing of the arguments of the new getter, the "(<code>'lambda)", that must be permuted.")
 
@@ -962,69 +1074,75 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
 (<p> "More formally, if "(<code>(<var>'array))" is specialized, then "(<code>'array-reverse)" returns ")
 (<pre>
  (<code>"
+(let* ((domain (array-domain "(<code>(<var>'array))"))
+       (lowers (interval-lower-bounds->list domain))
+       (uppers (interval-upper-bounds->list domain)))
   (specialized-array-share
    "(<code>(<var>'array))"
-   (array-domain "(<code>(<var>'array))")
+   domain
    (lambda multi-index
      (apply values
-            (vector->list
-             (vector-map
-              (lambda (i_k flip?_k l_k u_k)
-                (if flip?
-                    (- (+ l_k u_k -1) i_k)
-                    i_k))
-              (list->vector multi-index)
-              "(<var>'flip?)"
-              (interval-lower-bounds->vector (array-domain "(<code>(<var>'array))"))
-              (interval-upper-bounds->vector (array-domain "(<code>(<var>'array))")))))))"))
+            (map (lambda (i_k flip?_k l_k u_k)
+                   (if flip?
+                       (- (+ l_k u_k -1) i_k)
+                       i_k))
+                 multi-index
+                 (vector->list "(<var>'flip?)")
+                 lowers
+                 uppers)))))"))
 
 
 
 (<p> "Otherwise, if "(<code>(<var>'array))" is mutable, then "(<code>'array-reverse)" returns")
 (<pre>
  (<code>"
-  (make-array (array-domain "(<code>(<var>'array))")
-              (lambda multi-index
-                (apply (array-getter "(<code>(<var>'array))")
-                       (vector->list
-                        (vector-map
-                         (lambda (i_k flip?_k l_k u_k)
-                           (if flip?
-                               (- (+ l_k u_k -1) i_k)
-                               i_k))
-                         (list->vector multi-index)
-                         "(<var>'flip?)"
-                         (interval-lower-bounds->vector (array-domain "(<code>(<var>'array))"))
-                         (interval-upper-bounds->vector (array-domain "(<code>(<var>'array))"))))))
-              (lambda (v . multi-index)
-                (apply (array-setter "(<code>(<var>'array))")
-                       v
-                       (vector->list
-                        (vector-map
-                         (lambda (i_k flip?_k l_k u_k)
-                           (if flip?
-                               (- (+ l_k u_k -1) i_k)
-                               i_k))
-                         (list->vector multi-index)
-                         "(<var>'flip?)"
-                         (interval-lower-bounds->vector (array-domain "(<code>(<var>'array))"))
-                         (interval-upper-bounds->vector (array-domain "(<code>(<var>'array))")))))))"))
+(let* ((domain (array-domain "(<code>(<var>'array))"))
+       (lowers (interval-lower-bounds->list domain))
+       (uppers (interval-upper-bounds->list domain)))
+  (make-array
+   domain
+   (lambda multi-index
+     (apply (array-getter "(<code>(<var>'array))")
+            (map
+              (lambda (i_k flip?_k l_k u_k)
+                (if flip?
+                    (- (+ l_k u_k -1) i_k)
+                    i_k))
+              multi-index
+              (vector->list "(<var>'flip?)")
+              lowers
+              uppers)))
+   (lambda (v . multi-index)
+     (apply (array-setter "(<code>(<var>'array))")
+            v
+            (map
+             (lambda (i_k flip?_k l_k u_k)
+               (if flip?
+                   (- (+ l_k u_k -1) i_k)
+                   i_k))
+             multi-index
+             (vector->list "(<var>'flip?)")
+             lowers
+             uppers)))))"))
 (<p> "Finally, if "(<code>(<var>'array))" is immutable, then "(<code>'array-reverse)" returns ")
 (<pre>
  (<code>"
-  (make-array (array-domain "(<code>(<var>'array))")
-              (lambda multi-index
-                (apply (array-getter "(<code>(<var>'array))")
-                       (vector->list
-                        (vector-map
-                         (lambda (i_k flip?_k l_k u_k)
-                           (if flip?
-                               (- (+ l_k u_k -1) i_k)
-                               i_k))
-                         (list->vector multi-index)
-                         "(<var>'flip?)"
-                         (interval-lower-bounds->vector (array-domain "(<code>(<var>'array))"))
-                         (interval-upper-bounds->vector (array-domain "(<code>(<var>'array))")))))))"))
+(let* ((domain (array-domain "(<code>(<var>'array))"))
+       (lowers (interval-lower-bounds->list domain))
+       (uppers (interval-upper-bounds->list domain)))
+  (make-array
+   domain
+   (lambda multi-index
+     (apply (array-getter "(<code>(<var>'array))")
+            (map
+              (lambda (i_k flip?_k l_k u_k)
+                (if flip?
+                    (- (+ l_k u_k -1) i_k)
+                    i_k))
+              multi-index
+              (vector->list "(<var>'flip?)")
+              lowers
+              uppers))))) "))
 (<p> "It is an error if "(<code>(<var>'array))" and "(<code>(<var>'flip?))" don't satisfy these requirements.")
 
 (format-lambda-list '(array-sample array scales))
@@ -1035,32 +1153,38 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
 (<p> "More formally, if "(<code>(<var>'array))" is specialized, then "(<code>'array-scale)" returns ")
 (<pre>
  (<code>"
-  (specialized-array-share
-   "(<code>(<var>'array))"
-   (interval-scale (array-domain "(<code>(<var>'array))") "(<code>(<var>'scales))")
-   (lambda multi-index
-     (apply values (map * multi-index (vector->list "(<code>(<var>'scales))")))))"))
+(specialized-array-share
+ "(<code>(<var>'array))"
+ (interval-scale (array-domain "(<code>(<var>'array))")
+                 "(<code>(<var>'scales))")
+ (lambda multi-index
+   (apply values
+          (map * multi-index (vector->list "(<code>(<var>'scales))")))))"))
 
 
 
 (<p> "Otherwise, if "(<code>(<var>'array))" is mutable, then "(<code>'array-scale)" returns")
 (<pre>
  (<code>"
-  (make-array (interval-scale (array-domain "(<code>(<var>'array))") "(<code>(<var>'scales))")
-              (lambda multi-index
-                (apply (array-getter "(<code>(<var>'array))")
-                       (map * multi-index (vector->list "(<code>(<var>'scales))"))))
-              (lambda (v . multi-index)
-                (apply (array-setter "(<code>(<var>'array))")
-                       v
-                       (map * multi-index (vector->list "(<code>(<var>'scales))")))))"))
+(make-array
+ (interval-scale (array-domain "(<code>(<var>'array))")
+                 "(<code>(<var>'scales))")
+ (lambda multi-index
+   (apply (array-getter "(<code>(<var>'array))")
+          (map * multi-index (vector->list "(<code>(<var>'scales))"))))
+ (lambda (v . multi-index)
+   (apply (array-setter "(<code>(<var>'array))")
+          v
+          (map * multi-index (vector->list "(<code>(<var>'scales))")))))"))
 (<p> "Finally, if "(<code>(<var>'array))" is immutable, then "(<code>'array-scale)" returns ")
 (<pre>
  (<code>"
-  (make-array (interval-scale (array-domain "(<code>(<var>'array))") "(<code>(<var>'scales))")
-              (lambda multi-index
-                (apply (array-getter "(<code>(<var>'array))")
-                       (map * multi-index (vector->list "(<code>(<var>'scales))")))))"))
+(make-array
+ (interval-scale (array-domain "(<code>(<var>'array))")
+                 "(<code>(<var>'scales))")
+ (lambda multi-index
+   (apply (array-getter "(<code>(<var>'array))")
+          (map * multi-index (vector->list "(<code>(<var>'scales))")))))"))
 (<p> "It is an error if "(<code>(<var>'array))" and "(<code>(<var>'scales))" don't satisfy these requirements.")
 
 (format-lambda-list '(array-map f array #\. arrays))
@@ -1083,42 +1207,57 @@ returns a new array with the same domain and getter")
 calls")
 (<pre>
  (<code>"
-  (interval-for-each (lambda multi-index
-                       (apply "(<var>'f)" (map (lambda (g) (apply g multi-index)) (map array-getter (cons "(<var> 'array)" "(<var> 'arrays)")))))
-                     (array-domain "(<var> 'array)"))"))
+(interval-for-each
+ (lambda multi-index
+   (apply "(<var>'f)"
+          (map (lambda (g)
+                 (apply g multi-index))
+               (map array-getter
+                    (cons "(<var> 'array)"
+                          "(<var> 'arrays)")))))
+ (array-domain "(<var> 'array)"))"))
 (<p> "In particular, "(<code> 'array-for-each)" always walks the indices of the arrays in lexicographical order.")
 
 (<p> "It is expected that "(<code> 'array-map)" and "(<code> 'array-for-each)" will specialize the construction of")
 (<pre>
  (<code>"
-  (lambda multi-index
-    (apply "(<var>'f)"  (map (lambda (g) (apply g multi-index)) (map array-getter (cons "(<var> 'array)" "(<var> 'arrays)")))))"))
+(lambda multi-index
+  (apply "(<var>'f)"
+         (map (lambda (g)
+                (apply g multi-index))
+              (map array-getter
+                   (cons "(<var> 'array)"
+                         "(<var> 'arrays)")))))"))
 (<p> "It is an error to call "(<code> 'array-for-each)" if its arguments do not satisfy these conditions.")
 
 (format-lambda-list '(array-fold kons knil array))
 (<p> "If we use the defining relations for fold over lists from SRFI-1:")
 (<pre>
  (<code>"
-  (fold kons knil lis) = (fold kons (kons (car lis) knil) (cdr lis))
-  (fold kons knil '()) = knil
+(fold kons knil lis)
+    = (fold kons (kons (car lis) knil) (cdr lis))
+(fold kons knil '())
+    = knil
  "))
 (<p> "then "(<code>"(array-fold "(<var>'kons)" " (<var>'knil)" "(<var> 'array)")")" returns ")
 (<pre>
  (<code>"
-  (fold "(<var>'kons)" " (<var>'knil)" (array->list "(<var> 'array)"))"))
+(fold "(<var>'kons)" " (<var>'knil)" (array->list "(<var> 'array)"))"))
 (<p> "It is an error if "(<code>(<var>'array))" is not an array, or if "(<code>(<var>'kons))" is not a procedure.")
 
 (format-lambda-list '(array-fold-right kons knil array))
 (<p> "If we use the defining relations for fold-right over lists from SRFI-1:")
 (<pre>
  (<code>"
-  (fold-right kons knil lis) = (kons (car lis) (fold-right kons knil (cdr lis)))
-  (fold-right kons knil '()) = knil 
+(fold-right kons knil lis)
+    = (kons (car lis) (fold-right kons knil (cdr lis)))
+(fold-right kons knil '())
+    = knil 
 "))
 (<p> "then "(<code>"(array-fold-right "(<var>'kons)" " (<var>'knil)" "(<var> 'array)")")" returns ")
 (<pre>
  (<code>"
-  (fold-right "(<var>'kons)" " (<var>'knil)" (array->list "(<var> 'array)"))"))
+(fold-right "(<var>'kons)" " (<var>'knil)" (array->list "(<var> 'array)"))"))
 (<p> "It is an error if "(<code>(<var>'array))" is not an array, or if "(<code>(<var>'kons))" is not a procedure.")
 
 
@@ -1177,82 +1316,105 @@ order in array->specialized-array guarantees the the correct order of execution 
 
 (<pre>
  (<code>"
-  (define make-pgm   cons)
-  (define pgm-greys  car)
-  (define pgm-pixels cdr)
+(define make-pgm   cons)
+(define pgm-greys  car)
+(define pgm-pixels cdr)
+
+(define (read-pgm file)
   
-  (define (read-pgm file)
-    
-    (define (read-pgm-object port)
-      (skip-white-space port)
-      (let ((o (read port)))
-        (read-char port) ; to skip the newline or next whitespace
-        (if (eof-object? o)
-            (error \"reached end of pgm file\")
-            o)))
-    
-    (define (skip-to-end-of-line port)
-      (let loop ((ch (read-char port)))
-        (if (not (eq? ch #\\newline))
-            (loop (read-char port)))))
-    
-    (define (white-space? ch)
-      (case ch 
-        ((#\\newline #\\space #\\tab) #t)
-        (else #f)))
-    
-    (define (skip-white-space port)
-      (let ((ch (peek-char port)))
-        (cond ((white-space? ch) (read-char port) (skip-white-space port))
-              ((eq? ch #\\#) (skip-to-end-of-line port)(skip-white-space port))
-              (else #f))))
-    
-    ;; The image file formats defined in netpbm are problematical, because
-    ;; they read the data in the header as variable-length ISO-8859-1 text, including
-    ;; arbitrary whitespace and comments, and then they may read the rest of the file
-    ;; as binary data.
-    ;; So we give here a solution of how to deal with these subtleties in Gambit Scheme.
-    
-    (call-with-input-file
-        (list path:          file
-              char-encoding: 'ISO-8859-1
-              eol-encoding:  'lf)
-      (lambda (port)
+  (define (read-pgm-object port)
+    (skip-white-space port)
+    (let ((o (read port)))
+      ;; to skip the newline or next whitespace
+      (read-char port)
+      (if (eof-object? o)
+          (error \"reached end of pgm file\")
+          o)))
+  
+  (define (skip-to-end-of-line port)
+    (let loop ((ch (read-char port)))
+      (if (not (eq? ch #\\newline))
+          (loop (read-char port)))))
+  
+  (define (white-space? ch)
+    (case ch 
+      ((#\\newline #\\space #\\tab) #t)
+      (else #f)))
+  
+  (define (skip-white-space port)
+    (let ((ch (peek-char port)))
+      (cond ((white-space? ch)
+             (read-char port)
+             (skip-white-space port))
+            ((eq? ch #\\#)
+             (skip-to-end-of-line port)
+             (skip-white-space port))
+            (else #f))))
+  
+  ;; The image file formats defined in netpbm
+  ;; are problematical, because they read the data
+  ;; in the header as variable-length ISO-8859-1 text,
+  ;; including arbitrary whitespace and comments,
+  ;; and then they may read the rest of the file
+  ;; as binary data.
+  ;; So we give here a solution of how to deal
+  ;; with these subtleties in Gambit Scheme.
+  
+  (call-with-input-file
+      (list path:          file
+            char-encoding: 'ISO-8859-1
+            eol-encoding:  'lf)
+    (lambda (port)
+      
+      ;; We're going to read text for a while,
+      ;; then switch to binary.
+      ;; So we need to turn off buffering until
+      ;; we switch to binary.
+      
+      (port-settings-set! port '(buffering: #f))
+      
+      (let* ((header (read-pgm-object port))
+             (columns (read-pgm-object port))
+             (rows (read-pgm-object port))
+             (greys (read-pgm-object port)))
         
-        ;; We're going to read text for a while, then switch to binary.
-        ;; So we need to turn off buffering until we switch to binary.
+        ;; now we switch back to buffering
+        ;; to speed things up
         
-        (port-settings-set! port '(buffering: #f))
+        (port-settings-set! port '(buffering: #t))
         
-        (let* ((header (read-pgm-object port))
-               (columns (read-pgm-object port))
-               (rows (read-pgm-object port))
-               (greys (read-pgm-object port)))
-          
-          ;; now we switch back to buffering to speed things up
-          
-          (port-settings-set! port '(buffering: #t))
-          
-          (make-pgm greys
-                    (array->specialized-array
-                     (make-array
-                      (make-interval '#(0 0)
-                                     (vector rows columns))
-                      (cond ((or (eq? header 'p5)                                     ;; pgm binary
-                                 (eq? header 'P5))
-                             (if (< greys 256)
-                                 (lambda (i j)                                        ;; one byte/pixel
-                                   (char->integer (read-char port)))
-                                 (lambda (i j)                                        ;; two bytes/pixel, little-endian
-                                   (let* ((first-byte (char->integer (read-char port)))
-                                          (second-byte (char->integer (read-char port))))
-                                     (+ (* second-byte 256) first-byte)))))
-                            ((or (eq? header 'p2)                                     ;; pgm ascii
-                                 (eq? header 'P2))
-                             (lambda (i j)
-                               (read port)))
-                            (else
-                             (error \"read-pgm: not a pgm file\"))))))))))"
+        (make-pgm
+         greys
+         (array->specialized-array
+          (make-array
+           (make-interval '#(0 0)
+                          (vector rows columns))
+           (cond ((or (eq? header 'p5)
+                      (eq? header 'P5))
+                  ;; pgm binary
+                  (if (< greys 256)
+                      ;; one byte/pixel
+                      (lambda (i j)
+                        (char->integer
+                         (read-char port)))
+                      ;; two bytes/pixel,
+                      ;;little-endian
+                      (lambda (i j)
+                        (let* ((first-byte
+                                (char->integer
+                                 (read-char port)))
+                               (second-byte
+                                (char->integer
+                                 (read-char port))))
+                          (+ (* second-byte 256)
+                             first-byte)))))
+                 ;; pgm ascii
+                 ((or (eq? header 'p2)
+                      (eq? header 'P2))
+                  (lambda (i j)
+                      (read port)))
+                   (else
+                    (error \"not a pgm file\"))))))))))"
         ))
 
 
@@ -1266,41 +1428,61 @@ and this function is defined only for those $x$ for which $x$, $x+d$, and $x+2d$
 $d,2 d,3 d,\\ldots$, defined only on the domains where this makes sense: ")
 (<pre>
  (<code>"
-  (define (all-second-differences image direction)
-    (let ((image-domain (array-domain image)))
-      (let loop ((i 1)
-                 (result '()))
-        (let ((negative-scaled-direction
-               (vector-map (lambda (j) (* -1 j i)) direction))
-              (twice-negative-scaled-direction
-               (vector-map (lambda (j) (* -2 j i)) direction)))
-          (cond ((interval-intersect? image-domain
-                                      (interval-translate image-domain negative-scaled-direction)
-                                      (interval-translate image-domain twice-negative-scaled-direction))
-                 => (lambda (subdomain)
-                      (loop (+ i 1)
-                            (cons (array->specialized-array
-                                   (array-map (lambda (f_i f_i+d f_i+2d)
-                                                (+ f_i+2d
-                                                   (* -2. f_i+d)
-                                                   f_i))
-                                              (array-extract image
-                                                             subdomain)
-                                              (array-extract (array-translate image
-                                                                              negative-scaled-direction)
-                                                             subdomain)
-                                              (array-extract (array-translate image
-                                                                              twice-negative-scaled-direction)
-                                                             subdomain)))
-                                  result))))
-                (else
-                 (reverse result)))))))
-  "))
+(define (all-second-differences image direction)
+  (let ((image-domain (array-domain image)))
+    (let loop ((i 1)
+               (result '()))
+      (let ((negative-scaled-direction
+             (vector-map (lambda (j)
+                           (* -1 j i))
+                         direction))
+            (twice-negative-scaled-direction
+             (vector-map (lambda (j)
+                           (* -2 j i))
+                         direction)))
+        (cond ((interval-intersect?
+                image-domain
+                (interval-translate
+                 image-domain
+                 negative-scaled-direction)
+                (interval-translate
+                 image-domain
+                 twice-negative-scaled-direction))
+               =>
+               (lambda (subdomain)
+                 (loop
+                  (+ i 1)
+                  (cons
+                   (array->specialized-array
+                    (array-map
+                     (lambda (f_i f_i+d f_i+2d)
+                       (+ f_i+2d
+                          (* -2. f_i+d)
+                          f_i))
+                     (array-extract
+                      image
+                      subdomain)
+                     (array-extract
+                      (array-translate
+                       image
+                       negative-scaled-direction)
+                      subdomain)
+                     (array-extract
+                      (array-translate
+                       image
+                       twice-negative-scaled-direction)
+                      subdomain)))
+                   result))))
+              (else
+               (reverse result)))))))
+"))
 (<p> "We can define a small synthetic image of size 8x8 pixels and compute its second differences in various directions: ")
 (<pre>(<code> "
-(define image (array->specialized-array (make-array (make-interval '#(0 0) '#(8 8))
-						    (lambda (i j)
-						      (exact->inexact (+ (* i i) (* j j)))))))
+(define image
+ (array->specialized-array
+  (make-array (make-interval '#(0 0) '#(8 8))
+              (lambda (i j)
+                (exact->inexact (+ (* i i) (* j j)))))))
 
 (define (expose difference-images)
   (pretty-print (map (lambda (difference-image)
@@ -1309,37 +1491,47 @@ $d,2 d,3 d,\\ldots$, defined only on the domains where this makes sense: ")
 		     difference-images)))
 
 (begin
-  (display \"\\nSecond-difference images in the direction $k\\times (1,0)$, $k=1,2,...$, wherever they're defined:\\n\")
+  (display
+   \"\\nSecond-differences in the direction $k\\times (1,0)$:\\n\")
   (expose (all-second-differences image '#(1 0)))
-  (display \"\\nSecond-difference images in the direction $k\\times (1,1)$, $k=1,2,...$, wherever they're defined:\\n\")
+  (display
+   \"\\nSecond-differences in the direction $k\\times (1,1)$:\\n\")
   (expose (all-second-differences image '#(1 1)))
-  (display \"\\nSecond-difference images in the direction $k\\times (1,-1)$, $k=1,2,...$, wherever they're defined:\\n\")
+  (display
+   \"\\nSecond-differences in the direction $k\\times (1,-1)$:\\n\")
   (expose (all-second-differences image '#(1 -1))))
 "))
 (<p> "On Gambit 4.8.5, this yields (after some hand editing): ")
 (<pre> "
-Second-difference images in the direction $k\\times (1,0)$, $k=1,2,...$, wherever they're defined:
+Second-differences in the direction $k\\times (1,0)$:
 ((#<##interval #2 lower-bounds: #(0 0) upper-bounds: #(6 8)>
-  (2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2.
-   2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2.))
+ (2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2.
+  2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2.
+  2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2. 2.))
  (#<##interval #3 lower-bounds: #(0 0) upper-bounds: #(4 8)>
-  (8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8.))
+  (8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8.
+   8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8. 8.))
  (#<##interval #4 lower-bounds: #(0 0) upper-bounds: #(2 8)>
-  (18. 18. 18. 18. 18. 18. 18. 18. 18. 18. 18. 18. 18. 18. 18. 18.)))
+  (18. 18. 18. 18. 18. 18. 18. 18. 18.
+   18. 18. 18. 18. 18. 18. 18.)))
 
-Second-difference images in the direction $k\\times (1,1)$, $k=1,2,...$, wherever they're defined:
+Second-differences in the direction $k\\times (1,1)$:
 ((#<##interval #5 lower-bounds: #(0 0) upper-bounds: #(6 6)>
-  (4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4.))
+  (4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4.
+   4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4.))
  (#<##interval #6 lower-bounds: #(0 0) upper-bounds: #(4 4)>
-  (16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16.))
+  (16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16.
+   16. 16.))
  (#<##interval #7 lower-bounds: #(0 0) upper-bounds: #(2 2)>
   (36. 36. 36. 36.)))
 
-Second-difference images in the direction $k\\times (1,-1)$, $k=1,2,...$, wherever they're defined:
+Second-differences in the direction $k\\times (1,-1)$:
 ((#<##interval #8 lower-bounds: #(0 2) upper-bounds: #(6 8)>
-  (4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4.))
+  (4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4.
+   4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4. 4.))
  (#<##interval #9 lower-bounds: #(0 4) upper-bounds: #(4 8)>
-  (16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16.))
+  (16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16. 16.
+   16. 16.))
  (#<##interval #10 lower-bounds: #(0 6) upper-bounds: #(2 8)>
   (36. 36. 36. 36.)))
 
@@ -1350,106 +1542,123 @@ Second-difference images in the direction $k\\times (1,-1)$, $k=1,2,...$, wherev
 
 (<p> (<b> "Separable operators. ")"Many multi-dimensional transforms in signal processing are "(<i> 'separable)", in that that the multi-dimensional transform can be computed by applying one-dimensional transforms in each of the coordinate directions.  Examples of such transforms include the Fast Fourier Transform and the Fast Wavelet Transform.  Each one-dimensional subdomain of the complete domain is called a "(<i> 'pencil)", and the same one-dimensional transform is applied to all pencils in a given direction. Given the one-dimensional array transform, one can compute the multidimensional transform as follows:")
 (<pre> (<code>"
- (define (make-separable-transform 1D-transform)
-   (lambda (array)
-     ;; Works on arrays of any dimension.
-     (let* ((n
-	     (array-dimension array))
-	    (permutation
-	     ;; we start with the identity permutation
-	     (let ((result (make-vector n)))
-	       (do ((i 0 (fx+ i 1)))
-		   ((fx= i n) result)
-		 (vector-set! result i i)))))
-       ;; We apply the one-dimensional transform in each coordinate direction.
-       (do ((d 0 (fx+ d 1)))
-	   ((fx= d n))
-	 ;; Swap the d'th and n-1'st coordinates
-	 (vector-set! permutation (fx- n 1) d)
-	 (vector-set! permutation d (fx- n 1))
-	 ;; Apply the transform in the d'th coordinate direction
-	 ;; to all \"pencils\" in that direction
-	 ;; array-permute re-orders the coordinates to put the
-	 ;; d'th coordinate at the end, array-curry returns
-	 ;; an $n-1$-dimensional array of one-dimensional subarrays,
-	 ;; and 1D-transform is applied to each of those
-	 ;; one-dimensional sub-arrays.
-	 (array-for-each 1D-transform
-			 (array-curry (array-permute array permutation)
-				      1))
-	 ;; return the permutation to the identity
-	 (vector-set! permutation d d)
-	 (vector-set! permutation (fx- n 1) (fx- n 1))))))
+(define (make-separable-transform 1D-transform)
+  (lambda (array)
+    ;; Works on arrays of any dimension.
+    (let* ((n
+            (array-dimension array))
+           (permutation
+            ;; we start with the identity permutation
+            (let ((result (make-vector n)))
+              (do ((i 0 (fx+ i 1)))
+                  ((fx= i n) result)
+                (vector-set! result i i)))))
+      ;; We apply the one-dimensional transform
+      ;; in each coordinate direction.
+      (do ((d 0 (fx+ d 1)))
+          ((fx= d n))
+        ;; Swap the d'th and n-1'st coordinates
+        (vector-set! permutation (fx- n 1) d)
+        (vector-set! permutation d (fx- n 1))
+        ;; Apply the transform in the d'th coordinate
+        ;; direction to all \"pencils\" in that direction.
+        ;; array-permute re-orders the coordinates to
+        ;; put the d'th coordinate at the end, array-curry
+        ;; returns an $n-1$-dimensional array of
+        ;; one-dimensional subarrays, and 1D-transform
+        ;; is applied to each of those sub-arrays.
+        (array-for-each
+         1D-transform
+         (array-curry (array-permute array permutation)
+                      1))
+        ;; return the permutation to the identity
+        (vector-set! permutation d d)
+        (vector-set! permutation (fx- n 1) (fx- n 1))))))
  "))
 (<p> "We can test this by turning a one-dimensional Haar wavelet transform into a multi-dimensional Haar transform:")
 (<pre>
  (<code>"
-  (define (1D-Haar-loop a)
-    (let ((getter (array-getter a))
-          (setter (array-setter a))
-          (n (interval-upper-bound (array-domain a) 0)))
-      (do ((i 0 (fx+ i 2)))
-          ((fx= i n))
-        (let* ((a_i   (getter i))
-               (a_i+1 (getter (fx+ i 1)))
-               (scaled-sum        (fl/ (fl+ a_i a_i+1) (flsqrt 2.0)))
-               (scaled-difference (fl/ (fl- a_i a_i+1) (flsqrt 2.0))))
+(define (1D-Haar-loop a)
+  (let ((getter (array-getter a))
+        (setter (array-setter a))
+        (n (interval-upper-bound (array-domain a) 0)))
+    (do ((i 0 (fx+ i 2)))
+        ((fx= i n))
+      (let* ((a_i
+              (getter i))
+             (a_i+1 
+              (getter (fx+ i 1)))
+             (scaled-sum
+              (fl/ (fl+ a_i a_i+1) (flsqrt 2.0)))
+             (scaled-difference
+              (fl/ (fl- a_i a_i+1) (flsqrt 2.0))))
           (setter scaled-sum i)
           (setter scaled-difference (fx+ i 1))))))
   
-  (define (1D-Haar-transform a)
-    ;; works only on mutable arrays with domains $[0, 2^k)$ for some $k$
-    (let ((n (interval-upper-bound (array-domain a) 0)))
-      (if (fx< 1 n)
-          (begin
-            ;; calculate the scaled sums and differences
-            (1D-Haar-loop a)
-            ;; Apply the transform to the sub-array of scaled sums
-            (1D-Haar-transform (array-sample a '#(2)))))))
-  
-  (define (1D-Haar-inverse-transform a)
-    ;; works only on mutable arrays with domains $[0, 2^k)$ for some $k$
-    (let* ((n (interval-upper-bound (array-domain a) 0)))
-      (if (fx< 1 n)
-          (begin
-            ;; Apply the inverse transform to get the array of scaled sums
-            (1D-Haar-inverse-transform (array-sample a '#(2)))
-            ;; reconstruct the array values from the scaled sums and differences
-            (1D-Haar-loop a)))))
-  
-  (define Haar-transform
-    (make-separable-transform 1D-Haar-transform))
-  
-  (define Haar-inverse-transform
-    (make-separable-transform 1D-Haar-inverse-transform))
+(define (1D-Haar-transform a)
+  ;; works only on mutable arrays with domains
+  ;; $[0, 2^k)$ for some $k$
+  (let ((n (interval-upper-bound (array-domain a) 0)))
+    (if (fx< 1 n)
+        (begin
+          ;; calculate the scaled sums and differences
+          (1D-Haar-loop a)
+          ;; Apply the transform to the
+          ;; sub-array of scaled sums
+          (1D-Haar-transform (array-sample a '#(2)))))))
+
+(define (1D-Haar-inverse-transform a)
+  ;; works only on mutable arrays with domains
+  ;; $[0, 2^k)$ for some $k$
+  (let* ((n (interval-upper-bound (array-domain a) 0)))
+    (if (fx< 1 n)
+        (begin
+          ;; Apply the inverse transform to
+          ;; get the array of scaled sums
+          (1D-Haar-inverse-transform
+           (array-sample a '#(2)))
+          ;; reconstruct the array values from
+          ;; the scaled sums and differences
+          (1D-Haar-loop a)))))
+
+(define Haar-transform
+  (make-separable-transform 1D-Haar-transform))
+
+(define Haar-inverse-transform
+  (make-separable-transform 1D-Haar-inverse-transform))
 " ))
 (<p> "We then define an image that is a multiple of a single, two-dimensional Haar wavelet, compute its transform (which should be nonzero for only a single Haar coefficient), and then the inverse transform:")
 (<pre>
  (<code>"
-  (let ((image (array->specialized-array (make-array (make-interval '#(0 0) '#(4 4))
-                                                     (lambda (i j)
-                                                       (if (fx< i 2) 1. -1.))))))
-    (display \"\\nInitial image: \\n\")
-    (pretty-print (list (array-domain image)
-                        (array->list image)))
-    (Haar-transform image)
-    (display \"\\nArray of Haar wavelet coefficients: \\n\")
-    (pretty-print (list (array-domain image)
-                        (array->list image)))
-    (Haar-inverse-transform image)
-    (display \"\\nArray reconstructed from Haar wavelet coefficients: \\n\")
-    (pretty-print (list (array-domain image)
-                        (array->list image))))
-  "))
+(let ((image
+       (array->specialized-array
+        (make-array (make-interval '#(0 0) '#(4 4))
+                    (lambda (i j)
+                      (if (fx< i 2) 1. -1.))))))
+  (display \"\\nInitial image: \\n\")
+  (pretty-print (list (array-domain image)
+                      (array->list image)))
+  (Haar-transform image)
+  (display \"\\nArray of Haar wavelet coefficients: \\n\")
+  (pretty-print (list (array-domain image)
+                      (array->list image)))
+  (Haar-inverse-transform image)
+  (display \"\\nReconstructed image: \\n\")
+  (pretty-print (list (array-domain image)
+                      (array->list image))))
+"))
 (<p> "This yields: ")
 (<pre>"
 Initial image: 
-(#<##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)> (1. 1. 1. 1. 1. 1. 1. 1. -1. -1. -1. -1. -1. -1. -1. -1.))
+(#<##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)> 
+ (1. 1. 1. 1. 1. 1. 1. 1. -1. -1. -1. -1. -1. -1. -1. -1.))
 
 Array of Haar wavelet coefficients: 
-(#<##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)> (0. 0. 0. 0. 0. 0. 0. 0. 3.9999999999999987 0. 0. 0. 0. 0. 0. 0.))
+(#<##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)>
+ (0. 0. 0. 0. 0. 0. 0. 0. 3.9999999999999987
+  0. 0. 0. 0. 0. 0. 0.))
 
-Array reconstructed from Haar wavelet coefficients: 
+Reconstructed image: 
 (#<##interval #11 lower-bounds: #(0 0) upper-bounds: #(4 4)>
  (.9999999999999993
   .9999999999999993
