@@ -68,6 +68,7 @@ MathJax.Hub.Config({
 	      (<li> "Draft #12 published: 2016/9/17")
 	      (<li> "Draft #13 published: 2016/11/18")
 	      (<li> "Draft #14 published: 2016/11/28")
+	      (<li> "Draft #15 published: 2016/11/28")
 	      )
 	
 	(<h2> "Abstract")
@@ -1688,4 +1689,10 @@ Reconstructed image:
  (<li> (<a> name: 'SRFI-47 href: "http://srfi.schemers.org/srfi-47/" "SRFI 47: Array")", by Aubrey Jaffer.")
  (<li> (<a> name: 'SRFI-58 href: "http://srfi.schemers.org/srfi-58/" "SRFI 58: Array Notation")", by Aubrey Jaffer.")
  (<li> (<a> name: 'SRFI-63 href: "http://srfi.schemers.org/srfi-63/" "SRFI 63: Homogeneous and Heterogeneous Arrays")", by Aubrey Jaffer."))
+(<h2> "Copyright")
+(<p> (<unprotected> "&copy;")" 2016 Bradley J Lucier. All Rights Reserved.")
+(<p> "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: ")
+(<p> "The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.")
+(<p> " THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+")
 ))))))
