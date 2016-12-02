@@ -47,7 +47,8 @@ remainders.  (There is at least one (fortunately today defunct)
 programming language that provides addition, subtraction, and division,
 with multiplication notably absent, being expressible as division.)
 Everyone agrees that a pair of operators for computing integral
-quotients <em>q</em> and remainders <em>r</em> from division of dividend <em>n</em> by divisor <em>d</em>,
+quotients <em>q</em> and remainders <em>r</em> from the division of
+a numerator (dividend) <em>n</em> by a denominator (divisor) <em>d</em>,
 should satisfy the relations
 </p>
 <ol><li><em>n</em> = <em>dq</em> + <em>r</em>,
@@ -57,7 +58,7 @@ should satisfy the relations
 Such a pair of operators will be called a division operator pair.  Many
 programming languages provide only one division operator pair.  Some,
 such as C, leave the semantics unspecified when either or each of the
-dividend and the divisor is negative.  If the dividend and divisor are
+numerator and the denominator is negative.  If the numerator and denominator are
 both integers, then the remainder will also be an integer.
 </p>
 <p>
@@ -84,8 +85,8 @@ to satisfy properties (1)-(3), see Raymond T. Boute, <a
 Unfortunately, most programming languages give nondescript names such
 as DIV(IDE), QUOT(IENT), MOD(ULO), and REM(AINDER) to these operations.
 The language should make clear to programmers what division operations
-their programs are performing, especially when negative dividends and
-divisors can arise, but perhaps may not often be tested.
+their programs are performing, especially when negative numerators and
+denominators can arise, but perhaps may not often be tested.
 </p>
 
 <h2 id="RelatedStandards">Related Standards</h2>
@@ -94,22 +95,22 @@ divisors can arise, but perhaps may not often be tested.
 The R5RS gives the names <tt>quotient</tt> and <tt>remainder</tt> to the truncating
 division operator pair, and the name <tt>modulo</tt> to the remainder half of
 the flooring division operator pair.  For all these three procedures in
-the R5RS, the dividend may be any integer, and the divisor may be any
+the R5RS, the numerator may be any integer, and the denominator may be any
 nonzero integer.
 </p>
 <h3 id="R6RS">R6RS</h3>
 <p>
 The R6RS gives the names <tt>div</tt>, <tt>mod</tt>, and <tt>div-and-mod</tt> to the Euclidean division operator
 family, and the names <tt>div0</tt>, <tt>mod0</tt>, and <tt>div0-and-mod0</tt> to the balanced operator family.
-For all six of these procedures, the dividend may be
-any real number, and the divisor may be any nonzero real number.  The R5RS procedures
+For all six of these procedures, the numerator may be
+any real number, and the denominator may be any nonzero real number.  The R5RS procedures
 are also available in the R5RS compatibility library.
 </p>
 <h3 id="R7RS">R7RS</h3>
 <p>
 The truncate and floor families are part of R7RS-small.  Three of them
 are also available under their R5RS names, for backward compatibility.
-The dividend may be any integer, and the divisor may be any
+The numerator may be any integer, and the denominator may be any
 nonzero integer.
 </p>
 <h3 id="CommonLisp">Common Lisp</h3>
@@ -119,15 +120,15 @@ Common Lisp provides four integral division functions, <tt>floor</tt>, <tt>ceili
 division functions comprise both the quotient and remainder of a
 division operator pair, and return them as two values, of which the
 latter, the remainder, may be implicitly ignored in Common Lisp.  The
-divisor argument is optional in Common Lisp's integral division
+denominator argument is optional in Common Lisp's integral division
 functions; if omitted, it is taken to be 1.  <tt>mod</tt> is the remainder half
 of the flooring division operator pair; <tt>rem</tt> is the remainder half of
 the truncating division operator pair.  Common Lisp does not provide
 any part of the Euclidean division operator pair.
 </p>
 <p>
-For all six of these functions in Common Lisp, the dividend may be any
-real number, and the divisor may be any nonzero real number.  Common
+For all six of these functions in Common Lisp, the numerator may be any
+real number, and the denominator may be any nonzero real number.  Common
 Lisp also provides four extra functions <tt>ffloor</tt>, <tt>fceiling</tt>, <tt>ftruncate</tt>,
 and <tt>fround</tt>, which differ from their <tt>f</tt>-less variants only in
 floating-point contagion rules.
@@ -139,23 +140,23 @@ For each of six division operator pairs — floor, ceiling, truncate,
 round, Euclidean and balanced — there is a family of three procedures: one, named
 <tt>&lt;operator&gt;/</tt>, to compute the division and to return both quotient and
 remainder as multiple return values; one, named <tt>&lt;operator&gt;-quotient</tt>,
-to compute the quotient; and one, named <tt>&lt;operator&gt;-remainder</tt>, to
-compute the remainder.  Each division operator pair is specified by
-defining the quotient <em>q</em> in terms of the dividend <em>a</em> and the divisor <em>n</em>.
+to return only the quotient; and one, named <tt>&lt;operator&gt;-remainder</tt>, to
+return only the remainder.  Each division operator pair is specified by
+defining the quotient <em>q</em> in terms of the numerator <em>a</em> and the denominator <em>n</em>.
 Tacitly the remainder <em>r</em> is as above: <em>r</em> = <em>n</em> - <em>dq</em>.
 </p>
 <p>
 It is an error if any of the arguments are not integers (exact or inexact).
 It is also an error to
-supply zero as a divisor to any of these procedures.
+supply zero as a denominator to any of these procedures.
 If any argument is inexact, the result is inexact, unless the implementation
 can prove that the inexactness cannot affect the result, as in the case of
 dividing an exact zero by an inexact number.
 </p>
 <p>
-<tt>(floor/ </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
-<tt>(floor-quotient </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
-<tt>(floor-remainder </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
+<tt>(floor/ </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
+<tt>(floor-quotient </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
+<tt>(floor-remainder </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
 </p>
 <blockquote>
 <p>
@@ -166,9 +167,9 @@ dividing an exact zero by an inexact number.
 Thus <em>r</em> is negative iff <em>d</em> is negative.
 </p>
 <p>
-<tt>(ceiling/ </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
-<tt>(ceiling-quotient </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
-<tt>(ceiling-remainder </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
+<tt>(ceiling/ </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
+<tt>(ceiling-quotient </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
+<tt>(ceiling-remainder </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
 </p>
 <blockquote>
 <p>
@@ -179,22 +180,22 @@ Thus <em>r</em> is negative iff <em>d</em> is negative.
 Thus <em>r</em> is negative iff <em>d</em> is non-negative.
 </p>
 <p>
-If <em>divisor</em> is the number of units in a block, and &lt;dividend&gt; is
-some number of units, then <tt>(ceiling-quotient </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt>
-gives the number of blocks needed to cover <em>dividend</em> units.  For
-example, <em>divisor</em> might be the number of bytes in a disk sector, and
-<em>dividend</em> the number of bytes in a file; then the quotient is the
+If <em>denominator</em> is the number of units in a block, and &lt;numerator&gt; is
+some number of units, then <tt>(ceiling-quotient </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt>
+gives the number of blocks needed to cover <em>numerator</em> units.  For
+example, <em>denominator</em> might be the number of bytes in a disk sector, and
+<em>numerator</em> the number of bytes in a file; then the quotient is the
 number of disk sectors needed to store the contents of the file.  For
-another example, <em>divisor</em> might be the number of octets in the
-output of a cryptographic hash function, and <em>dividend</em> the number of
+another example, <em>denominator</em> might be the number of octets in the
+output of a cryptographic hash function, and <em>numerator</em> the number of
 octets desired in a key for a symmetric cipher, to be derived using
 the cryptographic hash function; then the quotient is the number of
 hash values needed to concatenate to make a key.
 </p>
 <p>
-<tt>(truncate/ </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
-<tt>(truncate-quotient </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
-<tt>(truncate-remainder </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
+<tt>(truncate/ </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
+<tt>(truncate-quotient </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
+<tt>(truncate-remainder </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
 </p>
 <blockquote>
 <p>
@@ -202,15 +203,15 @@ hash values needed to concatenate to make a key.
 </p>
 </blockquote>
 <p>
-Thus <em>r</em> is negative iff <em>n</em> is negative.  However, by any non-unit divisor, the
-quotient of +1, 0, or -1 is 0; that is, three contiguous dividends by
-a common divisor share a common quotient.  Of the other division
+Thus <em>r</em> is negative iff <em>n</em> is negative.  However, by any non-unit denominator, the
+quotient of +1, 0, or -1 is 0; that is, three contiguous numerators by
+a common denominator share a common quotient.  Of the other division
 operator pairs, only the round pair exhibits this property.
 </p>
 <p>
-<tt>(round/ </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
-<tt>(round-quotient </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
-<tt>(round-remainder </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
+<tt>(round/ </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
+<tt>(round-quotient </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
+<tt>(round-remainder </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
 </p>
 <blockquote>
 <p>
@@ -220,15 +221,15 @@ operator pairs, only the round pair exhibits this property.
 <p>
 The round function rounds to the nearest integer,
 breaking ties by choosing the nearest even integer.
-Nothing general can be said about the sign of r.  Like the truncate
-operator pair, the quotient of +1, 0, or -1 by any non-unit divisor is 0, so
-that three contiguous dividends by a common divisor share a common
+Nothing general can be said about the sign of <em>r</em>.  Like the truncate
+operator pair, the quotient of +1, 0, or -1 by any non-unit denominator is 0, so
+that three contiguous numerators by a common denominator share a common
 quotient.
 </p>
 <p>
-<tt>(euclidean/ </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
-<tt>(euclidean-quotient </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
-<tt>(euclidean-remainder </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
+<tt>(euclidean/ </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
+<tt>(euclidean-quotient </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
+<tt>(euclidean-remainder </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
 </p>
 <blockquote>
 <p>
@@ -246,23 +247,23 @@ This division operator pair satisfies the stronger property
 </blockquote>
 <p>
 used often in mathematics.  Thus, for example,
-<tt>(euclidean-remainder </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt>
+<tt>(euclidean-remainder </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt>
 is always a valid index into a vector whose
-length is at least the absolute value of <em>divisor</em>.
+length is at least the absolute value of <em>denominator</em>.
 This division operator pair is so
 named because it is the subject of the Euclidean division algorithm.
 </p>
 <p>
-<tt>(balanced/ </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
-<tt>(balanced-quotient </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
-<tt>(balanced-remainder </tt><em>dividend</em><tt> </tt><em>divisor</em><tt>)</tt><br />
+<tt>(balanced/ </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
+<tt>(balanced-quotient </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
+<tt>(balanced-remainder </tt><em>numerator</em><tt> </tt><em>denominator</em><tt>)</tt><br />
 </p>
 <p>
 This division operator pair satisfies the property
 </p>
 <blockquote>
 <p>
--|d/2| &lt;= r &lt; |d/2|.
+-|<em>d</em>/2| &lt;= <em>r</em> &lt; |<em>d</em>/2|.
 </p>
 </blockquote>
 <p>
