@@ -28,8 +28,8 @@ John Cowan
 <h1>Abstract</h1>
 
 <p>
-Fixnums are an implementation-defined subset of the exact integers.
-Every implementation of this SRFI must define its fixnum range as a closed
+<em>Fixnums</em> are an implementation-defined subset of the exact integers.
+Every implementation of this SRFI must define its <em>fixnum range</em> as a closed
 interval [-2<sup><em>w</em>-1</sup>, 2<sup><em>w</em>-1</sup>-1], 
 where <em>w</em> is an integer greater than or equal to 24.  Every
 mathematical integer within an implementation's fixnum range must
@@ -55,7 +55,7 @@ some of the semantics of fixnums, but makes the range implementation-dependent.
 </p>
 <p>
 Existing implementations employ different implementation strategies
-for fixnums: Some implement the model specified by R6RS (overflows
+for fixnums. Some implement the model specified by R6RS (overflows
 cause exceptions), some implement modular arithmetic (overflows
  “wrap around”), and others do not handle arithmetic overflows at all.
 In programs that use fixnums instead of generic arithmetic,
@@ -80,7 +80,7 @@ the letters <tt>fx</tt>.  In most cases they correspond to an R7RS-small or
 <a href="http://srfi.schemers.org/srfi-141/srfi-141.html">SRFI 141</a>
 or
 <a href="http://srfi.schemers.org/srfi-142/srfi-142.html">SRFI 142</a>
-on general integers.
+operation on general integers.
 </p>
 <h2 id="Constants">Constants</h2>
 <p>
@@ -155,7 +155,7 @@ Returns the two fixnum results of the following computation:
        (d1 (balanced-quotient d (expt 2 (fixnum-width)))))
   (values d0 d1))
 </pre><p>
-<tt>(fx*/carry </tt><em>fx<sub>1</sub> fx<sub>2</sub> fx<sub>3</sub></em><tt>)‌‌</tt>
+<tt>(fx*+/carry </tt><em>fx<sub>1</sub> fx<sub>2</sub> fx<sub>3</sub></em><tt>)‌‌</tt>
 </p>
 <p>
 Returns the two fixnum results of the following computation:
@@ -167,7 +167,7 @@ Returns the two fixnum results of the following computation:
 </pre><h2 id="Integerdivision">Integer division</h2>
 <p>
 The following procedures are the fixnum counterparts of procedures
-from <a href="http://srfi.schemers.org/srfi-141/srfi-141.html">SRFI 141</a>:
+from <a href="http://srfi.schemers.org/srfi-142/srfi-142.html">SRFI 142</a>:
 </p>
 <pre>fxfloor/ fxfloor-quotient fxfloor-remainder
 fxceiling/ fxceiling-quotient fxceiling-remainder
