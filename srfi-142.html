@@ -35,18 +35,19 @@ accompanied by a reference implementation of the spec in terms of a set of
 seven core operators. The sample implementation is portable, as efficient
 as practical with pure Scheme arithmetic (it is worthwhile replacing the
 core ops with C or assembly language if possible), and open source.
-The precise semantics of these operators is almost never an issue. A
-consistent, portable set of <em>names</em> and <em>parameter conventions</em>, however, is.
 </p>
 <p>
+The precise semantics of these operators is almost never an issue. A
+consistent, portable set of <em>names</em> and <em>parameter conventions</em>, however, is.
 Hence this SRFI, which is based mainly on <a href="http://srfi.schemers.org/srfi-33/srfi-33.html">SRFI 33</a>, with some changes and additions from <a href="http://srfi.schemers.org/srfi-33/mail-archive/msg00023.html">Olin's late revisions to SRFI 33</a> (which were never consummated).
-SRFI 33 was never finalized, but is a reasonably comprehensive proposal.
-A few procedures have been added from <a href="http://srfi.schemers.org/srfi-60/srfi-60.html">SRFI 60</a> and
-the general vector <a href="http://srfi.schemers.org/srfi-133/srfi-133.html">SRFI 133</a>.  
-SRFI 60 (based on SLIB) is smaller but has a few procedures of its own;
-some of its procedures have both native (often CL) and SRFI 33 names.
+<a href="http://srfi.schemers.org/srfi-60/srfi-60.html">SRFI 60</a>
+(based on SLIB) is smaller but has a few procedures of its own;
+some of its procedures have both native (often Common Lisp) and SRFI 33 names.
+They have been incorporated into this SRFI.
 <a href="http://www.r6rs.org/final/html/r6rs-lib/r6rs-lib-Z-H-12.html#node_sec_11.4">R6RS</a>
 is a subset of SRFI 60, except that all procedure names begin with a <tt>bitwise-</tt> prefix.
+A few procedures have been added from
+the general vector <a href="http://srfi.schemers.org/srfi-133/srfi-133.html">SRFI 133</a>.  
 </p>
 <p>
 Among the applications of bitwise operations are: hashing,
@@ -70,7 +71,7 @@ No issues at present
 
 <h2 id="Generaldesignprinciples">General design principles</h2>
 <ul><li>These operations interpret exact integers using two's-complement representation.
-</li></ul><ul><li>The associative bitwise ops are required to be n-ary. Programmers can <em>reliably</em> write <tt>bitwise-and</tt> with 3 arguments, for example.
+</li></ul><ul><li>The associative bitwise ops are required to be n-ary. Programmers can reliably write <tt>bitwise-and</tt> with 3 arguments, for example.
 </li></ul><ul><li>The word <tt>or</tt> is never used by itself, only with modifiers: <tt>xor</tt>, <tt>ior</tt>, <tt>nor</tt>,
 <tt>orc1</tt>, or <tt>orc2</tt>.  This is the same rule as Common Lisp.
 </li></ul><ul><li>Extra and redundant functions such as <tt>bitwise-count</tt>, <tt>bitwise-nor</tt> 
@@ -82,24 +83,23 @@ synthesized with a snarled mess of <tt>bitwise-and</tt>s, <tt>bitwise-or</tt>s, 
 What we gain is having an agreed-upon set of names by which we can refer
 to these functions. If you believe in "small is beautiful," then what is your motivation
 for including anything beyond <tt>bitwise-nand</tt>?
-</li></ul><ul><li>The programmer doesn't have to re-implement the redundant functions, and stumble
-over the boundary cases and error checking. The programmer can express
-himself using a full palette of building blocks.
+</li></ul><ul><li>Programmers doesn't have to re-implement the redundant functions, and stumble
+over the boundary cases and error checking, but can express
+themselves using a full palette of building blocks.
 </li></ul><ul><li>Compilers can directly implement many of these ops for great efficiency gains
 without requiring any tricky analysis.
 </li></ul><ul><li>Logical right or left shift operations are excluded 
 because they are not well defined on general integers; they are only defined
 on integers in some finite range. Remember that, in this library, integers
-are interpreted as <em>semi-infinite</em> bit strings that have only a finite
+are interpreted as semi-infinite bit strings that have only a finite
 number of ones or a finite number of zeros. Logical shifting operates on bit
 strings of some fixed size. If we shift left, then leftmost bits "fall off"
 the end (and zeros shift in on the right). If we shift right, then zeros
 shift into the string on the left (and rightmost bits fall off the end). So
 to define a logical shift operation, <em>we must specify the size of the
-window</em>. Typically this is the width of the underlying machine's register
-set (e.g., 32 bits). This is blatantly machine-specific and unportable, and
-clearly not the right thing for Scheme's more machine-independent general
-integers.
+window</em>. 
+<a href="http://srfi.schemers.org/srfi-143/srfi-143.html">SRFI 143</a>
+specifies logical shifts on fixnums, which are integers of machine-dependent size.
 </li></ul><h2 id="CommonLisp">Common Lisp</h2>
 <p>
 The core of this design design mirrors the structure of Common Lisp's pretty closely.  Here are some differences:
@@ -144,19 +144,19 @@ has been changed to <tt>bit-field-replace-same</tt>.
 <p>
 SRFI 60 includes six procedures that do not have SRFI 33 equivalents.  They are incorporated into this SRFI as follows:
 </p>
-<ul><li>The names <tt>rotate-bit-field</tt> and <tt>reverse-bit-field</tt> are replaced by <tt>bit-field-rotate</tt> and <tt>bit-field-reverse</tt>, in parallel with Olin's revisions.
+<ul><li>The names <tt>rotate-bit-field</tt> and <tt>reverse-bit-field</tt> are replaced by <tt>bit-field-rotate</tt> and <tt>bit-field-reverse</tt>, by analogy with Olin's revisions.
 </li></ul><ul><li>The procedures <tt>copy-bit</tt>, <tt>integer-&gt;list</tt> and <tt>list-&gt;integer</tt> are incorporated into this SRFI unchanged.
 </li></ul><ul><li>The procedure <tt>booleans-&gt;integer</tt> is a convenient way to specify a bitwise integer: it accepts an arbitrary number of boolean arguments and returns a non-negative integer.  So in this SRFI it has the short name <tt>bits</tt>, roughly analogous to <tt>list</tt>, <tt>string</tt>, and <tt>vector</tt>.
 </li></ul><h2 id="Othersources">Other sources</h2>
-<ul><li>The following procedures are inspired by SRFI 133:  <tt>bit-swap</tt>, <tt>bit-field-append</tt>,
-</li></ul><p>
+<ul><li><p>The following procedures are inspired by SRFI 133:  <tt>bit-swap</tt>, <tt>bit-field-append</tt>,
 <tt>bitwise-fold</tt>, <tt>bitwise-for-each</tt>, <tt>bitwise-unfold</tt>.
 </p>
-<ul><li>The procedure <tt>bit-field-set</tt> is the counterpart of <tt>bit-field-clear</tt>.
-</li></ul><h2 id="Argumentorderingandsemantics">Argument ordering and semantics</h2>
+<li><p>The procedure <tt>bit-field-set</tt> is the counterpart of <tt>bit-field-clear</tt>.</p>
+<li><p>The procedures <tt>integer-&gt;vector</tt> and <tt>vector-&gt;integer</tt> are inspired by their list counterparts.</p>
+</ul><h2 id="Argumentorderingandsemantics">Argument ordering and semantics</h2>
 <ul><li>In general, these procedures place the bitstring arguments to be operated on first.
 Where the operation is not commutative, the "destination" argument that provides
-the background to be operated on is placed before the "source" argument that provides
+the background bits to be operated on is placed before the "source" argument that provides
 the bits to be transferred to it.
 </li></ul><ul><li>In SRFI 33, <tt>bitwise-nand</tt> and <tt>bitwise-nor</tt> accepted an arbitrary number of arguments
 even though they are not commutative.  Olin's late revisions made them dyadic, and so
@@ -379,7 +379,7 @@ and the <em>index<sub>2</sub></em>th bit have been exchanged.
 <p>
 Determines if any/all of the bits set in bitstring <em>test-bits</em> are set
 in bitstring <em>i</em>. I.e.,  returns <tt>(not (zero? (bitwise-and </tt><em>test-bits i</em><tt>)))</tt>
-or <tt>(= </tt><em>test-bits</em><tt> (bitwise-and ''test-bits i'')))</tt> respectively.
+and <tt>(= </tt><em>test-bits</em><tt> (bitwise-and</tt> <em>test-bits i</em>))) respectively.
 </p>
 <p>
 <tt>(first-set-bit </tt><em>i</em><tt>)</tt>
@@ -398,7 +398,7 @@ Return -1 if <em>i</em> contains no 1 bits (i.e., if <em>i</em> is zero).
 </pre><h2 id="Bitfieldoperations">Bit field operations</h2>
 <p>
 These functions operate on a contiguous field of bits (a "byte," in
-Common-Lisp parlance) in a given bitstring. The <em>start</em> and <em>end</em>
+Common Lisp parlance) in a given bitstring. The <em>start</em> and <em>end</em>
 arguments, which are not optional, are
 non-negative exact integers specifying the field: it is the <em>end-start</em> bits
 running from bit <em>start</em> to bit <em>end</em>-1.
@@ -475,7 +475,7 @@ Returns a list/vector of <em>len</em> booleans corresponding to each bit of the 
 </p>
 <p>
 <tt>(list-&gt;integer </tt><em>list</em><tt>)</tt><br />
-<tt>(list-&gt;integer </tt><em>list</em><tt>)</tt>
+<tt>(vector-&gt;integer </tt><em>list</em><tt>)</tt>
 </p>
 <p>
 Returns an integer formed from the booleans in <em>list/vector</em>;
@@ -490,6 +490,8 @@ and so are <tt>integer-&gt;vector</tt> and <tt>vector-&gt;integer</tt>.
 </p>
 <p>
 Returns the integer coded by the <tt>bool</tt> arguments.
+The first argument is bit #0, the second argument is bit #1, and so on.
+Note that the result is never a negative integer.
 </p>
 <h2 id="Foldunfoldandgenerate">Fold, unfold, and generate</h2>
 <p>
