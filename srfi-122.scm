@@ -68,6 +68,7 @@ MathJax.Hub.Config({
 	      (<li> "Draft #12 published: 2016/9/17")
 	      (<li> "Draft #13 published: 2016/11/18")
 	      (<li> "Draft #14 published: 2016/11/28")
+	      (<li> "Draft #15 published: 2016/12/15")
 	      )
 	
 	(<h2> "Abstract")
@@ -201,12 +202,12 @@ they may have hash tables or databases behind an implementation, one may read th
          (<li> (<b> "Source of function names. ")"The function "(<code> 'array-curry)" gets its name from the " #\newline
                (<a> href: "http://en.wikipedia.org/wiki/Currying" "curry operator")
                " in programming---we are currying the getter of the array and keeping careful track of the domains. " #\newline
-               "interval-curry is simply given a parallel name (although it can be thought of as currying the " #\newline
-               "characteristic function of the interval,  encapsulated here as "(<code> 'interval-contains-multi-index?)").")
+               (<code>'interval-projections)" can be thought of as currying the " #\newline
+               "characteristic function of the interval,  encapsulated here as "(<code> 'interval-contains-multi-index?)".")
          (<li> (<b> "Choice of functions on intervals. ")"The choice of functions for both arrays and intervals was motivated almost solely by what I needed for arrays.  There are " #\newline
                "natural operations on intervals, like "
                (<pre> (<code>"(interval-cross-product interval1 interval2 ...)"))
-               "(the inverse of "(<code> 'interval-curry)"),
+               "(the inverse of "(<code> 'interval-projections)"),
        which don't seem terribly natural for arrays.")
          (<li> (<b> "No empty intervals. ")"This SRFI considers arrays over only nonempty intervals of positive dimension.  The author of this proposal acknowledges that other languages and array systems allow either zero-dimensional intervals or empty intervals of positive dimension, but prefers to leave such empty intervals as possibly compatible extensions to the current proposal.")
          (<li> (<b> "Multi-valued arrays. ")"While this SRFI restricts attention to single-valued arrays, wherein the getter of each array returns a single value, allowing multi-valued immutable arrays would a compatible extension of this SRFI.")
@@ -236,10 +237,10 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#interval-volume" "interval-volume")END
                  (<a> href: "#interval-subset?" "interval-subset?")END
                  (<a> href: "#interval-contains-multi-index?" "interval-contains-multi-index?")END
-                 (<a> href: "#interval-curry" "interval-curry")END
+                 (<a> href: "#interval-projections" "interval-projections")END
                  (<a> href: "#interval-for-each" "interval-for-each")END
                  (<a> href: "#interval-dilate" "interval-dilate")END
-                 (<a> href: "#interval-intersect?" "interval-intersect?")END
+                 (<a> href: "#interval-intersect" "interval-intersect")END
                  (<a> href: "#interval-translate" "interval-translate")END
                  (<a> href: "#interval-permute" "interval-permute") END
                  (<a> href: "#interval-scale" "interval-scale")
@@ -276,28 +277,31 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#array-dimension" "array-dimension")END
                  (<a> href: "#mutable-array?" "mutable-array?")END
                  (<a> href: "#array-setter" "array-setter")END
-                 (<a> href: "#specialized-array" "specialized-array")END
+                 (<a> href: "#specialized-array-default-safe?" "specialized-array-default-safe?") END
+                 (<a> href: "#make-specialized-array" "make-specialized-array")END
+                 (<a> href: "#specialized-array?" "specialized-array?")END
                  (<a> href: "#specialized-array-share" "specialized-array-share")END
                  (<a> href: "#specialized-array?" "specialized-array?")END
-                 (<a> href: "#array-safe?" "array-safe?") END
-                 (<a> href: "#array-body" "array-body")END
-                 (<a> href: "#array-indexer" "array-indexer")END
                  (<a> href: "#array-storage-class" "array-storage-class")END
-                 (<a> href: "#array-map" "array-map")END
-                 (<a> href: "#array-curry" "array-curry")END
-                 (<a> href: "#array-for-each" "array-for-each")END
-                 (<a> href: "#array-fold" "array-fold")END
-                 (<a> href: "#array-fold-right" "array-fold-right")END
-                 (<a> href: "#array-extract" "array-extract") END
-                 (<a> href: "#specialized-array-default-safe?" "specialized-array-default-safe?") END
+                 (<a> href: "#array-indexer" "array-indexer")END
+                 (<a> href: "#array-body" "array-body")END
+                 (<a> href: "#array-safe?" "array-safe?") END
+                 (<a> href: "#specialized-array-share" "specialized-array-share")END
                  (<a> href: "#array->specialized-array" "array->specialized-array")END
+                 (<a> href: "#array-curry" "array-curry")END
+                 (<a> href: "#array-extract" "array-extract") END
                  (<a> href: "#array-translate" "array-translate")END
                  (<a> href: "#array-permute" "array-permute")END
                  (<a> href: "#array-reverse" "array-reverse")END
                  (<a> href: "#array-sample" "array-sample")END
-                 (<a> href: "#array-every?" "array-every?")END
+                 (<a> href: "#array-map" "array-map")END
+                 (<a> href: "#array-for-each" "array-for-each")END
+                 (<a> href: "#array-fold" "array-fold")END
+                 (<a> href: "#array-fold-right" "array-fold-right")END
+                 (<a> href: "#array-any" "array-any")END
+                 (<a> href: "#array-every" "array-every")END
                  (<a> href: "#array->list" "array->list") END
-                 (<a> href: "#list->specialized-array" "list->specialized-array") END
+                 (<a> href: "#list->specialized-array" "list->specialized-array")
                  "."
                  )))
         (<h2> "Miscellaneous Functions")
@@ -327,7 +331,7 @@ $l_0<u_0,\\ldots,l_{d-1}<u_{d-1}$.")
         (format-lambda-list '(make-interval lower-bounds upper-bounds))
         (<p> "Create a new interval; "(<code> (<var>"lower-bounds"))" and "(<code> (<var>"upper-bounds"))"
 are nonempty vectors (of the same length) of exact integers that satisfy")
-        (<blockquote>
+        (<pre>
          (<code>" (< (vector-ref "(<var>"lower-bounds")" i) (vector-ref "(<var>"upper-bounds")" i))"))
         (<p> " for 
 $0\\leq i<{}$"(<code>"(vector-length "(<var>"lower-bounds")")")".  It is an error if 
@@ -338,7 +342,7 @@ $0\\leq i<{}$"(<code>"(vector-length "(<var>"lower-bounds")")")".  It is an erro
 
         (format-lambda-list '(interval-dimension interval))
         (<p> "If "(<code>(<var>"interval"))" is an interval built with ")
-        (<blockquote>
+        (<pre>
          (<code>"(make-interval "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
         (<p> "then "(<code> 'interval-dimension)" returns "(<code>"(vector-length "(<var>"lower-bounds")")")".  It is an error to call "(<code> 'interval-dimension)"
 if "(<code>(<var>"interval"))" is not an interval.")
@@ -360,16 +364,16 @@ if "(<code>(<var>"interval"))" and "(<code>(<var>"i"))" do not satisfy these con
  (format-lambda-list '(interval-lower-bounds->list interval))
  (format-lambda-list '(interval-upper-bounds->list interval))
  (<p> "If "(<code>(<var>"interval"))" is an interval built with ")
- (<blockquote>
+ (<pre>
   (<code>"(make-interval "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
  (<p> " then "(<code> 'interval-lower-bounds->list)" returns "(<code> "(vector->list "(<var>"lower-bounds")")")
       " and  "(<code> 'interval-upper-bounds->list)" returns "(<code> "(vector->list "(<var>"upper-bounds")")")". It is an error to call
- "(<code> 'interval-lower-bounds->list)" or "(<code> 'interval-upper-bounds->list)" if "(<code>(<var>"interval"))" does not satisfy these conditions.;;; ")
+ "(<code> 'interval-lower-bounds->list)" or "(<code> 'interval-upper-bounds->list)" if "(<code>(<var>"interval"))" does not satisfy these conditions.")
 
         (format-lambda-list '(interval-lower-bounds->vector interval))
         (format-lambda-list '(interval-upper-bounds->vector interval))
         (<p> "If "(<code>(<var>"interval"))" is an interval built with ")
-        (<blockquote>
+        (<pre>
          (<code>"(make-interval "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
         (<p> " then "(<code> 'interval-lower-bounds->vector)" returns a copy of "(<code> (<var>"lower-bounds"))
              "  and "(<code> 'interval-upper-bounds->vector)" returns a copy of "(<code> (<var>"upper-bounds"))". It is an error to call
@@ -378,10 +382,10 @@ if "(<code>(<var>"interval"))" and "(<code>(<var>"i"))" do not satisfy these con
 
         (format-lambda-list '(interval-volume interval))
         (<p> "If "(<code>(<var>"interval"))" is an interval built with ")
-        (<blockquote>
+        (<pre>
          (<code>"(make-interval "(<var>"lower-bounds")" "(<var>"upper-bounds")")"))
         (<p> "then, assuming the existence of "(<code>'vector-map)", "(<code> 'interval-volume)" returns ")
-        (<blockquote>
+        (<pre>
          (<code> "(apply * (vector->list (vector-map - "(<var>"upper-bounds")" "(<var>"lower-bounds")")))"))
         
 
@@ -389,24 +393,24 @@ if "(<code>(<var>"interval"))" and "(<code>(<var>"i"))" do not satisfy these con
 
         (format-lambda-list '(interval= interval1 interval2))
         (<p> "If "(<code>(<var>"interval1"))" and "(<code>(<var>"interval2"))" are intervals built with ")
-        (<blockquote>
+        (<pre>
          (<code>"(make-interval "(<var>"lower-bounds1")" "(<var>"upper-bounds1")")"))
         (<p> "and")
-        (<blockquote>
+        (<pre>
          (<code>"(make-interval "(<var>"lower-bounds2")" "(<var>"upper-bounds2")")"))
         (<p> "respectively, then "(<code> 'interval=)" returns")
-        (<blockquote>
+        (<pre>
          (<code> "(and (equal? "(<var> 'lower-bounds1)" "(<var> 'lower-bounds2)") (equal? "(<var> 'upper-bounds1)" "(<var> 'upper-bounds2)"))"))
         (<p> "It is an error to call "(<code> 'interval=)" if "(<code>(<var> 'interval1))" or "(<code>(<var> 'interval2))" do not satisfy this condition.")
 
         (format-lambda-list '(interval-subset? interval1 interval2))
         (<p> "If "(<code>(<var>"interval1"))" and "(<code>(<var>"interval2"))" are intervals of the same dimension $d$, "
              "then "(<code>'interval-subset?)" returns "(<code>'#t)" if ")
-        (<blockquote>
-         (<code>"(interval-lower-bound "(<var>'interval1)" j)")"${}\\geq{}$"(<code>"(interval-lower-bound "(<var>'interval2)" j)"))
+        (<pre>
+         (<code>"(<= (interval-lower-bound "(<var>'interval1)" j) (interval-lower-bound "(<var>'interval2)" j))"))
         (<p> "and")
-        (<blockquote>
-         (<code>"(interval-upper-bound "(<var>'interval1)" j)")"${}\\leq{}$"(<code>"(interval-upper-bound "(<var>'interval2)" j)"))
+        (<pre>
+         (<code>"(<= (interval-upper-bound "(<var>'interval1)" j) (interval-upper-bound "(<var>'interval2)" j))"))
         (<p> "for all $0\\leq j<d$, otherwise it returns "(<code>'#f)".  It is an error if the arguments do not satisfy these conditions.")
 
         (format-lambda-list '(interval-contains-multi-index? interval index-0 index-1 ...))
@@ -417,8 +421,8 @@ then "(<code> 'interval-contains-multi-index?)" returns "(<code> #t)" if ")
         (<p>"for $0\\leq j < d$, and "(<code>'#f)" otherwise.")
         (<p> "It is an error to call "(<code> 'interval-contains-multi-index?)" if "(<code>(<var> 'interval))" and "(<code>(<var> 'index-0))",..., do not satisfy this condition.")
 
-        (format-lambda-list '(interval-curry interval right-dimension))
-        (<p> "Conceptually, "(<code> 'interval-curry)" takes a $d$-dimensional interval 
+        (format-lambda-list '(interval-projections interval right-dimension))
+        (<p> "Conceptually, "(<code> 'interval-projections)" takes a $d$-dimensional interval 
 $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
              "and splits it into two parts")
         (<blockquote> "$[l_0,u_0)\\times\\cdots\\times[l_{d-\\text{right-dimension}-1},u_{d-\\text{right-dimension}-1})$")
@@ -426,7 +430,7 @@ $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
         (<blockquote> "$[l_{d-\\text{right-dimension}},u_{d-\\text{right-dimension}})\\times\\cdots\\times[l_{d-1},u_{d-1})$")
         (<p> "This function, the inverse of Cartesian products or cross products of intervals, is used to keep track of the domains of curried arrays.")
         (<p> "More precisely, if "(<code>(<var> 'interval))" is an interval and "(<code>(<var> 'right-dimension))" is an exact integer that satisfies "
-             (<code> "0 < "(<var> 'right-dimension)" < "(<var>'d))" then "(<code> 'interval-curry)" returns two intervals:")
+             (<code> "0 < "(<var> 'right-dimension)" < "(<var>'d))" then "(<code> 'interval-projections)" returns two intervals:")
         (<pre>
          (<code> "
 (values
@@ -450,7 +454,7 @@ $[l_0,u_0)\\times [l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$\n"
           ...
           (interval-upper-bound "(<var>'interval)"
                                 (- "(<var>'d)" 1)))))"))
-(<p> "It is an error to call "(<code> 'interval-curry)" if its arguments do not satisfy these conditions.")
+(<p> "It is an error to call "(<code> 'interval-projections)" if its arguments do not satisfy these conditions.")
 
 
 (format-lambda-list '(interval-for-each f interval))
@@ -489,9 +493,9 @@ nonempty interval.  It is an error if the arguments do not satisfy these conditi
  '#(0 0) '#(-500 -50)) => error
 "))
 
-(format-lambda-list '(interval-intersect? interval-1 interval-2 ...))
+(format-lambda-list '(interval-intersect interval-1 interval-2 ...))
 (<p> "If all the arguments are intervals of the same dimension and they have a nonempty intersection,
-the "(<code> 'interval-intersect?)" returns that intersection; otherwise it returns "(<code>'#f))
+the "(<code> 'interval-intersect)" returns that intersection; otherwise it returns "(<code>'#f))
 (<p> "It is an error if the arguments are not all intervals with the same dimension.")
 
 (format-lambda-list '(interval-translate interval translation))
@@ -527,7 +531,7 @@ the representation of $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
 
 (<h2> "Storage classes")
 (<p> "Conceptually, a storage-class is a set of functions to manage the backing store of a specialized-array.
-The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.")
+The functions allow one to make a backing store, to get values from the store and to set new values, to return the length of the store, and to specify a default value for initial elements of the backing store.  Typically, a backing store is a (heterogeneous or homogeneous) vector.  A storage-class has a type distinct from other Scheme types.")
 (<h3> "Procedures")
 
 (format-lambda-list '(make-storage-class getter setter checker maker length default))
@@ -558,12 +562,13 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
 (format-lambda-list '(storage-class-default m))
 (<p> "If "(<code>(<var> 'm))" is an object created by")
 (<blockquote>
- (<code>"(make-storage-class "(<var> "setter getter checker maker length default")")"))
+ (<code>"(make-storage-class "(<var> "getter setter checker maker length default")")"))
 (<p> " then "
      (<code> 'storage-class-getter)" returns "(<code>(<var> 'getter))", "
      (<code> 'storage-class-setter)" returns "(<code>(<var> 'setter))", "
      (<code> 'storage-class-checker)" returns "(<code>(<var> 'checker))", "
      (<code> 'storage-class-maker)" returns "(<code>(<var> 'maker))", and "
+     (<code> 'storage-class-length)" returns "(<code>(<var> 'length))", and "
      (<code> 'storage-class-default)" returns "(<code>(<var> 'default))".  Otherwise, it is an error to call any of these routines.")
 
 (<h3> "Global Variables")
@@ -676,14 +681,14 @@ setter "(<code>(<var> 'setter))".  It is an error to call "(<code> 'make-array)"
   ((array-getter sparse-array) 0 0) => 1."))
 
 (format-lambda-list '(array? obj))
-(<p> "Returns "(<code> "#t")" if and only if "(<code>(<var> 'obj))" is an array.")
+(<p> "Returns "(<code> "#t")" if  "(<code>(<var> 'obj))" is an array and "(<code> '#f)" otherwise.")
 
 (format-lambda-list '(array-domain array))
 (format-lambda-list '(array-getter array))
 (<p> "If "(<code>(<var> 'array))" is an array built by")
 (<pre>
- (<code> "(make-array "(<var> 'interval)" "(<var> 'getter)")"))
-(<p> "then "(<code> 'array-domain)" returns "(<code>(<var> 'interval))
+ (<code> "(make-array "(<var> 'interval)" "(<var> 'getter)" ["(<var> 'setter)"])"))
+(<p> "(with or without the optional "(<code>(<var> 'setter))" argument) then "(<code> 'array-domain)" returns "(<code>(<var> 'interval))
      " and "(<code> 'array-getter)" returns  "(<code>(<var> 'getter))".
 It is an error to call "(<code> 'array-domain)" or "(<code> 'array-getter)" if "(<code>(<var> 'array))" is not an array.")
 (<p> "Example: ")
@@ -702,7 +707,7 @@ It is an error to call "(<code> 'array-domain)" or "(<code> 'array-getter)" if "
 (<p> "Shorthand for "(<code>"(interval-dimension (array-domain "(<var>'array)"))")".  It is an error to call this function if "(<code>(<var>'array))" is not an array")
 
 (format-lambda-list '(mutable-array? obj))
-(<p> "Returns "(<code>"#t")" if and only if "(<code>(<var> 'obj))" is a mutable array.")
+(<p> "Returns "(<code>"#t")" if "(<code>(<var> 'obj))" is a mutable array and "(<code> '#f)" otherwise.")
 
 (format-lambda-list '(array-setter array))
 (<p> "If "(<code>(<var> 'array))" is an array built by")
@@ -717,7 +722,7 @@ if "(<code>(<var> 'array))" is not a mutable array.")
 if "(<code>(<var>'bool))" is "(<code>'#f)" then the next call to "(<code>'specialized-array-default-safe?)" will return "(<code>'#f)";
 otherwise it is an error.")
 
-(format-lambda-list '(specialized-array interval #\[ storage-class "generic-storage-class" #\] #\[ safe? "(specialized-array-default-safe?)"#\]))
+(format-lambda-list '(make-specialized-array interval #\[ storage-class "generic-storage-class" #\] #\[ safe? "(specialized-array-default-safe?)"#\]))
 (<p> "Constructs a specialized-array from its arguments.")
 (<p> (<code>(<var>'interval))" must be given as a nonempty interval. If given, "(<code>(<var>'storage-class))" must be a storage class; if it is not given it defaults to "(<code>'generic-storage-class)". If given, "(<code>(<var>'safe?))" must be a boolean; if it is not given it defaults to the current value of "(<code>"(specialized-array-default-safe?)")".")
 
@@ -728,9 +733,10 @@ otherwise it is an error.")
    (interval-volume "(<var>'interval)")
    (storage-class-default "(<var>'storage-class)"))
   "))
-(<p> "The indexer of the resulting array is constructed as the lexicographical mapping of "(<code>(<var>'interval))" onto the interval "(<code> "[0,(interval-volume "(<var>'interval)")")".")
+(<p> "The indexer of the resulting array is constructed as the lexicographical mapping of "(<code>(<var>'interval))" onto the interval "(<code> "[0,(interval-volume "(<var>'interval)"))")".")
 
-(<p> "If "(<code>(<var>'safe))" is "(<code>'#t)", then the arguments of the getter and setter (including the value to be stored) of the resulting array are checked for correctness.  If not, then "(<code>"(array-getter "(<var>'array)")")" is defined simply as ")
+(<p> "If "(<code>(<var>'safe))" is "(<code>'#t)", then the arguments of the getter and setter (including the value to be stored) of the resulting array are always checked for correctness.")
+(<p> "After correctness checking (if needed), "(<code>"(array-getter "(<var>'array)")")" is defined simply as ")
 (<pre>
  (<code>"
   (lambda multi-index
@@ -742,20 +748,20 @@ otherwise it is an error.")
 (<pre>
  (<code>"
   (lambda (val . multi-index)
-    ((storage-class-getter "(<var>'storage-class)")
+    ((storage-class-setter "(<var>'storage-class)")
      (array-body "(<var>'array)")
      (apply (array-indexer "(<var>'array)") multi-index)
      val))
   "
      ))
-(<p> "It is an error if the arguments of "(<code>'specialized-array)" do not satisfy these conditions.")
-(<p> (<b> "Examples. ")"A simple array that can hold any type of element can be defined with "(<code>"(specialized-array (make-interval '#(0 0) '#(3 3)))")".  If you find that you're using a lot of unsafe arrays of unsigned 16-bit integers, one could define ")
+(<p> "It is an error if the arguments of "(<code>'make-specialized-array)" do not satisfy these conditions.")
+(<p> (<b> "Examples. ")"A simple array that can hold any type of element can be defined with "(<code>"(make-specialized-array (make-interval '#(0 0) '#(3 3)))")".  If you find that you're using a lot of unsafe arrays of unsigned 16-bit integers, one could define ")
 (<pre>
  (<code>"
-  (define (u16-array interval)
-    (specialized-array interval u16-storage-class #f))
+  (define (make-u16-array interval)
+    (make-specialized-array interval u16-storage-class #f))
 "))
-(<p> "and then simply call, e.g., "(<code>"(u16-array (make-interval '#(0 0) '#(3 3)))")".")
+(<p> "and then simply call, e.g., "(<code>"(make-u16-array (make-interval '#(0 0) '#(3 3)))")".")
 
 (format-lambda-list '(specialized-array? obj))
 (<p> "Returns "(<code>"#t")" if "(<code>(<var> 'obj))" is a specialized-array, and "(<code>"#f")" otherwise. A specialized-array is an array.")
@@ -781,18 +787,18 @@ indexer:       (lambda multi-index
                      (lambda ()
                        (apply "(<var>'new-domain->old-domain)"
                               multi-index))
-                   (specialized-array-indexer "(<var> 'array)")))"))
+                   (array-indexer "(<var> 'array)")))"))
 (<p> (<code>(<var> 'new-domain->old-domain))" must be an affine one-to-one mapping from "(<code>(<var> 'new-domain))" to
 "(<code>"(array-domain "(<var> 'array)")")".")
 
-(<p> "Note: It is assumed that affine structure of the composition of "(<code>(<var> 'new-domain->old-domain))" and "(<code>"(specialized-array-indexer "(<var> 'array))" will be used to simplify:")
+(<p> "Note: It is assumed that affine structure of the composition of "(<code>(<var> 'new-domain->old-domain))" and "(<code>"(array-indexer "(<var> 'array))" will be used to simplify:")
 (<pre>
  (<code>"
   (lambda multi-index
     (call-with-values
         (lambda ()
           (apply "(<var>'new-domain->old-domain)" multi-index))
-      (specialized-array-indexer "(<var> 'array)")))"
+      (array-indexer "(<var> 'array)")))"
       ))
 (<p> "It is an error if "(<code>(<var>'array))" is not a specialized array, or if "(<code>(<var>'new-domain))" is not an interval, or if "(<code>(<var>'new-domain->old-domain))" is not a one-to-one affine mapping with the appropriate domain and range.")
 
@@ -804,12 +810,12 @@ indexer:       (lambda multi-index
   (array->specialized-array
    (make-array (make-interval '#(0 0) '#(5 10))
                list)))
-  (define b
-    (specialized-array-share
-     a
-     (make-interval '#(0 0) '#(5 5))
-     (lambda (i j)
-       (values i (+ i j)))))
+(define b
+  (specialized-array-share
+   a
+   (make-interval '#(0 0) '#(5 5))
+   (lambda (i j)
+     (values i (+ i j)))))
 ;; Print the \"rows\" of b
 (array-for-each (lambda (row)
                   (pretty-print (array->list row)))
@@ -834,9 +840,9 @@ indexer:       (lambda multi-index
        (getter
         (array-getter "(<var>'array)"))
        (result
-        (specialized-array domain
-                           "(<var>'result-storage-class)"
-                           "(<var>'safe?)"))
+        (make-specialized-array domain
+                                "(<var>'result-storage-class)"
+                                "(<var>'safe?)"))
        (result-setter
         (array-setter result)))
   (interval-for-each (lambda multi-index
@@ -888,8 +894,8 @@ of whose elements is itself an (immutable) array and ")
 (<pre>
  (<code>"
 (call-with-values
-    (lambda () (interval-curry (array-domain "(<var> 'array)")
-                               "(<var> 'inner-dimension)"))
+    (lambda () (interval-projections (array-domain "(<var> 'array)")
+                                     "(<var> 'inner-dimension)"))
   (lambda (outer-interval inner-interval)
     (make-array
      outer-interval
@@ -906,8 +912,8 @@ of whose elements is itself an (immutable) array and ")
 (<pre>
  (<code>"
 (call-with-values
-    (lambda () (interval-curry (array-domain "(<var> 'array)")
-                               "(<var> 'inner-dimension)"))
+    (lambda () (interval-projections (array-domain "(<var> 'array)")
+                                     "(<var> 'inner-dimension)"))
   (lambda (outer-interval inner-interval)
     (make-array
      outer-interval
@@ -927,8 +933,8 @@ of whose elements is itself an (immutable) array and ")
 (<pre>
  (<code>"
 (call-with-values
-    (lambda () (interval-curry (array-domain "(<var> 'array)")
-                               "(<var> 'inner-dimension)"))
+    (lambda () (interval-projections (array-domain "(<var> 'array)")
+                                     "(<var> 'inner-dimension)"))
   (lambda (outer-interval inner-interval)
     (make-array
      outer-interval
@@ -982,7 +988,7 @@ of whose elements is itself an (immutable) array and ")
 
 
 (format-lambda-list '(array-translate array translation))
-(<p> "Assumes that "(<code>(<var>'array))" is a valid array, "(<code>(<var>'translation))" is a valid translation, and that the dimensions of the array and the translation are the same. The resulting array will have domain "(<code>"(interval-translate (array-domain Array) translation)")".")
+(<p> "Assumes that "(<code>(<var>'array))" is a valid array, "(<code>(<var>'translation))" is a valid translation, and that the dimensions of the array and the translation are the same. The resulting array will have domain "(<code>"(interval-translate (array-domain array) translation)")".")
 (<p> "If "(<code>(<var>'array))" is a specialized array, returns a new specialized array")
 (<pre>
  (<code>"
@@ -1030,7 +1036,7 @@ of whose elements is itself an (immutable) array and ")
 (<p> "It is an error if the arguments do not satisfy these conditions.")
 
 (format-lambda-list '(array-permute array permutation))
-(<p> "Assumes that "(<code>(<var>'array))" is a valid array, "(<code>(<var>'permutation))" is a valid permutation, and that the dimensions of the array and the permutation are the same. The resulting array will have domain "(<code>"(interval-permute (array-domain Array) permutation)")".")
+(<p> "Assumes that "(<code>(<var>'array))" is a valid array, "(<code>(<var>'permutation))" is a valid permutation, and that the dimensions of the array and the permutation are the same. The resulting array will have domain "(<code>"(interval-permute (array-domain array) permutation)")".")
 (<p> "We begin with an example.  Assume that the domain of "(<code>(<var>'array))" is represented by the interval  $[0,4)\\times[0,8)\\times[0,21)\\times [0,16)$, as in the example for "(<code>'interval-permute)", and the permutation is "(<code>'#(3 0 1 2))".  Then the domain of the new array is the interval $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
 (<p> "So the multi-index argument of the "(<code>'getter)" of the result of "(<code>'array-permute)" must lie in the new domain of the array, the interval  $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.  So if we define "(<code>(<var>'old-getter))" as "(<code>"(array-getter "(<var>'array)")")", the definition of the new array must be in fact")
 (<pre>
@@ -1046,103 +1052,84 @@ of whose elements is itself an (immutable) array and ")
 
 
 (<p> "Employing this same pseudo-code, if "(<code>(<var>'array))" is a specialized-array and we denote the permutation by $\\pi$, then "(<code>'array-permute)" returns the new specialized array")
-(<p>(<code>"
- (specialized-array-share "(<var>'array)"
-			  (interval-permute (array-domain "(<var>'array)") ")"$\\pi$)"(<code>"
-			  (lambda multi-index (apply values (")"$\\pi^{-1}$"(<code>"multi-index))))"))
+(<pre>(<code>"
+(specialized-array-share "(<var>'array)"
+                         (interval-permute (array-domain "(<var>'array)") "(<unprotected>"&pi;")")
+                         (lambda multi-index
+                           (apply values ("(<unprotected> "&pi;")(<sup>"-1")" multi-index))))"))
 (<p> "The result array shares "(<code>"(array-body "(<var>'array)")")" with the argument.")
 
 
 (<p> "Again employing this same pseudo-code, if "(<code>(<var>'array))" is not a specialized array, but is
 a mutable-array, then "(<code>'array-permute)" returns the new mutable")
-(<p>(<code>"
- (make-array (interval-permute (array-domain "(<var>'array)") ")"$\\pi$)"(<code>"
-             (lambda multi-index (apply (array-getter "(<var>'array)") (")"$\\pi^{-1}$"(<code>"multi-index)))
-             (lambda (val . multi-index) (apply (array-setter "(<var>'array)") val (")"$\\pi^{-1}$"(<code>"multi-index))))"))
+(<pre>(<code>"
+(make-array (interval-permute (array-domain "(<var>'array)") "(<unprotected>"&pi;")")
+            (lambda multi-index
+              (apply (array-getter "(<var>'array)")
+                     ("(<unprotected> "&pi;")(<sup>"-1")" multi-index)))
+            (lambda (val . multi-index)
+              (apply (array-setter "(<var>'array)")
+                     val
+                     ("(<unprotected> "&pi;")(<sup>"-1")" multi-index))))"))
 (<p> "which employs the setter and the getter of the argument to "(<code>'array-permute)".")
 
 (<p> "Finally, if "(<code>(<var>'array))" is not a mutable array, then "(<code>'array-permute)" returns")
-(<p>(<code>"
- (make-array (interval-permute (array-domain "(<var>'array)") ")"$\\pi$)"(<code>"
-             (lambda multi-index (apply (array-getter "(<var>'array)") (")"$\\pi^{-1}$"(<code>"multi-index))))"))
+(<pre>(<code>"
+(make-array (interval-permute (array-domain "(<var>'array)") "(<unprotected>"&pi;")")
+            (lambda multi-index
+              (apply (array-getter "(<var>'array)")
+                     ("(<unprotected> "&pi;")(<sup>"-1")" multi-index))))"))
 (<p>"It is an error to call "(<code>'array-permute)" if its arguments do not satisfy these conditions.")
 
 
 (format-lambda-list '(array-reverse array flip?))
 (<p> "We assume that "(<code>(<var>'array))" is an array and "(<code>(<var>'flip?))" is a vector of booleans whose length is the same as the dimension of "(<code>(<var>'array))".")
 (<p> (<code>'array-reverse)" returns a new array  that is specialized,  mutable, or immutable according to whether "(<code>(<var>'array))" is specialized, mutable, or immutable, respectively.  Informally, if "(<code>"(vector-ref "(<var>'flip?)" k)")" is true, then the ordering of multi-indices in the k'th coordinate direction is reversed, and is left undisturbed otherwise.")
-(<p> "More formally, if "(<code>(<var>'array))" is specialized, then "(<code>'array-reverse)" returns ")
+(<p> "More formally, we introduce the function ")
 (<pre>
  (<code>"
-(let* ((domain (array-domain "(<code>(<var>'array))"))
-       (lowers (interval-lower-bounds->list domain))
-       (uppers (interval-upper-bounds->list domain)))
-  (specialized-array-share
-   "(<code>(<var>'array))"
-   domain
-   (lambda multi-index
-     (apply values
-            (map (lambda (i_k flip?_k l_k u_k)
-                   (if flip?
-                       (- (+ l_k u_k -1) i_k)
-                       i_k))
-                 multi-index
-                 (vector->list "(<var>'flip?)")
-                 lowers
-                 uppers)))))"))
-
-
-
+(define flip-multi-index
+  (let* ((domain (array-domain "(<code>(<var>'array))"))
+         (lowers (interval-lower-bounds->list domain))
+         (uppers (interval-upper-bounds->list domain)))
+    (lambda (multi-index)
+      (map (lambda (i_k flip?_k l_k u_k)
+             (if flip?
+                 (- (+ l_k u_k -1) i_k)
+                 i_k))
+           multi-index
+           (vector->list "(<var>'flip?)")
+           lowers
+           uppers))))"))
+(<p> "Then if "(<code>(<var>'array))" is specialized, then "(<code>'array-reverse)" returns ")
+(<pre>
+ (<code>"
+(specialized-array-share
+ "(<code>(<var>'array))"
+ domain
+ (lambda multi-index
+   (apply values
+          (flip-multi-index multi-index))))"))
 (<p> "Otherwise, if "(<code>(<var>'array))" is mutable, then "(<code>'array-reverse)" returns")
 (<pre>
  (<code>"
-(let* ((domain (array-domain "(<code>(<var>'array))"))
-       (lowers (interval-lower-bounds->list domain))
-       (uppers (interval-upper-bounds->list domain)))
-  (make-array
-   domain
-   (lambda multi-index
-     (apply (array-getter "(<code>(<var>'array))")
-            (map
-              (lambda (i_k flip?_k l_k u_k)
-                (if flip?
-                    (- (+ l_k u_k -1) i_k)
-                    i_k))
-              multi-index
-              (vector->list "(<var>'flip?)")
-              lowers
-              uppers)))
+(make-array
+ domain
+ (lambda multi-index
+   (apply (array-getter "(<code>(<var>'array))")
+          (flip-multi-index multi-index)))
    (lambda (v . multi-index)
      (apply (array-setter "(<code>(<var>'array))")
             v
-            (map
-             (lambda (i_k flip?_k l_k u_k)
-               (if flip?
-                   (- (+ l_k u_k -1) i_k)
-                   i_k))
-             multi-index
-             (vector->list "(<var>'flip?)")
-             lowers
-             uppers)))))"))
+            (flip-multi-index multi-index)))))"))
 (<p> "Finally, if "(<code>(<var>'array))" is immutable, then "(<code>'array-reverse)" returns ")
 (<pre>
  (<code>"
-(let* ((domain (array-domain "(<code>(<var>'array))"))
-       (lowers (interval-lower-bounds->list domain))
-       (uppers (interval-upper-bounds->list domain)))
-  (make-array
-   domain
-   (lambda multi-index
-     (apply (array-getter "(<code>(<var>'array))")
-            (map
-              (lambda (i_k flip?_k l_k u_k)
-                (if flip?
-                    (- (+ l_k u_k -1) i_k)
-                    i_k))
-              multi-index
-              (vector->list "(<var>'flip?)")
-              lowers
-              uppers))))) "))
+(make-array
+ domain
+ (lambda multi-index
+   (apply (array-getter "(<code>(<var>'array))")
+          (flip-multi-index multi-index))))) "))
 (<p> "It is an error if "(<code>(<var>'array))" and "(<code>(<var>'flip?))" don't satisfy these requirements.")
 
 (format-lambda-list '(array-sample array scales))
@@ -1150,7 +1137,7 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
      "and "(<code>(<var>'scales))" is a vector of positive exact integers whose length is the same as the dimension of "(<code>(<var>'array))".")
 (<p> (<code>'array-sample)" returns a new array  that is specialized,  mutable, or immutable according to whether "(<code>(<var>'array))" is specialized, mutable, or immutable, respectively.  Informally, if we construct a new matrix $S$ with the entries of "(<code>(<var>'scales))" on the main diagonal, then "
      "the $\\vec i$th element of "(<code>"(array-sample "(<var>'array)" "(<var>'scales)")")" is the $S\\vec i$th element of "(<code>(<var>'array))".")
-(<p> "More formally, if "(<code>(<var>'array))" is specialized, then "(<code>'array-scale)" returns ")
+(<p> "More formally, if "(<code>(<var>'array))" is specialized, then "(<code>'array-sample)" returns ")
 (<pre>
  (<code>"
 (specialized-array-share
@@ -1163,7 +1150,7 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
 
 
 
-(<p> "Otherwise, if "(<code>(<var>'array))" is mutable, then "(<code>'array-scale)" returns")
+(<p> "Otherwise, if "(<code>(<var>'array))" is mutable, then "(<code>'array-sample)" returns")
 (<pre>
  (<code>"
 (make-array
@@ -1176,7 +1163,7 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
    (apply (array-setter "(<code>(<var>'array))")
           v
           (map * multi-index (vector->list "(<code>(<var>'scales))")))))"))
-(<p> "Finally, if "(<code>(<var>'array))" is immutable, then "(<code>'array-scale)" returns ")
+(<p> "Finally, if "(<code>(<var>'array))" is immutable, then "(<code>'array-sample)" returns ")
 (<pre>
  (<code>"
 (make-array
@@ -1188,22 +1175,23 @@ a mutable-array, then "(<code>'array-permute)" returns the new mutable")
 (<p> "It is an error if "(<code>(<var>'array))" and "(<code>(<var>'scales))" don't satisfy these requirements.")
 
 (format-lambda-list '(array-map f array #\. arrays))
-(<p> "If "(<code>(<var> 'array))", "(<code>"(car "(<var> 'arrays)")")", ... all have the same domain and "(<code>(<var> 'f))" is a function, then "(<code> 'array-map)"
+(<p> "If "(<code>(<var> 'array))", "(<code>"(car "(<var> 'arrays)")")", ... all have the same domain and "(<code>(<var> 'f))" is a procedure, then "(<code> 'array-map)"
 returns a new array with the same domain and getter")
 (<pre>
  (<code>"
-  (lambda multi-index
-    (apply "(<var>'f)" (map (lambda (g)
-                              (apply g multi-index))
-                            (map array-getter
-                                 (cons "(<var> 'array)" "(<var> 'arrays)")))))"))
+(lambda multi-index
+  (apply "(<var>'f)"
+         (map (lambda (g)
+                (apply g multi-index))
+              (map array-getter
+                   (cons "(<var> 'array)" "(<var> 'arrays)")))))"))
 (<p> "It is assumed that "(<code>(<var> 'f))" is appropriately defined to be evaluated in this context.")
 (<p> "It is an error to call "(<code> 'array-map)" if its arguments do not satisfy these conditions.")
 
 
 
 (format-lambda-list '(array-for-each f array #\. arrays))
-(<p> "If "(<code>(<var> 'array))", "(<code>"(car "(<var> 'arrays)")")", ... all have the same domain  and "(<code>(<var> 'f))" is an appropriate function, then "(<code> 'array-for-each)"
+(<p> "If "(<code>(<var> 'array))", "(<code>"(car "(<var> 'arrays)")")", ... all have the same domain  and "(<code>(<var> 'f))" is an appropriate procedure, then "(<code> 'array-for-each)"
 calls")
 (<pre>
  (<code>"
@@ -1260,10 +1248,25 @@ calls")
 (fold-right "(<var>'kons)" " (<var>'knil)" (array->list "(<var> 'array)"))"))
 (<p> "It is an error if "(<code>(<var>'array))" is not an array, or if "(<code>(<var>'kons))" is not a procedure.")
 
+(format-lambda-list '(array-any pred array1 array2 "..."))
 
-(format-lambda-list '(array-every? proc array))
-(<p> "If "(<code>(<var>'array))" is an array and "(<code>(<var>'proc))" is a procedure that can be applied to elements of "(<code>(<var>'array))", then "(<code>'array-every?)" returns "(<code>'#t)" if "(<code>(<var>'proc))" returns a non-false value for all elements of "(<code>(<var>'array))", and "(<code>'#f)" otherwise.")
-(<p> "It is an error if "(<code>(<var>'array))" and "(<code>(<var>'proc))" don't satisfy these conditions.")
+(<p> "Assumes that "(<code>(<var>'array1))", "(<code>(<var>'array2))", etc., are arrays, all with the same domain, which we'll call "(<code>'interval)".  Also assumes that "(<code>(<var>'pred))" is a procedure that takes as many arguments as there are arrays and returns a single value.")
+(<p> (<code>'array-any)" first applies "(<code>"(array-getter "(<var>'array1)")")", etc., to the first element of "(<code>'interval)" in lexicographical order, to which values it then applies "(<code>(<var>'pred))".")
+(<p> "If the result of "(<code>(<var>'pred))" is not "(<code>'#f)", then that result is returned by "(<code>'array-any)".  If the result of "(<code>(<var>'pred))" is "(<code>'#f)", then "(<code>'array-any)" continues with the second element of "(<code>'interval)", etc., returning the first nonfalse value of  "(<code>(<var>'pred))".")
+(<p> "If "(<code>(<var>'pred))" always returns  "(<code>'#f)", then "(<code>'array-any)" returns "(<code>'#f)".")
+(<p> "If it happens that "(<code>(<var>'pred))" is applied to the results of applying "(<code>"(array-getter "(<var>'array1)")")", etc., to the last element of "(<code>'interval)", then this last call to "(<code>(<var>'pred))" is in tail position.")
+(<p> "The functions "(<code>"(array-getter "(<var>'array1)")")", etc., are applied only to those values of "(<code>'interval)" necessary to determine the result of "(<code>'array-any)".")
+(<p> "It is an error if the arguments do not satisfy these assumptions.")
+
+(format-lambda-list '(array-every pred array1 array2 "..."))
+
+(<p> "Assumes that "(<code>(<var>'array1))", "(<code>(<var>'array2))", etc., are arrays, all with the same domain, which we'll call "(<code>'interval)".  Also assumes that "(<code>(<var>'pred))" is a procedure that takes as many arguments as there are arrays and returns a single value.")
+(<p> (<code>'array-every)" first applies "(<code>"(array-getter "(<var>'array1)")")", etc., to the first element of "(<code>'interval)" in lexicographical order, to which values it then applies "(<code>(<var>'pred))".")
+(<p> "If the result of "(<code>(<var>'pred))" is "(<code>'#f)", then that result is returned by "(<code>'array-every)".  If the result of "(<code>(<var>'pred))" is nonfalse, then "(<code>'array-every)" continues with the second element of "(<code>'interval)", etc., returning the first  value of  "(<code>(<var>'pred))" that is "(<code>'#f)".")
+(<p> "If "(<code>(<var>'pred))" always returns  a nonfalse falue, then the last nonfalse value returned by "(<code>(<var>'pred))" is also returned by "(<code>'array-every)".")
+(<p> "If it happens that "(<code>(<var>'pred))" is applied to the results of applying "(<code>"(array-getter "(<var>'array1)")")", etc., to the last element of "(<code>'interval)", then this last call to "(<code>(<var>'pred))" is in tail position.")
+(<p> "The functions "(<code>"(array-getter "(<var>'array1)")")", etc., are applied only to those values of "(<code>'interval)" necessary to determine the result of "(<code>'array-every)".")
+(<p> "It is an error if the arguments do not satisfy these assumptions.")
 
 
 (format-lambda-list '(array->list array))
@@ -1289,7 +1292,7 @@ translate: ")
  (<dt> (<code> "(array-rank a)"))
  (<dd> (<code> "(array-dimension obj)"))
  (<dt> (<code> "(make-array prototype k1 ...)"))
- (<dd> (<code> "(specialized-array (make-interval (vector 0 ...) (vector k1 ...)) storage-class)")".")
+ (<dd> (<code> "(make-specialized-array (make-interval (vector 0 ...) (vector k1 ...)) storage-class)")".")
  (<dt> (<code> "(make-shared-array array mapper k1 ...)"))
  (<dd> (<code> "(specialized-array-share array (make-interval (vector 0 ...) (vector k1 ...)) mapper)"))
  (<dt> (<code> "(array-in-bounds? array index1 ...)"))
@@ -1414,7 +1417,10 @@ order in array->specialized-array guarantees the the correct order of execution 
                   (lambda (i j)
                       (read port)))
                    (else
-                    (error \"not a pgm file\"))))))))))"
+                    (error \"not a pgm file\"))))
+          (if (< greys 256)
+              u8-storage-class
+              u16-storage-class)))))))"
         ))
 
 
@@ -1440,7 +1446,7 @@ $d,2 d,3 d,\\ldots$, defined only on the domains where this makes sense: ")
              (vector-map (lambda (j)
                            (* -2 j i))
                          direction)))
-        (cond ((interval-intersect?
+        (cond ((interval-intersect
                 image-domain
                 (interval-translate
                  image-domain
@@ -1679,6 +1685,8 @@ Reconstructed image:
 " )
 (<p> "In perfect arithmetic, this Haar transform is "(<i>'orthonormal)", in that the sum of the squares of the elements of the image is the same as the sum of the squares of the Haar coefficients of the image.  We can see that this is approximately true here.")
 
+(<h2> "Acknowledgments")
+(<p> "John Cowan, Sudarshan S Chawathe, and Per Bothner made a number of comments and suggestions that improved this proposal.")
 (<h2> "References")
 (<ol>
  (<li> (<a> name: 'bawden href: "http://groups-beta.google.com/group/comp.lang.scheme/msg/6c2f85dbb15d986b?hl=en&" "\"multi-dimensional arrays in R5RS?\"")

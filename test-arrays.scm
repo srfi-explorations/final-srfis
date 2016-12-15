@@ -1,6 +1,6 @@
 ;;(declare (standard-bindings)(extended-bindings)(block)(not safe) (fixnum))
 (declare (inlining-limit 0))
-(define tests 1000)
+(define tests 10000)
 
 (define-macro (test expr value)
   `(let* (;(ignore (pretty-print ',expr))
@@ -200,28 +200,28 @@
       (test (interval-upper-bounds->vector interval)
 	    (list->vector upper)))))
 
-(pp "interval-curry error tests")
+(pp "interval-projections error tests")
 
-(test (interval-curry 1 1)
-      "interval-curry: argument is not an interval: ")
+(test (interval-projections 1 1)
+      "interval-projections: The first argument is not an interval: ")
 
-(test (interval-curry (make-interval '#(0) '#(1)) #t)
-      "interval-curry: the dimension of the interval is not greater than 1: " )
+(test (interval-projections (make-interval '#(0) '#(1)) #t)
+      "interval-projections: The dimension of the first argument is not greater than 1: " )
 
 
-(test (interval-curry (make-interval '#(0 0) '#(1 1)) 1/2)
-      "interval-curry: argument is not an exact integer: ")
+(test (interval-projections (make-interval '#(0 0) '#(1 1)) 1/2)
+      "interval-projections: The second argument is not an exact integer: ")
 
-(test (interval-curry (make-interval '#(0 0) '#(1 1)) 1.)
-      "interval-curry: argument is not an exact integer: ")
+(test (interval-projections (make-interval '#(0 0) '#(1 1)) 1.)
+      "interval-projections: The second argument is not an exact integer: ")
 
-(test (interval-curry (make-interval '#(0 0) '#(1 1)) 0)
-      "interval-curry: argument is not between 0 and (interval-dimension interval) (exclusive): ")
+(test (interval-projections (make-interval '#(0 0) '#(1 1)) 0)
+      "interval-projections: The second argument is not between 0 and the dimension of the first argument (exclusive): ")
 
-(test (interval-curry (make-interval '#(0 0) '#(1 1)) 2)
-      "interval-curry: argument is not between 0 and (interval-dimension interval) (exclusive): ")
+(test (interval-projections (make-interval '#(0 0) '#(1 1)) 2)
+      "interval-projections: The second argument is not between 0 and the dimension of the first argument (exclusive): ")
 
-(pp "interval-curry result tests")
+(pp "interval-projections result tests")
 
 (do ((i 0 (+ i 1)))
     ((= i tests))
@@ -230,9 +230,9 @@
 	 (left-dimension (random 1 (- (length lower) 1)))
 	 (right-dimension (- (length lower) left-dimension)))
     (test-multiple-values
-     (interval-curry (make-interval (list->vector lower)
-				    (list->vector upper))
-		     right-dimension)
+     (interval-projections (make-interval (list->vector lower)
+                                          (list->vector upper))
+                           right-dimension)
      (list (make-interval (list->vector (reverse (list-tail (reverse lower) (- (length lower) left-dimension))))
 			  (list->vector (reverse (list-tail (reverse upper) (- (length upper) left-dimension)))))
 	   (make-interval (list->vector (list-tail lower left-dimension))
@@ -619,14 +619,14 @@
 
 (pp "specialized-array error tests")
 
-(test (specialized-array  'a)
-      "specialized-array: The first argument is not an interval: ")
+(test (make-specialized-array  'a)
+      "make-specialized-array: The first argument is not an interval: ")
 
-(test (specialized-array (make-interval '#(0) '#(10)) 'a)
-      "specialized-array: The second argument is not a storage-class: ")
+(test (make-specialized-array (make-interval '#(0) '#(10)) 'a)
+      "make-specialized-array: The second argument is not a storage-class: ")
 
-(test (specialized-array (make-interval '#(0) '#(10)) generic-storage-class 'a)
-      "specialized-array: The third argument is not a boolean: ")
+(test (make-specialized-array (make-interval '#(0) '#(10)) generic-storage-class 'a)
+      "make-specialized-array: The third argument is not a boolean: ")
 
 
 
@@ -779,23 +779,112 @@
 (pp "array-map error tests")
 
 (test (array-map 1 #f)
-      "array-map: Argument is not a procedure: ")
+      "array-map: The first argument is not a procedure: ")
 
 (test (array-map list 1 (make-array (make-interval '#(3) '#(4))
 				    list))
-      "array-map: Not all arguments are arrays: ")
+      "array-map: Not all arguments after the first are arrays: ")
 
 (test (array-map list (make-array (make-interval '#(3) '#(4))
 				  list) 1)
-      "array-map: Not all arguments are arrays: ")
+      "array-map: Not all arguments after the first are arrays: ")
 
 (test (array-map list
 		 (make-array (make-interval '#(3) '#(4))
 			     list)
 		 (make-array (make-interval '#(3 4) '#(4 5))
 			     list))
-      "array-map: Not all arrays have the same domain: ")
+      "array-map: Not all arguments after the first have the same domain: ")
 
+(pp "array-every and array-any error tests")
+
+(test (array-every 1 2)
+      "array-every: The first argument is not a procedure: ")
+
+(test (array-every list 1)
+      "array-every: Not all arguments after the first are arrays: ")
+
+(test (array-every list
+                   (make-array (make-interval '#(3) '#(4))
+                               list)
+                   1)
+      "array-every: Not all arguments after the first are arrays: ")
+
+(test (array-every list
+                   (make-array (make-interval '#(3) '#(4))
+                               list)
+                   (make-array (make-interval '#(3 4) '#(4 5))
+                               list))
+      "array-every: Not all arguments after the first have the same domain: ")
+
+(test (array-any 1 2)
+      "array-any: The first argument is not a procedure: ")
+
+(test (array-any list 1)
+      "array-any: Not all arguments after the first are arrays: ")
+
+(test (array-any list
+                 (make-array (make-interval '#(3) '#(4))
+                             list)
+                 1)
+      "array-any: Not all arguments after the first are arrays: ")
+
+(test (array-any list
+                 (make-array (make-interval '#(3) '#(4))
+                             list)
+                 (make-array (make-interval '#(3 4) '#(4 5))
+                             list))
+      "array-any: Not all arguments after the first have the same domain: ")
+
+(pp "array-every and array-any")
+
+(do ((i 0 (+ i 1)))
+    ((= i tests))
+  (let* ((interval
+          (random-interval 1 5))
+         (n
+          (interval-volume interval))
+         (separator
+          ;; I want to make sure that the last item is chosen at least
+          ;; once for each random 
+          (random (max 0 (- n 10)) n))
+         (indexer
+          (##interval->basic-indexer interval))
+         (array-1
+          (make-array interval
+                      (lambda args
+                        (let ((index (apply indexer args)))
+                        (cond ((< index separator)
+                               #f)
+                              ((= index separator)
+                               1)
+                              (else
+                               (error "The array should never be called with these args"
+                                      interval
+                                      separator
+                                      args
+                                      index)))))))
+         (array-2
+          (make-array interval
+                      (lambda args
+                        (let ((index (apply indexer args)))
+                        (cond ((< index separator)
+                               #t)
+                              ((= index separator)
+                               #f)
+                              (else
+                               (error "The array should never be called with these args"
+                                      interval
+                                      separator
+                                      args
+                                      index))))))))
+    (test (array-any values array-1)
+          1)
+    (test (array-every values array-2)
+          #f)))
+
+                                   
+           
 
 (pp "array-fold error tests")
 
@@ -814,22 +903,22 @@
 (pp "array-for-each error tests")
 
 (test (array-for-each 1 #f)
-      "array-for-each: Argument is not a procedure: ")
+      "array-for-each: The first argument is not a procedure: ")
 
 (test (array-for-each list 1 (make-array (make-interval '#(3) '#(4))
 					 list))
-      "array-for-each: Not all arguments are arrays: ")
+      "array-for-each: Not all arguments after the first are arrays: ")
 
 (test (array-for-each list (make-array (make-interval '#(3) '#(4))
 				       list) 1)
-      "array-for-each: Not all arguments are arrays: ")
+      "array-for-each: Not all arguments after the first are arrays: ")
 
 (test (array-for-each list
 		      (make-array (make-interval '#(3) '#(4))
 				  list)
 		      (make-array (make-interval '#(3 4) '#(4 5))
 				  list))
-      "array-for-each: Not all arrays have the same domain: ")
+      "array-for-each: Not all arguments after the first have the same domain: ")
 
 
 (pp "array-map, array-fold, and array-for-each result tests")
@@ -1028,7 +1117,7 @@
 	   (inner-dimension
 	    (random 1 (interval-dimension domain)))
 	   (domains
-	    (call-with-values (lambda ()(interval-curry domain inner-dimension)) list))
+	    (call-with-values (lambda ()(interval-projections domain inner-dimension)) list))
 	   (outer-domain
 	    (car domains))
 	   (inner-domain
@@ -1046,7 +1135,7 @@
 	    (array-curry Array inner-dimension))
 	   (immutable-curry-from-definition
 	    (call-with-values
-		(lambda () (interval-curry (array-domain Array) inner-dimension))
+		(lambda () (interval-projections (array-domain Array) inner-dimension))
 	      (lambda (outer-interval inner-interval)
 		(make-array outer-interval
 			    (lambda outer-multi-index
@@ -1055,7 +1144,7 @@
 					    (apply (array-getter Array) (append outer-multi-index inner-multi-index)))))))))
 	   (mutable-curry-from-definition
 	    (call-with-values
-		(lambda () (interval-curry (array-domain Array) inner-dimension))
+		(lambda () (interval-projections (array-domain Array) inner-dimension))
 	      (lambda (outer-interval inner-interval)
 		(make-array outer-interval
 			    (lambda outer-multi-index
@@ -1066,7 +1155,7 @@
 					    (apply (array-setter Array) v (append outer-multi-index inner-multi-index)))))))))
 	   (specialized-curry-from-definition
 	    (call-with-values
-		(lambda () (interval-curry (array-domain Array) inner-dimension))
+		(lambda () (interval-projections (array-domain Array) inner-dimension))
 	      (lambda (outer-interval inner-interval)
 		(make-array outer-interval
 			    (lambda outer-multi-index
@@ -1102,28 +1191,20 @@
 		      ))
       
       (and (or (myarray= Array copied-array) (error "Arggh"))
-	   (or (array-every? array? immutable-curry) (error "Arggh"))
-	   (or (array-every? (lambda (a) (not (mutable-array? a))) immutable-curry) (error "Arggh"))
-	   (or (array-every? mutable-array? mutable-curry) (error "Arggh"))
-	   (or (array-every? (lambda (a) (not (specialized-array? a))) mutable-curry) (error "Arggh"))
-	   (or (array-every? specialized-array? specialized-curry) (error "Arggh"))
-	   (or (array-every? (lambda (xy) (apply myarray= xy))
-			     (array-map list immutable-curry immutable-curry-from-definition))
+	   (or (array-every array? immutable-curry) (error "Arggh"))
+	   (or (array-every (lambda (a) (not (mutable-array? a))) immutable-curry) (error "Arggh"))
+	   (or (array-every mutable-array? mutable-curry) (error "Arggh"))
+	   (or (array-every (lambda (a) (not (specialized-array? a))) mutable-curry) (error "Arggh"))
+	   (or (array-every specialized-array? specialized-curry) (error "Arggh"))
+	   (or (array-every (lambda (xy) (apply myarray= xy))
+                            (array-map list immutable-curry immutable-curry-from-definition))
 	       (error "Arggh"))
-	   (or (array-every? (lambda (xy) (apply myarray= xy))
-			     (array-map list mutable-curry mutable-curry-from-definition))
+	   (or (array-every (lambda (xy) (apply myarray= xy))
+                            (array-map list mutable-curry mutable-curry-from-definition))
 	       (error "Arggh"))
-	   (or (array-every? (lambda (xy) (apply myarray= xy))
-			     (array-map list specialized-curry specialized-curry-from-definition))
+	   (or (array-every (lambda (xy) (apply myarray= xy))
+                            (array-map list specialized-curry specialized-curry-from-definition))
 	       (error "Arggh"))))))
-
-(pp "array-every? error tests")
-
-(test (array-every? 'a 'a)
-      "array-every?: The first argument is not a procedure: ")
-
-(test (array-every? (lambda args #t) 'a)
-      "array-every?: The second argument is not an array: ")
 
 
 
@@ -1132,16 +1213,16 @@
 (test (specialized-array-share 1 1 1)
       "specialized-array-share: array is not a specialized-array: ")
 
-(test (specialized-array-share (specialized-array (make-interval '#(1) '#(2)))
+(test (specialized-array-share (make-specialized-array (make-interval '#(1) '#(2)))
 			       1 1)
       "specialized-array-share: new-domain is not an interval: ")
 
-(test (specialized-array-share (specialized-array (make-interval '#(1) '#(2)))
+(test (specialized-array-share (make-specialized-array (make-interval '#(1) '#(2)))
 			       (make-interval '#(0) '#(1))
 			       1)
       "specialized-array-share: new-domain->old-domain is not a procedure: ")
 
-(test (specialized-array-share (specialized-array (make-interval '#(1) '#(2)))
+(test (specialized-array-share (make-specialized-array (make-interval '#(1) '#(2)))
 			       (make-interval '#(0) '#(1))
 			       (lambda args #t)
 			       'a)
@@ -1397,7 +1478,7 @@
 			(my-array-translate Array translation))
 	      #t)))))
 
-(let* ((specialized (specialized-array (make-interval '#(0 0 0 0 0) '#(1 1 1 1 1))))
+(let* ((specialized (make-specialized-array (make-interval '#(0 0 0 0 0) '#(1 1 1 1 1))))
        (mutable (make-array (array-domain specialized)
 			    (array-getter specialized)
 			    (array-setter specialized)))
@@ -1585,20 +1666,20 @@
 	      #t))))
   )
 
-(pp "interval-intersect? tests")
+(pp "interval-intersect tests")
 
 (let ((a (make-interval '#(0 0) '#(10 10)))
       (b (make-interval '#(0) '#(10)))
       (c (make-interval '#(10 10) '#(20 20))))
-  (test (interval-intersect? 'a)
-	"interval-intersect?: The argument is not an interval: ")
-  (test (interval-intersect?  a 'a)
-	"interval-intersect?: Not all arguments are intervals: ")
-  (test (interval-intersect? a b)
-	"interval-intersect?: Not all arguments have the same dimension: "))
+  (test (interval-intersect 'a)
+	"interval-intersect: The argument is not an interval: ")
+  (test (interval-intersect  a 'a)
+	"interval-intersect: Not all arguments are intervals: ")
+  (test (interval-intersect a b)
+	"interval-intersect: Not all arguments have the same dimension: "))
 
 
-(define (my-interval-intersect? . args)
+(define (my-interval-intersect . args)
   
   (define (fold-left operator           ;; called with (operator result-so-far (car list))
 		     initial-value
@@ -1632,9 +1713,9 @@
 	 (intervals (map (lambda (x)
 			   (random-interval dimension (+ dimension 1)))
 			 (iota 0 number-of-intervals))))
-    ;; (pp (list intervals (apply my-interval-intersect? intervals)))
-    (test (apply my-interval-intersect? intervals)
-	  (apply interval-intersect? intervals))))
+    ;; (pp (list intervals (apply my-interval-intersect intervals)))
+    (test (apply my-interval-intersect intervals)
+	  (apply interval-intersect intervals))))
 
 (pp "test interval-scale and array-scale")
 
@@ -2161,7 +2242,7 @@
              (vector-map (lambda (j) (* -1 j i)) direction))
             (twice-negative-scaled-direction
              (vector-map (lambda (j) (* -2 j i)) direction)))
-        (cond ((interval-intersect? image-domain
+        (cond ((interval-intersect image-domain
                                     (interval-translate image-domain negative-scaled-direction)
                                     (interval-translate image-domain twice-negative-scaled-direction))
                => (lambda (subdomain)
