@@ -1686,7 +1686,7 @@ Reconstructed image:
 (<p> "In perfect arithmetic, this Haar transform is "(<i>'orthonormal)", in that the sum of the squares of the elements of the image is the same as the sum of the squares of the Haar coefficients of the image.  We can see that this is approximately true here.")
 
 (<h2> "Acknowledgments")
-(<p> "John Cowan, Sudarshan S Chawathe, and Per Bothner made a number of comments and suggestions that improved this proposal.")
+(<p> "The SRFI author thanks John Cowan, Sudarshan S Chawathe, Jamison Hope, and Per Bothner for their comments and suggestions, and Arthur A Gleckler, SRFI Editor, for his guidance and patience.")
 (<h2> "References")
 (<ol>
  (<li> (<a> name: 'bawden href: "http://groups-beta.google.com/group/comp.lang.scheme/msg/6c2f85dbb15d986b?hl=en&" "\"multi-dimensional arrays in R5RS?\"")
