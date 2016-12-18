@@ -1,0 +1,359 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 145: Denoting error situations in support of debugging, documentation and compiler optimizations</title>
+    <link rel="stylesheet" href="http://srfi.schemers.org/srfi.css" type="text/css" />
+  </head>
+
+  <body>
+
+<h1>Title</h1>
+
+Denoting error situations in support of debugging, documentation and compiler optimizations
+
+<h1>Author</h1>
+
+Marc Nieper-Wi&szlig;kirchen
+
+<h1>Status</h1>
+
+<h1>Abstract</h1>
+
+<p>
+A means to denote the invalidity of certain code paths in a Scheme
+program is proposed.  It allows Scheme code to turn the evaluation
+into a user-defined error that need not be signalled by the
+implementation.  Optimizing compilers may use these denotations to
+produce better code and to issue better warnings about dead code.
+</p>
+
+<h1>Issues</h1>
+
+<ul>
+  <li>Can the title of this SRFI be improved?</li>
+  <li>Is <code>fatal-error</code> a good name?</li>
+  <li>The names <code>assert</code> and <code>declare</code></li> are
+  already in use in non-standard extensions of some Schemes.  Are
+  there good alternatives to these names for this SRFI?
+</ul>
+
+<h1>Rationale</h1>
+
+<p>
+The R7RS requires some operations to signal an error when they fail.
+Signalling an error means, among other things, that a non-continuable
+exception is raised.  Such exceptions can be handled by exception
+handlers; in particular, signalling an error is observable behaviour in a Scheme program.
+</p>
+
+<p>
+In all other error situations, implementations &mdash; while not
+required &mdash; are encouraged to detect and report the error, but
+they do not have to signal the error as if <code>raise</code> was
+invoked.
+</p>
+
+<p>
+The <code>error</code> procedure of the R7RS gives a Scheme program a
+means to signal user-defined errors.  However, there is no canonical
+way to turn the evaluation of a piece of Scheme code into a
+user-defined error that is not signalled.  Consider the following definition:
+</p>
+
+<pre>
+(define (f x)
+  (unless (exact-integer? x)
+    (error "f: argument is not an integer" x))
+  (g (* x x)))
+</pre>
+
+<p>
+It is the intention to express that invoking the
+procedure <code>f</code> with any argument but an exact integer is an
+error.  However it is (usually) not important that such an error
+situation can be handled by an exception handler (in the Java
+programming language, one would probably use an <em>unchecked
+exception</em>).  So the above program is over-specifying.  While an
+optimizing compiler on which the definition is evaluated may assume
+that <code>x</code> is an exact integer after the first expression in
+the procedure body (and thus may emit specialised monomorphic code afterwards),
+it must not eliminate the first expression in the procedure body
+because calling <code>f</code> with a non-exact-integer argument has
+different observable behaviour than calling just <code>(g (* x
+x))</code>.
+</p>
+
+<p>Given that <code>f</code> is called a lot in the code and that
+performance is important, the programmer may thus decide that it is
+better to comment out the test at the beginning of the procedure body
+in non-debug situations:
+</p>
+
+<pre>
+(define (f x)
+  (cond-expand
+    (debug
+     (unless (exact-integer? x)
+       (error "f: argument is not an integer" x))))
+  (g (* x x)))
+</pre>
+
+<p>
+However, this code (when the feature identifier <code>debug</code> is
+not defined) may even be less performant than the first solution: An
+optimizing implementation now has no way (in case <code>g</code> is
+not well-known) to detect that <code>x</code> is always supposed to be
+an exact integer in the code path of the procedure body.  So the
+compiler has to emit slow, polymorphic code that works on either
+number type.
+</p>
+
+<p>
+To remedy these problems, this SRFI specifies a way to denote error
+situations that are not supposed to be recoverable and which is
+helpful for debugging and for the control and data flow analysis of
+optimizing compilers.  For implementations conforming to this SRFI,
+the procedure <code>f</code> can be rewritten as follows:
+</p>
+
+<pre>
+(define (f x)
+  (unless (exact-integer? x)
+    (fatal-error "f: argument is not an integer" x))
+  (g (* x x)))
+</pre>
+
+<p>
+  An optimizing compiler may deduce that <code>x</code> is an exact
+  integer after the first expression in the procedure body so may emit
+  specialised monomorphic code.  However, in non-debug mode, an
+  optimizing compiler may also remove the whole test at the beginning
+  of the procedure body because the test has only one branch that does
+  not lead into an error situation.
+</p>
+
+<p>As such tests are quite common, this SRFI defines a bit of
+syntactic sugar.  The definition can also be rewritten as:</p>
+
+<pre>
+(define (f x)
+  (assert (exact-integer? x))
+  (g (* x x)))
+</pre>
+
+<p>
+Or as:
+</p>
+
+<pre>
+(define (f x)
+  (declare (exact-integer? x))
+  (g (* x x)))
+</pre>
+
+<p>
+  One should note that error situations in which implementations are
+  not required to signal an error (and the R7RS is full of those and
+  this specification adds user defined version on top of that) are
+  analoguous to what is called <em>undefined behaviour</em>, for
+  example, in the C programming language, including its boon and bane.
+  In order to reduce a potential source of software bugs, an
+  optimizing compiler that makes use of code elimination through
+  undefined behaviour should warn the user about dead or meaningless
+  code:
+</p>
+
+<pre>
+(define (f x)
+  (unless (exact-integer? x)
+    (frob x)
+    (fatal-error "f: argument is not an integer" x))
+  (when (inexact? x)
+    (twiddle x))
+  (g (* x x)))
+</pre>
+
+<p>
+Assuming the compiler can prove that <code>(frob x)</code> returns, it
+is encouraged issue a warning that the evaluation of <code>frob</code>
+is meaningless because the code path in which it appears is invalid.
+(It may abstain from issueing the warning if evaluation
+of <code>frob</code> changes the arguments
+of <code>fatal-error</code>.)  Likewise, the compiler is encouraged to
+issue a warning that <code>(twiddle x)</code> is likewise dead code,
+never evaluated.
+</p>
+
+<p><i>Note: A program that, for some input, would eventually evaluate
+a call to fatal-error is invalid and executation of it is an error
+itself, so anything may happen.  In particular <code>frob</code> may never be
+called in the above example.  An optimizing compiler may assume that a program presented to it is
+valid, so it may assume that the branch including the call to frob is
+never taken. Thus any expression in this path is simply superfluous.</i></p>
+
+<h1>Specification</h1>
+
+<h2>Procedures</h2>
+
+<p>
+  <code>(fatal-error <em>message</em> <em>obj</em> ...)</code>
+</p>
+
+<p>
+  It is an error if <code>(fatal-error <em>message</em> <em>obj</em>
+    ...)</code> is ever evaluated.  However, implementations are
+    encouraged to signal an error when this application is evaluated
+    and to report the information provided
+    by <code><em>message</em></code>, as well as
+    any <code><em>obj</em></code>s, to the user, at least when the
+    implementation is in debug or non-optimizing mode.  In case of
+    signalling the error, an implementation is also encouraged to
+    report the source location of the source of the error.
+</p>
+
+<p><i>Rationale: There are three reasons why <code>fatal-error</code>
+is defined to be a procedure and not a keyword introducing a special
+form.  The first reason is that the analogous <code>error</code> of
+SRFI 23 and the R7RS is a procedure as well.  The second reason is the
+same as raised in SRFI 23: One may want to
+call <code>fatal-error</code> using <code>apply</code>.  The last
+reason is a didactic one: Expanding code
+into <code>(fatal-error <em>message</em> <em>obj</em> ...)</code> is
+not an error, only evaluation of such an expression is an error.</i>
+</p>
+
+<h2>Syntax</h2>
+
+<p>
+  <code>(assert <em>expression</em>)</code>
+</p>
+  
+The above syntax shall be equivalent to
+<pre>
+(unless <em>expression</em>
+  (fatal-error "assertion failed" (quote <em>expression</em>)))
+</pre>  
+
+Implementations are free to change the exact format of
+the <code><em>message</em></code>, as well as
+any <code><em>obj</em></code>s.
+
+<p>
+  <code>(declare (<em>pred</em> &lt;identifier&gt;))</code>
+</p>
+
+Here, <em>pred</em> denotes an expression evaluating to a procedure
+accepting one argument.  The syntax shall be equivalent to:
+<pre>
+(unless (<em>pred</em> &lt;identifier&gt;)
+  (fatal-error "argument not of expected type" (quote <em>pred</em>) (quote &lt;identifier&gt;)))
+</pre>
+
+Again, implementations are free to change the exact format of
+the <code><em>message</em></code>, as well as
+any <code><em>obj</em></code>s.
+
+<h1>Implementation</h1>
+
+<p>
+A simple implementation for R7RS can be given as follows:
+</p>
+
+<pre>
+(define-library (srfi 145)
+  (export fatal-error assert)
+  (import (scheme base))
+  (begin
+    (define-syntax assert
+      (syntax-rules ()
+        ((assert expression)
+         (unless expression
+           (fatal-error "assertion failed" (quote expression))))
+        ((assert . _)
+         (syntax-error "invalid assert syntax"))))
+    (define-syntax declare
+      (syntax-rules ()
+        ((declare (pred var)
+         (unless (pred var)
+           (fatal-error "argument not of expected type" (quote pred) (quote var))))))))
+  (cond-expand
+    (debug
+     (begin
+       (define fatal-error error)))
+    (else
+     (begin
+       (define (fatal-error message . objs)
+         (car 0))))))
+</pre>  
+
+<p>
+This sample implementation meets all the requirements.  If the feature
+identifier <code>debug</code> is set, <code>fatal-error</code> behaves
+as <code>error</code>.  If the feature identifier <code>debug</code>
+is not set, invoking <code>fatal-error</code> causes a subsequent
+error when <code>(car 0)</code> is evaluated, thus rendering the whole
+code path leading to the invocation of <code>fatal-error</code>
+invalid.
+</p>
+
+<p>
+One should note that there is also a trivial R7RS implementation for
+the specification given in this SRFI, namely:
+</p>
+
+<pre>
+(define-library (srfi 145)
+  (export fatal-error assert declare)
+  (import (scheme base))
+  (begin
+    (define-syntax assert
+      (syntax-rules ()
+        ((assert . _) #f)))
+    (define-syntax declare
+      (syntax-rules ()
+        ((declar . _) #f)))
+    (define (fatal-error . args) #f)))
+</pre>
+
+<p>The reason why this is a faithful implementation is that
+whenever <code>fatal-error</code> is invoked, it is an error anyway,
+so that implementations are allowed to fail catastrophically (in the
+words of the R7RS), including that they simply return <code>#f</code>
+whenever <code>fatal-error</code> is invoked.
+
+<h1>Acknowledgements</h1>
+
+<p>
+I would like to thank all the persons who have been involved in discussing
+the topic of this SRFI and helping to bring it in final shape, in
+particular John Cowan and Jim Rees.
+</p>
+
+<h1>Copyright</h1>
+Copyright (C) Marc Nieper-Wi&szlig;kirchen (2016).  All Rights Reserved. 
+
+<p>
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
+
+<p>
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
+
+<p>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+  <hr>
+  <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>
