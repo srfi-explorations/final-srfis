@@ -280,8 +280,6 @@ they may have hash tables or databases behind an implementation, one may read th
                  (<a> href: "#specialized-array-default-safe?" "specialized-array-default-safe?") END
                  (<a> href: "#make-specialized-array" "make-specialized-array")END
                  (<a> href: "#specialized-array?" "specialized-array?")END
-                 (<a> href: "#specialized-array-share" "specialized-array-share")END
-                 (<a> href: "#specialized-array?" "specialized-array?")END
                  (<a> href: "#array-storage-class" "array-storage-class")END
                  (<a> href: "#array-indexer" "array-indexer")END
                  (<a> href: "#array-body" "array-body")END
@@ -1686,7 +1684,7 @@ Reconstructed image:
 (<p> "In perfect arithmetic, this Haar transform is "(<i>'orthonormal)", in that the sum of the squares of the elements of the image is the same as the sum of the squares of the Haar coefficients of the image.  We can see that this is approximately true here.")
 
 (<h2> "Acknowledgments")
-(<p> "The SRFI author thanks John Cowan, Sudarshan S Chawathe, Jamison Hope, and Per Bothner for their comments and suggestions, and Arthur A Gleckler, SRFI Editor, for his guidance and patience.")
+(<p> "The SRFI author thanks Edinah K Gnang, John Cowan, Sudarshan S Chawathe, Jamison Hope, and Per Bothner for their comments and suggestions, and Arthur A Gleckler, SRFI Editor, for his guidance and patience.")
 (<h2> "References")
 (<ol>
  (<li> (<a> name: 'bawden href: "http://groups-beta.google.com/group/comp.lang.scheme/msg/6c2f85dbb15d986b?hl=en&" "\"multi-dimensional arrays in R5RS?\"")
