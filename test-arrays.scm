@@ -1,6 +1,6 @@
 ;;(declare (standard-bindings)(extended-bindings)(block)(not safe) (fixnum))
 (declare (inlining-limit 0))
-(define tests 10000)
+(define tests 100)
 
 (define-macro (test expr value)
   `(let* (;(ignore (pretty-print ',expr))
@@ -838,10 +838,27 @@
 
 (pp "array-every and array-any")
 
+(define (multi-index< ind1 ind2)
+  (and (not (null? ind1))
+       (not (null? ind2))
+       (or (< (car ind1)
+              (car ind2))
+           (and (= (car ind1)
+                   (car ind2))
+                (multi-index< (cdr ind1)
+                              (cdr ind2))))))
+
+(define (indices-in-proper-order l)
+  (or (null? l)
+      (null? (cdr l))
+      (and (multi-index< (car l)
+                         (cadr l))
+           (indices-in-proper-order (cdr l)))))
+
 (do ((i 0 (+ i 1)))
     ((= i tests))
   (let* ((interval
-          (random-interval 1 5))
+          (random-nonnegative-interval 1 6))
          (n
           (interval-volume interval))
          (separator
@@ -850,38 +867,51 @@
           (random (max 0 (- n 10)) n))
          (indexer
           (##interval->basic-indexer interval))
+         (arguments-1
+          '())
          (array-1
           (make-array interval
                       (lambda args
+                        (set! arguments-1 (cons args
+                                                arguments-1))
                         (let ((index (apply indexer args)))
-                        (cond ((< index separator)
-                               #f)
-                              ((= index separator)
-                               1)
-                              (else
-                               (error "The array should never be called with these args"
-                                      interval
-                                      separator
-                                      args
-                                      index)))))))
+                          (cond ((< index separator)
+                                 #f)
+                                ((= index separator)
+                                 1)
+                                (else
+                                 (error "The array should never be called with these args"
+                                        interval
+                                        separator
+                                        args
+                                        index)))))))
+         (arguments-2
+          '())
          (array-2
           (make-array interval
                       (lambda args
+                        (set! arguments-2 (cons args
+                                                arguments-2))
                         (let ((index (apply indexer args)))
-                        (cond ((< index separator)
-                               #t)
-                              ((= index separator)
-                               #f)
-                              (else
-                               (error "The array should never be called with these args"
-                                      interval
-                                      separator
-                                      args
-                                      index))))))))
+                          (cond ((< index separator)
+                                 #t)
+                                ((= index separator)
+                                 #f)
+                                (else
+                                 (error "The array should never be called with these args"
+                                        interval
+                                        separator
+                                        args
+                                        index))))))))
     (test (array-any values array-1)
           1)
     (test (array-every values array-2)
-          #f)))
+          #f)
+    (if (not (indices-in-proper-order (reverse arguments-1)))
+        (error "arrghh arguments-1" arguments-1))
+    (if (not (indices-in-proper-order (reverse arguments-2)))
+        (error "arrghh arguments-2" arguments-2))
+    ))
 
                                    
            
