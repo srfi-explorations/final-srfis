@@ -715,7 +715,7 @@ It is an error to call "(<code> 'array-domain)" or "(<code> 'array-getter)" if "
 if "(<code>(<var> 'array))" is not a mutable array.")
 
 (format-lambda-list '(specialized-array-default-safe? #\[ bool #\]))
-(<p> "With no argument, Returns "(<code>'#t)" if newly-constructed specialized arrays check the arguments of setters and getters by default, and "(<code>'#f)" otherwise.")
+(<p> "With no argument, returns "(<code>'#t)" if newly-constructed specialized arrays check the arguments of setters and getters by default, and "(<code>'#f)" otherwise.")
 (<p> "If "(<code>(<var>'bool))" is "(<code>'#t)" then the next call to "(<code>'specialized-array-default-safe?)" will return "(<code>'#t)";
 if "(<code>(<var>'bool))" is "(<code>'#f)" then the next call to "(<code>'specialized-array-default-safe?)" will return "(<code>'#f)";
 otherwise it is an error.")
