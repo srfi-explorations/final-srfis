@@ -658,7 +658,7 @@
 
 (define-tag menu single-attributes: (compact))
 
-(define-tag meta end-tag?: #f allow-core-attributes?: #f attributes: (content dir http-equiv lang name scheme))
+(define-tag meta end-tag?: #f allow-core-attributes?: #f attributes: (charset content dir http-equiv lang name scheme))
 
 (define-tag noframes)
 
