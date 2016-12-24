@@ -999,8 +999,8 @@ of whose elements is itself an (immutable) array and ")
           (map -
                multi-index
                (vector->list "(<var>'translation)")))))
-")
- (<p>"that shares the body of "(<code>(<var>'array))"."))
+"))
+(<p>"that shares the body of "(<code>(<var>'array))".")
 (<p> "If "(<code>(<var>'array))" is not a specialized array but is a mutable array, returns a new mutable array")
 (<pre>
  (<code>"
