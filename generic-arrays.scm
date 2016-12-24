@@ -2565,11 +2565,11 @@
                      ;; at this dimension back to the lower bound, increment the
                      ;; arg index at the previous dimension, and go back to the
                      ;; previous dimension
-                     (begin
+                     (let ((previous-tail (vector-ref tails (fx- dimension 1))))
                        (set-car! (vector-ref tails  dimension)
                                  (vector-ref lowers dimension))
-                       (set-car! (vector-ref tails       (fx- dimension 1))
-                                 (+ 1 (vector-ref lowers (fx- dimension 1))))
+                       (set-car! previous-tail
+                                 (+ 1 (car previous-tail)))
                        (loop (fx- dimension 1)
                              total-index)))
                     ((fx< dimension (fx- dimensions 1))
