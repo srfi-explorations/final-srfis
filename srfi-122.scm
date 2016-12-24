@@ -493,7 +493,7 @@ nonempty interval.  It is an error if the arguments do not satisfy these conditi
 
 (format-lambda-list '(interval-intersect interval-1 interval-2 ...))
 (<p> "If all the arguments are intervals of the same dimension and they have a nonempty intersection,
-the "(<code> 'interval-intersect)" returns that intersection; otherwise it returns "(<code>'#f))
+the "(<code> 'interval-intersect)" returns that intersection; otherwise it returns "(<code>'#f)".")
 (<p> "It is an error if the arguments are not all intervals with the same dimension.")
 
 (format-lambda-list '(interval-translate interval translation))
@@ -546,7 +546,7 @@ the backing store are of some \"type\", either heterogeneous (all Scheme types) 
  (<li> "If "(<code>(<var> 'v))" is an object created by "
        (<code>"("(<var> "maker n value")")")
        " then "(<code> "("(<var>"length v")")")" returns "(<code>(<var> 'n))"."))
-(<p> "If the arguments do not satisfy these conditions, then it is an error to call "(<code> 'make-storage-class))
+(<p> "If the arguments do not satisfy these conditions, then it is an error to call "(<code> 'make-storage-class)".")
 (<p> "Note that we assume that "(<code>(<var> 'getter))" and "(<code>(<var> 'setter))" generally take "(<i> 'O)"(1) time to execute.")
 
 (format-lambda-list '(storage-class? m))
@@ -702,7 +702,7 @@ It is an error to call "(<code> 'array-domain)" or "(<code> 'array-getter)" if "
   ((array-getter a) 11 0) => is an error"))
 
 (format-lambda-list '(array-dimension array))
-(<p> "Shorthand for "(<code>"(interval-dimension (array-domain "(<var>'array)"))")".  It is an error to call this function if "(<code>(<var>'array))" is not an array")
+(<p> "Shorthand for "(<code>"(interval-dimension (array-domain "(<var>'array)"))")".  It is an error to call this function if "(<code>(<var>'array))" is not an array.")
 
 (format-lambda-list '(mutable-array? obj))
 (<p> "Returns "(<code>"#t")" if "(<code>(<var> 'obj))" is a mutable array and "(<code> '#f)" otherwise.")
