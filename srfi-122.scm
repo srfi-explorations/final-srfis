@@ -45,7 +45,7 @@ MathJax.Hub.Config({
 	(<p> "Bradley J. Lucier")
 	
 	(<h2> "Status")
-	(<p> "This SRFI is currently in " (<em> "draft") " status.  Here is "
+	(<p> "This SRFI is currently in " (<em> "final") " status.  Here is "
 	     (<a> href: "http://srfi.schemers.org/srfi-process.html" "an explanation")
 	     " of each status that a SRFI can hold.  To provide input on this SRFI, please send email to "
 	     (<code> (<a> href: "mailto:srfi minus 122 at srfi dot schemers dot org"
@@ -70,8 +70,8 @@ MathJax.Hub.Config({
 	      (<li> "Draft #13 published: 2016/11/18")
 	      (<li> "Draft #14 published: 2016/11/28")
 	      (<li> "Draft #15 published: 2016/12/15")
-	      )
-	
+	      (<li> "Finalized: 2016/12/24"))
+
 	(<h2> "Abstract")
 	(<p> 
 	 "This SRFI specifies an array mechanism for Scheme. Arrays as defined here are quite general; at their most basic, an array is simply a "
