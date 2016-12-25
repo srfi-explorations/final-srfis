@@ -74,6 +74,17 @@
 
 	(test-equal '(bar 42) (bar 42)))
 
+      (test-group "Auxiliary definitions in custom macro transformers"
+	(define-syntax my-macro-transformer
+	  (syntax-rules ()
+	    ((my-macro-transformer)
+	     (begin (define foo 2)
+		    (syntax-rules ()
+		      ((_) foo))))))
+	
+	(test-equal 42 (* 21 (letrec-syntax ((foo (my-macro-transformer)))
+			       (foo)))))
+      
       (test-group "Scoping of expansion"
 	(define-syntax simple-syntax-rules
 	  (syntax-rules ()

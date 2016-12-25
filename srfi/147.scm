@@ -24,9 +24,13 @@
   (scheme-syntax-rules ()))
 
 (scheme-define-syntax expand-transformer
-  (scheme-syntax-rules (scheme-syntax-rules)
+  (scheme-syntax-rules (scheme-syntax-rules begin)
     ((expand-transformer (k ...) (scheme-syntax-rules . args))
      (k ... (scheme-syntax-rules . args)))
+    ((expand-transformer (k ...) (begin definition ... transformer-spec))
+     (begin definition
+	    ...
+	    (expand-transformer (k ...) transformer-spec)))   
     ((expand-transformer (k ...) (keyword . args))
      (keyword (:continuation expand-transformer (k ...)) . args))))
 
@@ -40,7 +44,8 @@
 (scheme-define-syntax let-syntax
   (scheme-syntax-rules ()
     ((let-syntax ((keyword transformer-spec) ...) body1 body2 ...)
-     (let-syntax-aux (keyword ...) (transformer-spec ...) () (body1 body2 ...)))
+     (let ()
+       (let-syntax-aux (keyword ...) (transformer-spec ...) () (body1 body2 ...))))
     ((let-syntax . _)
      (syntax-error "invalid let-syntax syntax"))))
 
@@ -67,7 +72,8 @@
 (scheme-define-syntax letrec-syntax
   (scheme-syntax-rules ()
     ((letrec-syntax ((keyword transformer-spec) ...) body1 body2 ...)
-     (letrec-syntax-aux (keyword ...) (transformer-spec ...) () (body1 body2 ...)))
+     (let ()
+       (letrec-syntax-aux (keyword ...) (transformer-spec ...) () (body1 body2 ...))))
     ((letrec-syntax . _)
      (syntax-error "invalid letrec-syntax syntax"))))
 
