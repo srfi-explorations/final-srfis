@@ -519,13 +519,13 @@ $[l_0,u_0)\\times[l_1,u_1)\\times\\cdots\\times[l_{d-1},u_{d-1})$,
 then the result represents the cross product
 $[l_{\\pi_0},u_{\\pi_0})\\times[l_{\\pi_1},u_{\\pi_1})\\times\\cdots\\times[l_{\\pi_{d-1}},u_{\\pi_{d-1}})$.")
 (<p> "For example, if the argument interval represents $[0,4)\\times[0,8)\\times[0,21)\\times [0,16)$ and the
-permutation is "(<code>'#(3 0 1 2))", then the result of "(<code> "(interval-dilate "(<var>'interval)" "(<var>' translation)")")" will be
+permutation is "(<code>'#(3 0 1 2))", then the result of "(<code> "(interval-permuate "(<var>'interval)" "(<var>' permutation)")")" will be
 the representation of $[0,16)\\times [0,4)\\times[0,8)\\times[0,21)$.")
 
 (format-lambda-list '(interval-scale interval scales))
 (<p> "If "(<code>(<var>'interval))" is a $d$-dimensional interval $[0,u_1)\\times\\cdots\\times[0,u_{d-1})$ with all lower bounds zero, "
      "and "(<code>(<var>'scales))" is a length-$d$ vector of positive exact integers, which we'll denote by $\\vec s$, then "(<code>'interval-scale)
-     " returns the interval $[0,\\operatorname{ceiling}(u_1/s_1))\\times\\cdots\\times[0,\\operatorname{ceiling}(u_{d-1},s_{d-1})$.")
+     " returns the interval $[0,\\operatorname{ceiling}(u_1/s_1))\\times\\cdots\\times[0,\\operatorname{ceiling}(u_{d-1}/s_{d-1})$.")
 (<p> "It is an error if  "(<code>(<var>'interval))" and "(<code>(<var>'scales))" do not satisfy this condition.")
 
 (<h2> "Storage classes")
