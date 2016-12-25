@@ -1,0 +1,194 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 147: Custom macro transformers</title>
+    <link rel="stylesheet" href="http://srfi.schemers.org/srfi.css" type="text/css" />
+  </head>
+
+  <body>
+
+<h1>Title</h1>
+
+Custom macro transformers
+
+<h1>Author</h1>
+
+Marc Nieper-Wi&szlig;kirchen
+
+<h1>Status</h1>
+
+??? the draft/final/withdrawn status of the SRFI, information on how
+to subscribe to its mailing list, and important dates in its history
+
+<h1>Abstract</h1>
+
+<p>
+Each syntax definition assigns a macro transformer to a keyword.  The
+macro transformer is specified by a transformer spec, which is either
+an instance of <code>syntax-rules</code> or a use of a macro that eventually
+expands into an instance of <code>syntax-rules</code>.  In the
+latter case, the keyword of macro use is called a <em>custom macro
+transformer</em>.
+</p>
+
+<h1>Issues</h1>
+
+<p>
+There are currently no issues.
+</p>
+
+<h1>Rationale</h1>
+
+<p>
+While the <code>syntax-rules</code>-transformer is in many cases a
+simple way to define new keywords in the Scheme language, sometimes more
+specialized macro transformers are being called for (<i>e.g.</i>
+the <code>computation-rules</code> of SRFI 53).  The current report on
+the Scheme language, the R7RS, however, does not describe a means to
+define custom macro transformers based on top of syntax rules.
+</p>
+
+<p>
+Such a means is described in this SRFI, namely allowing macro uses that
+eventually expand into a transformer spec in place of transformer spec.
+</p>
+
+<p>
+  A simple example is given below:
+</p>
+
+<pre>
+  (define-syntax syntax-rules*
+    (syntax-rules ()
+      ((syntax-rules* (literal ...) (pattern . templates) ...)
+       (syntax-rules (literal ...) (pattern (begin . templates)) ...))
+      ((syntax-rules* ellipsis (literal ...) (pattern . templates) ...)
+       (syntax-rules ellipsis (literal ...) (pattern (begin . templates)) ...))))
+
+  (let-syntax
+      ((foo
+       (syntax-rules* ()
+         ((foo a b)
+          (define a 1)
+          (define b 2)))))
+    (foo x y)
+    (list x y))            &#x27f9; '(1 2)
+</pre>
+
+<h1>Specification</h1>
+
+<p>
+  A Scheme system supporting this SRFI should apply the requirements
+  of this SRFI with respect to <code>syntax-rules</code> <i>mutatis
+  mutandis</i> to all other natively provided macro
+  transformers, <i>e.g.</i> <code>sc-macro-transformer</code>
+  or <code>syntax-case</code>.
+</p>
+  
+<p>
+  A Scheme system supporting this SRFI should apply the requirements
+  of this SRFI with respect
+  to <code>define-syntax</code>, <code>let-syntax</code>,
+  and <code>letrec-syntax</code> <i>mutatis mutandis</i> to all other
+  natively provided binding facilities for
+  keywords, <i>e.g.</i> <code>let-syntax/splicing</code>
+  or <code>define-syntax-parameter</code>.
+</p>
+
+<h2>Syntax</h2>
+
+This SRFI extends 7.1.5 of the R7RS as follows:
+
+<pre>
+  &lt;transformer spec&gt; 
+    -&gt; &lt;macro use&gt;
+</pre>
+
+<p>
+  Whenever a keyword is bound to a macro transformer, and the macro
+  transformer is given by a transformer spec that is a macro
+  use, the keyword is bound to the macro transformer given by the
+  transformer spec that results from transcribing the macro use.  It is
+  an error if the macro use does not expand into a transformer spec.
+</p>
+
+<h1>Implementation</h1>
+
+The sample implementation redefines the following identifiers exported
+from the <code>(scheme base)</code> library:
+<ul>
+  <li><code>define-syntax</code></li>
+  <li><code>let-syntax</code></li>
+  <li><code>letrec-syntax</code></li>
+  <li><code>syntax-rules</code></li>
+</ul>
+
+The sample implementation provides these exports through
+the <code>(srfi 147)</code> library.  Typical library declarations of a
+program or library using <code>(srfi 147)</code> are:
+
+<pre>
+  (cond-expand
+    (custom-macro-transformers
+     (import (scheme base)))
+    (else
+     (import (except (scheme base)
+                     define-syntax
+                     let-syntax
+                     letrec-syntax
+                     syntax-rules))
+     (import (srfi 147))))
+</pre>
+
+<p>
+  For convenience, the sample implementation provides these library
+  declaration in the
+  file <a href="custom-macro-transformers.scm">custom-macro-transformers.scm</a>
+  for inclusion via <code>include-library-declarations</code>.
+</p>
+
+<p>
+A Scheme system properly supporting this SRFI should ensure that the bindings
+of <code>define-syntax</code>, <code>let-syntax</code>,
+<code>letrec-syntax</code>, and <code>syntax-rules</code> exported
+from <code>(scheme base)</code> and <code>(srfi 147)</code> are
+respectively the same.  Such a Scheme system should provide the
+feature identifier <code>custom-macro-transformers</code>.  This
+cannot be achieved by a fully portable implementation using only the
+R7RS without redefining <code>(scheme base)</code>.
+</p>
+
+<h1>Acknowledgements</h1>
+
+Credit goes to the inventors and promoters of the
+beautiful <code>syntax-rules</code>-macro facility, which seems to be
+an indispensable and defining part of contemporary Scheme.
+
+<h1>Copyright</h1>
+Copyright (C) Marc Nieper-Wi&szlig;kirchen (2016).  All Rights Reserved. 
+
+<p>
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
+
+<p>
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
+
+<p>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+  <hr>
+  <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>
