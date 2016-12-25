@@ -74,6 +74,17 @@
 
 	(test-equal '(bar 42) (bar 42)))
 
+      (test-group "Scoping of expansion"
+	(define-syntax simple-syntax-rules
+	  (syntax-rules ()
+	    ((simple-syntax-rules . rules)
+	     (syntax-rules () . rules))))
+
+	(test-equal 'foo (letrec-syntax
+			     ((simple-syntax-rules
+			       (simple-syntax-rules ((_) 'foo))))
+			   (simple-syntax-rules))))
+
       (test-group "Example from specification"
 	(define-syntax syntax-rules*
 	  (syntax-rules ()

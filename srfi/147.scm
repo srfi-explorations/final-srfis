@@ -20,7 +20,6 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-
 (scheme-define-syntax :continuation
   (scheme-syntax-rules ()))
 
@@ -69,7 +68,7 @@
   (scheme-syntax-rules ()
     ((letrec-syntax ((keyword transformer-spec) ...) body1 body2 ...)
      (letrec-syntax-aux (keyword ...) (transformer-spec ...) () (body1 body2 ...)))
-    ((letrec-synta . _)
+    ((letrec-syntax . _)
      (syntax-error "invalid letrec-syntax syntax"))))
 
 (scheme-define-syntax letrec-syntax-aux
@@ -82,7 +81,7 @@
 			body*)
      (expand-transformer (letrec-syntax-aux keyword*
 					    (transformer-spec2 ...)
-					    tranformer-spec*
+					    transformer-spec*
 					    body*)
 			 transformer-spec1))
     ((letrec-syntax-aux keyword*
