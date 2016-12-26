@@ -96,6 +96,20 @@
 			       (simple-syntax-rules ((_) 'foo))))
 			   (simple-syntax-rules))))
 
+      (test-group "Custom ellipsis"
+	(define-syntax my-syntax-rules
+	  (syntax-rules !!! ()
+	    ((my-syntax-rules e l* rule !!!)
+	     (syntax-rules e l* rule !!!))))
+	
+	(define-syntax foo
+	  (my-syntax-rules ::: ()
+	    ((foo a) 'a)
+	    ((foo a b) '(a . b))		   
+  	    ((foo a :::) (list 'a :::))))
+
+	(test-equal '(a b c) (foo a b c)))
+      
       (test-group "Example from specification"
 	(define-syntax syntax-rules*
 	  (syntax-rules ()
