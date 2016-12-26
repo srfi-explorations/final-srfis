@@ -74,6 +74,42 @@
 
 	(test-equal '(bar 42) (bar 42)))
 
+      (test-group "Auxiliary definitions in custom macro transformers"
+	(define-syntax my-macro-transformer
+	  (syntax-rules ()
+	    ((my-macro-transformer)
+	     (begin (define foo 2)
+		    (syntax-rules ()
+		      ((_) foo))))))
+	
+	(test-equal 42 (* 21 (letrec-syntax ((foo (my-macro-transformer)))
+			       (foo)))))
+      
+      (test-group "Scoping of expansion"
+	(define-syntax simple-syntax-rules
+	  (syntax-rules ()
+	    ((simple-syntax-rules . rules)
+	     (syntax-rules () . rules))))
+
+	(test-equal 'foo (letrec-syntax
+			     ((simple-syntax-rules
+			       (simple-syntax-rules ((_) 'foo))))
+			   (simple-syntax-rules))))
+
+      (test-group "Custom ellipsis"
+	(define-syntax my-syntax-rules
+	  (syntax-rules !!! ()
+	    ((my-syntax-rules e l* rule !!!)
+	     (syntax-rules e l* rule !!!))))
+	
+	(define-syntax foo
+	  (my-syntax-rules ::: ()
+	    ((foo a) 'a)
+	    ((foo a b) '(a . b))		   
+  	    ((foo a :::) (list 'a :::))))
+
+	(test-equal '(a b c) (foo a b c)))
+      
       (test-group "Example from specification"
 	(define-syntax syntax-rules*
 	  (syntax-rules ()

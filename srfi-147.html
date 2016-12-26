@@ -109,10 +109,21 @@ This SRFI extends 7.1.5 of the R7RS as follows:
 
 <p>
   Whenever a keyword is bound to a macro transformer, and the macro
-  transformer is given by a transformer spec that is a macro
-  use, the keyword is bound to the macro transformer given by the
-  transformer spec that results from transcribing the macro use.  It is
-  an error if the macro use does not expand into a transformer spec.
+  transformer is given by a transformer spec that is a macro use, the
+  keyword is bound to the macro transformer given by the transformer
+  spec that results from transcribing the macro use.  It is an error
+  if the macro use does not expand into a transformer spec (but see below).  In case
+  of transformer specs that appear in the bindings of
+  the <code>let-syntax</code> and <code>letrec-syntax</code> binding
+  constructs, the expansion of the transformer spec takes place in the
+  (outer) scope of the binding construct.
+</p>
+
+<p>
+  In order to facilitate writing sophisticated custom macro
+  transformers, it is allowed that a transformer spec expands into a
+  sequence of multiple definitions eventually followed by a
+  transformer spec (whose expansion may make use of the introduced definitions).
 </p>
 
 <h1>Implementation</h1>

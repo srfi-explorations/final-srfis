@@ -20,14 +20,17 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-
 (scheme-define-syntax :continuation
   (scheme-syntax-rules ()))
 
 (scheme-define-syntax expand-transformer
-  (scheme-syntax-rules (scheme-syntax-rules)
+  (scheme-syntax-rules (scheme-syntax-rules begin)
     ((expand-transformer (k ...) (scheme-syntax-rules . args))
      (k ... (scheme-syntax-rules . args)))
+    ((expand-transformer (k ...) (begin definition ... transformer-spec))
+     (begin definition
+	    ...
+	    (expand-transformer (k ...) transformer-spec)))   
     ((expand-transformer (k ...) (keyword . args))
      (keyword (:continuation expand-transformer (k ...)) . args))))
 
@@ -41,7 +44,8 @@
 (scheme-define-syntax let-syntax
   (scheme-syntax-rules ()
     ((let-syntax ((keyword transformer-spec) ...) body1 body2 ...)
-     (let-syntax-aux (keyword ...) (transformer-spec ...) () (body1 body2 ...)))
+     (let ()
+       (let-syntax-aux (keyword ...) (transformer-spec ...) () (body1 body2 ...))))
     ((let-syntax . _)
      (syntax-error "invalid let-syntax syntax"))))
 
@@ -68,8 +72,9 @@
 (scheme-define-syntax letrec-syntax
   (scheme-syntax-rules ()
     ((letrec-syntax ((keyword transformer-spec) ...) body1 body2 ...)
-     (letrec-syntax-aux (keyword ...) (transformer-spec ...) () (body1 body2 ...)))
-    ((letrec-synta . _)
+     (let ()
+       (letrec-syntax-aux (keyword ...) (transformer-spec ...) () (body1 body2 ...))))
+    ((letrec-syntax . _)
      (syntax-error "invalid letrec-syntax syntax"))))
 
 (scheme-define-syntax letrec-syntax-aux
@@ -82,7 +87,7 @@
 			body*)
      (expand-transformer (letrec-syntax-aux keyword*
 					    (transformer-spec2 ...)
-					    tranformer-spec*
+					    transformer-spec*
 					    body*)
 			 transformer-spec1))
     ((letrec-syntax-aux keyword*
@@ -115,10 +120,10 @@
      (k ... (scheme-syntax-rules l ... rule1* ... . rule2*)))
 
     ((syntax-rules-aux "state1" k* ::: l*
-       (((_ . pattern) template) . rule1*) (rule2* ...) rule3*)
+       (((_ . pattern) template) . rule1*) (rule2 ...) rule3*)
 
      (syntax-rules-aux "state1" k* ::: l* rule1*
-       (rule2*
+       (rule2
 	...
 	((_ (:continuation c :::) . pattern)
 	 (c ::: template)))
