@@ -121,7 +121,6 @@
 
     ((syntax-rules-aux "state1" k* ::: l*
        (((_ . pattern) template) . rule1*) (rule2 ...) rule3*)
-
      (syntax-rules-aux "state1" k* ::: l* rule1*
        (rule2
 	...
