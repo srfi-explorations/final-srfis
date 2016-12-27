@@ -80,7 +80,10 @@
 (scheme-define-syntax letrec-syntax-aux
   (scheme-syntax-rules ()
     ((letrec-syntax-aux (keyword ...) () (transformer-spec ...) body*)
-     (scheme-letrec-syntax ((keyword transformer-spec) ...) . body*))
+     (begin
+       (define-syntax keyword transformer-spec)
+       ...
+       (let () . body*)))
     ((letrec-syntax-aux keyword*
 			(transformer-spec1 transformer-spec2 ...)
 			transformer-spec*
