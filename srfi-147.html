@@ -31,10 +31,12 @@ Marc Nieper-Wi&szlig;kirchen
 <p>
 Each syntax definition assigns a macro transformer to a keyword.  The
 macro transformer is specified by a transformer spec, which is either
-an instance of <code>syntax-rules</code> or a use of a macro that eventually
-expands into an instance of <code>syntax-rules</code>.  In the
-latter case, the keyword of macro use is called a <em>custom macro
-transformer</em>.
+an instance of <code>syntax-rules</code>, an existing syntactic keyword
+(including macro keywords and the syntactic keywords that introduce the core forms,
+like <code>lambda</code>, <code>if</code>, or <code>define</code>), or
+a use of a macro that eventually expands into an instance
+of <code>syntax-rules</code>.  In the latter case, the keyword of
+macro use is called a <em>custom macro transformer</em>.
 </p>
 
 <h1>Issues</h1>
@@ -107,7 +109,8 @@ This SRFI extends 7.1.5 of the R7RS as follows:
 
 <pre>
   &lt;transformer spec&gt; 
-    -&gt; &lt;macro use&gt;
+   -&gt; &lt;keyword&gt;
+   -&gt; &lt;macro use&gt;
 </pre>
 
 <p>
@@ -115,11 +118,25 @@ This SRFI extends 7.1.5 of the R7RS as follows:
   transformer is given by a transformer spec that is a macro use, the
   keyword is bound to the macro transformer given by the transformer
   spec that results from transcribing the macro use.  It is an error
-  if the macro use does not expand into a transformer spec (but see below).  In case
-  of transformer specs that appear in the bindings of
-  the <code>let-syntax</code> and <code>letrec-syntax</code> binding
+  if the macro use does not expand into a transformer spec (but see
+  below).  In case of transformer specs that appear in the bindings of
+  the <code>let-syntax</code> binding construct, the expansion of the
+  transformer spec takes place in the (outer) scope of the binding
+  construct.  In case of transformer specs that appear in the bindings of
+  the <code>letrec-syntax</code> binding
   constructs, the expansion of the transformer spec takes place in the
-  (outer) scope of the binding construct.
+  scope of the bindings of the binding construct.
+</p>
+
+<p>
+  If the transformer spec is a <em>keyword</em>, the keyword bound to
+  the transformer spec essentially becomes an alias to the syntactic
+  keyword <em>keyword</em>.  (<em>Keyword</em> may also be one of the
+  core syntactic keywords
+  like <code>lambda</code>, <code>if</code>, <code>define</code>.)
+  The same holds if the transformer spec is a macro use that
+  eventually expands into a (possibly empty) sequence of multiple definitions followed by
+  the <em>keyword</em> (possibly bound by the introduced definitions).
 </p>
 
 <p>

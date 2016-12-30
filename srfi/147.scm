@@ -32,7 +32,10 @@
 	    ...
 	    (expand-transformer (k ...) transformer-spec)))   
     ((expand-transformer (k ...) (keyword . args))
-     (keyword (:continuation expand-transformer (k ...)) . args))))
+     (keyword (:continuation expand-transformer (k ...)) . args))
+    ((expand-transformer (k ...) keyword)
+     (k ... (scheme-syntax-rules ()
+	      ((_ . args) (keyword . args)))))))
 
 (scheme-define-syntax define-syntax
   (scheme-syntax-rules ()
@@ -80,7 +83,10 @@
 (scheme-define-syntax letrec-syntax-aux
   (scheme-syntax-rules ()
     ((letrec-syntax-aux (keyword ...) () (transformer-spec ...) body*)
-     (scheme-letrec-syntax ((keyword transformer-spec) ...) . body*))
+     (begin
+       (define-syntax keyword transformer-spec)
+       ...
+       (let () . body*)))
     ((letrec-syntax-aux keyword*
 			(transformer-spec1 transformer-spec2 ...)
 			transformer-spec*
@@ -121,7 +127,6 @@
 
     ((syntax-rules-aux "state1" k* ::: l*
        (((_ . pattern) template) . rule1*) (rule2 ...) rule3*)
-
      (syntax-rules-aux "state1" k* ::: l* rule1*
        (rule2
 	...

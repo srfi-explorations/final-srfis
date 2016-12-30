@@ -41,7 +41,18 @@
 			     (syntax-rules ()
 			       ((foo)
 				42))))
-			 (foo))))
+			 (foo)))
+
+	(test-equal 42 (letrec-syntax
+			   ((foo
+			     (syntax-rules ()
+			       ((foo)
+				42)))
+			    (bar
+			     (syntax-rules ()
+			       ((bar)
+				(foo)))))
+			 (bar))))
 
       (test-group "Custom macro transformers"
 	(define-syntax simple-syntax-rules
@@ -91,7 +102,7 @@
 	    ((simple-syntax-rules . rules)
 	     (syntax-rules () . rules))))
 
-	(test-equal 'foo (letrec-syntax
+	(test-equal 'foo (let-syntax
 			     ((simple-syntax-rules
 			       (simple-syntax-rules ((_) 'foo))))
 			   (simple-syntax-rules))))
@@ -109,7 +120,12 @@
   	    ((foo a :::) (list 'a :::))))
 
 	(test-equal '(a b c) (foo a b c)))
-      
+
+      (test-group "Aliases for keywords"
+	(define-syntax λ lambda)
+	(define foo (λ () 'baz))
+	(test-equal 'baz (foo)))
+
       (test-group "Example from specification"
 	(define-syntax syntax-rules*
 	  (syntax-rules ()
