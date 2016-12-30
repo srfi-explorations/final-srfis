@@ -102,7 +102,7 @@
 	    ((simple-syntax-rules . rules)
 	     (syntax-rules () . rules))))
 
-	(test-equal 'foo (letrec-syntax
+	(test-equal 'foo (let-syntax
 			     ((simple-syntax-rules
 			       (simple-syntax-rules ((_) 'foo))))
 			   (simple-syntax-rules))))
