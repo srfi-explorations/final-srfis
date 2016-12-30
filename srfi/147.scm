@@ -32,7 +32,10 @@
 	    ...
 	    (expand-transformer (k ...) transformer-spec)))   
     ((expand-transformer (k ...) (keyword . args))
-     (keyword (:continuation expand-transformer (k ...)) . args))))
+     (keyword (:continuation expand-transformer (k ...)) . args))
+    ((expand-transformer (k ...) keyword)
+     (k ... (scheme-syntax-rules ()
+	      ((_ . args) (keyword . args)))))))
 
 (scheme-define-syntax define-syntax
   (scheme-syntax-rules ()

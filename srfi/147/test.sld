@@ -121,6 +121,11 @@
 
 	(test-equal '(a b c) (foo a b c)))
 
+      (test-group "Aliases for keywords"
+	(define-syntax λ lambda)
+	(define foo (λ () 'baz))
+	(test-equal 'baz (foo)))
+
       (test-group "Example from specification"
 	(define-syntax syntax-rules*
 	  (syntax-rules ()
