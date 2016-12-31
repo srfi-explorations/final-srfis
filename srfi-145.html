@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>SRFI 145: Denoting error situations in support of debugging, documentation and compiler optimizations</title>
+    <title>SRFI 145: Assumptions</title>
     <link rel="stylesheet" href="http://srfi.schemers.org/srfi.css" type="text/css" />
   </head>
 
@@ -10,7 +10,7 @@
 
 <h1>Title</h1>
 
-Denoting error situations in support of debugging, documentation and compiler optimizations
+Assumptions
 
 <h1>Author</h1>
 
@@ -38,10 +38,7 @@ produce better code and to issue better warnings about dead code.
 
 <h1>Issues</h1>
 
-<ul>
-  <li>Can the title of this SRFI be improved?</li>
-  <li>Is <code>fatal-error</code> a good name?</li>
-</ul>
+<p>There are currently no issues.</p>
 
 <h1>Rationale</h1>
 
@@ -125,8 +122,7 @@ the procedure <code>f</code> can be rewritten as follows:
 
 <pre>
 (define (f x)
-  (unless (exact-integer? x)
-    (fatal-error "f: argument is not an integer" x))
+  (assume (exact-integer? x))
   (g (* x x)))
 </pre>
 
@@ -139,24 +135,21 @@ the procedure <code>f</code> can be rewritten as follows:
   not lead into an error situation.
 </p>
 
-<p>As such tests are quite common, this SRFI defines a bit of
-syntactic sugar.  The definition can also be rewritten as:</p>
-
-<pre>
-(define (f x)
-  (assume (exact-integer? x))
-  (g (* x x)))
-</pre>
-
-<p>
-Or as:
+<p>Another interesting use case is the following, which employs an
+assumption that would fail unconditionally:
 </p>
 
 <pre>
-(define (f x)
-  (assume-type exact-integer? x)
-  (g (* x x)))
+ (define (foo x a b)
+   (case
+    ((plus) (+ a b))
+    ((minus) (- a b))
+    (else (assume #f))))
 </pre>
+
+<p>
+This definition allows a compiler to treat <code>(foo 'times 3 5)</code> as a compile-time error.
+</p>
 
 <p>
   One should note that error situations in which implementations are
@@ -174,7 +167,7 @@ Or as:
 (define (f x)
   (unless (exact-integer? x)
     (frob x)
-    (fatal-error "f: argument is not an integer" x))
+    (assume #f))
   (when (inexact? x)
     (twiddle x))
   (g (* x x)))
@@ -184,15 +177,13 @@ Or as:
 Assuming the compiler can prove that <code>(frob x)</code> returns, it
 is encouraged issue a warning that the evaluation of <code>frob</code>
 is meaningless because the code path in which it appears is invalid.
-(It may abstain from issueing the warning if evaluation
-of <code>frob</code> changes the arguments
-of <code>fatal-error</code>.)  Likewise, the compiler is encouraged to
+Likewise, the compiler is encouraged to
 issue a warning that <code>(twiddle x)</code> is likewise dead code,
 never evaluated.
 </p>
 
 <p><i>Note: A program that, for some input, would eventually evaluate
-a call to fatal-error is invalid and execution of it is an error
+<code>(assume #f)</code> is invalid and execution of it is an error
 itself, so anything may happen.  In particular <code>frob</code> may never be
 called in the above example.  An optimizing compiler may assume that a program presented to it is
 valid, so it may assume that the branch including the call to frob is
@@ -200,65 +191,21 @@ never taken. Thus any expression in this path is simply superfluous.</i></p>
 
 <h1>Specification</h1>
 
-<h2>Procedures</h2>
-
-<p>
-  <code>(fatal-error <em>message</em> <em>obj</em> ...)</code>
-</p>
-
-<p>
-  It is an error if <code>(fatal-error <em>message</em> <em>obj</em>
-    ...)</code> is ever evaluated.  However, implementations are
-    encouraged to signal an error when this application is evaluated
-    and to report the information provided
-    by <code><em>message</em></code>, as well as
-    any <code><em>obj</em></code>s, to the user, at least when the
-    implementation is in debug or non-optimizing mode.  In case of
-    signalling the error, an implementation is also encouraged to
-    report the source location of the source of the error.
-</p>
-
-<p><i>Rationale: There are three reasons why <code>fatal-error</code>
-is defined to be a procedure and not a keyword introducing a special
-form.  The first reason is that the analogous <code>error</code> of
-SRFI 23 and the R7RS is a procedure as well.  The second reason is the
-same as raised in SRFI 23: One may want to
-call <code>fatal-error</code> using <code>apply</code>.  The last
-reason is a didactic one: Expanding code
-into <code>(fatal-error <em>message</em> <em>obj</em> ...)</code> is
-not an error, only evaluation of such an expression is an error.</i>
-</p>
-
 <h2>Syntax</h2>
 
 <p>
-  <code>(assume <em>expression</em>)</code>
+  <code>(assume <em>obj</em>)</code>
 </p>
-  
-The above syntax shall be equivalent to
-<pre>
-(unless <em>expression</em>
-  (fatal-error "invalid assumption" (quote <em>expression</em>)))
-</pre>  
-
-Implementations are free to change the exact format of
-the <code><em>message</em></code>, as well as
-any <code><em>obj</em></code>s.
 
 <p>
-  <code>(assume-type <em>pred</em> <em>obj</em>)</code>
+ This special form is an expression that evaluates to an undefined
+ value if <em>obj</em> does evaluate to a true value.  It is an error
+ if <em>obj</em> evaluates to a false value.  In this case,
+ implementations are encouraged to report this error to the user, at
+ least when the implementation is in debug or non-optimizing mode.  In
+ case of reporting the error, an implementation is also encouraged to
+ report the source location of the source of the error.
 </p>
-
-Here, <em>pred</em> denotes an expression evaluating to a procedure
-accepting one argument and <em>obj</em> any Scheme value.  The syntax shall be equivalent to:
-<pre>
-(unless (<em>pred</em> <em>obj</em>)
-  (fatal-error "not of expected type" (quote <em>pred</em>) <em>expr</em>))
-</pre>
-
-Again, implementations are free to change the exact format of
-the <code><em>message</em></code>, as well as
-any <code><em>obj</em></code>s.
 
 <h1>Implementation</h1>
 
@@ -268,7 +215,7 @@ A simple implementation for R7RS can be given as follows:
 
 <pre>
 (define-library (srfi 145)
-  (export fatal-error assume assume-type)
+  (export assume)
   (import (scheme base))
   (begin
     (define-syntax assume
@@ -278,13 +225,6 @@ A simple implementation for R7RS can be given as follows:
            (fatal-error "invalid assumption" (quote expression))))
         ((assume . _)
          (syntax-error "invalid assume syntax"))))
-    (define-syntax assume-type
-      (syntax-rules ()
-        ((assume-type pred expr
-         (unless (pred expr)
-           (fatal-error "not of expected type" (quote pred) var))))
-        ((assume-type . _)
-         (syntax-error "invalid assume-type syntax"))))
   (cond-expand
     (debug
      (begin
@@ -297,12 +237,12 @@ A simple implementation for R7RS can be given as follows:
 
 <p>
 This sample implementation meets all the requirements.  If the feature
-identifier <code>debug</code> is set, <code>fatal-error</code> behaves
-as <code>error</code>.  If the feature identifier <code>debug</code>
-is not set, invoking <code>fatal-error</code> causes a subsequent
-error when <code>(car 0)</code> is evaluated, thus rendering the whole
-code path leading to the invocation of <code>fatal-error</code>
-invalid.
+identifier <code>debug</code> is set, <code>assume</code> uses
+<code>error</code> to signal an invalid assumption.  If the feature
+identifier <code>debug</code> is not set,
+invoking <code>assume</code> with a false argument causes a subsequent error
+when <code>(car 0)</code> is evaluated, thus rendering the whole code
+path leading to the invocation of that <code>assume</code> invalid.
 </p>
 
 <p>
@@ -312,23 +252,18 @@ the specification given in this SRFI, namely:
 
 <pre>
 (define-library (srfi 145)
-  (export fatal-error assume assume-type)
+  (export assume)
   (import (scheme base))
   (begin
     (define-syntax assume
       (syntax-rules ()
-        ((assume . _) #f)))
-    (define-syntax assume-type
-      (syntax-rules ()
-        ((assume-type . _) #f)))
-    (define (fatal-error . args) #f)))
+        ((assume . _) #f)))))
 </pre>
 
 <p>The reason why this is a faithful implementation is that
-whenever <code>fatal-error</code> is invoked, it is an error anyway,
+whenever <code>(assume #f)</code> is invoked, it is an error anyway,
 so that implementations are allowed to fail catastrophically (in the
-words of the R7RS), including that they simply return <code>#f</code>
-whenever <code>fatal-error</code> is invoked.
+words of the R7RS), including that they simply return <code>#f</code>.
 
 <h1>Acknowledgements</h1>
 
