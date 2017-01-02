@@ -24,9 +24,11 @@
   (scheme-syntax-rules ()))
 
 (scheme-define-syntax expand-transformer
-  (scheme-syntax-rules (scheme-syntax-rules begin)
+  (scheme-syntax-rules (scheme-syntax-rules syntax-error begin)
     ((expand-transformer (k ...) (scheme-syntax-rules . args))
      (k ... (scheme-syntax-rules . args)))
+    ((expand-transformer (k ...) (syntax-error . args))
+     (syntax-error . args))
     ((expand-transformer (k ...) (begin definition ... transformer-spec))
      (begin definition
 	    ...

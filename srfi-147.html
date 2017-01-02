@@ -84,6 +84,12 @@ eventually expand into a transformer spec in place of transformer spec.
     (list x y))            &#x27f9; '(1 2)
 </pre>
 
+<p>A fairly large use case of this SRFI
+is <a href="http://srfi.schemers.org/srfi-148/srfi-148.html">SRFI 148</a>,
+which defines a custom macro transformer for hygienic composable
+macros.
+</p>
+
 <h1>Specification</h1>
 
 <p>
@@ -122,8 +128,8 @@ This SRFI extends 7.1.5 of the R7RS as follows:
   if the macro use does not expand into a transformer spec (but see
   below).  In case of transformer specs that appear in the bindings of
   the <code>let-syntax</code> binding construct, the expansion of the
-  transformer spec takes place in the (outer) scope of the binding
-  construct.  In case of transformer specs that appear in the bindings of
+  transformer spec takes place in a scope between the outer scope of the binding
+  construct and its inner scope.  In case of transformer specs that appear in the bindings of
   the <code>letrec-syntax</code> binding
   constructs, the expansion of the transformer spec takes place in the
   scope of the bindings of the binding construct.
