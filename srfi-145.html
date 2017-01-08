@@ -123,7 +123,7 @@ the procedure <code>f</code> can be rewritten as follows:
 
 <pre>
 (define (f x)
-  (assume (exact-integer? x))
+  (assume (exact-integer? x) "f takes integer arguments" x)
   (g (* x x)))
 </pre>
 
@@ -145,7 +145,7 @@ assumption that would fail unconditionally:
    (case
     ((plus) (+ a b))
     ((minus) (- a b))
-    (else (assume #f))))
+    (else (assume #f "valid operators are plus/minus" x))))
 </pre>
 
 <p>
@@ -195,17 +195,18 @@ never taken. Thus any expression in this path is simply superfluous.</i></p>
 <h2>Syntax</h2>
 
 <p>
-  <code>(assume <em>obj</em>)</code>
+  <code>(assume <em>obj</em> <em>message</em> ...)</code>
 </p>
 
 <p>
- This special form is an expression that evaluates to an undefined
- value if <em>obj</em> does evaluate to a true value.  It is an error
- if <em>obj</em> evaluates to a false value.  In this case,
- implementations are encouraged to report this error to the user, at
- least when the implementation is in debug or non-optimizing mode.  In
- case of reporting the error, an implementation is also encouraged to
- report the source location of the source of the error.
+  This special form is an expression that evaluates to the value
+  of <em>obj</em> value if <em>obj</em> evaluates to a true value.  It
+  is an error if <em>obj</em> evaluates to a false value.  In this case,
+  implementations are encouraged to report this error together with
+  the <code><em>message</em></code>s to the user, at least when the
+  implementation is in debug or non-optimizing mode.  In case of
+  reporting the error, an implementation is also encouraged to report
+  the source location of the source of the error.
 </p>
 
 <h1>Implementation</h1>
@@ -221,9 +222,9 @@ A simple implementation for R7RS can be given as follows:
   (begin
     (define-syntax assume
       (syntax-rules ()
-        ((assume expression)
+        ((assume expression message ...)
          (unless expression
-           (fatal-error "invalid assumption" (quote expression))))
+           (fatal-error "invalid assumption" (quote expression) (list message ...))))
         ((assume . _)
          (syntax-error "invalid assume syntax"))))
   (cond-expand
@@ -258,7 +259,7 @@ the specification given in this SRFI, namely:
   (begin
     (define-syntax assume
       (syntax-rules ()
-        ((assume . _) #f)))))
+        ((assume obj . _) obj)))))
 </pre>
 
 <p>The reason why this is a faithful implementation is that
