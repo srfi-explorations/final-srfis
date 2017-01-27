@@ -36,7 +36,8 @@
     (import (rename (rnrs sorting)
                     (list-sort    r6rs-list-sort)
                     (vector-sort  r6rs-vector-sort)
-                    (vector-sort! r6rs-vector-sort!)))))
+                    (vector-sort! r6rs-vector-sort!))))
+   (else))
 
   (cond-expand
    ((library (rnrs base))
