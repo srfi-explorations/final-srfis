@@ -60,7 +60,6 @@
           vector-insert-sort vector-insert-sort!           ; not part of SRFI 132
           vector-heap-sort   vector-heap-sort!             ; not part of SRFI 132
           vector-quick-sort  vector-quick-sort!            ; not part of SRFI 132
-;         vector-binary-search vector-binary-search3       ; not part of SRFI 132
           vector-quick-sort3 vector-quick-sort3!           ; not part of SRFI 132
           )
 
