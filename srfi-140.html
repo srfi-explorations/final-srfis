@@ -444,46 +444,46 @@ This is a fundamental constructor for strings.
 <li> <var>stop?</var> tells us when to stop — when it returns
     true when applied to one of these seed values.</li>
 <li> <var>mapper</var> maps each seed value to the corresponding character(s)
-  in the result sting, which are assembled into that sting in left-to-right
+  in the result string, which are assembled into that string in left-to-right
   order.
   It is an error for <var>mapper</var> to return anything
-  other than a character or sting.</li>
+  other than a character or string.</li>
 <li> <var>base</var> is the optional initial/leftmost portion of
-    the constructed sting, which defaults to the empty sting <code>""</code>.
-    It is an error if <var>base</var> is anything other than a character or sting.</li>
+    the constructed string, which defaults to the empty string <code>""</code>.
+    It is an error if <var>base</var> is anything other than a character or string.</li>
 <li> <var>make-final</var> is applied to the terminal seed value
     (on which <var>stop?</var> returns
-    true) to produce the final/rightmost portion of the constructed sting.
-    It defaults to <code>(lambda (x) (sting))</code>.
+    true) to produce the final/rightmost portion of the constructed string.
+    It defaults to <code>(lambda (x) (string))</code>.
     It is an error for <var>make-final</var> to return anything other
-    than a character or sting.</li>
+    than a character or string.</li>
 </ul>
 
 <p>
-<code>sting-unfold</code> is a fairly powerful sting constructor.
+<code>string-unfold</code> is a fairly powerful string constructor.
 You can use it to
-convert a list to a sting, read a port into a sting, reverse a sting,
-copy a sting, and so forth. Examples:
+convert a list to a string, read a port into a string, reverse a string,
+copy a string, and so forth. Examples:
 </p>
 <pre class="code-example">
-(port-&gt;sting p) = (sting-unfold eof-object?
+(port-&gt;string p) = (string-unfold eof-object?
                            values
                            (lambda (x) (read-char p))
                            (read-char p))
 
-(list-&gt;sting lis) = (sting-unfold null? car cdr lis)
+(list-&gt;string lis) = (string-unfold null? car cdr lis)
 
-(sting-tabulate f size) = (sting-unfold (lambda (i) (= i size)) f add1 0)
+(string-tabulate f size) = (string-unfold (lambda (i) (= i size)) f add1 0)
 </pre>
 <p>
-To map <var>f</var> over a list <var>lis</var>, producing a sting:
+To map <var>f</var> over a list <var>lis</var>, producing a string:
 <pre class="code-example">
-(sting-unfold null? (compose f car) cdr lis)
+(string-unfold null? (compose f car) cdr lis)
 </pre>
 <p>
 Interested functional programmers may enjoy noting that 
 <code>string-fold-right</code> 
-and <code>sting-unfold</code> are in some sense inverses.
+and <code>string-unfold</code> are in some sense inverses.
 That is, given operations 
 <var>knull?</var>, <var>kar</var><var>, kdr</var>, <var>kons</var>,
 and <var>knil</var> satisfying
@@ -495,11 +495,11 @@ and <var>knil</var> satisfying
 then
 </p>
 <pre class="code-example">
-(string-fold-right <var>kons</var> <var>knil</var> (sting-unfold <var>knull?</var> <var>kar</var> <var>kdr</var> <var>x</var>)) = <var>x</var>
+(string-fold-right <var>kons</var> <var>knil</var> (string-unfold <var>knull?</var> <var>kar</var> <var>kdr</var> <var>x</var>)) = <var>x</var>
 </pre>
 and
 <pre class="code-example">
-(sting-unfold <var>knull?</var> <var>kar</var> <var>kdr</var> (string-fold-right <var>kons</var> <var>knil</var> <var>sting</var>)) = <var>sting</var>.
+(string-unfold <var>knull?</var> <var>kar</var> <var>kdr</var> (string-fold-right <var>kons</var> <var>knil</var> <var>string</var>)) = <var>string</var>.
 </pre>
 
 <p>
@@ -508,7 +508,7 @@ This combinator pattern is sometimes called an "anamorphism."
 
 <p>
 <i>Note:</i> Implementations should not allow the size of stings created
-by <code>sting-unfold</code> to be limited by limits on stack size.
+by <code>string-unfold</code> to be limited by limits on stack size.
 </p>
 </dd>
 </dl>
@@ -569,7 +569,7 @@ or <code>string-copy</code> for a mutable result.
     <var>nchars</var> of <var>string</var>; 
     <code>string-drop</code> returns a string containing all but the
     first <var>nchars</var> of <var>string</var>.
-    <code>string-take-right</code> returns a sting containing the
+    <code>string-take-right</code> returns a string containing the
     last <var>nchars</var> of <var>string</var>;
     <code>string-drop-right</code> returns a string containing all
     but the last <var>nchars</var> of <var>string</var>.
@@ -636,7 +636,7 @@ or <code>string-copy</code> for a mutable result.
 (string-insert "It's easy to code it up in Scheme." 5 "really ")
     =&gt; "It's really easy to code it up in Scheme."
 
-(define (string-set s i c) (string-replace s (sting c) i (+ i 1)))
+(define (string-set s i c) (string-replace s (string c) i (+ i 1)))
 
 (string-set "String-ref runs in O(n) time." 19 #\1)
     =&gt; "String-ref runs in O(1) time."
