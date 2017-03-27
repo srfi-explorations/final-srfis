@@ -128,8 +128,9 @@ Except for the effects of the fixnum rule, the <tt>fx</tt> versions
 have the same arguments and semantics as their generic counterparts,
 with the following additional modifications:
 </p>
-<ul><li>The procedures <tt>fx+</tt> and <tt>fx*</tt> accept exactly two arguments.
-</li></ul><ul><li>The procedure <tt>fx-</tt> accepts either one or two arguments.
+<ul><li>The procedures <tt>fx+</tt>, <tt>fx-</tt>, and <tt>fx*</tt> accept exactly two arguments.
+</li></ul><ul><li>The procedure <tt>fxneg</tt> corresponds to
+the procedure <tt>-</tt> with exactly one argument.
 </li></ul><ul><li>The <tt>fxsqrt</tt> procedure is the counterpart of <tt>exact-integer-sqrt</tt> rather than <tt>sqrt</tt>.
 </li></ul><p>
 Note that in accordance with the fixnum rule the procedure <tt>fxabs</tt> has undefined
@@ -142,9 +143,8 @@ results when applied to <tt>fx-least</tt>.
 <p>
 Returns the two fixnum results of the following computation:
 </p>
-<pre>(let* ((s (+ fx1 fx2 fx3))
-       (s0 (balanced-remainder s (expt 2 (fixnum-width))))
-       (s1 (balanced-quotient s (expt 2 (fixnum-width)))))
+<pre>(let*-values (((s) (+ fx1 fx2 fx3))
+       ((s1 s0) (balanced/ s (expt 2 (fixnum-width)))))
   (values s0 s1))
 </pre><p>
 <tt>(fx-/carry </tt><em>fx<sub>1</sub> fx<sub>2</sub> fx<sub>3</sub></em><tt>)‌‌</tt>
@@ -152,24 +152,28 @@ Returns the two fixnum results of the following computation:
 <p>
 Returns the two fixnum results of the following computation:
 </p>
-<pre>(let* ((d (- fx1 fx2 fx3))
-       (d0 (balanced-remainder d (expt 2 (fixnum-width))))
-       (d1 (balanced-quotient d (expt 2 (fixnum-width)))))
+<pre>(let*-values (((d) (- fx1 fx2 fx3))
+       ((d1 d0) (balanced/ d (expt 2 (fixnum-width)))))
   (values d0 d1))
 </pre><p>
-<tt>(fx*+/carry </tt><em>fx<sub>1</sub> fx<sub>2</sub> fx<sub>3</sub></em><tt>)‌‌</tt>
+<tt>(fx+*/carry </tt><em>fx<sub>1</sub> fx<sub>2</sub> fx<sub>3</sub></em><tt>)</tt>
 </p>
 <p>
 Returns the two fixnum results of the following computation:
 </p>
-<pre>(let* ((s (+ (* fx1, fx1)) fx3))
-       (s0 (balanced-remainder s (expt 2 (fixnum-width))))
-       (s1 (balanced-quotient s (expt 2 (fixnum-width)))))
+<pre>(let*-values (((s) (+ (* fx1, fx1)) fx3))
+       ((s1 s0) (balanced/ s (expt 2 (fixnum-width)))))
   (values s0 s1))
-</pre><h2 id="Integerdivision">Integer division</h2>
+</pre><p>
+
+The <tt>balanced/</tt> procedure is available in
+<a href="http://srfi.schemers.org/srfi-141/srfi-141.html">SRFI 141</a>,
+and in the R6RS library
+under the name of <tt>div0-and-mod0</tt>.</p>
+<h2 id="Integerdivision">Integer division</h2>
 <p>
 The following procedures are the fixnum counterparts of procedures
-from <a href="http://srfi.schemers.org/srfi-142/srfi-142.html">SRFI 142</a>:
+from <a href="http://srfi.schemers.org/srfi-141/srfi-141.html">SRFI 141</a>:
 </p>
 <pre>fxfloor/ fxfloor-quotient fxfloor-remainder
 fxceiling/ fxceiling-quotient fxceiling-remainder
@@ -184,14 +188,17 @@ have the same arguments and semantics as their generic counterparts.
 <h2 id="Bitwiseoperations">Bitwise operations</h2>
 <p>
 The following procedures are the fixnum counterparts of procedures
-from <a href="http://srfi.schemers.org/srfi-141/srfi-141.html">SRFI 141</a>:
+from <a href="http://srfi.schemers.org/srfi-142/srfi-142.html">SRFI 142</a>:
 </p>
-<pre>fxnot
-fxand   fxior   fxxor   fxeqv
+<pre>
+fxnot
+fxand   fxior 
+fxxor   fxeqv
 fxnand  fxnor 
-fxandc1 fxandc2 fxorc1  fxorc2 
+fxandc1 fxandc2
+fxorc1  fxorc2 
 
-farithmetic-shift fxbit-count fxinteger-length
+fxarithmetic-shift fxbit-count fxinteger-length
 
 fxif 
 fxbit-set? fxcopy-bit fxbit-swap
@@ -200,12 +207,9 @@ fxfirst-set-bit
 
 fxbit-field fxbit-field-any? fxbit-field-every?
 fxbit-field-clear fxbit-field-set
-fxbit-field-replace  fbit-field-replace-same
+fxbit-field-replace fxbit-field-replace-same
 fxbit-field-rotate fxbit-field-reverse
-fxbit-field-append
 
-fixnum-&gt;list list-&gt;fixnum
-fixnum-&gt;vector vector-&gt;fixnum
 fxbits
 fxfold fxfor-each fxunfold
 </pre><p>
