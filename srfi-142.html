@@ -36,7 +36,7 @@ performing bitwise logical operations on integers; it is
 accompanied by a reference implementation of the spec in terms of a set of
 seven core operators. The sample implementation is portable, as efficient
 as practical with pure Scheme arithmetic (it is worthwhile replacing the
-core ops with C or assembly language if possible), and open source.
+core operators with C or assembly language if possible), and open source.
 </p>
 <p>
 The precise semantics of these operators is almost never an issue. A
@@ -150,7 +150,7 @@ SRFI 60 includes six procedures that do not have SRFI 33 equivalents.  They are 
 </li></ul><ul><li>The procedures <tt>copy-bit</tt>, <tt>integer-&gt;list</tt> and <tt>list-&gt;integer</tt> are incorporated into this SRFI unchanged.
 </li></ul><ul><li>The procedure <tt>booleans-&gt;integer</tt> is a convenient way to specify a bitwise integer: it accepts an arbitrary number of boolean arguments and returns a non-negative integer.  So in this SRFI it has the short name <tt>bits</tt>, roughly analogous to <tt>list</tt>, <tt>string</tt>, and <tt>vector</tt>.
 </li></ul><h2 id="Othersources">Other sources</h2>
-<ul><li><p>The following procedures are inspired by SRFI 133:  <tt>bit-swap</tt>, <tt>bit-field-append</tt>,
+<ul><li><p>The following procedures are inspired by SRFI 133:  <tt>bit-swap</tt>,
 <tt>bitwise-fold</tt>, <tt>bitwise-for-each</tt>, <tt>bitwise-unfold</tt>.
 </p>
 <li><p>The procedure <tt>bit-field-set</tt> is the counterpart of <tt>bit-field-clear</tt>.</p>
@@ -191,7 +191,6 @@ bit-field bit-field-any? bit-field-every?
 bit-field-clear bit-field-set
 bit-field-replace  bit-field-replace-same
 bit-field-rotate bit-field-reverse
-bit-field-append
 
 integer-&gt;list list-&gt;integer
 integer-&gt;vector vector-&gt;integer
@@ -458,14 +457,6 @@ by <em>count</em> bits towards high-order.
 <p>
 Returns <em>i</em> with the order of the bits in the field reversed.
 </p>
-<p>
-<tt>(bit-field-append </tt><em>i start end</em> ...<tt>)</tt>
-</p>
-<p>
-It is an error if the number of arguments is not a multiple of three.  The field specified
-by each triple of <em>i start end</em> arguments is extracted, and the
-fields are concatenated in left-to-right order and returned as an integer.
-</p>
 <h2 id="Bitsasbooleans">Bits as booleans</h2>
 <p>
 <tt>(integer-&gt;list </tt><em>i</em> [ <em>len</em> ]<tt>)</tt><br />
@@ -542,7 +533,23 @@ with bit 0.  Note that it is an infinite generator.
 
 <h1>Implementation</h1>
 
-TBD
+<p>The implementation is in the repository of this SRFI, and includes the
+following files:</p>
+
+<ul><li><tt>bitwise-core.scm</tt> - the SRFI 60 sample implementation
+of the seven core operators, without dependencies
+<li><tt>chibi-core.scm</tt> - core operators not provided by Chibi
+<li><tt>chicken-core.scm</tt> - core operators not provided by Chicken
+<li><tt>bitwise-33.scm</tt> - SRFI 33 sample implementation, renamed
+<li><tt>bitwise-60.scm</tt> - part of SRFI 60 sample implementation, renamed
+<li><tt>bitwise-other.scm</tt> - implementation of other procedures
+<li><tt>srfi-142.scm</tt> - Chicken module
+<li><tt>srfi-142.sld</tt> - R7RS library
+</ul>
+<p>Note that Chibi provides a C implementation of some of the core operators.
+There is a <tt>cond-expand</tt> in <tt>srfi-142.sld</tt> that takes
+advantage of this.
+The <tt>bit.{so,dll}</tt> file can be found in <tt>$PREFIX/lib/chibi/srfi/33</tt>.
 
 
 <h1 id="Comparisonofproposals">Comparison of proposals</h1>
@@ -581,7 +588,6 @@ The following table compares the names of the bitwise (aka logical) functions of
 </td></tr><tr><td>Replace corresponding bit field</td><td><tt>deposit-field</tt></td><td><tt>deposit-field</tt></td><td><tt>copy-bit-field</tt></td><td>---</td><td>---</td><td><tt>bit-field-copy-same</tt>
 </td></tr><tr><td>Rotate bit field</td><td>---</td><td>---</td><td>---</td><td><tt>rotate-bit-field</tt></td><td><tt>bitwise-rotate-bit-field</tt></td><td><tt>bit-field-rotate</tt>
 </td></tr><tr><td>Reverse bit field</td><td>---</td><td>---</td><td>---</td><td><tt>reverse-bit-field</tt></td><td><tt>bitwise-reverse-bit-field</tt></td><td><tt>bit-field-reverse</tt>
-</td></tr><tr><td>Append bit fields</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td><td><tt>bit-field-append</tt>
 </td></tr><tr><td>Integer to boolean list</td><td>---</td><td>---</td><td>---</td><td><tt>integer-&gt;list</tt></td><td>---</td><td><tt>integer-&gt;list</tt>
 </td></tr><tr><td>Integer to boolean vector</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td><td><tt>integer-&gt;vector</tt>
 </td></tr><tr><td>Boolean list to integer</td><td>---</td><td>---</td><td>---</td><td><tt>list-&gt;integer</tt></td><td>---</td><td><tt>list-&gt;integer</tt>
