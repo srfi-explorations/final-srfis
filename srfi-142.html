@@ -464,7 +464,8 @@ Returns <em>i</em> with the order of the bits in the field reversed.
 <tt>(integer-&gt;vector </tt><em>i</em> [ <em>len</em> ]<tt>)</tt>
 </p>
 <p>
-Returns a list/vector of <em>len</em> booleans corresponding to each bit of the non-negative integer <em>i</em>.
+Returns a list/vector of <em>len</em> booleans corresponding to each bit of the non-negative integer <em>i</em>,
+returning bit #0 as the first element, bit #1 as the second, and so on.
 <tt>#t</tt> is returned for each 1; <tt>#f</tt> for 0. The <em>len</em> argument defaults to <tt>(integer-length </tt><em>i</em><tt>)</tt>.
 </p>
 <p>
@@ -472,10 +473,13 @@ Returns a list/vector of <em>len</em> booleans corresponding to each bit of the 
 <tt>(vector-&gt;integer </tt><em>list</em><tt>)</tt>
 </p>
 <p>
-Returns an integer formed from the booleans in <em>list/vector</em>;
-it is an error if <em>list/vector</em> contains non-booleans.
+Returns an integer formed from the booleans in <em>list/vector</em>,
+using the first element as bit #0, the second element as bit #1, and so on.
+It is an error if <em>list/vector</em> contains non-booleans.
 A 1 bit is coded for each <tt>#t</tt>; a 0 bit for <tt>#f</tt>.
 Note that the result is never a negative integer.
+</p><p>
+For positive integers,
 <tt>integer-&gt;list</tt> and <tt>list-&gt;integer</tt> are inverses in the sense of <tt>equal?</tt>,
 and so are <tt>integer-&gt;vector</tt> and <tt>vector-&gt;integer</tt>.
 </p>

@@ -76,27 +76,29 @@
   (not (zero? (bitwise-and (arithmetic-shift n (- start)) (%mask (- end start))))))
 
 ;; Part of Olin's late revsisions; code by John Cowan; public domain.
-(define bit-field-every? #f)
+(define (bit-field-every? n start end)
+  (let ((m (%mask (- end start))))
+    (eqv? m (bitwise-and (arithmetic-shift n (- start)) m))))
 
 ;; Integrating i-b-f reduces nicely.
 (define (bit-field-clear n start end)
-  (bit-field-replace 0 n start end))
+  (bit-field-replace n 0 start end))
 
 ;; Counterpart to above, not in SRFI 33, written by John Cowan, public domain
 (define (bit-field-set n start end)
-  (bit-field-replace -1 n start end))
+  (bit-field-replace n -1 start end))
 
 ;;; Oops -- intermediate ARITHMETIC-SHIFT can fixnum-overflow on fixnum args.
 ;(define (bit-field-replace newfield n start end)
 ;  (bit-field-replace-same (arithmetic-shift newfield start) n start end))
 
 ;;; This three-line version won't fixnum-overflow on fixnum args.
-(define (bit-field-replace newfield n start end)
+(define (bit-field-replace n newfield start end)
   (let ((m (%mask (- end start))))
     (bitwise-ior (bitwise-and n (bitwise-not (arithmetic-shift m start)))
 		 (arithmetic-shift (bitwise-and newfield m) start))))
 
-(define (bit-field-replace-same from to start end)
+(define (bit-field-replace-same to from start end)
   (bitwise-if (arithmetic-shift (%mask (- end start)) start) to from))
 
 ;; Simple definition

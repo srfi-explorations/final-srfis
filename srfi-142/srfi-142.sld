@@ -1,4 +1,4 @@
-(define-library (srfi-142) 
+(define-library (srfi 142) 
   (import (scheme base))
   (import (scheme case-lambda))
 

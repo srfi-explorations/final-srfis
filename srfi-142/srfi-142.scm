@@ -1,9 +1,10 @@
 ;;;; chicken implementation of SRFI 142
 (module srfi-142 ()
   (import scheme)
-  (import (only chicken include case-lambda when
+  (import (only chicken include use case-lambda when
                         bitwise-and bitwise-ior bitwise-xor
                         arithmetic-shift))
+  (use numbers)
 
   (export bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-eqv
           bitwise-nand bitwise-nor bitwise-andc1 bitwise-andc2
