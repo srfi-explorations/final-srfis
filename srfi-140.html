@@ -93,6 +93,8 @@ it might be useful to be able to explicitly test for a mutable string.
 <li>Before finalization, will provide a full implementation.
 (Implementation section currently says "...just SRFI-135 with different
 names.")
+<li>Should <code>string-replicate</code> be called <code>xsubstring</code>,
+to match SRFI-13?
 <li>Should the <code>string-index</code> family be generalized to allow
 a character (or a charset) for <var>pred</var>?
 </ul>
@@ -353,9 +355,9 @@ Must execute in O(1) time.
 <p>
     It is an error if the bytevector subrange given to
     <code>utf8-&gt;string</code> contains invalid UTF-8 byte sequences.
-    For the other three procedures, it is an error if <var>start</var>
-    or <var>end</var> are odd, or if the bytevector subrange contains
-    invalid UTF-16 byte sequences.    
+    For the other three procedures, it is an error if
+    <code>(- <var>end</var> <var>start</var>)</code> is odd,
+    or if the bytevector subrange contains invalid UTF-16 byte sequences.
 </p>
 
 <!-- Previous drafts were based on the R6RS semantics:
@@ -508,7 +510,7 @@ This combinator pattern is sometimes called an "anamorphism."
 </p>
 
 <p>
-<i>Note:</i> Implementations should not allow the size of stings created
+<i>Note:</i> Implementations should not allow the size of strings created
 by <code>string-unfold</code> to be limited by limits on stack size.
 </p>
 </dd>
@@ -858,7 +860,7 @@ This indicates a useful value is returned when there is a match.
     to their argument.  In some cases, the length of the result may
     be different from the length of the argument.
 If the result is equal to the argument in the sense of <code>string=?</code>,
-<em>and</em> the arguments immutable, then that argument may be returned.
+<em>and</em> the argument is immutable, then that argument may be returned.
     Note that language-sensitive mappings and foldings are not used.
     <p>
 The results are the same as the R7RS procedures, but as immutable strings.
@@ -963,10 +965,11 @@ when <var>final-string</var> is a mutable string, and is allowed
     This procedure is a simple unparser; it pastes strings
     together using the delimiter string. 
 
-    <p>
-    <var>string-list</var> is a list of strings.
-    <var>delimiter</var> is a string.
-    The <var>grammar</var> argument is a symbol that determines
+<p>
+The <var>string-list</var> is a list of strings.
+The <var>delimiter</var> is the string used to delimit elements; it defaults to
+    a single space "&nbsp;".
+The <var>grammar</var> argument is a symbol that determines
     how the delimiter is
     used, and defaults to <code>'infix</code>.
     It is an error for <var>grammar</var> to be any symbol other
@@ -995,10 +998,6 @@ when <var>final-string</var> is a mutable string, and is allowed
       </li>
 </ul>
 
-    <p>
-    The delimiter is the string used to delimit elements; it defaults to
-    a single space "&nbsp;".
-    </p>
 <pre class="code-example">
 (string-join '("foo" "bar" "baz"))
          =&gt; "foo bar baz"
@@ -1249,7 +1248,7 @@ more general <code>string-replicate</code> procedure:
     in both the positive and negative directions.
     For example, if <var>string</var> is <code>"abcdefg"</code>,
     <var>start</var> is 3, 
-    and <var>end</var> is6,
+    and <var>end</var> is 6,
     then we have the conceptual bidirectionally-infinite string
 <pre>
     ...  d  e  f  d  e  f  d  e  f  d  e  f  d  e  f  d  e  f  d ...
@@ -1263,7 +1262,7 @@ more general <code>string-replicate</code> procedure:
     </p>
 <p>
 If <var>from</var> and <var>to</var> are missing they default to 0
-and <code>(string-length</code> <var>string</var><code>)</code>,
+and <code><var>from</var>+(<var>end</var>-<var>start</var>)</code>,
 respectively.
 This variant is a generalization of using <code>substring</code>,
 but unlike <code>substring</code> never shares substructures that would
@@ -1307,6 +1306,7 @@ its first argument or previously allocated objects.
     It is an error if <var>start</var>=<var>end</var>,
     unless <var>from</var>=<var>to</var>,
     which is allowed as a special case.
+    <p>This procedure is similar to SRFI-13's <code>xsubstring</code>.
     </p>
 </dd>
 <dt class="proc-def" id="string-split"></a>
