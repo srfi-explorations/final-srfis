@@ -3,8 +3,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>SRFI 144: Flonums</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="/srfi.css" type="text/css" />
+    <link rel="stylesheet" href="http://srfi.schemers.org/srfi.css" type="text/css" />
   </head>
 
   <body>
@@ -65,6 +64,7 @@ the portability of code that uses it. Standardizing the range or precision
 of flonums would make flonum operations inefficient on some systems, which
 would defeat their purpose. Therefore, this SRFI specifies some of the semantics
 of flonums, but makes the range and precision implementation-dependent.
+However, this SRFI, unlike C99, does assume that the floating-point radix is 2.
 </p>
 <p>
 The source of most of the variables and procedures in this SRFI is the C99/Posix
@@ -75,15 +75,15 @@ which should be available directly or indirectly to Scheme implementers.
 <tt>arcsinh</tt>, <tt>arccosh</tt>, <tt>arctanh</tt>,
 <tt>erf</tt>, and <tt>tgamma</tt>.)</p>
 
-<p>In addition, some of the procedures of
+<p>In addition, flonum equivalents for the procedures of
 <a href="http://srfi.schemers.org/srfi-141/srfi-141.html">
-SRFI 141</a>,
+SRFI 141</a> are provided, as well as some procedures and variables from
 <a href="http://www.r6rs.org/final/html/r6rs-lib/r6rs-lib-Z-H-12.html#node_sec_11.3">
 the R6RS flonum library</a>,
-and the R7RS arithmetic procedures have flonum equivalents here.
-<p>This SRFI, unlike C99, assumes that the floating-point radix is 2.</p>
-
-
+<a href="http://wiki.call-cc.org/man/4/Unit%20library#arithmetic-fixnum-operations">
+the Chicken flonum routines</a>, and
+<a href="http://wiki.call-cc.org/eggref/4/mathh">the Chicken <tt>mathh</tt> egg</a>.
+Lastly, a few procedures are flonum versions of R7RS-small numeric procedures.
 </p>
 <h1>Specification</h1>
 
@@ -110,9 +110,7 @@ Flonum operations must be at least as accurate as their generic counterparts whe
 </p>
 <p>
 This SRFI uses <em>x, y, z</em> as
-parameter names for flonum arguments, and <em>ix</em>
-as a name for an integer-valued flonum argument, i.e., a flonum for which the
-<tt>integer?</tt> predicate returns true.
+parameter names for flonum arguments.
 Exact integer parameters are designated <em>n</em>.
 </p>
 <h2 id="Constants">Constants</h2>
@@ -443,32 +441,32 @@ otherwise it would lose the correspondence with
 according to IEEE 754.
 </p>
 <p>
-<tt>(flodd? </tt><em>ix</em><tt>)</tt>
+<tt>(flodd? </tt><em>x</em><tt>)</tt>
 </p>
-<p>Tests whether the integral flonum <em>ix</em> is odd.</p>
+<p>Tests whether the flonum <em>x</em> is odd.  It is an error if <em>x</em> is not an integer.</p>
 <tt>(fleven? </tt><em>ix</em><tt>)</tt>
 </p>
-<p>Tests whether the integral flonum <em>ix</em> is even.</p>
+<p>Tests whether the flonum <em>x</em> is even.  It is an error if <em>x</em> is not an integer.</p>
 <p>
 <tt>(flfinite? </tt><em>x</em><tt>)</tt>
 </p>
-<p>Tests whether the flonum <em>ix</em> is finite. (C99 <tt>isfinite</tt>)</p>
+<p>Tests whether the flonum <em>x</em> is finite. (C99 <tt>isfinite</tt>)</p>
 <p>
 <tt>(flinfinite? </tt><em>x</em><tt>)</tt>
 </p>
-<p>Tests whether the flonum <em>ix</em> is infinite. (C99 <tt>isinf</tt>)</p>
+<p>Tests whether the flonum <em>x</em> is infinite. (C99 <tt>isinf</tt>)</p>
 <p>
 <tt>(flnan? </tt><em>x</em><tt>)</tt>
 </p>
-<p>Tests whether the flonum <em>ix</em> is NaN. (C99 <tt>isnan</tt>)</p>
+<p>Tests whether the flonum <em>x</em> is NaN. (C99 <tt>isnan</tt>)</p>
 <p>
 <tt>(flnormalized? </tt><em>x</em><tt>)</tt>
 </p>
-<p>Tests whether the flonum <em>ix</em> is normalized. (C99 <tt>isnormal</tt>)</p>
+<p>Tests whether the flonum <em>x</em> is normalized. (C99 <tt>isnormal</tt>)</p>
 <p>
 <tt>(fldenormalized? </tt><em>x</em><tt>)</tt>
 </p>
-<p>Tests whether the flonum <em>ix</em> is denormalized. (C99 <tt>issubnormal</tt>)</p>
+<p>Tests whether the flonum <em>x</em> is denormalized. (C99 <tt>issubnormal</tt>)</p>
 <h2 id="Arithmetic">Arithmetic</h2>
 <p>
 <tt>(fl+ </tt><em>x</em> ...<tt>)</tt>
@@ -518,7 +516,7 @@ provides these numbers, and <tt>fl-greatest</tt>/<tt>fl-least</tt> otherwise.
 <tt>(flabs </tt><em>x</em><tt>)</tt>
 </p>
 <p>
-Returns the absolute value of <em>x</em>.
+Returns the absolute value of <em>x</em>.  (C99 <tt>fabs</tt>)
 (C99 <tt>fabs</tt>)
 </p>
 <p>
@@ -532,7 +530,7 @@ Returns |<em>x</em> - <em>y</em>|.
 </p>
 <p>
 Returns the difference of <em>x</em> and <em>y</em> if it is non-negative,
-or zero if the difference is negative).
+or zero if the difference is negative.
 (C99 <tt>fdim</tt>)
 </p>
 <p>
@@ -591,13 +589,13 @@ Returns e<sup><em>x</em></sup>.
 <tt>(flexp2 </tt><em>x</em><tt>)</tt>
 </p>
 <p>
-Corresponds to 2<sup><em>x</em></sup>.  (C99 <tt>exp2</tt>)
+Returns 2<sup><em>x</em></sup>.  (C99 <tt>exp2</tt>)
 </p>
 <p>
 <tt>(flexp-1 </tt><em>x</em><tt>)</tt>
 </p>
 <p>
-Equivalent to e<sup><em>x</em></sup> - 1, but is much more accurate for values of x near 1.  It is recommended for use in algorithms where accuracy is important.  (C99 <tt>expm1</tt>)
+Returns e<sup><em>x</em></sup> - 1, but is much more accurate than <tt>flexp</tt> for values of x near 1.  It is recommended for use in algorithms where accuracy is important.  (C99 <tt>expm1</tt>)
 </p>
 <p>
 <tt>(flsquare </tt><em>x</em><tt>)</tt>
@@ -645,15 +643,15 @@ Returns log<sub>e</sub> <em>x</em>.
 <tt>(fllog1+ </tt><em>x</em><tt>)</tt>
 </p>
 <p>
-Returns (log<sub>e</sub> <em>x</em>) + 1, but is much more accurate for values of x near 1.  It is recommended for use in algorithms where accuracy is important.  (C99 <tt>log1p</tt>)
+Returns (log<sub>e</sub> <em>x</em>) + 1, but is much more accurate than <tt>fllog</tt> for values of x near 1.  It is recommended for use in algorithms where accuracy is important.  (C99 <tt>log1p</tt>)
 </p>
 <p>
 <tt>(fllog2 </tt><em>x</em><tt>)</tt>
 </p>
 <p>
 Returns log<sub>2</sub> <em>x</em>.
-</p>
 (C99 <tt>log2</tt>)
+</p>
 <p>
 <tt>(fllog10 </tt><em>x</em><tt>)</tt>
 </p>
@@ -683,7 +681,7 @@ Returns log<sub>10</sub> <em>x</em>.
 </p>
 <p>Returns arccos <em>x</em>.  (C99 <tt>acos</tt>)</p>
 <p>
-<tt>(flatan </tt>[<em>y</em>] <em>x</em>]<tt>)</tt>
+<tt>(flatan </tt>[<em>y</em>] <em>x</em><tt>)</tt>
 </p>
 <p>Returns arctan <em>x</em>.  (C99 <tt>atan</tt>)</p>
 <p>With two arguments, return arctan(<em>y</em>/<em>x</em>.  (C99 <tt>atan2</tt>)</p>
@@ -751,13 +749,13 @@ Returns two values, log Γ(|<em>x</em>|) without internal overflow, and sgn(Γ(<
 <tt>(flfirst-bessel </tt><em>x n</em><tt>)</tt>
 </p>
 <p>
-Returns the <em>n</em>th order Bessel function of the first kind applied to <em>x</em>, J<sub>n</sub>(x).  (C99 <tt>j0</tt>, <tt>j1</tt>, <tt>jn</tt>)
+Returns the <em>n</em>th order Bessel function of the first kind applied to <em>x</em>, J<sub>n</sub>(x).  (C99 <tt>jn</tt>)
 </p>
 <p>
 <tt>(flsecond-bessel </tt><em>x n</em><tt>)</tt>
 </p>
 <p>
-Returns the <em>n</em>th order Bessel function of the second kind applied to <em>x</em>, Y<sub>n</sub>(x).  (C99 <tt>y0</tt>, <tt>y1</tt>, <tt>yn</tt>)
+Returns the <em>n</em>th order Bessel function of the second kind applied to <em>x</em>, Y<sub>n</sub>(x).  (C99 <tt>yn</tt>)
 </p>
 <p>
 <tt>(flerf </tt><em>x</em><tt>)</tt>
