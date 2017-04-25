@@ -84,8 +84,6 @@ and <a href="http://srfi.schemers.org/srfi-118/srfi-118.html">SRFI-118</a>.
 <li>What name should we use for "immutable string" and
 corresponding predicate?
 Is "istring" and <code>istring?</code> a good choice?
-<li>What standard libraries should the language provide,
-and what should each library export?
 <li>Would an <code>mstring?</code> predicate be useful?
 In an implementation with immutable strings without a O(1) guarantee
 (such as <code>java.lang.String</code> on the Java platform)
@@ -94,8 +92,6 @@ it might be useful to be able to explicitly test for a mutable string.
 <li>Before finalization, will provide a full implementation.
 (Implementation section currently says "...just SRFI-135 with different
 names.")
-<li>Should <code>string-replicate</code> be called <code>xsubstring</code>,
-to match SRFI-13?
 <li>Should the <code>string-index</code> family be generalized to allow
 a character (or a charset) for <var>pred</var>?
 </ul>
@@ -147,6 +143,13 @@ In the following procedure specifications:
     <li>A <var>string</var> argument or result is any string (immutable or mutable).</li>
 </ul>
 The rest as in SRFI-135.
+<p>
+Some procedures are specified as executing in guaranteed O(1) time.
+Unless specified, the other procedures may execute in linear time,
+using time proportional to the length of the involved string(s).
+Implementors must <em>not</em> implement (for example)
+<code>string-for-each</code> using <code>string-ref</code>,
+since that could lead to quadratic runtime on mutable strings.
 
 <h3>String literals</h3>
 String literals have type istring.
@@ -181,7 +184,8 @@ In an implementation that supports <a href="http://srfi.schemers.org/srfi-109/sr
   <code>(<span class="proc-def">string-null?</code></span> <var>string</var><code>)</code> → <var>boolean</var>
 <dd class="proc-def">
 Is <var>string</var> the empty string?
-Must execute in O(1) time.
+Same result as <code>(= (string-length <var>string</var>) 0)</code> but
+must execute in O(1) time.
 </dd>
 </dl>
 <dl>
@@ -212,7 +216,7 @@ Must execute in O(1) time.
         interval (with <var>start</var> &lt; <var>end</var>),
         the returned true value is the one returned by the final call to the
         predicate on
-        <code>(string-ref (string-copy <var>string</var>) (- <var>end</var> 1))</code>.</li>
+        <code>(string-ref <var>string</var> (- <var>end</var> 1))</code>.</li>
 
       <li> If <code>string-any</code> returns true,
         the returned true value is the one returned by the predicate.</li>
@@ -463,6 +467,12 @@ This is a fundamental constructor for strings.
     than a character or string.</li>
 </ul>
 
+<p><code>string-unfold-right</code> is the same as <code>string-unfold</code>
+except the results of <var>mapper</var> are assembled into the string
+in right-to-left order,
+<var>base</var> is the optional rightmost portion of the constructed string,
+and <var>make-final</var> produces the leftmost portion
+of the constructed string
 <p>
 <code>string-unfold</code> is a fairly powerful string constructor.
 You can use it to
@@ -530,7 +540,7 @@ you can use <a href="#string-repeat"><code>string-repeat</code></a>.
 </dt>
 <dd>As in R7RS.</dd>
 <dt class="proc-def" id="substring">
-<code>(<span class="proc-def">substring</code></span><var> string [start end]</var><code>)</code><var> → istring</var>
+<code>(<span class="proc-def">substring</code></span><var> string start end</var><code>)</code><var> → istring</var>
 </dt>
 <dd class="proc-def">
     This procedure returns a istring containing the characters of
@@ -549,11 +559,11 @@ you can use <a href="#string-repeat"><code>string-repeat</code></a>.
     representation divided by the storage that would be used by
     an unshared representation.
     In particular, these procedures should just return their first
-    argument when that argument is a string, <var>start</var> is 0, and
+    argument when that argument is an istring, <var>start</var> is 0, and
     <var>end</var> is the length of that string.
   </p>
 <p>For the functionality of <code>substring</code> with guaranteed no sharing
-use <code>string-replicate</code> for an immutable result,
+use <code>xsubstring</code> for an immutable result,
 or <code>string-copy</code> for a mutable result.
 </dd>
 <dt class="proc-def1" id="string-take">
@@ -601,6 +611,54 @@ or <code>string-copy</code> for a mutable result.
 </pre>
 </dd>
 </dl>
+
+<dt class="proc-def1" id="string-pad">
+<code>(<span class="proc-def">string-pad&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></code><var> string len [char start end]</var><code>)</code><var> → text</var>
+</dt>
+<dt class="proc-defn" id="string-pad-right">
+<code>(<span class="proc-def">string-pad-right</span></code><var> string len [char start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dd class="proc-def">
+    Returns an istring of length <var>len</var> comprised of the characters
+    drawn from the given subrange of <var>string</var>,
+    padded on the left (right)
+    by as many occurrences of the character <var>char</var> as needed.
+    If <var>string</var> has more
+    than <var>len</var> chars, it is truncated on the left (right)
+    to length <var>len</var>.
+    <var>char</var> defaults to <code>#\space</code>.
+<pre class="code-example">
+(string-pad     "325" 5) =&gt; "  325"
+(string-pad   "71325" 5) =&gt; "71325"
+(string-pad "8871325" 5) =&gt; "71325"
+</pre>
+
+<!--
+==== string-trim string-trim-right string-trim-both
+============================================================================-->
+<dt class="proc-def1">
+<code>(<span class="proc-def" id="string-trim">string-trim&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></code><var> string [pred start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dt class="proc-defi">
+<code>(<span class="proc-def" id="string-trim-right">string-trim-right</span></code><var> string [pred start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dt class="proc-defi">
+<code>(<span class="proc-def" id="string-trim-both">string-trim-both&nbsp;</span></code><var> string [pred start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dd class="proc-defn">
+    Returns a string obtained from the given subrange of <var>string</var>
+    by skipping
+    over all characters on the left / on the right /
+    on both sides that satisfy the second argument <var>pred</var>:
+    <var>pred</var> defaults to <code>char-whitespace?</code>.
+<pre class="code-example">
+(string-trim-both "  The outlook wasn't brilliant,  \n\r")
+    =&gt; "The outlook wasn't brilliant,"
+</pre>
+</dd>
+
+</dl>
+
 
 <h3>Replacement</h3>
 <dl>
@@ -787,9 +845,10 @@ These functions can be trivially composed with <code>string-take</code> and
 <code>string-drop</code> to produce take-while, drop-while, span, and break
 procedures without loss of efficiency.
 </p>
-<p><em>Note:</em> Guile generalizes <var>pred</var> to <var>char_pred</var>,
+<p><em>Note:</em> SRFI-13 and Guile generalizes <var>pred</var> to
+<var>char_pred</var>,
 which can be a predicate, a character, or a character set.
-That seems convenient.  Should it be standardized?
+This is an optional extension.
 </dd>
 </dl>
 
@@ -1096,7 +1155,9 @@ The <code>string-fold-right</code> combinator is sometimes called a "catamorphis
 <dt class="proc-def" id="string-map">
 <code>(<span class="proc-def">string-map</span></code><var> proc string<sub>1</sub> string<sub>2</sub> ...<code>)</code> → istring</var>
 </dt>
-<dd>As in R7RS, except the result is an immutable string.</dd>
+<dd>As in R7RS, except the result is an immutable string.
+As an extension, the result from <var>proc</var>
+may be a string (not just a character).</dd>
 <!--
 ==== string-for-each
 ============================================================================-->
@@ -1226,15 +1287,15 @@ Create a string by repeating the first argument <var>len</var> times.
 If the first argument is a character, it is as if it were wrapped with
 the <code>string</code> constructor.
 We can define <code>string-repeat</code> in terms of the
-more general <code>string-replicate</code> procedure:
+more general <code>xsubstring</code> procedure:
 <pre>
 (define (string-repeat S N)
    (let ((T (if (char? S) (string S) S)))
-     (string-replicate T 0 (* N (string-length T))))
+     (xsubstring T 0 (* N (string-length T))))
 </pre>
 </dd>
-<dt class="proc-def" id="string-replicate"></a>
-<code>(<span class="proc-def">string-replicate</span></code><var> string [from to [start end]]</var><code>)</code><var> → istring</var>
+<dt class="proc-def" id="xsubstring"></a>
+<code>(<span class="proc-def">xsubstring</span></code><var> string [from to [start end]]</var><code>)</code><var> → istring</var>
 </dt>
 <dd class="proc-def">
     This is an <q>extended substring</q> procedure that implements replicated
@@ -1256,7 +1317,7 @@ more general <code>string-replicate</code> procedure:
         -9 -8 -7 -6 -5 -4 -3 -2 -1  0 +1 +2 +3 +4 +5 +6 +7 +8 +9
 </pre>
     <p>
-    <code>string-replicate</code> returns the substring of this string
+    <code>xsubstring</code> returns the substring of this string
     beginning at index <var>from</var>,
     and ending at <var>to</var>.
     It is an error if <var>from</var> is greater than <var>to</var>.
@@ -1271,19 +1332,19 @@ retain characters or sequences of characters that are substructures of
 its first argument or previously allocated objects.
 (Hence it is equivalent to SRFI-135's <code>string-copy</code>.)
     <p>
-    You can use <code>string-replicate</code> to perform a variety of tasks:
+    You can use <code>xsubstring</code> to perform a variety of tasks:
     </p>
     <ul>
     <li> To rotate a string left:
-        <code>(string-replicate "abcdef" 2 8)</code>
+        <code>(xsubstring "abcdef" 2 8)</code>
         =&gt; <code>"cdefab"</code>
     </li>
     <li> To rotate a string right:
-        <code>(string-replicate "abcdef" -2 4)</code>
+        <code>(xsubstring "abcdef" -2 4)</code>
         =&gt; <code>"efabcd"</code>
     </li>
     <li> To replicate a string:
-        <code>(string-replicate "abc" 0 7)</code>
+        <code>(xsubstring "abc" 0 7)</code>
         =&gt; <code>"abcabca"</code>
     </li>
     </ul>
@@ -1307,8 +1368,9 @@ its first argument or previously allocated objects.
     It is an error if <var>start</var>=<var>end</var>,
     unless <var>from</var>=<var>to</var>,
     which is allowed as a special case.
-    <p>This procedure is similar to SRFI-13's <code>xsubstring</code>.
-    </p>
+    <p><i>Rationale:</i> SRFI-135 names the corresponding procedure <code>textual-replicate</code>.
+    The name <code>string-replicate</code> might be better in the abstract,
+    but following SRFI-13's <code>xsubstring</code> name seems preferable.</p>
 </dd>
 <dt class="proc-def" id="string-split"></a>
 <code>(<span class="proc-def">string-split</span></code><var> string delimiter [grammar limit start end]</var><code>)</code><var> → list</var>
@@ -1317,8 +1379,7 @@ its first argument or previously allocated objects.
 Returns a list of strings representing the words contained in the
 substring of <var>string</var> from <var>start</var> (inclusive)
 to <var>end</var> (exclusive).
-The <var>delimiter</var> is a string string to be used as
-the word separator.
+The <var>delimiter</var> is a string to be used as the word separator.
 This will often be a single character, but multiple characters are allowed
 for use cases such as splitting on <code>"\r\n"</code>.
 The returned list will have one more item than the number of
@@ -1479,31 +1540,90 @@ or other way to select "R7RS standards mode", then that switch should cause it t
 the <code>(stri 140 mstrings)</code> bindings.
 
 <h1>Implementation</h1>
-<em>Unfinished!</em>
-<p>This is basically just SRFI-135 with different names.
-So we can re-use any suitable SRFI-135 implementation.
-However, here is a simple and fairly efficient implementation of
-istrings written for the Java platform, which uses UTF-16 chars:
+<p>Since this specification changes core parts of Scheme,
+a portable library implementation is not possible.
+<p>
+<a href="http://ww.gnu.org/software/kawa/">Kawa</a> version 3.0
+will include a complete implementation of this specification.
+<b>Note:</b> Kawa 3.0 isn't released or quite finished yet.
+Get the implementation from the <code>invoke</code> branch
+of the <a href="https://gitlab.com/kashell/Kawa">Kawa git repository</a>.
+
+<h3>Implementing istring - general notes</h3>
+<p>
+SRFI-135 provides 3 alternative implementations for <q>texts</q>,
+which can be used to implement istrings:
+<ul>
+<li><code>kernel16</code> uses an internal representation based on UTF-16,
+which performs well when strings can represent any Unicode
+text and non-ASCII characters are common.
+The data structure used is a vector of bytevectors,
+where each bytevector (except the last) stores 128 code points.
+</li>
+<li><code>kernel8</code> uses an internal representation based on UTF-8,
+  which performs well when most (but not all) strings consist of
+  ASCII characters.
+</li>
+<li><code>kernel0</code> uses an internal representation based on Scheme
+    strings, which performs well if strings are acceptably
+    space-efficient and the <code>string-ref</code> procedure
+    runs in constant time.  It also performs well in interpreted
+    systems even when <code>string-ref</code> takes linear time,
+    because the built-in <code>string-ref</code> is likely to run
+    faster on short strings than any UTF-8 or UTF-16 scanner that
+    could be written in Scheme.
+</li>
+</ul>
+
+<h3>Kawa's implementation of istring</h3>
+<p>
+The Kawa implementation of istring uses one data array and one offset array.
+The data array is a native Java <code>String</code>, which internally
+is an array of 16-bit chars.
+(JDK 9 uses an array of 8-bit bytes when all the characters are Latin-1.)
+The offset array stores, for every 16th character,
+the start index within the data array of that character.
+Thus to find the position of character 37, we get element 2 in the index array,
+which gives us the position of character 32,
+and then we scan linerarly 5 characters forwards.
+If there are no surrogate characters in the range 32 to 48 (the normal case)
+then the difference between the offsets is 16, so no scan is needed
+(just add 5 to the offset for character 32).
+<p>
+This data structure is simple, fast, and relatively compact.
+The overhead of the index array is 4 bytes for
+every 16 characters (32 bytes or more), thus at most 12.5% overhead
+for long strings.  In the common case of only BMP characters,
+no index array is needed.
+<p>
+The implementation of istrings uses the  <code>IString</code> class.
+The following is implified - see <code>gnu/lists/IString.java</code>
+for the complete class.
 <pre>
-public class SchemeIString implements CharSequence {
-    String str;
+public class IString implements CharSequence {
+    String str; // Contains actual char (code unit) values
     int cplength; // number of codepoints
 
     /* Index of every 16-th character.
      * Null if all characters are in the basic plane. */
     int[] offsets;
 
-    /** used for string-ref */
-    public int indexByCodePoints(int i) {
+    /** used for substring etc */
+    public int offsetByCodePoints(int i) {
         if (offsets == null)
-            return (int) str.charAt(i);
+            return i;
         int pos = offsets[i&gt;&gt;4];
         // Optimize if all characters between (i &amp; 15)
         // and (i &amp; 15) + 16 are all in the basic plane:
         if (pos + 16 == offsets[(i&gt;&gt;4) + 1])
-            return (int) str.charAt(pos + (i &amp; 15));
+            return pos + (i &amp; 15);
         // scan linearly from pos, at most 15 characters forward:
-        return str.codePoinAt(pos + str.offsetByCodePoints(pos, i&amp;15));
+        return str.offsetByCodePoints(str, pos, i &amp; 15);
+    }
+
+    /** used for string-ref */
+    public int indexByCodePoints(int index) {
+        return str.codePointAt(offsetByCodePoints(index));
     }
 
     /* used for string-length */
@@ -1515,17 +1635,67 @@ public class SchemeIString implements CharSequence {
     public int length() { return str.length(); }
 }
 </pre>
-This implementation doesn't support shared substrings,
-but that could be handled with a little more work and
-replacing the <code>String str</code> field with a
-char array field <code>char[] chars</code>.
-Sharing would be handled by re-using the <code>chars</code>
-and <code>offsets</code> fields, but adding start/end offsets.
-Of course that has the tradeoff of more garbage being retained.
 <p>
-Implementing mutable strings is trivial, since there is no performance
-expectation.  Just use a simple record which has a pointer
-to a data buffer, which can be reallocated as needed.
+The actual implementation supports shared substrings.
+<p>(<em>Detail:</em> Instead of using a <code>String</code> for the data array,
+it would be slightly more efficient to use a native Java char array
+(one object fewer and one indirection less).  However,
+using a <code>String</code> has the advantage that the <code>toString</code>
+method is trivial.)
+
+<h3>Linear-time procedures and non-istrings</h3>
+<p>Many implementations (including Kawa) support mutable strings
+or kinds of strings that do <em>not</em> have constant-time indexing.
+Many of the procedures in this specification perform a linear
+scan of a substring.  It is important that these procedures
+not be implemented using <code>string-ref</code> since that could
+lead to quadratic run-time.
+<p>
+In Kawa, any object that implement the (standard Java) interface
+<code>java.lang.CharSequence</code> is a <q>string</q>.
+This includes the standard Java classes <code>java.lang.String</code>
+(immutable strings) and <code>java.lang.StringBuilder</code>.
+These are implemented using arrays of <code>char</code> values,
+which are 16-bit code units.
+Indexing in therms of <code>char</code> units (using the <code>charAt</code>
+method) is efficient (constant-time), as is determining the number of <code>char</code>s.
+(Since <code>CharSequence</code> is an interface, rather than a concrete
+implemetation, we cannot be guaranteed of this, but it is true of all
+standard or Kawa classes that implement <code>CharSequence</code>.)
+<p>
+To implement a procedure like <code>string-count</code>
+we first map <var>start</var> and <var>end</var> to offsets
+in the <code>CharSequence</code>.
+(This is constant-time if the string is an istring, or
+if <var>start</var>/<var>end</var> have default values;
+otherwise linear-time.)
+Then we call <code>charAt</code> with increasing indexes.
+If a surrogate pair is seen, then we combine them, before
+calling the <var>pred</var>.
+This is quite efficient regardless of whether or not the
+string is an istring.
+<p>
+The Kawa implementation uses helper macros
+<code>string-for-each-forwards</code>
+(<code>string-for-each</code> with start/end indexes),
+and <code>string-for-each-backwards</code>.
+These make many of the specified procedures trivial.
+
+<h3>Mutable strings</h3>
+<p>This specification requires that mutable strings have adjustable size.
+That means there needs to be some indirection between string object
+and the buffer containing the actual chracters, so the
+latter can be re-allocated when needed.
+Using a <a href="https://en.wikipedia.org/wiki/Gap_buffer">gap-buffer</a>
+is a reasonable approach, but not required.
+<p>
+Kawa uses the <code>gnu.lists.FString</code> class for mutable strings.
+
+<h3>Testsuite</h3>
+There is a testsite, derived from William Clinger's SRFI-135 testsuite.
+It is available
+in <a href="https://gitlab.com/kashell/Kawa/blob/invoke/testsuite/strings-test.scm"><code>testsuite/strings-tests.scm</code></a> in the <code>invoke</code> branch of the <a href="https://gitlab.com/kashell/Kawa">Kawa git repository</a>.
+(It will soon move to the <code>master</code> branch.)
 
 <h1>Acknowledgements</h1>
 <p>Thank you to Olin Shivers, author of
@@ -1536,7 +1706,7 @@ to a data buffer, which can be reallocated as needed.
 
 <h1>Copyright</h1>
 <p>
-Copyright (C) Per Bothner 2016</p>
+Copyright (C) Per Bothner 2017</p>
 <p>
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
