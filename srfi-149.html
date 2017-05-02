@@ -122,6 +122,22 @@ validity of templates in syntax rules.
    (foo (bar 1 2) (baz 3 4)))
 </pre>
 
+<p><i>Note: There is at least one logical explanation for the presence
+    of the second restriction in the R7RS: Allowing pattern variables
+    with non-zero ellipsis count to have extra ellipses in the
+    template has an ambiguous meaning without further specification
+    (which is given below), in contrast to allowing this for
+    zero-ellipsis variables, which is unambiguous.  The ambiguity is
+    in which of the ellipses in the template should iterate and which
+    should replicate.  In other words, which ones should be considered
+    the ellipses that correspond to the ellipses in the pattern, and
+    which ones should be considered the extra ellipses.  The R7RS
+    doesn't specify it because it doesn't have to specify it because
+    in the R7RS for any variable, either all of the
+    ellipses in the template iterate (because the number of ellipses in
+    the pattern and template match), or they all replicate (because there
+    were no ellipses for this variable in the pattern).</i></p>
+
 <h1>Specification</h1>
 
 <p>A Scheme system that supports this SRFI should provide the
@@ -166,8 +182,8 @@ validity of templates in syntax rules.
     <p>If a pattern variable in a subtemplate is followed by more
       instances of <code>&lt;ellipsis&gt;</code> than the subpattern
       in which it occurs is followed, the input elements by which it
-      is replaced in the output are repeated for every excess instance
-      of <code>&lt;ellipsis&gt;</code> on the left.
+      is replaced in the output are repeated for the innermost excess instances
+      of <code>&lt;ellipsis&gt;</code>. <i>(Note: This resolves the ambiguity mentioned above.)</i>
     </p>
   </li>
   <li>
@@ -477,10 +493,17 @@ of <a href="http://srfi.schemers.org/srfi-46/srfi-46.html">SRFI
 </p>
 
 <p>
-  I would also like to thank Alex Shinn for having made the free software
+  I would like to thank Alex Shinn for having made the free software
   Chibi-Scheme, from which I shamelessly stole the implementation
   of <code>syntax-rules</code>.  Of course, this does not imply that
   he necessarily endorses this SRFI.
+</p>
+
+<p>
+  I would also like to thank Al Petrofsky who pointed out that the
+  need of resolving the ambiguity when lifting the second restriction
+  should be made explicit and not just implicit in this SRFI.  I used
+  some of his wording on the mailing list while amending this SRFI.
 </p>
 
 <h1>Copyright</h1>
