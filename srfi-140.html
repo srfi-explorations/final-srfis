@@ -96,13 +96,13 @@ and <a href="http://srfi.schemers.org/srfi-118/srfi-118.html">SRFI-118</a>.
   to the Scheme language, complicating teaching and migration.
 
   This specification uses traditional RnRS and SRFI-13 names, but changes
-  to procedures return istrings, rather than mutable strings.
+  procedures to return istrings, rather than mutable strings.
   This may break some existing programs, but it seems worth it:
 <ul>
 <li>Programs that break seem to be rare.  They are also easy to fix:
 You can always use <code>string-copy</code> to convert an istring
 to a mutable string.</li>
-<li>Any breakable is obvious, sigalling an error, rather than subtle
+<li>Any breakage is obvious, sigalling an error, rather than subtle
 or producing an incorrect result.
 <li>Programs that depend on <code>string-set!</code> usually are old
 and don't support Unicode well, so could do with a review.
@@ -1561,7 +1561,7 @@ which performs well when strings can represent any Unicode
 text and non-ASCII characters are common.
 The data structure used is a vector of bytevectors,
 where each bytevector (except the last) stores 128 code points.
-(Kawa uses simpler data structure, described below.)
+(Kawa uses a simpler data structure, described below.)
 </li>
 <li><code>kernel8</code> uses an internal representation based on UTF-8,
   which performs well when most (but not all) strings consist of
