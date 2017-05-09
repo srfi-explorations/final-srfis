@@ -80,23 +80,6 @@ This combines
 <a href="http://srfi.schemers.org/srfi-135/srfi-135.html">SRFI-135</a>,
 and <a href="http://srfi.schemers.org/srfi-118/srfi-118.html">SRFI-118</a>.
 
-<h1>Issues</h1>
-<ul>
-<li>What name should we use for "immutable string" and
-corresponding predicate?
-Is "istring" and <code>istring?</code> a good choice?
-<li>Would an <code>mstring?</code> predicate be useful?
-In an implementation with immutable strings without a O(1) guarantee
-(such as <code>java.lang.String</code> on the Java platform)
-you can't assume that a non-istring string is mutable, so  
-it might be useful to be able to explicitly test for a mutable string.
-<li>Before finalization, will provide a full implementation.
-(Implementation section currently says "...just SRFI-135 with different
-names.")
-<li>Should the <code>string-index</code> family be generalized to allow
-a character (or a charset) for <var>pred</var>?
-</ul>
-
 <h1>Rationale</h1>
 
 <p>This attempts to solve the same issues with R7RS strings raised by
@@ -112,17 +95,34 @@ a character (or a charset) for <var>pred</var>?
   is natural and straightforward, it still adds a conceptual hurdle and wart
   to the Scheme language, complicating teaching and migration.
 
+  This specification uses traditional RnRS and SRFI-13 names, but changes
+  to procedures return istrings, rather than mutable strings.
+  This may break some existing programs, but it seems worth it:
+<ul>
+<li>Programs that break seem to be rare.  They are also easy to fix:
+You can always use <code>string-copy</code> to convert an istring
+to a mutable string.</li>
+<li>Any breakable is obvious, sigalling an error, rather than subtle
+or producing an incorrect result.
+<li>Programs that depend on <code>string-set!</code> usually are old
+and don't support Unicode well, so could do with a review.
+<li>Preserving traditional procedure names means that existing code,
+documentation, and teaching materials are valid and automatically
+<q>ported</q> to using efficient istrings.  In contrast, porting code
+to use SRFI-135 texts would be a major pain.  
+</ul>
+
 <h1>Specification</h1>
 <p>
-<em>Note:</em> This specification is intentionally an approximate
-clone of SRFI-135.
+<em>Note:</em> This specification provides very similar functionality
+as SRFI-135.
 However, what SRFI-135 calls <q>textual</q>, we call plain <q>string</q>.
 What SRFI-135 calls <q>text</q>, we call either <q>istring</q>
 (in type specifiers) or plain <q>string</q> (in most procedure names).
 Specifically,
-all of the SRFI-135 procedures are renamed to start
-with <code>string-</code> rather than <code>textual-</code>
-or <code>text-</code>.
+SRFI-135 procedures that start with <code>textual-</code>
+or <code>text-</code>, in this specification start with
+plain <code>string-</code>.
 Any argument or result type marked as <q>textual</q> is changed to
 <q>string</q>, while the type <q>text</q> is changed to <q>istring</q>.
 <p>
@@ -140,17 +140,17 @@ mutable string, not an istring.
 In the following procedure specifications:
 <ul>
     <li>An <var>istring</var> argument or result is an immutable string.</li>
+    <li>An <var>mstring</var> argument or result is a mutable string.</li>
 
     <li>A <var>string</var> argument or result is any string (immutable or mutable).</li>
 </ul>
-The rest as in SRFI-135.
 <p>
 Some procedures are specified as executing in guaranteed O(1) time.
 Unless specified, the other procedures may execute in linear time,
 using time proportional to the length of the involved string(s).
 Implementors must <em>not</em> implement (for example)
 <code>string-for-each</code> using <code>string-ref</code>,
-since that could lead to quadratic runtime on mutable strings.
+since that could lead to quadratic behavior if an argument is not an istring.
 
 <h3>String literals</h3>
 String literals have type istring.
@@ -612,7 +612,7 @@ or <code>string-copy</code> for a mutable result.
 </pre>
 </dd>
 </dl>
-
+<dl>
 <dt class="proc-def1" id="string-pad">
 <code>(<span class="proc-def">string-pad&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></code><var> string len [char start end]</var><code>)</code><var> → text</var>
 </dt>
@@ -633,10 +633,12 @@ or <code>string-copy</code> for a mutable result.
 (string-pad   "71325" 5) =&gt; "71325"
 (string-pad "8871325" 5) =&gt; "71325"
 </pre>
-
+</dd>
+</dl>
 <!--
 ==== string-trim string-trim-right string-trim-both
 ============================================================================-->
+<dl>
 <dt class="proc-def1">
 <code>(<span class="proc-def" id="string-trim">string-trim&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></code><var> string [pred start end]</var><code>)</code><var> → istring</var>
 </dt>
@@ -1408,7 +1410,7 @@ as many splits as possible are made.
 It is an error if <var>limit</var> is any other value.
 </p>
 <p>
-To split on a regular expression <var>re</var>,
+To split on a regular expression,
 you can use SRFI 115's <code>regexp-split</code> procedure.
 </dd>
 </dl>
@@ -1473,9 +1475,9 @@ These return istrings.
 
 <h3>Libraries</h3>
 There is no reason - except backward compatibility - for a procedure
-such as string-upcase to return a mutable string.
+such as <code>string-upcase</code> to return a mutable string.
 However, we need a mechanism to use the "old" immutable-string-returning
-string-upcase rather than the istring-returning version.
+<code>string-upcase</code> rather than the istring-returning version.
 <p>
 The following libraries are defined:
 <dl>
@@ -1500,7 +1502,6 @@ procedures are as in this specification.
 Provides definition for all the procedures that this specification specifies
 to return an istring, but which in R7RS or SRFI-13 return mutable strings,
 such as <code>string-append</code>.
-<em>TODO: List needed.</em>
 This library provides versions that return mutable strings.
 <p>It could be implemented like this:
 <pre>
@@ -1544,11 +1545,11 @@ the <code>(stri 140 mstrings)</code> bindings.
 <p>Since this specification changes core parts of Scheme,
 a portable library implementation is not possible.
 <p>
-<a href="http://ww.gnu.org/software/kawa/">Kawa</a> version 3.0
+<a href="http://www.gnu.org/software/kawa/">Kawa</a> version 3.0
 will include a complete implementation of this specification.
-<b>Note:</b> Kawa 3.0 isn't released or quite finished yet.
-Get the implementation from the <code>invoke</code> branch
-of the <a href="https://gitlab.com/kashell/Kawa">Kawa git repository</a>.
+At time of writing, Kawa 3.0 isn't released or quite finished yet,
+but the <a href="https://gitlab.com/kashell/Kawa">Kawa git repository</a>
+includes the functionality of this specification.
 
 <h3>Implementing istring - general notes</h3>
 <p>
@@ -1560,6 +1561,7 @@ which performs well when strings can represent any Unicode
 text and non-ASCII characters are common.
 The data structure used is a vector of bytevectors,
 where each bytevector (except the last) stores 128 code points.
+(Kawa uses simpler data structure, described below.)
 </li>
 <li><code>kernel8</code> uses an internal representation based on UTF-8,
   which performs well when most (but not all) strings consist of
@@ -1652,7 +1654,7 @@ scan of a substring.  It is important that these procedures
 not be implemented using <code>string-ref</code> since that could
 lead to quadratic run-time.
 <p>
-In Kawa, any object that implement the (standard Java) interface
+In Kawa, any object that implements the (standard Java) interface
 <code>java.lang.CharSequence</code> is a <q>string</q>.
 This includes the standard Java classes <code>java.lang.String</code>
 (immutable strings) and <code>java.lang.StringBuilder</code>.
@@ -1694,9 +1696,9 @@ Kawa uses the <code>gnu.lists.FString</code> class for mutable strings.
 
 <h3>Testsuite</h3>
 There is a testsite, derived from William Clinger's SRFI-135 testsuite.
-It is available
-in <a href="https://gitlab.com/kashell/Kawa/blob/invoke/testsuite/strings-test.scm"><code>testsuite/strings-tests.scm</code></a> in the <code>invoke</code> branch of the <a href="https://gitlab.com/kashell/Kawa">Kawa git repository</a>.
-(It will soon move to the <code>master</code> branch.)
+See <a href="strings-tests.scm"><code>strings-tests.scm</code></a>.
+(It is also available in the 
+<a href="https://gitlab.com/kashell/Kawa/blob/master/testsuite/strings-test.scm">Kawa git repository</a>.)
 
 <h1>Acknowledgements</h1>
 <p>Thank you to Olin Shivers, author of
