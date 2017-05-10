@@ -127,9 +127,9 @@ Any argument or result type marked as <q>textual</q> is changed to
 <q>string</q>, while the type <q>text</q> is changed to <q>istring</q>.
 <p>
 For example:
-<dd><dt class="proc-def"></a>
+<dl><dd><dt class="proc-def">
 <code class="proc-def">string-map</code><var> proc string<sub>1</sub> string<sub>2</sub> ... → istring</var>
-</dt>
+</dt></dl>
 <p>
 One exception: <code>make-string</code> returns a
 mutable string, not an istring.
@@ -161,7 +161,7 @@ In an implementation that supports <a href="http://srfi.schemers.org/srfi-109/sr
 
 <dl>
 <dt class="proc-def" id="string-p">
-<code>(<span class="proc-def">string?</code><var> obj<code>)</code> → boolean</var></dt>
+<code>(<span class="proc-def">string?</span></code><var> obj<code>)</code> → boolean</var></dt>
 <dd class="proc-def">
     Is <var>obj</var> a string?
     Must return true if <code>istring?</code> returns true.
@@ -171,7 +171,7 @@ In an implementation that supports <a href="http://srfi.schemers.org/srfi-109/sr
 
 <dl>
 <dt class="proc-def" id="istring-p">
-<code>(<span class="proc-def">istring?</code><var> obj<code>)</code> → boolean</var>
+<code>(<span class="proc-def">istring?</span></code><var> obj<code>)</code> → boolean</var>
 </dt>
 <dd class="proc-def">
   Is <var>obj</var> an immutable string, with guaranteed
@@ -182,7 +182,7 @@ In an implementation that supports <a href="http://srfi.schemers.org/srfi-109/sr
 
 <dl>
 <dt class="proc-def" id="string-null-p">
-  <code>(<span class="proc-def">string-null?</code></span> <var>string</var><code>)</code> → <var>boolean</var>
+  <code>(<span class="proc-def">string-null?</span></code> <var>string</var><code>)</code> → <var>boolean</var>
 <dd class="proc-def">
 Is <var>string</var> the empty string?
 Same result as <code>(= (string-length <var>string</var>) 0)</code> but
@@ -191,9 +191,9 @@ must execute in O(1) time.
 </dl>
 <dl>
 <dt class="proc-def" id="string-every">
-<code>(<span class="proc-def">string-every</code><var> pred string [start end]</code>)</code> → <var>value</var>
+<code>(<span class="proc-def">string-every</span></code><var> pred string [start end]</var><code>)</code><var> → value</var>
 <dt class="proc-def" id="string-any">
-<code>(<span class="proc-def">string-any</code><var> pred string [start end]</code>)</code> → <var>value</var>
+<code>(<span class="proc-def">string-any</span></code><var> pred string [start end]</var><code>)</code><var> → value</var>
 <dd class="proc-def">
   <p>
     Checks to see if every/any character in <var>string</var>
@@ -206,7 +206,7 @@ must execute in O(1) time.
     if <var>pred</var> returns true, <code>string-any</code>
     does not call <var>pred</var> on subsequent characters.
     Both procedures are "witness-generating":
-  </o>
+  </p>
 
     <ul>
       <li> If <code>string-every</code> is given an empty interval
@@ -260,7 +260,7 @@ must execute in O(1) time.
     The behavior of the result will not be affected by subsequent mutation
     of the vector or list.
 </dd>
-<dt class="proc-def" id="reverse-list2string"></a>
+<dt class="proc-def" id="reverse-list2string">
 <code>(<span class="proc-def">reverse-list-&gt;string</span></code><var> char-list</var><code>)</code><var> → istring</var>
 </dt>
 <dd class="proc-def">
@@ -279,7 +279,7 @@ must execute in O(1) time.
 <code>(<span class="proc-def">string-&gt;utf8&nbsp;&nbsp;&nbsp;</span></code><var> string [start end]</var><code>)</code><var> → bytevector</var>
 </dt>
 <dt class="proc-defi" id="string2utf16">
-<code>(<span class="proc-def">string-&gt;utf16&nbsp;&nbsp;</code><var> string [start end]</var><code>)</code><var> → bytevector</var>
+<code>(<span class="proc-def">string-&gt;utf16&nbsp;&nbsp;</span></code><var> string [start end]</var><code>)</code><var> → bytevector</var>
 </dt>
 <dt class="proc-defi" id="string2utf16be">
 <code>(<span class="proc-def">string-&gt;utf16be</span></code><var> string [start end]</var><code>)</code><var> → bytevector</var>
@@ -408,7 +408,7 @@ must execute in O(1) time.
 </dl>
 
 <h3>Immutable string constructors</h3>
-<dl><dt class="proc-def" id="string"></a>
+<dl><dt class="proc-def" id="string">
 <code>(<span class="proc-def">string</span></code> <var>char</var><code>)</code><var> ... → istring</var>
 </dt>
 <dd class="proc-def">
@@ -534,14 +534,18 @@ you can use <a href="#string-repeat"><code>string-repeat</code></a>.
 <h3>Selection</h3>
 <dl>
 <dt class="proc-def" id="string-length">
-<code>(<span class="proc-def">string-length</code></span><var> string</var><code>)</code><var> → len</var>
+<code>(<span class="proc-def">string-length</span></code><var> string</var><code>)</code><var> → len</var>
 </dt>
 <dt class="proc-def" id="string-ref">
-<code>(<span class="proc-def">string-ref</code></span><var> string idx</var><code>)</code><var> → char</var>
+<code>(<span class="proc-def">string-ref</span></code><var> string idx</var><code>)</code><var> → char</var>
 </dt>
-<dd>As in R7RS.</dd>
+<dd>As in R7RS.
+However, if the <var>string</var> is an istring, both must execute
+in constant time; otherwise they may execute in time proportional to
+the length of <var>string</var>.
+</dd>
 <dt class="proc-def" id="substring">
-<code>(<span class="proc-def">substring</code></span><var> string start end</var><code>)</code><var> → istring</var>
+<code>(<span class="proc-def">substring</span></code><var> string start end</var><code>)</code><var> → istring</var>
 </dt>
 <dd class="proc-def">
     This procedure returns a istring containing the characters of
@@ -568,10 +572,10 @@ use <code>xsubstring</code> for an immutable result,
 or <code>string-copy</code> for a mutable result.
 </dd>
 <dt class="proc-def1" id="string-take">
-<code>(<span class="proc-def">string-take&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> string nchars</var><code>)</span></code><var> → istring</var>
+<code>(<span class="proc-def">string-take</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> string nchars</var><code>)</code><var> → istring</var>
 </dt>
 <dt class="proc-defi" id="string-drop">
-<code>(<span class="proc-def">string-drop&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> string nchars</var><code>)</span></code><var> → istring</var>
+<code>(<span class="proc-def">string-drop</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> string nchars</var><code>)</code><var> → istring</var>
 </dt>
 <dt class="proc-defi" id="string-take-right">
 <code>(<span class="proc-def">string-take-right</span></code><var> string nchars</var><code>)</code><var> → istring</var>
@@ -717,16 +721,15 @@ or <code>string-copy</code> for a mutable result.
 <code>(<span class="proc-def">string&lt;?&nbsp;</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
 </dt>
 <dt class="proc-defi" id="string-greater-p">
-<code>(<span class="proc-def">string&gt;?&nbsp;</code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
+<code>(<span class="proc-def">string&gt;?&nbsp;</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
 </dt>
 <dt class="proc-def" id="string-leq-p">
-<code>(<span class="proc-def">string&lt=?</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
+<code>(<span class="proc-def">string&lt;=?</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
 </dt>
 <dt class="proc-defn" id="string-geq-p">
-<code>(<span class="proc-def">string&gt=?</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
+<code>(<span class="proc-def">string&gt;=?</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
 </dt>
- <dt class="proc-def">
-<a name="string-ci-equal-p"></a>
+ <dt class="proc-def" id="string-ci-equal-p">
 <code>(<span class="proc-def">string-ci=?</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
 </dt>
 <dt class="proc-def1" id="string-ci-less-p">
@@ -736,15 +739,15 @@ or <code>string-copy</code> for a mutable result.
 <code>(<span class="proc-def">string-ci&gt;?&nbsp;</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
 </dt>
 <dt class="proc-defi" id="string-ci-leq-p">
-<code>(<span class="proc-def">string-ci&lt=?</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ..<code>)</code>. → boolean</var>
+<code>(<span class="proc-def">string-ci&lt;=?</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ..<code>)</code>. → boolean</var>
 </dt>
 <dt class="proc-defn" id="string-ci-geq-p">
-<code>(<span class="proc-def">string-ci&gt=?</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
+<code>(<span class="proc-def">string-ci&gt;=?</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
 </dt>
  <dd>As in R7RS.</dd>
 </dl>
 
-<h3>Prefixes & suffixes</h3>
+<h3>Prefixes &amp; suffixes</h3>
 <dl>
 <!--
 ==== string-prefix-length    string-suffix-length
@@ -900,20 +903,16 @@ This indicates a useful value is returned when there is a match.
 
 <h3>Case conversion</h3>
 <dl>
-<dt class="proc-def1">
-<a name="string-upcase"></a>
-<a name="string-downcase"></a>
-<a name="string-foldcase"></a>
-<a name="string-titlecase"></a>
+<dt class="proc-def1" id="string-upcase">
 <code>(<span class="proc-def">string-upcase</span>&nbsp;&nbsp;</code><var> string<code>)</code> → istring</var>
 </dt>
-<dt class="proc-defi">
+<dt class="proc-defi" id="string-downcase">
 <code>(<span class="proc-def">string-downcase</span></code><var> string<code>)</code> → istring</var>
 </dt>
-<dt class="proc-defi">
+<dt class="proc-defi" id="string-foldcase">
 <code>(<span class="proc-def">string-foldcase</span></code><var> string<code>)</code> → istring</var>
 </dt>
-<dt class="proc-defn">
+<dt class="proc-defn" id="string-titlecase">
 <code>(<span class="proc-def">string-titlecase</span></code><var> string<code>)</code> → istring</var>
 </dt>
 <dd class="proc-def">
@@ -937,7 +936,7 @@ The results are the same as the R7RS procedures, but as immutable strings.
 ==== string-append
 ============================================================================-->
 <dt class="proc-def" id="string-append">
-<code>(<span class="proc-def">string-append</soan></code><var> string ...<code>)</code> → istring</var>
+<code>(<span class="proc-def">string-append</span></code><var> string ...<code>)</code> → istring</var>
 </dt>
 <dd class="proc-def">
     Returns a string whose sequence of characters is the concatenation
@@ -1083,9 +1082,8 @@ The <var>grammar</var> argument is a symbol that determines
 
 </dl>
 
-<h3>Fold & map & friends</h3>
+<h3>Fold &amp; map &amp; friends</h3>
 <dl>
-
 <dt class="proc-def1" id="string-fold">
 <code>(<span class="proc-def">string-fold</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> kons knil string [start end]<code>)</code> → value</var>
 </dt>
@@ -1164,16 +1162,15 @@ may be a string (not just a character).</dd>
 <!--
 ==== string-for-each
 ============================================================================-->
-<dt class="proc-def">
-<a name="string-for-each"></a>
+<dt class="proc-def" id="string-for-each">
 <code>(<span class="proc-def">string-for-each</span></code><var> proc string<sub>1</sub> string<sub>2</sub> ...<code>)</code> → unspecified</var>
 </dt>
 <dd>As in R7RS.</dd>
 </dl>
-<dl>
 <!--
 ==== string-map-index
 ============================================================================-->
+<dl>
 <dt class="proc-def" id="string-map-index">
 <code>(<span class="proc-def">string-map-index</span></code><var> proc string [start end]<code>)</code> → istring</var>
 </dt>
@@ -1195,8 +1192,7 @@ the call to <code>string-map-index</code> has returned, then
 <!--
 ==== string-for-each-index
 ============================================================================-->
-<dt class="proc-def">
-<a name="string-for-each-index"></a>
+<dt class="proc-def" id="string-for-each-index">
 <code>(<span class="proc-def">string-for-each-index</span></code><var> proc string [start end]<code>)</code> → unspecified</var>
 </dt>
 <dd class="proc-def">
@@ -1216,28 +1212,27 @@ Example:
   v) =&gt; (101 100 99 98 97)
 </pre>
 </dd>
-
+</dl>
 <!--
 ==== string-count
 ============================================================================-->
-<dt class="proc-def">
-<a name="string-count"></a>
-<code>(<span class="proc-def">string-count</code><var> string pred [start end]<code>)</code> → integer</var>
+<dl>
+<dt class="proc-def" id="string-count">
+<code>(<span class="proc-def">string-count</span></code><var> string pred [start end]</var><code>)</code><var> → integer</var>
 </dt>
 <dd class="proc-def">
     Returns a count of the number of characters in the specified substring
     of <var>string</var> that satisfy the given predicate.
-
+</dd></dl>
 <!--
 ==== string-filter string-remove
 ============================================================================-->
-<dt class="proc-def1">
-<a name="string-filter"></a>
-<a name="string-remove"></a>
-<code>(<span class="proc-def">string-filter</span></code><var> pred string [start end]<code>)</code> → istring</var>
+<dl>
+<dt class="proc-def1" id="string-filter">
+<code>(<span class="proc-def">string-filter</span></code><var> pred string [start end]</var><var><code>)</code> → istring</var>
 </dt>
-<dt class="proc-defn">
-<code>(<span class="proc-def">string-remove</span></code><var> pred string [start end]<code>)</code> → istring</var>
+<dt class="proc-defn" id="string-remove">
+<code>(<span class="proc-def">string-remove</span></code><var> pred string [start end]</var><code>)</code><var> → istring</var>
 </dt>
 <dd class="proc-def">
     Filter the given substring of <var>string</var>, retaining
@@ -1252,14 +1247,13 @@ Example:
     encouraged to return a result that shares storage with that string
     whenever sharing would be space-efficient.
   </p>
-</dd>
+</dd></dl>
 
 <!--
 ==== string-reverse
 ============================================================================-->
 <!--
-<dt class="proc-def">
-<a name="string-reverse"></a>
+<dt class="proc-def"  id="string-reverse">
 <code class="proc-def">string-reverse</code><var> string [start end] → string</var>
 </dt>
 <dd class="proc-def">
@@ -1280,11 +1274,9 @@ would come out <em>before</em> <var>b</var> in the reversed result.
 </dd>
 -->
 
-</dl>
-
-<h3>Replication & splitting</h3>
-<dl><dt class="proc-def" id="string-repeat"></a>
-<code>(<span class="proc-def">string-repeat</span></code> <var>string-or-character len</var<code>)</code><var> → istring</var>
+<h3>Replication &amp; splitting</h3>
+<dl><dt class="proc-def" id="string-repeat">
+<code>(<span class="proc-def">string-repeat</span></code> <var>string-or-character len</var><code>)</code><var> → istring</var>
 <dd>
 Create a string by repeating the first argument <var>len</var> times.
 If the first argument is a character, it is as if it were wrapped with
@@ -1297,7 +1289,7 @@ more general <code>xsubstring</code> procedure:
      (xsubstring T 0 (* N (string-length T))))
 </pre>
 </dd>
-<dt class="proc-def" id="xsubstring"></a>
+<dt class="proc-def" id="xsubstring">
 <code>(<span class="proc-def">xsubstring</span></code><var> string [from to [start end]]</var><code>)</code><var> → istring</var>
 </dt>
 <dd class="proc-def">
@@ -1375,7 +1367,7 @@ its first argument or previously allocated objects.
     The name <code>string-replicate</code> might be better in the abstract,
     but following SRFI-13's <code>xsubstring</code> name seems preferable.</p>
 </dd>
-<dt class="proc-def" id="string-split"></a>
+<dt class="proc-def" id="string-split">
 <code>(<span class="proc-def">string-split</span></code><var> string delimiter [grammar limit start end]</var><code>)</code><var> → list</var>
 </dt>
 <dd class="proc-def">
@@ -1532,7 +1524,6 @@ The SRFI-135 library, if provided, is naturally implemented
 by importing <code>(string 140 istrings)</code> and other libraries,
 and then using <code>export</code> with <code>rename</code>.
 <dd></dl>
-<p>
 
 <h3>Default environment</h3>
 <p>
