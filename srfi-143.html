@@ -51,12 +51,18 @@ as <i>fixnums</i> and <i>bignums</i> respectively. Because the maximum
 word, fixnums can be represented more compactly and operated on more
 efficiently than bignums.</p>
 <p>Specific procedures for fixnum arithmetic
-are already supported by many systems. Standardizing fixnum arithmetic
+are already supported by many Scheme systems. Standardizing fixnum arithmetic
 increases the portability of code that uses it. Standardizing the range
 of fixnums would make fixnum operations inefficient on some systems,
 which would defeat their purpose. Therefore, this SRFI specifies some of
 the semantics of fixnum operations, but makes the range of fixnums implementation-dependent.
 </p>
+<p>This SRFI is a modest extension of the 
+<a href="http://www.r6rs.org/final/html/r6rs-lib/r6rs-lib-Z-H-12.html#node_sec_11.2">
+R6RS <tt>(rnrs arithmetic fixnum)</tt></a>
+library, with some procedures renamed for consistency with R7RS-small.
+New procedures include <tt>fxneg</tt>, <tt>fxabs</tt>, <tt>fxsquare</tt>,
+and <tt>fxsqrt</tt>.
 <p>
 Existing implementations employ different implementation strategies
 for fixnum procedures. Some implement the model specified by R6RS (overflows
@@ -94,7 +100,7 @@ is to be understood.
 This SRFI uses <em>i</em>, <em>j</em>, <em>k</em> as parameter
 names for fixnum arguments.  Except as noted, the names of fixnum procedures begin with
 the letters <tt>fx</tt>.  In most cases they correspond to an R7RS-small or
-<a href="http://srfi.schemers.org/srfi-142/srfi-142.html">SRFI 142</a>
+<a href="http://srfi.schemers.org/srfi-151/srfi-151.html">SRFI 151</a>
 operation on general integers.
 </p>
 <h2 id="Constants">Constants</h2>
@@ -215,7 +221,7 @@ Semantically equivalent to <tt>-</tt>, but accepts exactly two arguments.
 </p>
 
 <p>
-<tt>(fxneg </tt><em>i j</em><tt>)</tt>
+<tt>(fxneg </tt><em>i</em><tt>)</tt>
 </p>
 <p>
 Semantically equivalent to <tt>-</tt>, but accepts exactly one argument.
@@ -226,6 +232,20 @@ Semantically equivalent to <tt>-</tt>, but accepts exactly one argument.
 </p>
 <p>
 Semantically equivalent to <tt>*</tt>, but accepts exactly two arguments.
+</p>
+
+<p>
+<tt>(fxquotient </tt><em>i j</em><tt>)</tt>
+</p>
+<p>
+Semantically equivalent to <tt>quotient</tt>.
+</p>
+
+<p>
+<tt>(fxremainder </tt><em>i j</em><tt>)</tt>
+</p>
+<p>
+Semantically equivalent to <tt>remainder</tt>.
 </p>
 
 <p>
@@ -275,22 +295,22 @@ Returns the two fixnum results of the following computation:
 <p>
 Returns the two fixnum results of the following computation:
 </p>
-<pre>(let*-values (((s) (+ (* i j)) k))
+<pre>(let*-values (((s) (+ (* i j) k))
        ((q r) (balanced/ s (expt 2 fx-width))))
   (values r q))
 </pre><p>
 
 The <tt>balanced/</tt> procedure is available in
 <a href="http://srfi.schemers.org/srfi-141/srfi-141.html">SRFI 141</a>,
-and in the R6RS base library
-under the name of <tt>div0-and-mod0</tt>.</p>
+and also in the R6RS base library under the name of <tt>div0-and-mod0</tt>.</p>
 <h2 id="Bitwiseoperations">Bitwise operations</h2>
 <p>
 The following procedures are the fixnum counterparts of certain bitwise operations
-from <a href="http://srfi.schemers.org/srfi-142/srfi-142.html">SRFI 142</a>
+from <a href="http://srfi.schemers.org/srfi-151/srfi-151.html">SRFI 151</a>
 and the R6RS
 <a href="http://www.r6rs.org/final/html/r6rs-lib/r6rs-lib-Z-H-12.html#node_sec_11.2">
 <tt>(rnrs arithmetic fixnums)</tt></a> library.
+In case of disagreement, SRFI 151 is preferred.
 The prefixes <tt>bitwise-</tt> and <tt>integer-</tt> are dropped for brevity and compatibility.
 </p>
 <p>
@@ -325,14 +345,14 @@ Semantically equivalent to <tt>bitwise-xor</tt>.
 <tt>(fxarithmetic-shift </tt><em>i count</em><tt>)</tt>
 </p>
 <p>
-Semantically equivalent to <tt>fxarithmetic-shift</tt>, except that it is an error
-for the absolute value of <i>count</i> to exceed <tt>fx-width</tt>.
+Semantically equivalent to <tt>arithmetic-shift</tt>, except that it is an error
+for the absolute value of <i>count</i> to exceed <i>w</i>-1.
 </p>
 
 <p>
 <tt>(fxarithmetic-shift-left </tt><em>i count</em><tt>)</tt>
 </p><p>
-The same as <tt>fx-arithmetic-shift</tt> except that a negative
+The same as <tt>fxarithmetic-shift</tt> except that a negative
 value of <em>count</em> is an error.
 This is provided for additional efficiency.
 </p><p>
@@ -343,23 +363,11 @@ of <em>count</em> specifies
 the number of bits to shift right, and a negative value is an error.
 This is provided for additional efficiency.
 </p><p>
-<tt>(fxlogical-shift-right </tt><em>i count</em><tt>)</tt>
-</p><p>
-Similar to <tt>fxarithmetic-shift-right</tt>, but
-always inserts 0 bits at the most significant end
-rather than copies of the sign bit.
-Logical left shifting is the same as arithmetic left shifting.
-</p>
-<p>
-The result of a logical shift depends on the value of <tt>fx-width</tt>.
-This means that if <tt>fx-width</tt> were 8 (which this SRFI does not permit),
-then <tt>(fxlogical-shift-right -8 1)</tt> would be <tt>#x74</tt>, or 116, rather than -4.
-</p>
 <p>
 <tt>(fxbit-count </tt><em>i</em><tt>)</tt>
 </p>
 <p>
-Semantically equivalent to <tt>bit-count</tt>.
+Semantically equivalent to SRFI 151 <tt>bit-count</tt>.
 </p>
 
 <p>
@@ -381,7 +389,7 @@ It can be implemented as
 <tt>(fxbit-set? </tt><em>index i</em><tt>)</tt>
 </p>
 <p>
-Semantically equivalent to <tt>bit-set</tt>, except that
+Semantically equivalent to SRFI 151 <tt>bit-set?</tt>, except that
 it is an error for <em>index</em> to be larger than or equal to <tt>fx-width</tt>.
 </p>
 
@@ -389,7 +397,7 @@ it is an error for <em>index</em> to be larger than or equal to <tt>fx-width</tt
 <tt>(fxcopy-bit </tt><em>index i boolean</em><tt>)</tt>
 </p>
 <p>
-Semantically equivalent to <tt>copy-bit</tt>, except that
+Semantically equivalent to SRFI 151 <tt>copy-bit</tt>, except that
 it is an error for <em>index</em> to be larger than or equal to <tt>fx-width</tt>.
 </p>
 
@@ -400,19 +408,71 @@ it is an error for <em>index</em> to be larger than or equal to <tt>fx-width</tt
 Semantically equivalent to <tt>first-set-bit</tt>.
 </p>
 
+<p>
+<tt>(fxbit-field </tt><em>i start end</em><tt>)</tt>
+</p>
+<p>
+Semantically equivalent to <tt>bit-field</tt>.
+</p>
+
+<p>
+<tt>(fxbit-field-rotate </tt><em>i count start end</em><tt>)</tt>
+</p>
+<p>
+Semantically equivalent to SRFI 151 <tt>bit-field-rotate</tt>.
+</p>
+
+<p>
+<tt>(fxbit-field-reverse </tt><em>i start end</em><tt>)</tt>
+</p>
+<p>
+Semantically equivalent to <tt>bit-field-reverse</tt>.
+</p>
+
 <h1>Implementation</h1>
 
-<p>The implementation is (not yet) in the repository of this SRFI, and consists of these files:</p>
+<p>Two sample implementations are provided in the repository of this SRFI.
+The main implementation is for R5RS and R7RS Schemes, the other
+for R6RS Schemes.
+They are essentially independent of each other, though some code has been
+copied into the R6RS library from the other sources.
+The R6RS library is preferred on any system that implements the R6RS
+<tt>(rnrs arithmetic fixnum)</tt> library.
+
+<p>Here are the files for the main implementation:</p>
 
 <ul>
-<li><tt>bitwise-core.scm</tt> - implementation of the core bitwise ops from SRFI 142 (ultimately from SLIB) with no dependencies
+<li><tt>fxcore.scm</tt> - implementation of the core bitwise ops, modified from SRFI 151 (ultimately from SLIB) with no dependencies
 <li><tt>rubber-chicken.scm</tt> - generic implementation of procedures built in to Chicken
 <li><tt>srfi-143-impl.scm</tt> - implementation of procedures <i>not</i> built in to Chicken
 <li><tt>srfi-143.sls</tt> - R6RS library
 <li><tt>srfi-143.scm</tt> - Chicken library
 <li><tt>srfi-143.sld</tt> - R7RS library with no dependencies
-
+<li><tt>chicken-test.scm</tt> - Chicken tests
+<li><tt>chibi-test</tt> - Chibi tests
 </ul>
+
+<p>Here are the files for the R6RS implementation:</p>
+
+<ul>
+<li><tt>srfi-143.sls</tt> - R6RS library
+<li><tt>r6rs-test.scm</tt> - R6RS tests
+</ul>
+<p>
+The main implementation is based on the rather irregular set of fixnum
+procedures that Chicken provides, of which <tt>rubber-chicken.scm</tt>
+is an emulation.  Systems using this implementation should rewrite
+<tt>fxcore.scm</tt>, <tt>rubber-chicken.scm</tt>, and <tt>carries.scm</tt>
+to use native fixnum
+operations if there are any, or create them in C or assembly language
+if possible.  The comments at the start of each file indicate which
+procedures should be provided.
+</p>
+<p>There is some implementation-specific support for Chibi and Gauche.
+Chibi requires the <tt>bit.{so,dll}</tt> file, which can be found at
+<tt>$PREFIX/lib/chibi/srfi/{33,142}</tt>.
+</p>
+
 <h1>Acknowledgements</h1>
 
 This SRFI would not be possible without the efforts of Olin Shivers, Audrey Jaffer, Taylor Campbell,
