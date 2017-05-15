@@ -2854,24 +2854,24 @@
 ;; begin section with UTF-8 literals
 (cond-expand
  (full-unicode
-  (let ((str (make-string 3 #\����)))
+  (let ((str (make-string 3 #\😂)))
   (test-equal 3 (string-length str))
  ;; (test-equal 6 (str:length))
   (string-replace! str 1 2 "abc")
-  (test-equal "����abc����" str)
+  (test-equal "😂abc😂" str)
   (string-replace! str 5 5 str 3)
-  (test-equal "����abc����c����" str)
+  (test-equal "😂abc😂c😂" str)
   (string-replace! str 0 2 "ABC" 1 2)
-  (test-equal "Bbc����c����" str)
+  (test-equal "Bbc😂c😂" str)
   (test-equal 6 (length str))
   (test-equal #\c (string-ref str 2))
   (test-equal #\x1f602 (string-ref str 3))
   (test-equal #\c (string-ref str 4)))
 
-  (test-equal "c����b����a" (reverse-list->string '(#\a #\���� #\b #\���� #\c)))
+  (test-equal "c😼b😂a" (reverse-list->string '(#\a #\😂 #\b #\😼 #\c)))
 
-  (test-equal "y����a����xy" (xsubstring "a����xy����" 3 9))
-  (test-equal "y����a����" (xsubstring "a����xy����" -2 2))
+  (test-equal "y😂a😼xy" (xsubstring "a😼xy😂" 3 9))
+  (test-equal "y😂a😼" (xsubstring "a😼xy😂" -2 2))
 ))
 ;; end section with UTF-8 literals
 
