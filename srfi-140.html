@@ -150,9 +150,6 @@ In the following procedure specifications:
 Some procedures are specified as executing in guaranteed O(1) time.
 Unless specified, the other procedures may execute in linear time,
 using time proportional to the length of the involved string(s).
-Implementors must <em>not</em> implement (for example)
-<code>string-for-each</code> using <code>string-ref</code>,
-since that could lead to quadratic behavior if an argument is not an istring.
 
 <h3>String literals</h3>
 String literals have type istring.
@@ -304,7 +301,11 @@ must execute in O(1) time.
 <p>
     The bytevectors returned by <code>string-&gt;utf16</code>
     begin with a BOM that declares an implementation-dependent
-    endianness, and the bytevector elements following that BOM
+    endianness.
+    The latter <em>should</em> match the <code>big-endian</code>
+    or <code>little-endian</code> identifier returned by the R7RS <code>features</code> procedure.
+
+    The bytevector elements following that BOM
     encode the given  substring using that endianness.
 </p>
 <p>
@@ -411,7 +412,7 @@ must execute in O(1) time.
 
 <h3>Immutable string constructors</h3>
 <dl><dt class="proc-def" id="string">
-<code>(<span class="proc-def">string</span></code> <var>char</var><code>)</code><var> ... → istring</var>
+<code>(<span class="proc-def">string</span></code> <var>char ...</var><code>)</code><var> → istring</var>
 </dt>
 <dd class="proc-def">
     Returns a string consisting of the given characters.
@@ -595,9 +596,8 @@ or <code>string-copy</code> for a mutable result.
     <code>string-drop-right</code> returns a string containing all
     but the last <var>nchars</var> of <var>string</var>.
   <p>
-    The argument string does not share any
-    storage with the result, so subsequent mutation of that string
-    will not affect the string returned by these procedures.
+    Subsequent mutation of the argument string
+    will not affect the istring returned by these procedures.
     If <var>string</var> is an istring, implementations are
     encouraged to return a result that shares storage with that string
     (which is easily accomplished by using <code>substring</code> to
@@ -627,13 +627,12 @@ or <code>string-copy</code> for a mutable result.
 </dt>
 <dd class="proc-def">
     Returns an istring of length <var>len</var> comprised of the characters
-    drawn from the given subrange of <var>string</var>,
-    padded on the left (right)
-    by as many occurrences of the character <var>char</var> as needed.
+    drawn from the given subrange of <var>string</var>.
+    The result is padded on the left (right) by as many occurrences
+    of the character <var>char</var> (which defaults to <code>#\space</code>) as needed.
     If <var>string</var> has more
     than <var>len</var> chars, it is truncated on the left (right)
     to length <var>len</var>.
-    <var>char</var> defaults to <code>#\space</code>.
 <pre class="code-example">
 (string-pad     "325" 5) =&gt; "  325"
 (string-pad   "71325" 5) =&gt; "71325"
@@ -664,6 +663,9 @@ or <code>string-copy</code> for a mutable result.
 (string-trim-both "  The outlook wasn't brilliant,  \n\r")
     =&gt; "The outlook wasn't brilliant,"
 </pre>
+<p><i>Note:</i> It would be more natural to rename <code>string-trim</code> to <code>string-trim-left</code>,
+and possibly rename <code>string-trim-both</code> to <code>string-trim</code>,
+but SRFI-13 uses the specified names.
 </dd>
 
 </dl>
@@ -1465,7 +1467,7 @@ all return <var>istring</var>.
 <p>
 R7RS specifies that it is an error to mutate the results of <code>command-line</code>,
 <code>get-environment-variable</code>, or <code>get-environment-variables</code>.
-These return istrings.
+These <em>should</em> return istrings.
 
 <h3>Libraries</h3>
 There is no reason - except backward compatibility - for a procedure
@@ -1644,8 +1646,8 @@ method is trivial.)
 or kinds of strings that do <em>not</em> have constant-time indexing.
 Many of the procedures in this specification perform a linear
 scan of a substring.  It is important that these procedures
-not be implemented using <code>string-ref</code> since that could
-lead to quadratic run-time.
+<em>not</em> be implemented using <code>string-ref</code> (unless <code>string-ref</code> is O(1)
+even for non-istrings), since that could lead to quadratic run-time.
 <p>
 In Kawa, any object that implements the (standard Java) interface
 <code>java.lang.CharSequence</code> is a <q>string</q>.
@@ -1653,7 +1655,7 @@ This includes the standard Java classes <code>java.lang.String</code>
 (immutable strings) and <code>java.lang.StringBuilder</code>.
 These are implemented using arrays of <code>char</code> values,
 which are 16-bit code units.
-Indexing in therms of <code>char</code> units (using the <code>charAt</code>
+Indexing in terms of <code>char</code> units (using the <code>charAt</code>
 method) is efficient (constant-time), as is determining the number of <code>char</code>s.
 (Since <code>CharSequence</code> is an interface, rather than a concrete
 implementation, we cannot be guaranteed of this, but it is true of all
