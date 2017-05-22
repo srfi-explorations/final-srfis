@@ -56,5 +56,7 @@
     (r6rs:fxbit-set? i index))
 
   (define (fxbit-field-rotate i count start end)
-    (fxrotate-bit-field i start end count))
+    (if (fxnegative? count)
+      (fxrotate-bit-field i start end (+ count (- start end)))
+      (fxrotate-bit-field i start end count)))
 )

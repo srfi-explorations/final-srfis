@@ -24,7 +24,7 @@
   ;; Provide core bitwise functions
   (cond-expand
     (chibi
-      (include-shared "bit")
+      (include-shared "srfi/142/bit")
       (begin
         (define (fxnot i) (- -1 i))
   
