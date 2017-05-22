@@ -56,11 +56,6 @@
 ;; Helper function
 (define (mask start end) (fxnot (fxarithmetic-shift-left -1 (- end start))))
 
-(define (fxarithmetic-shift i count)
-  (if (fxnegative? count)
-      (fxarithmetic-shift-right i (- count))
-      (fxarithmetic-shift-left i count)))
-
 (define (fxif mask n0 n1)
   (fxior (fxand mask n0)
           (fxand (fxnot mask) n1)))
