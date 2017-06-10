@@ -18,7 +18,7 @@
 <html>
   <head>
     <meta name="keywords" content="Scheme, programming language, texts, texts, Unicode, SRFI" />
-    <link rel="author" href="mailto:will@ccs.neu.edu" />
+    <link rel="author" href="mailto:cowan@ccil.org" />
     <title>SRFI 152: String Library (reduced)</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -184,7 +184,6 @@ John Cowan
 <li><a href="#Rationale">Rationale</a></li>
 <li><a href="#Specification">Specification</a>
   <ul>
-  <li><a href="#Introduction">Introduction</a>
   <li><a href="#OptionalProcedures">Optional Procedures</a>
 </li>
   <li><a href="#Notation">Notation</a></li>
@@ -201,6 +200,7 @@ John Cowan
     <li><a href="#FoldMap">Fold and map and friends</a></li>
     <li><a href="#ReplicationSplitting">Replication and splitting </a></li>
     <li><a href="#Normalization">Normalization </a></li>
+    <li><a href="#InputOutput">Input-output </a></li>
     <li><a href="#Mutation">Mutation </a></li>
 </ul>
 
@@ -348,7 +348,8 @@ Here is a list of the procedures provided by this SRFI:
 <dt class="proc-index">Replication and splitting</dt>
 <dd class="proc-index">
 <pre class="proc-index">
-<a href="#string-replicate">string-replicate</a> <a href="#string-split">string-split</a>
+<a href="#string-replicate">string-replicate</a>
+<a href="#string-segment">string-segment</a> <a href="#string-split">string-split</a>
 </pre>
 </dd>
 
@@ -358,6 +359,13 @@ Here is a list of the procedures provided by this SRFI:
 <pre class="proc-index">
 <a href="#string-normalize-nfc">string-normalize-nfc</a> <a href="#string-normalize-nfkc">string-normalize-nfkc</a>
 <a href="#string-normalize-nfd">string-normalize-nfd</a> <a href="#string-normalize-nfkd">string-normalize-nfkd</a>
+</pre>
+</dd>
+
+<dt class="proc-index">Input-output</dt>
+<dd class="proc-index">
+<pre class="proc-index">
+<a href="#read-string">read-string</a> <a href="#write-string">write-string</a>
 </pre>
 </dd>
 
@@ -439,14 +447,6 @@ for long sequences of characters.
 <h1><a name="Specification">Specification</a></h1>
 
 
-<h2><a name="Introduction">Introduction</a></h2>
-<p>
-
-The procedures specified by this SRFI are exported by the
-<code>(srfi 152)</code> library.
-In R6RS systems that do not yet support R7RS library names,
-the name of this library is <code>(srfi :152)</code>.
-</p>
 
 <p>
 Procedures present in R5RS, R6RS, and R7RS-small are marked (R5RS).
@@ -461,6 +461,7 @@ Except as noted, the results returned from the procedures of this
 SRFI <i>must</i> be newly allocated strings.
 This is a change from the definition of SRFIs 13 and 130,
 though most Schemes do not support sharable strings in any case.
+However, the empty string need not be newly allocated.
 
 <p>
 The procedures of this SRFI follow
@@ -479,6 +480,11 @@ The order of common arguments is consistent across the
 different procedures.
 </p>
       
+<p>
+If a procedure's return value is said to be "unspecified," the
+procedure returns a single result whose value is unconstrained
+and might even vary from call to call.
+</p>
 <h2><a name="OptionalProcedures">Optional Procedures</a></h2>
 <p>
 The string-bytevector conversion and the Unicode casing and
@@ -588,11 +594,6 @@ takes two required arguments
 and zero or more optional arguments (<var>dict<sub>2</sub> ...</var>).
 </p>
 
-<p>
-If a procedure's return value is said to be "unspecified," the
-procedure returns a single result whose value is unconstrained
-and might even vary from call to call.
-</p>
 
 
 <!--========================================================================-->
@@ -1086,7 +1087,7 @@ by <code>string-unfold</code> to be limited by limits on stack size.
 <code class="proc-def">substring&nbsp;&nbsp;&nbsp;</code><var> string start end → string</var> (R5RS)
 </dt>
 <dt class="proc-defn">
-<code class="proc-def">string-copy&nbsp;&nbsp;&nbsp;</code><var> string [start end] → string</var> (R5RS+)
+<code class="proc-def">string-copy&nbsp;</code><var> string [start end] → string</var> (R5RS+)
 </dt>
 <dd class="proc-def">
     These procedures return a string containing the characters of
@@ -1095,13 +1096,6 @@ by <code>string-unfold</code> to be limited by limits on stack size.
     The only difference is that <code>substring</code> requires all three arguments,
     whereas <code>string-copy</code> requires only one.
 
-  <p>
-    However, if either procedure returns an empty string, that empty
-    string may be <code>eq?</code> or <code>eqv?</code> to the string
-    <code>""</code>.
-    If the string returned by <code>string-copy</code> is non-empty,
-    then it is not <code>eqv?</code> to any previously extant object.
-  </p>
 </dd>
 
 <!--
@@ -1234,11 +1228,6 @@ by <code>string-unfold</code> to be limited by limits on stack size.
   </p>
 
   <p>
-    The result of <code>string-replace</code> never shares substructures
-    that would retain characters or sequences of characters that are
-    substructures of its first argument or previously allocated objects.
-  </p>
-  <p>
     Examples:
   </p>
 <pre class="code-example">
@@ -1299,7 +1288,7 @@ by <code>string-unfold</code> to be limited by limits on stack size.
 <code class="proc-def">string&lt;=?</code><var> string1 string2 string3 ... → boolean</var> (R5RS)
 </dt>
 <dt class="proc-defn">
-<code class="proc-def">string&gt;=?</code><var> string1 string2 string3 ... → boolean</var> (R5RS)
+<code class="proc-def">string>=?</code><var> string1 string2 string3 ... → boolean</var> (R5RS)
 </dt>
 <dd class="proc-def">
     These procedures return <code>#t</code> if their arguments
@@ -1367,7 +1356,7 @@ by <code>string-unfold</code> to be limited by limits on stack size.
 <code class="proc-def">string-ci&lt;=?</code><var> string1 string2 string3 ... → boolean</var> (R5RS)
 </dt>
 <dt class="proc-defn">
-<code class="proc-def">string-ci&gt;=?</code><var> string1 string2 string3 ... → boolean</var> (R5RS)
+<code class="proc-def">string-ci>=?</code><var> string1 string2 string3 ... → boolean</var> (R5RS)
 </dt>
 <dd class="proc-def">
     These procedures behave as though they had called
@@ -1540,7 +1529,7 @@ This indicates a useful value is returned when there is a match.
 ============================================================================-->
 <dt class=proc-def>
 <a name="string-take-while"></a>
-<code class=proc-def>string-take-while&nbsp;</code><var> pred string [start end] → list</var>
+<code class=proc-def>string-take-while&nbsp;</code><var> pred string [start end] → string</var>
 <dd class=proc-def>
 
 Returns the longest initial prefix of the substring of <var>string</var>
@@ -1556,7 +1545,7 @@ satisfy the predicate <var>pred</var>.
 ============================================================================-->
 <dt class=proc-def>
 <a name="string-drop-while"></a>
-<code class=proc-def>string-drop-while</code><var> pred string [start end] → list</var>
+<code class=proc-def>string-drop-while</code><var> pred string [start end] → string</var>
 <dd class=proc-def>
 Drops the longest initial prefix of the substring of <var>string</var> 
 specified by <var>start</var> and <var>end</var> whose elements all
@@ -1900,9 +1889,9 @@ Example:
                 ((#\1) c1)
                 ((#\2) (string c2))
                 ((#\-) (string #\- c1))))
-             (string->string "1222-1111-2222")
-             (string->string "Hi There!")
-             (string->string "Dear John"))
+             "1222-1111-2222"
+             "Hi There!"
+             "Dear John")
      => "Hear-here!"
 </pre>
 </dd>
@@ -1966,7 +1955,7 @@ way to loop over a substring.
 Example:
 </p>
 <pre class="code-example">
-(let ((txt (string->string "abcde"))
+(let ((txt "abcde")
       (v '()))
   (string-for-each-index
     (lambda (cur) (set! v (cons (char->integer (string-ref txt cur)) v)))
@@ -2005,6 +1994,7 @@ Example:
    <p><i>Compatibility note:</i>
         In SRFI 13, <code>string-remove</code> is called 
         <code>string-delete</code>.
+        This is inconsistent with SRFI 1 and other SRFIs.
 
 </dd>
 
@@ -2090,6 +2080,18 @@ Example:
 </dd>
 
 <!--
+==== string-segment
+============================================================================-->
+<dt class="proc-def">
+<a name="string-segment"></a>
+<code class="proc-def">string-segment</code><var> string k → list</var>
+</dt>
+<dd class="proc-def">
+   Returns a list of strings representing the consecutive substrings of length <var>k</var>.
+   The last string may be shorter than <var>k</var>.
+</dd>
+
+<!--
 ==== string-split
 ============================================================================-->
 <dt class="proc-def">
@@ -2131,11 +2133,8 @@ It is an error if <var>limit</var> is any other value.
 </p>
 <p>
 To split on a regular expression <var>re</var>,
-use SRFI 115's <code>regexp-split</code> procedure:
+use SRFI 115's <code>regexp-split</code> procedure.
 </p>
-<pre class="code-example">
-(map string->string (regexp-split re (string->string txt)))
-</pre>
 </dd>
 
 </dl>
@@ -2182,6 +2181,37 @@ use SRFI 115's <code>regexp-split</code> procedure:
 
 (string-normalize-nfc "\x65;\x301;") => "\xE9;"
 </pre>
+</dd>
+
+</dl>
+
+<h3><a name="InputOutput">Input-output</a></h3>
+<!--
+==== read-string
+============================================================================-->
+<dt class="proc-def">
+<a name="read-string"></a>
+<code class="proc-def">read-string</code><var> k [port] → string</var> (R7RS)
+</dt>
+<dd class="proc-def">
+Reads the next <var>k</var> characters, or as many as are available
+before the end of file, from the textual input port into a
+newly allocated string in left-to-right order and returns the
+string. If no characters are available before the end of file,
+an end-of-file object is returned.
+The default port is the value of <code>(current-input-port)</code>.</dd>
+
+<!--
+==== write-string
+============================================================================-->
+<dt class="proc-def">
+<a name="write-string"></a>
+<code class="proc-def">write-string</code><var> string [port start end]→ g</var> (R7RS)
+</dt>
+<dd class="proc-def">
+Writes the characters of <var>string</var> from index <var>start</var> to index
+<var>end</var> onto textual output port <var>port</var>.
+The default port is the value of <code>(current-output-port)</code>.</dd>
 </dd>
 
 </dl>
@@ -2238,11 +2268,50 @@ use SRFI 115's <code>regexp-split</code> procedure:
 <h1><a name="SampleImp">Sample implementation</a></h1>
 
 <p>
-The sample implementation of this SRFI is (not yet) in the
-SRFI repository.  The implementation is portable but inefficient;
+The sample implementations of this SRFI are (not yet) in the
+SRFI repository.  The main implementation is portable but inefficient;
 since efficiency is not a design goal (use texts for that!),
 it should be satisfactory.
 </p>
+<p>There are two implementations for Chicken.  One works on Chicken's
+native 8-bit strings; the other leverages the <code>utf8</code> egg
+to provide a UTF-8 facade over those same strings.  This means that
+there is no reliable way to tell by inspection whether a string is
+8-bit or UTF-8, and one must take precautions to avoid mixing them.</p>
+
+<p>The Chicken modules <code>srfi-13 utf8 utf8-srfi-13 utf8-case-map</code>
+shouldn't be imported together into the same module or program
+with either <code>srfi-152</code> or <code>utf8-srfi-152</code>,
+as they are inherently incompatible.
+However, it is possible to import <code>utf8-srfi-152</code> and then
+cherry-pick non-conflicting identifiers from <code>utf8</code> with
+<code>(import (only utf8 read-char write-char print ...))</code>.
+There is no problem with the <code>utf8-srfi-14</code> and
+<code>unicode-char-sets</code> modules.</p>
+
+<p>When importing any of the <code>scheme chicken data-structures extras</code>
+modules along with <code>utf8-srfi-152</code>,
+be sure to do it as follows to avoid conflicts:</p>
+
+<pre>
+(import (except scheme
+    make-string string string-length string-ref string-set! substring
+    string->list list->string string-fill!))
+(import (except chicken
+    reverse-list->string))
+(import (except data-structures
+    string-split substring-index))
+(import (except extras
+    read-string write-string))
+</pre>
+<p>The <code>srfi-152</code> module does not require any exclusions from the
+<code>scheme</code> module,
+but if the other modules are imported, the specified identifiers must be excluded.
+</p>
+
+<p>The R7RS library assumes the presence of all R7RS-small procedures and
+does not require excluding any of them, as this SRFI is inherently compatible
+with R7RS-small.</p>
 
 <!--========================================================================-->
 <h1><a name="Acknowledgements">Acknowledgements</a></h1>
