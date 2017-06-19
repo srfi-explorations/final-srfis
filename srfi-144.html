@@ -15,7 +15,7 @@ SRFI 144: Flonums
 
 <h1>Author</h1>
 
-John Cowan
+John Cowan, Will Clinger
 
 <h1>Status</h1>
 
@@ -42,14 +42,8 @@ procedures, but allow more efficient implementations.
 
 <h1>Issues</h1>
 
-<ol><li>
-<p>(Resolved)
-</p>
-</li><li>
+None at present.
 
-<p>C <tt>round</tt> rounds toward zero, Scheme <tt>round</tt> rounds toward even.  How do we
-resolve this discrepancy?</p>
-</li></ol>
 
 <h1>Rationale</h1>
 
@@ -80,6 +74,8 @@ the Chicken flonum routines</a>, and
 <a href="http://wiki.call-cc.org/eggref/4/mathh">the Chicken <tt>mathh</tt> egg</a>.
 Lastly, a few procedures are flonum versions of R7RS-small numeric procedures.
 </p>
+
+<p>The SRFI text is by John Cowan; the portable implementation is by Will Clinger.<p>
 <h1>Specification</h1>
 
 <p>
@@ -217,12 +213,6 @@ Bound to &pi;/2.  (C99 <tt>M_PI_2</tt>)
 Bound to &pi;/4.  (C99 <tt>M_PI_4</tt>)
 </p>
 <p>
-<tt>fl-2/sqrt-pi</tt>
-</p>
-<p>
-Bound to 2/&radic;&pi;.
-</p>
-<p>
 <tt>fl-pi-squared</tt>
 </p>
 <p>
@@ -238,7 +228,7 @@ Bound to &pi;/180, the number of radians in a degree.
 <tt>fl-2/pi</tt>
 </p>
 <p>
-Bound to  2<sup>&pi;</sup>.  (C99 <tt>M_2_PI</tt>)
+Bound to  2/&pi;.  (C99 <tt>M_2_PI</tt>)
 </p>
 <p>
 <tt>fl-2/sqrt-pi</tt>
@@ -450,7 +440,7 @@ Returns the exponent of <em>x</em>.  (C99 <tt>logb</tt>)
 <tt>(flinteger-exponent </tt><em>x</em><tt>)</tt>
 </p>
 <p>
-Returns the same as <tt>flexponent</tt> as an exact integer.  If <em>x</em> is zero, returns <tt>fl-integer-exponent-zero</tt>; if <em>x</em> is a NaN, returns <tt>fl-integer-exponent-nan</tt>; if <em>x</em> is infinite, returns a large implementation-dependent exact integer.  (C99 <tt>ilogb</tt>)
+Returns the same as <tt>flexponent</tt> truncated to an exact integer.  If <em>x</em> is zero, returns <tt>fl-integer-exponent-zero</tt>; if <em>x</em> is a NaN, returns <tt>fl-integer-exponent-nan</tt>; if <em>x</em> is infinite, returns a large implementation-dependent exact integer.  (C99 <tt>ilogb</tt>)
 </p>
 <p>
 <tt>(flnormalized-fraction-exponent </tt><em>x</em><tt>)</tt>
@@ -498,18 +488,6 @@ These procedures return <tt>#t</tt> if their arguments are (respectively): equal
 Returns <tt>#t</tt> if <em>x</em> and <em>y</em> are unordered
 according to IEEE rules.  This means that one of them is a NaN.
 </p>
-<p>
-<tt>(flmax </tt><em>x</em> ...<tt>)</tt>
-</p>
-<p>
-<tt>(flmin </tt><em>x</em> ...<tt>)</tt>
-</p>
-<p>
-Return the maximum/minimum argument.  If there are no arguments,
-these procedures return <tt>-inf.0</tt> or <tt>+inf.0</tt> if the implementation
-provides these numbers, and <tt>fl-greatest</tt> or <tt>fl-least</tt> otherwise.
-(C99 <tt>fmax fmin</tt>)
-</p>
 <p>These numerical predicates test a flonum for a particular property, returning <tt>#t</tt> or <tt>#f</tt>.</p>
 <p>
 <tt>(flinteger? </tt><em>x</em><tt>)</tt>
@@ -530,7 +508,7 @@ Beware of roundoff errors.</p>
 <p>Tests whether <em>x</em> is negative.
 Note that <tt>(flnegative? -0.0)</tt> must return <tt>#f</tt>;
 otherwise it would lose the correspondence with
-<tt>(fl&lt; -0.0 0.0)</tt>, which is <tt>#f</tt>
+<tt>(fl&lt;? -0.0 0.0)</tt>, which is <tt>#f</tt>
 according to IEEE 754.
 </p>
 <p>
@@ -564,6 +542,18 @@ in C99, use <tt>fpclassify(x) == FP_NORMAL</tt>)</p>
 in C99, use <tt>fpclassify(x) == FP_SUBNORMAL</tt>)</p>
 <h2 id="Arithmetic">Arithmetic</h2>
 <p>
+<tt>(flmax </tt><em>x</em> ...<tt>)</tt>
+</p>
+<p>
+<tt>(flmin </tt><em>x</em> ...<tt>)</tt>
+</p>
+<p>
+Return the maximum/minimum argument.  If there are no arguments,
+these procedures return <tt>-inf.0</tt> or <tt>+inf.0</tt> if the implementation
+provides these numbers, and <tt>(fl- fl-greatest)</tt> or <tt>fl-greatest</tt> otherwise.
+(C99 <tt>fmax fmin</tt>)
+</p>
+<p>
 <tt>(fl+ </tt><em>x</em> ...<tt>)</tt>
 </p>
 <p>
@@ -578,7 +568,7 @@ arguments.
 <tt>(fl+* </tt><em>x y z</em><tt>)</tt>
 </p>
 <p>
-Returns <tt>(fl+ (fl* x y) z)</tt>
+Returns <i>xy + z</i>
 as if to infinite precision and rounded only once.
 The boolean constant <tt>fl-fast-fl+*</tt>
 indicates whether this procedure executes about as fast as, 
@@ -730,7 +720,7 @@ Returns log<sub><i>e</i></sub> <em>x</em>.
 <tt>(fllog1+ </tt><em>x</em><tt>)</tt>
 </p>
 <p>
-Returns (log<sub><i>e</i></sub> <em>x</em>) + 1, but is much more accurate than <tt>fllog</tt> for values of x near 0.  It is recommended for use in algorithms where accuracy is important.  (C99 <tt>log1p</tt>)
+Returns (log<sub><i>e</i></sub> (<em>x</em>+ 1), but is much more accurate than <tt>fllog</tt> for values of x near 0.  It is recommended for use in algorithms where accuracy is important.  (C99 <tt>log1p</tt>)
 </p>
 <p>
 <tt>(fllog2 </tt><em>x</em><tt>)</tt>
@@ -747,10 +737,10 @@ Returns log<sub>10</sub> <em>x</em>.
 (C99 <tt>log10</tt>)
 </p>
 <p>
-<tt>(make-fllog-base </tt><em>n</em><tt>)</tt>
+<tt>(make-fllog-base </tt><em>x</em><tt>)</tt>
 </p>
 <p>
-Returns a procedure that calculates the base-<em>n</em> logarithm of its
+Returns a procedure that calculates the base-<em>x</em> logarithm of its
 argument.
 </p>
 <h2 id="Trigonometricfunctions">Trigonometric functions</h2>
@@ -778,7 +768,10 @@ argument.
 <tt>(flatan </tt>[<em>y</em>] <em>x</em><tt>)</tt>
 </p>
 <p>Returns arctan <em>x</em>.  (C99 <tt>atan</tt>)</p>
-<p>With two arguments, returns arctan(<em>y</em>/<em>x</em>).  (C99 <tt>atan2</tt>)</p>
+<p>With two arguments, returns arctan(<em>y</em>/<em>x</em>).
+in the range [-&pi;,&pi;], using the signs of <em>x</em>
+and <em>y</em> to choose the correct quadrant for the result.
+(C99 <tt>atan2</tt>)</p>
 <p>
 <tt>(flsinh </tt><em>x</em><tt>)</tt>
 </p>
@@ -834,7 +827,8 @@ integers.  (C99 <tt>tgamma</tt>)
 <tt>(flloggamma </tt><em>x</em><tt>)</tt>
 </p>
 <p>
-Returns two values, log Γ(|<em>x</em>|) without internal overflow, and sgn(Γ(<em>x</em>)).  (C99 <tt>lgamma</tt>)
+Returns two values, log |Γ(<em>x</em>)| without internal overflow, and the sign of Γ(<em>x</em>) as 1.0
+if it is positive and -1.0 if it is negative.  (C99 <tt>lgamma</tt>)
 </p>
 <p>
 <tt>(flfirst-bessel </tt><em>x n</em><tt>)</tt>
@@ -864,13 +858,36 @@ Returns the complementary error function, 1 - erf(<em>x</em>).  (C99 <tt>erfc</t
 
 <h1>Implementation</h1>
 
-The implementation of this SRFI is (not yet) in the repository.  Because implementing
-many of these procedures depends on access to the C library via a foreign-function
-interface (FFI), and because FFIs are one of the least portable things about Scheme
-implementations, this implementation is specific to Chicken.  It makes use of
-Chicken's built-in flonum functions, a modified version of the <tt>mathh</tt>
-egg, and additional implementation code in Scheme.  It should be fairly
-straightforward to convert it to a different Scheme FFI.
+<p>The implementation of this SRFI is in the repository.  <p>
+
+<p>The sample implementation should run without modification in every
+complete implementation of R7RS-small that uses IEEE-754 double or
+single precision arithmetic for inexact reals.<p>
+
+<p>To show how a Foreign Function Interface (FFI) to C99 math libraries
+could be used to implement some procedures of SRFI 144, the sample
+implementation is configured to use Larceny's FFI when running on an
+x86 processor under Linux or MacOS X.  Although <code>srfi/144.ffi.scm</code>
+uses Larceny's FFI to make many C functions available, the sample
+implementation uses only three of those C functions:</p>
+
+<ul>
+<li>    <code>fma</code> (to implement <code>fl+*</code>)</li>
+<li>    <code>jn</code>  (to implement <code>flfirst-bessel</code>)</li>
+<li>    <code>yn</code>  (to implement <code>flsecond-bessel</code>)</li>
+</ul>
+
+Those are the only C functions that provide a worthwhile advantage
+in either accuracy or speed over the completely portable definitions,
+as measured in Larceny.
+
+The portable implementations of the Bessel functions are far less
+accurate than the C functions <code>jn</code> and <code>yn</code> when the flonum argument is
+on the order of 1e15.</p>
+
+<p>A Chicken specialization of this implementation is (not yet) also in the repository:
+the module is in <code>144.scm</code> and additional code in <code>144.chicken.scm</code>.
+</p>
 
 <h1>Acknowledgements</h1>
 
