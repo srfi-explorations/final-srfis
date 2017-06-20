@@ -22,6 +22,20 @@ directory, incant something like:
 
     larceny --path . --r7rs --program tests/scheme/run/flonum.sps
     sagittarius -c -L . -r7 tests/scheme/run/flonum.sps
+    chibi-scheme -I . < tests/scheme/run/flonum.sps
+
+In some implementations, it may be necessary to write a little
+program that loads the various files:
+
+    % cat /tmp/temp.scm
+    (load "srfi/144.sld")
+    (load "tests/scheme/test.sld")
+    (load "tests/scheme/flonum.sld")
+    (load "tests/scheme/run/flonum.sps")
+    (exit)
+
+    kawa --r7rs --no-warn-unused -f /tmp/temp.scm
+    gosh -r7 -I . -b < /tmp/temp.scm
 
 Some tests may fail due to minor bugs in current versions of those
 systems, but the current development version of Larceny passes all
@@ -44,4 +58,4 @@ The *.data files assume the C99 functions are perfectly accurate
 (which they are not), and show the rms error for small windows
 around each argument.  The relative error is shown unless the result
 of the C99 function has absolute value less than one, in which case
-the absolute error is used instead.
+the absolute error is shown instead.

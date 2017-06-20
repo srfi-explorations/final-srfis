@@ -34,6 +34,9 @@
 ;;;
 ;;; Donald E Knuth.  The Art of Computer Programming, Volume 2,
 ;;; Seminumerical Algorithms, Second Edition.  Addison-Wesley, 1981.
+;;;
+;;; J N Newman.  Approximations for the Bessel and Struve Functions.
+;;; Mathematics of Computation, 43(168), October 1984, pages 551-556.
 
 ;;; I have deliberately avoided recent references, and have also
 ;;; avoided looking at any code or pseudocode for these or similar
@@ -43,78 +46,16 @@
 ;;; as specified at http://vrici.lojban.org/~cowan/temp/srfi-144.html
 ;;; as of 4 June 2017.
 ;;;
-;;; Why must the argument to make-fllog-base be an exact integer?
-;;;
 ;;; FIXME: not as accurate as it should be
 ;;; FIXME: not as fast as it should be
 ;;; FIXME: assumes IEEE arithmetic or similar
 ;;; FIXME: assumes all inexact reals are flonums
 ;;; FIXME: assumes (scheme inexact)
-;;; FIXME: assumes (rnrs arithmetic flonums)
 
 ;;; Mathematical Constants
+;;;
+;;; The mathematical constants are now defined in 144.constants.scm
 
-;;; For portability and ease of implementation, most are calculated.
-;;; Some numerical values are copied from Wikipedia or the references.
-;;; Inaccuracies will be revealed by testing and then repaired.
-
-(define fl-e (exp 1))
-(define fl-1/e (/ fl-e))
-
-(define fl-e-2 ; (* fl-e fl-e) is 1 bit low (Linux, IEEE double)
-  7.389056098930650227230427)
-
-(define fl-e-pi/4 (exp (/ (acos -1.0) 4.0)))
-(define fl-log2-e (log fl-e 2.0))
-
-(define fl-log10-e ; (log fl-e 10.0) is 1 bit low (Linux, IEEE double)
-  .4342944819032518276511289)
-
-(define fl-log-2 (log 2.0))
-(define fl-1/log-2 (/ fl-log-2))
-(define fl-log-3 (log 3.0))
-(define fl-log-pi (log (acos -1.0)))
-(define fl-log-10 (log 10.0))
-(define fl-1/log-10 ; (/ fl-log-10) is 1 bit low (Linux, IEEE double)
-  fl-log10-e)
-
-(define fl-pi (acos -1.0))
-(define fl-1/pi (/ fl-pi))
-(define fl-2pi (* 2.0 fl-pi))
-(define fl-pi/2 (/ fl-pi 2.0))
-(define fl-pi/4 (/ fl-pi 4.0))
-(define fl-2/sqrt-pi (/ 2.0 (sqrt fl-pi)))
-(define fl-pi-squared (* fl-pi fl-pi))
-(define fl-degree (/ fl-pi 180.0))
-(define fl-2/pi (/ 2.0 fl-pi))
-;(define fl-2/sqrt-pi fl-2/sqrt-pi)   ; specified twice in draft of SRFI 144
-(define fl-sqrt-2 (sqrt 2.0))
-(define fl-sqrt-3 (sqrt 3.0))
-(define fl-sqrt-5 (sqrt 5.0))
-(define fl-sqrt-10 (sqrt 10.0))
-
-(define fl-1/sqrt-2 ; (/ fl-sqrt-2) is 1 bit low (Linux, IEEE double)
-  (/ fl-sqrt-2 2.0))
-
-(define fl-cbrt-2 (expt 2.0 (inexact 1/3)))
-(define fl-cbrt-3 (expt 3.0 (inexact 1/3)))
-(define fl-4thrt-2 (expt 2.0 .25))
-(define fl-phi (/ (+ 1.0 (sqrt 5.0)) 2.0))
-(define fl-log-phi (log fl-phi))
-
-(define fl-1/log-phi ; fl-log-phi) ; is 1 bit low (Linux, IEEE double)
-  2.0780869212350275376013226061177957677422)
-
-(define fl-euler 0.57721566490153286060651209008240243104215933593992)
-(define fl-e-euler (exp fl-euler))
-(define fl-sin-1 (sin 1.0))
-(define fl-cos-1 (cos 1.0))
-
-(define fl-gamma-1/2 ; (sqrt fl-pi) is 1 bit low (Linux, IEEE double)
-  1.7724538509055160272981674833411451827975)
-
-(define fl-gamma-1/3 2.6789385347077476336556929409746776441287)
-(define fl-gamma-2/3 1.3541179394264004169452880281545137855193)
 
 ;; Implementation Constants
 
@@ -210,11 +151,14 @@
          (result2 (fl- x result1)))
     (values result1 result2)))
 
+;;; The 8th draft of SRFI 144 will say flexponent returns the inexact
+;;; integer obtained by truncating toward zero.
+
 (define (flexponent x)
-  (fllog2 (flabs x)))
+  (fltruncate (fllog2 (flabs x))))
 
 (define (flinteger-exponent x)
-  (exact (fltruncate (flexponent x))))
+  (exact (flexponent x)))
 
 (define (flnormalized-fraction-exponent x)
   (define (return result1 result2)
@@ -235,9 +179,9 @@
         ((fl=? x 0.0)    ; unspecified for 0.0
          (values 0.0 0))
         ((flinfinite? x)
-         (values 0.5 (+ 3 (exact (round (flexponent fl-greatest))))))
+         (values 0.5 (+ 3 (exact (round (fllog2 fl-greatest))))))
         ((flnormalized? x)
-         (let* ((result2 (exact (flround (flexponent x))))
+         (let* ((result2 (exact (flround (fllog2 x))))
                 (two^result2 (inexact (expt 2.0 result2))))
            (if (flinfinite? two^result2)
                (call-with-values
@@ -467,12 +411,12 @@
 
 (define fllog10 (flop1 'fllog10 (lambda (x) (log x 10.0))))
 
-(define (make-fllog-base k)
-  (if (and (exact-integer? k) (> k 1))
+(define (make-fllog-base base)
+  (check-flonum! 'make-fllog-base base)
+  (if (fl>? base 1.0)
       (flop1 'procedure-created-by-make-fllog-base
-             (let ((base (inexact k)))
-               (lambda (x) (log x base))))
-      (error "bad argument passed to make-fllog-base" k)))
+             (lambda (x) (log x base)))
+      (error "argument to make-fllog-base must be positive" base)))
 
 ;;; Trigonometric functions
 
@@ -487,6 +431,8 @@
   (flop1 'flsinh
          (lambda (x)
            (cond ((not (flfinite? x)) x)
+                 ((fl<? (flabs x) 0.75)
+                  (fl/ (fl- (flexp-1 x) (flexp-1 (fl- x))) 2.0))
                  (else
                   (fl/ (fl- (flexp x) (flexp (fl- x))) 2.0))))))
 
@@ -494,6 +440,8 @@
   (flop1 'flcosh
          (lambda (x)
            (cond ((not (flfinite? x)) (flabs x))
+                 ((fl<? (flabs x) 0.75)
+                  (fl+ 1.0 (fl/ (fl+ (flexp-1 x) (flexp-1 (fl- x))) 2.0)))
                  (else
                   (fl/ (fl+ (flexp x) (flexp (fl- x))) 2.0))))))
 
@@ -503,27 +451,76 @@
            (cond ((flinfinite? x) (flcopysign 1.0 x))
                  ((flnan? x) x)
                  (else
-                  (fl/ (flsinh x) (flcosh x)))))))
+                  (let ((a (flsinh x))
+                        (b (flcosh x)))
+                    (cond ((fl=? a b)
+                           1.0)
+                          ((fl=? a (fl- b))
+                           -1.0)
+                          (else
+                           (fl/ (flsinh x) (flcosh x))))))))))
 
 ;;; inverse hyperbolic functions
 
 (define flasinh
   (flop1 'flasinh
          (lambda (x)
+           (define (eqn4.6.31 x^2 c k k0)
+             (if (> k 45) ; FIXME
+                 c
+                 (fl+ c
+                      (fl* x^2
+                           (eqn4.6.31 x^2
+                                      (fl- (fl/ (fl* c k0 k0)
+                                                (fl* (fl+ k0 1.0)
+                                                     (fl+ k0 2.0))))
+                                      (+ k 2)
+                                      (fl+ k0 2.0))))))
            (cond ((flzero? x) x)
                  ((not (flfinite? x)) x)
+                 ((fl<? x 0.0)
+                  (fl- (flasinh (fl- x))))
+                 ((fl<? x 0.5)
+                  (fl* x (eqn4.6.31 (fl* x x) 1.0 1 1.0)))
                  (else
-                  (fllog (fl+ x (flsqrt (fl+ (fl* x x) 1.0)))))))))
+                  (let* ((x^2+1 (fl+ (fl* x x) 1.0))
+                         (root (if (flfinite? x^2+1)
+                                   (flsqrt x^2+1)
+                                   x))
+                         (a (fl+ x root)))
+                    (if (flfinite? a)
+                        (fllog a)
+                        (fl+ fl-log-2 (fllog x)))))))))
 
 (define flacosh
   (flop1 'flacosh
          (lambda (x)
-           (fllog (fl+ x (flsqrt (fl- (fl* x x) 1.0)))))))
+           (if (fl<=? x 0.5)
+               +nan.0
+               (let* ((x^2-1 (fl- (fl* x x) 1.0))
+                      (root (if (flfinite? x^2-1)
+                                (flsqrt x^2-1)
+                                x))
+                      (a (fl+ x root)))
+                 (if (flfinite? a)
+                     (fllog a)
+                     (fl+ fl-log-2 (fllog x))))))))
 
 (define flatanh
   (flop1 'flatanh
          (lambda (x)
+           (define (eqn4.6.33 x^2 k k0)
+             (if (> k 50) ; FIXME
+                 (fl/ k0)
+                 (fl+ (fl/ k0)
+                      (fl* x^2
+                           (eqn4.6.33 x^2 (+ k 2) (+ k0 2.0))))))
            (cond ((flzero? x) x)
+                 ((not (flfinite? x)) x)
+                 ((fl<? x 0.0)
+                  (fl- (flatanh (fl- x))))
+                 ((fl<? x 0.5)
+                  (fl* x (eqn4.6.33 (fl* x x) 1 1.0)))
                  (else
                   (fl* 0.5 (fllog (fl/ (fl+ 1.0 x) (fl- 1.0 x)))))))))
 
