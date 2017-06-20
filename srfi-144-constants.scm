@@ -39,11 +39,11 @@
 (define-constant fl-sqrt-10      3.1622776601683793319988935444327185337196)   ; sqrt(10)
 (define-constant fl-cbrt-2       1.2599210498948731647672106072782283505703)   ; cubert(2)
 (define-constant fl-cbrt-3       1.4422495703074083823216383107801095883919)   ; cubert(3)
-(define-constant fl-4thrt-2      1.4422495703074083823216383107801095883919)   ; fourthrt(2)
+(define-constant fl-4thrt-2      1.189207115002721)                            ; fourthrt(2)
 (define-constant fl-1/sqrt-2     0.707106781186547524400844362104849039)       ; 1/sqrt(2)
 (define-constant fl-phi          1.6180339887498948482045868343656381177203)   ; phi
 (define-constant fl-log-phi      0.4812118250596034474977589134243684231352)   ; ln(phi)
-(define-constant fl-1/log-phi    0.4812118250596034474977589134243684231352)   ; 1/ln(phi)
+(define-constant fl-1/log-phi    2.0780869212350273)                           ; 1/ln(phi)
 (define-constant fl-euler        0.5772156649015328606065120900824024310422)   ; euler
 (define-constant fl-e-euler      1.7810724179901979852365041031071795491696)   ; e^euler
 (define-constant fl-sin-1        0.8414709848078965066525023216302989996226)   ; sin(1)
