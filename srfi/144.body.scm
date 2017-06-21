@@ -413,7 +413,7 @@
 
 (define (make-fllog-base base)
   (check-flonum! 'make-fllog-base base)
-  (if (fl>? base 1.0)
+  (if (flpositive? base)
       (flop1 'procedure-created-by-make-fllog-base
              (lambda (x) (log x base)))
       (error "argument to make-fllog-base must be positive" base)))
