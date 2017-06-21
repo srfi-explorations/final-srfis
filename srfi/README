@@ -2,7 +2,13 @@ This directory contains a portable sample implementation of SRFI 144.
 
 The sample implementation should run without modification in every
 complete implementation of R7RS (small) that uses IEEE-754 double or
-single precision arithmetic for inexact reals.
+single precision arithmetic for inexact reals.  It can also be made
+to work in R5RS or R6RS systems.  (For R5RS, define an appropriate
+value for the c-functions-are-available variable and load the *.scm
+files.  For R6RS, change 144.sld to a 144.sls file that uses R6RS
+library syntax, resolving the cond-expand forms as appropriate for
+your system and replacing include forms by copying included files
+directly into the 144.sls file.)
 
 To show how a Foreign Function Interface (FFI) to C99 math libraries
 could be used to implement some procedures of SRFI 144, the sample
