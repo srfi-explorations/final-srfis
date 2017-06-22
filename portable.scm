@@ -453,6 +453,7 @@
 					s2 start2 end2)))))
 
 
+
 ;;; Cutting & pasting strings
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; string-take string nchars
@@ -464,11 +465,11 @@
 ;;; string-pad string k [char start end] 
 ;;; string-pad-right string k [char start end] 
 ;;; 
-;;; string-trim       string [char/pred start end] 
-;;; string-trim-right string [char/pred start end] 
-;;; string-trim-both  string [char/pred start end] 
+;;; string-trim       string [char/char-set/pred start end] 
+;;; string-trim-right string [char/char-set/pred start end] 
+;;; string-trim-both  string [char/char-set/pred start end] 
 ;;;
-;;; These trimmers invert the meaning from MIT Scheme -- you
+;;; These trimmers invert the char-set meaning from MIT Scheme -- you
 ;;; say what you want to trim.
 
 (define (string-take s n)
@@ -503,27 +504,24 @@
 (define (string-trim s . criterion+start+end)
   (let-optionals* criterion+start+end ((criterion char-whitespace?) rest)
     (let-string-start+end (start end) string-trim s rest
-      (let ((i (string-skip s criterion start end)))
-        (if (= i end)
-            ""
-	    (%substring s i end))))))
+      (cond ((string-skip s criterion start end) =>
+	     (lambda (i) (%substring s i end)))
+	    (else "")))))
 
 (define (string-trim-right s . criterion+start+end)
   (let-optionals* criterion+start+end ((criterion char-whitespace?) rest)
     (let-string-start+end (start end) string-trim-right s rest
-      (let ((i (string-skip-right s criterion start end)))
-        (if (= i start)
-            ""
-	    (%substring s start i))))))
+      (cond ((string-skip-right s criterion start end) =>
+	     (lambda (i) (%substring s start (+ 1 i))))
+	    (else "")))))
 
 (define (string-trim-both s . criterion+start+end)
   (let-optionals* criterion+start+end ((criterion char-whitespace?) rest)
     (let-string-start+end (start end) string-trim-both s rest
-      (let ((i (string-skip s criterion start end)))
-        (if (= i end)
-            ""
-            (%substring
-             s i (string-skip-right s criterion i end)))))))
+      (cond ((string-skip s criterion start end) =>
+	     (lambda (i)
+	       (%substring s i (+ 1 (string-skip-right s criterion i end)))))
+	    (else "")))))
 
 
 (define (string-pad-right s n . char+start+end)
@@ -549,7 +547,6 @@
 	    (let ((ans (make-string n char)))
 	      (%string-copy! ans (- n len) s start end)
 	      ans))))))
-
 
 
 ;;; Filtering strings
@@ -602,36 +599,31 @@
 
 (define (string-index str criterion . maybe-start+end)
   (let-string-start+end (start end) string-index str maybe-start+end
-	   (let lp ((i start))
-	     (if (< i end)
-                 (if (criterion (string-ref str i))
-                     i
-                     (lp (+ i 1)))
-                 #f))))
+           (let lp ((i start))
+             (and (< i end)
+                  (if (criterion (string-ref str i)) i
+                      (lp (+ i 1)))))))
 
 (define (string-index-right str criterion . maybe-start+end)
   (let-string-start+end (start end) string-index-right str maybe-start+end
 	   (let lp ((i (- end 1)))
-	     (if (< i start) #f
-		  (if (criterion (string-ref str i)) (+ i 1)
+	     (and (>= i start)
+		  (if (criterion (string-ref str i)) i
 		      (lp (- i 1)))))))
 
 (define (string-skip str criterion . maybe-start+end)
   (let-string-start+end (start end) string-skip str maybe-start+end
-	   (let lp ((i start))
-	     (if (< i end)
-		 (if (criterion (string-ref str i))
-                     (lp (+ i 1))
-		     i)
-                 end))))
+           (let lp ((i start))
+             (and (< i end)
+                  (if (criterion (string-ref str i)) (lp (+ i 1))
+                      i)))))
 
 (define (string-skip-right str criterion . maybe-start+end)
   (let-string-start+end (start end) string-skip-right str maybe-start+end
-	   (let lp ((i (- end 1)))
-	     (if (< i start)
-                 start
-                 (if (criterion (string-ref str i))
-                     (lp (- i 1)))))))
+           (let lp ((i (- end 1)))
+             (and (>= i start)
+                  (if (criterion (string-ref str i)) (lp (- i 1))
+                      i)))))
 
 ;;; Useful hacks added for SRFI 152
 
@@ -653,14 +645,14 @@
   (let-string-start+end (start end) string-break s maybe-start+end
     (let ((idx (string-skip criterion start end)))
       (if idx
-        (values (%substring 0 idx) (%substring idx (string-length s)))
+        (values (%substring s 0 idx) (%substring s idx (string-length s)))
         (values s "")))))
 
 (define (string-span s criterion . maybe-start+end)
   (let-string-start+end (start end) string-span s maybe-start+end
     (let ((idx (string-index criterion start end)))
       (if idx
-        (values (%substring 0 idx) (%substring idx (string-length s)))
+        (values (%substring s 0 idx) (%substring s idx (string-length s)))
         (values "" s)))))
 
 (define (string-count s criterion . maybe-start+end)
@@ -1010,31 +1002,6 @@
 
       (%finish-string-concatenate-reverse len string-list final end))))
 
-(define (string-concatenate-reverse/shared string-list . maybe-final+end)
-  (let-optionals* maybe-final+end ((final "" (string? final))
-				   (end (string-length final)
-					(and (integer? end)
-					     (exact? end)
-					     (<= 0 end (string-length final)))))
-    ;; Add up the lengths of all the strings in STRING-LIST; also get a
-    ;; pointer NZLIST into STRING-LIST showing where the first non-zero-length
-    ;; string starts.
-    (let lp ((len 0) (nzlist #f) (lis string-list))
-      (if (pair? lis)
-	  (let ((slen (string-length (car lis))))
-	    (lp (+ len slen)
-		(if (or nzlist (zero? slen)) nzlist lis)
-		(cdr lis)))
-
-	  (cond ((zero? len) (substring final 0 end))
-
-		;; LEN > 0, so NZLIST is non-empty.
-
-		((and (zero? end) (= len (string-length (car nzlist))))
-		 (car nzlist))
-
-		(else (%finish-string-concatenate-reverse len nzlist final end)))))))
-
 (define (%finish-string-concatenate-reverse len string-list final end)
   (let ((ans (make-string (+ end len))))
     (%string-copy! ans len final 0 end)
@@ -1298,6 +1265,15 @@
 
 	     (else "")))))		; Special-cased for infix grammar.
 
+(define (string-segment str k)
+  (if (< k 1) (error "minimum segment size is 1" k))
+  (let ((len (string-length str)))
+    (let loop ((start 0)
+               (result '()))
+      (if (= start len)
+        (reverse result)
+        (let ((end (min (+ start k) len)))
+          (loop end (cons (%substring str start end) result)))))))
 
 
 ;;; Porting & performance-tuning notes

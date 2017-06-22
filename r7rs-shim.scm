@@ -106,3 +106,9 @@
   (let-string-start+end (start end) string-copy! s maybe-start+end
     (%substring s start end)))
 
+(define (write-string str maybe-port+start+end)
+  (let-optionals* maybe-port+start+end
+        ((port (current-output-port))
+         (start 0)
+         (end (string-length str)))
+    (display (%substring str start end) port)))

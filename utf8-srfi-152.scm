@@ -1,18 +1,25 @@
 ;;;; Module for Chicken's native 8-bit strings
 
-(module srfi-152 ()
+(module utf8-srfi-152 ()
 
-  ;; R5RS+ procedures must not be imported, as we redefine them
-  (import (except scheme string->list string-copy string-fill!))
+  ;; R5RS+ and utf8 procedures must not be imported, as we redefine them
+  (import (except scheme
+     string-length string-ref string-set! make-string string substring
+     string-copy string->list list->string string-fill!))
 
   (import (only chicken include error use))
+
+  ;; Cherry-pick utf8 procedures and re-export them
+  (use (only utf8
+    string-length string-ref string-set! make-string string substring list->string))
+  (export string-length string-ref string-set! make-string string substring list->string)
 
   ;; Don't export R5RS procedures
   #;(no-export string? make-string list->string
                string-length string-ref substring
-               string=? string<? string>? string<=? string>=?
-               string-ci=? string-ci<? string-ci>? string-ci<=? string-ci>=?
-               string-set!)
+              string=? string<? string>? string<=? string>=?
+              string-ci=? string-ci<? string-ci>? string-ci<=? string-ci>=?
+              string-set!)
 
   ;; Export R5RS+ procedures
   (export string->list string-copy string-fill!)
@@ -25,14 +32,15 @@
   #;(no-export string-normalize-nfc string-normalize-nfkc
                string-normalize-nfd string-normalize-nfkd)
 
-  ;; Simple case-mapping functions
+  ;; Import case-mapping functions from utf-8-casemap and re-export them
   (export string-upcase string-downcase string-foldcase)
-  (define (string-upcase str) (string-map char-upcase str))
-  (define (string-downcase str) (string-map char-downcase str))
-  (define (string-foldcase str) (string-map char-downcase str))  ; good enough for ASCII work
+  (use (rename (only utf8-case-map utf8-string-upcase utf8-string-downcase)
+                  (utf8-string-upcase string-upcase)
+                  (utf8-string-downcase string-downcase)))
+  (define (string-foldcase str) (error "string-foldcase not supported"))
 
   ;; Export R7RS procedures (defined in r7rs-shim file and chicken module)
-  (import (only extras read-string))
+  (import (only utf8 read-string))
   (export string->vector vector->string string-map string-for-each
           read-string write-string string-copy! write-string)
 

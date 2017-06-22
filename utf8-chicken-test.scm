@@ -1,4 +1,4 @@
-(use srfi-152) (use test)
+(use utf8-srfi-152) (use test)
 
 (define (complement proc) (lambda (x) (not (proc x))))
 (define (char-newline? ch) (eqv? ch #\newline))
@@ -10,7 +10,7 @@
 ;; artefact of converting from cursors to indexes and back
 (define (dummy-index string index) index)
 
-(define ABC "ABC")
+(define ABC "αβγ")
 
 (test-group "srfi-152"
 (test-group "srfi-152:gauche"

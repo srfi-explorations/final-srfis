@@ -314,7 +314,8 @@ Here is a list of the procedures provided by this SRFI:
 <a href="#string-index">string-index</a> <a href="#string-index-right">string-index-right</a>
 <a href="#string-skip">string-skip</a> <a href="#string-skip-right">string-skip-right</a>
 <a href="#string-contains">string-contains</a> <a href="#string-contains-right">string-contains-right</a>
-<a href="#string-take-while">string-take-while</a> <a href="#string-drop-while">string-drop-while</a>
+<a href="#string-take-while">string-take-while</a> <a href="#string-take-while-right">string-take-while-right</a>
+<a href="#string-drop-while">string-drop-while</a> <a href="#string-drop-while-right">string-drop-while-right</a>
 <a href="#string-break">string-break</a> <a href="#string-span">string-span</a>
 </pre>
 </dd>
@@ -406,8 +407,10 @@ Ultimately the origin of all these SRFIs is
 <li>characters and SRFI 14 character sets as alternatives to predicates</li>
 </ul>
 
-However, it includes the normalization procedures from R6RS
-and the mutator <code>string-copy!</code> from R7RS-small.
+However, it includes the normalization procedures from R6RS,
+the <code>string-copy! read-string write-string</code>
+procedures from R7RS-small, and the <code>string-segment</code>
+and <code>string-split</code> procedures from other sources.
 
 <p>
 There are no performance guarantees for any of the procedures in this SRFI.
@@ -900,7 +903,7 @@ by <code>string-unfold</code> to be limited by limits on stack size.
 <code class="proc-def">reverse-list->string</code><var> char-list → string</var>
 </dt>
 <dd class="proc-def">
-    An efficient implementation of <code>(compose list->string reverse)</code>:
+    Semantically equivalent to <code>(compose list->string reverse)</code>:
 <pre class="code-example">
 (reverse-list->string '(#\a #\B #\c)) → "cBa"
 </pre>
@@ -1526,31 +1529,40 @@ This indicates a useful value is returned when there is a match.
 </dl>
 
 <!--
-==== string-take-while
+==== string-take-while string-take-while-right
 ============================================================================-->
-<dt class=proc-def>
+<dt class=proc-def1>
 <a name="string-take-while"></a>
-<code class=proc-def>string-take-while&nbsp;</code><var> pred string [start end] → string</var>
+<a name="string-take-while-right"></a>
+<code class=proc-def>string-take-while&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> pred string [start end] → string</var>
+<dt class=proc-defn>
+<code class=proc-def>string-take-while-right&nbsp;</code><var> pred string [start end] → string</var>
 <dd class=proc-def>
 
-Returns the longest initial prefix of the substring of <var>string</var>
+Returns the longest initial prefix/suffix of the substring of <var>string</var>
 specified by <var>start</var> and <var>end</var> whose elements all
 satisfy the predicate <var>pred</var>.
+(Not SRFI 13 procedures.)
 
 <pre class=code-example>
 (string-take-while char-alphabetic? "ABC123") => "123"
 </pre>
 
 <!--
-==== string-drop-while
+==== string-drop-while string-drop-while-right
 ============================================================================-->
-<dt class=proc-def>
+<dt class=proc-def1>
 <a name="string-drop-while"></a>
-<code class=proc-def>string-drop-while</code><var> pred string [start end] → string</var>
+<a name="string-drop-while-right"></a>
+<code class=proc-def>string-drop-while&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> pred string [start end] → string</var>
+<dt class=proc-defn>
+<code class=proc-def>string-drop-while-right&nbsp;</code><var> pred string [start end] → string</var>
 <dd class=proc-def>
 Drops the longest initial prefix of the substring of <var>string</var> 
 specified by <var>start</var> and <var>end</var> whose elements all
 satisfy the predicate <var>pred</var>, and returns the rest of the string.
+<p>These are the same as <code>string-trim</code> and <code>string-trim-right</code>,
+but with a different order of arguments.  (Not SRFI 13 procedures.)
 
 <pre class=code-example>
 (string-drop-while char-alphabetic "ABC123") => "123"
@@ -1653,7 +1665,7 @@ and <code>break</code> breaks the string at the first element satisfying
 <code class="proc-def">string-concatenate</code><var> string-list → string</var>
 </dt>
 <dd class="proc-def">
-    Concatenates the elements of <code>string-list</code> together
+    Concatenates the elements of <em>string-list</em> together
     into a single string.
   <p>
     <i>Rationale:</i>
@@ -2090,6 +2102,7 @@ Example:
 <dd class="proc-def">
    Returns a list of strings representing the consecutive substrings of length <var>k</var>.
    The last string may be shorter than <var>k</var>.
+   (Not a SRFI 13 procedure.)
 </dd>
 
 <!--
@@ -2105,6 +2118,8 @@ substring of <var>string</var> from <var>start</var> (inclusive)
 to <var>end</var> (exclusive).
 The <var>delimiter</var> is a string to be used as
 the word separator.
+   (Not a SRFI 13 procedure; replaces <code>string-tokenize</code>).
+<p>
 This will often be a single character, but multiple characters are allowed
 for use cases such as splitting on <code>"\r\n"</code>.
 The returned list will have one more item than the number of
@@ -2192,7 +2207,7 @@ use SRFI 115's <code>regexp-split</code> procedure.
 ============================================================================-->
 <dt class="proc-def">
 <a name="read-string"></a>
-<code class="proc-def">read-string</code><var> k [port] → string</var> (R7RS)
+<code class="proc-def">read-string</code><var> k [port] → string</var> (R7RS-small)
 </dt>
 <dd class="proc-def">
 Reads the next <var>k</var> characters, or as many as are available
@@ -2207,7 +2222,7 @@ The default port is the value of <code>(current-input-port)</code>.</dd>
 ============================================================================-->
 <dt class="proc-def">
 <a name="write-string"></a>
-<code class="proc-def">write-string</code><var> string [port start end]→ g</var> (R7RS)
+<code class="proc-def">write-string</code><var> string [port start end]→ g</var> (R7RS-small)
 </dt>
 <dd class="proc-def">
 Writes the characters of <var>string</var> from index <var>start</var> to index
@@ -2250,7 +2265,7 @@ The default port is the value of <code>(current-output-port)</code>.</dd>
 ============================================================================-->
 <dt class="proc-def">
 <a name="string-copy!"></a>
-<code class="proc-def">string-copy!</code><var> to at from [start end] → string</var> (R7RS)
+<code class="proc-def">string-copy!</code><var> to at from [start end] → string</var> (R7RS-small)
 </dt>
 <dd class="proc-def">
    Copies the characters of string <var>from</var> between <var>start</var> and <var>end</var>
@@ -2274,7 +2289,7 @@ SRFI repository.  The main implementation is portable but inefficient;
 since efficiency is not a design goal (use texts for that!),
 it should be satisfactory.
 </p>
-<p>There are two implementations for Chicken.  One works on Chicken's
+<p>There are two modules for Chicken.  One works on Chicken's
 native 8-bit strings; the other leverages the <code>utf8</code> egg
 to provide a UTF-8 facade over those same strings.  This means that
 there is no reliable way to tell by inspection whether a string is
@@ -2305,9 +2320,15 @@ be sure to do it as follows to avoid conflicts:</p>
 (import (except extras
     read-string write-string))
 </pre>
-<p>The <code>srfi-152</code> module does not require any exclusions from the
-<code>scheme</code> module,
-but if the other modules are imported, the specified identifiers must be excluded.
+<p>When using the <code>srfi-152</code> module instead, import the <code>scheme</code>
+module as follows:</p>
+
+<pre>
+(import (except scheme)
+  string->list string-fill))
+</pre>
+
+The other modules, if imported, must be restricted in the same way as shown above.
 </p>
 
 <p>The R7RS library assumes the presence of all R7RS-small procedures and
