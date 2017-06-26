@@ -1,4 +1,4 @@
-(use srfi-152) (use test)
+(use srfi-152) (use test) (import (only chicken open-input-string open-output-string get-output-string))
 
 (define (complement proc) (lambda (x) (not (proc x))))
 (define (char-newline? ch) (eqv? ch #\newline))
@@ -10,7 +10,7 @@
 ;; artefact of converting from cursors to indexes and back
 (define (dummy-index string index) index)
 
-(define ABC "ABC")
+(define ABC "abc")
 
 (test-group "srfi-152"
 (test-group "srfi-152:gauche"
@@ -342,14 +342,20 @@
 (test "string-replicate" ""
        (string-replicate "abcdefg" 9 9 3 6))
 
+(test "string-segment" '("ab" "cd" "ef")
+  (string-segment "abcdef" 2))
+(test "string-segment" '("ab" "cd" "ef" "g")
+  (string-segment "abcdefg" 2))
+(test "string-segment" '()
+  (string-segment "" 2))
 (test "string-split" '("Help" "make" "programs" "run," "run," "RUN!")
-       (string-split " " "Help make programs run, run, RUN!"))
+       (string-split "Help make programs run, run, RUN!" " "))
 (test "string-split" '("Help" "make" "programs run, run, RUN!")
-       (string-split " " "Help make programs run, run, RUN!" 'infix 2))
+       (string-split "Help make programs run, run, RUN!" " " 'infix 2))
 (test "string-split" '("usr" "local" "bin")
-       (string-split "/" "/usr/local/bin" 'prefix))
+       (string-split "/usr/local/bin" "/" 'prefix))
 (test "string-split" '("be()" "here()" "now()")
-       (string-split "; " "be(); here(); now(); " 'suffix))
+       (string-split "be(); here(); now(); " "; " 'suffix))
 
 )
 (test-group "srfi-152:gauche:regression"
@@ -404,19 +410,9 @@
 ; I reviewed the SRFI-13 mailing list and c.l.scheme, but found no mention of
 ; this issue.  Apologies if I've missed something.
 
-(test-assert "string=? + string-filter"
-             (call-with-current-continuation
-              (lambda (k)
-                (handle-exceptions exn
-                  (k #f)
-                  (string=? "ADR" (string-filter char-upper-case? "abrAcaDabRa"))))))
+(test "ADR" (string-filter char-upper-case? "abrAcaDabRa"))
 
-(test-assert "string=? + string-remove"
-             (call-with-current-continuation
-              (lambda (k)
-                (handle-exceptions exn
-                  (k #f)
-                  (string=? "abrcaaba" (string-remove char-upper-case? "abrAcaDabRa"))))))
+(test "abrcaaba" (string-remove char-upper-case? "abrAcaDabRa"))
 ))
 (test-group "srfi-152:larceny"
 ;;; Predicates
@@ -1429,6 +1425,51 @@
                              "And woman, that she may know number?"
                              0 28))
 )
+)
+(test-group "srfi-152:residual"
+  (test #t (string? "abc"))
+  (test #f (string? 32))
+  (test "$$$" (make-string 3 #\$))
+  (test "$$$" (string #\$ #\$ #\$))
+  (test '(#\b #\c) (string->list "abcde" 1 3))
+  (test "abcde" (list->string '(#\a #\b #\c #\d #\e)))
+  (test "abcde" (vector->string '#(#\a #\b #\c #\d #\e)))
+  (test '("12345" "abcde")
+    (call-with-values (lambda () (string-span "12345abcde" char-numeric?)) list))
+  (test '("12345" "abcde")
+    (call-with-values (lambda () (string-break "12345abcde" char-alphabetic?)) list))
+  (test "abcde" (string-take-while "abcde12345" char-alphabetic?))
+  (test "abcde" (string-take-while-right "12345abcde" char-alphabetic?))
+  (test "abcde" (string-drop-while "   abcde" char-whitespace?))
+  (test "abcde" (string-drop-while-right "abcde  " char-whitespace?))
+  (test 5 (string-length "abcde"))
+  (test "ab!"
+    (let ((abc (string-copy "abc")))
+      (string-set! abc 2 #\!)
+      abc))
+  (test "ab!"
+    (let ((abc (string-copy "abc")))
+      (string-set! abc 2 #\!)
+      abc))
+  (test "!!!"
+    (let ((abc (string-copy "abc")))
+      (string-fill! abc #\!)
+      abc))
+  (test "a!c"
+    (let ((abc (string-copy "abc")))
+      (string-fill! abc #\! 1 2)
+      abc))
+
+  ;; These leak ports, but so what?  It's just a test.
+  (test "foobar" (read-string 6 (open-input-string "foobar")))
+  (test "foobar"
+    (let ((port (open-output-string)))
+      (write-string "foobar" port)
+      (get-output-string port)))
+  (test "ooba"
+    (let ((port (open-output-string)))
+      (write-string "foobar" port 1 5)
+      (get-output-string port)))
 )
 )
 (test-exit)

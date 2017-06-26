@@ -629,31 +629,45 @@
 
 (define (string-take-while s criterion . maybe-start+end)
   (let-string-start+end (start end) string-take-while s maybe-start+end
-    (let ((idx (string-skip criterion start end)))
+    (let ((idx (string-skip s criterion start end)))
       (if idx
           (%substring s 0 idx)
           ""))))
 
+(define (string-take-while-right s criterion . maybe-start+end)
+  (let-string-start+end (start end) string-take-while s maybe-start+end
+    (let ((idx (string-skip-right s criterion start end)))
+      (if idx
+          (%substring s (+ idx 1) (string-length s))
+          ""))))
+
 (define (string-drop-while s criterion . maybe-start+end)
   (let-string-start+end (start end) string-drop-while s maybe-start+end
-    (let ((idx (string-skip criterion start end)))
+    (let ((idx (string-skip s criterion start end)))
       (if idx
           (%substring s idx (string-length s))
           s))))
 
-(define (string-break s criterion . maybe-start+end)
-  (let-string-start+end (start end) string-break s maybe-start+end
-    (let ((idx (string-skip criterion start end)))
+(define (string-drop-while-right s criterion . maybe-start+end)
+  (let-string-start+end (start end) string-drop-while s maybe-start+end
+    (let ((idx (string-skip-right s criterion start end)))
       (if idx
-        (values (%substring s 0 idx) (%substring s idx (string-length s)))
-        (values s "")))))
+          (%substring s 0 (+ idx 1))
+          s))))
 
 (define (string-span s criterion . maybe-start+end)
   (let-string-start+end (start end) string-span s maybe-start+end
-    (let ((idx (string-index criterion start end)))
+    (let ((idx (string-skip s criterion start end)))
       (if idx
         (values (%substring s 0 idx) (%substring s idx (string-length s)))
         (values "" s)))))
+
+(define (string-break s criterion . maybe-start+end)
+  (let-string-start+end (start end) string-break s maybe-start+end
+    (let ((idx (string-index s criterion start end)))
+      (if idx
+        (values (%substring s 0 idx) (%substring s idx (string-length s)))
+        (values s "")))))
 
 (define (string-count s criterion . maybe-start+end)
   (let-string-start+end (start end) string-count s maybe-start+end

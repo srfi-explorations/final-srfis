@@ -38,8 +38,11 @@
         (vector-set! vector (- i start) (string-ref s i))))))
 
 (define (vector->string vector . maybe-start+end)
-  (let-string-start+end (start end) vector->string vector maybe-start+end
-    (let ((s (make-string (- start end))))
+  (let ((start 0) (end (vector-length vector)))
+    (case (length maybe-start+end)
+      ((1) (set! start (car maybe-start+end)))
+      ((2) (set! end (cadr maybe-start+end))))
+    (let ((s (make-string (- end start))))
       (do ((i (- end 1) (- i 1)))
           ((< i start) s)
         (string-set! s (- i start) (vector-ref vector i))))))
@@ -106,9 +109,17 @@
   (let-string-start+end (start end) string-copy! s maybe-start+end
     (%substring s start end)))
 
-(define (write-string str maybe-port+start+end)
-  (let-optionals* maybe-port+start+end
-        ((port (current-output-port))
-         (start 0)
-         (end (string-length str)))
-    (display (%substring str start end) port)))
+;; Chicken's write-string is incompatible with R7RS
+(define write-string
+  (case-lambda
+    ((str) (display str))
+    ((str port) (display str port))
+    ((str port start) (write-string str port start (string-length str)))
+    ((str port start end) (display (%substring str start end) port))))
+
+(define (eof-object)
+  (let ((port (open-input-string "")))
+    (dynamic-wind
+      (lambda () #f)
+      (lambda () (read-char port))
+      (lambda () close-input-port port))))

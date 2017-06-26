@@ -483,6 +483,9 @@ right-to-left operation, and <code>-both</code> to specify both.
 <p>
 The order of common arguments is consistent across the
 different procedures.
+In particular, all procedures place the main string to be operated on first,
+with the exception of the mapping and folding procedures, which are consistent
+with R7RS-small and SRFI 1.
 </p>
       
 <p>
@@ -495,8 +498,8 @@ and might even vary from call to call.
 The string-bytevector conversion and the Unicode casing and
 normalization procedures are marked (Optional) in this SRFI, and
 implementing them is not a requirement of this SRFI.  In particular,
-they are not provided in the sample implementation unless R6RS or
-other libraries are present.</p>
+they are not provided in the sample implementation unless R6RS, R7RS
+or other libraries are present.</p>
 
 <p>This is done primarily for practical reasons: a standalone
 implementation would require bitwise or fixnum procedures and
@@ -504,8 +507,7 @@ Unicode tables not needed for the rest of the SRFI, and adding those
 procedures and tables to the sample implementation would vastly
 increase its size.  Nevertheless, implementors should make an effort
 to provide them.  The UTF-8 conversions and case conversions are
-already required by R7RS-small, and both of these plus the UTF-16
-conversions are already required by R6RS.
+already required by R7RS-small, and all of them are already required by R6RS.
 </p>
 
 <!--========================================================================-->
@@ -1535,9 +1537,9 @@ This indicates a useful value is returned when there is a match.
 <dt class=proc-def1>
 <a name="string-take-while"></a>
 <a name="string-take-while-right"></a>
-<code class=proc-def>string-take-while&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> pred string [start end] → string</var>
+<code class=proc-def>string-take-while&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> string pred [start end] → string</var>
 <dt class=proc-defn>
-<code class=proc-def>string-take-while-right&nbsp;</code><var> pred string [start end] → string</var>
+<code class=proc-def>string-take-while-right&nbsp;</code><var> string pred [start end] → string</var>
 <dd class=proc-def>
 
 Returns the longest initial prefix/suffix of the substring of <var>string</var>
@@ -1545,9 +1547,6 @@ specified by <var>start</var> and <var>end</var> whose elements all
 satisfy the predicate <var>pred</var>.
 (Not SRFI 13 procedures.)
 
-<pre class=code-example>
-(string-take-while char-alphabetic? "ABC123") => "123"
-</pre>
 
 <!--
 ==== string-drop-while string-drop-while-right
@@ -1555,9 +1554,9 @@ satisfy the predicate <var>pred</var>.
 <dt class=proc-def1>
 <a name="string-drop-while"></a>
 <a name="string-drop-while-right"></a>
-<code class=proc-def>string-drop-while&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> pred string [start end] → string</var>
+<code class=proc-def>string-drop-while&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> string pred [start end] → string</var>
 <dt class=proc-defn>
-<code class=proc-def>string-drop-while-right&nbsp;</code><var> pred string [start end] → string</var>
+<code class=proc-def>string-drop-while-right&nbsp;</code><var> string pred [start end] → string</var>
 <dd class=proc-def>
 Drops the longest initial prefix of the substring of <var>string</var> 
 specified by <var>start</var> and <var>end</var> whose elements all
@@ -1565,9 +1564,6 @@ satisfy the predicate <var>pred</var>, and returns the rest of the string.
 <p>These are the same as <code>string-trim</code> and <code>string-trim-right</code>,
 but with a different order of arguments.  (Not SRFI 13 procedures.)
 
-<pre class=code-example>
-(string-drop-while char-alphabetic "ABC123") => "123"
-</pre>
 
 
 <!--
@@ -1575,10 +1571,10 @@ but with a different order of arguments.  (Not SRFI 13 procedures.)
 ============================================================================-->
 <dt class=proc-def1>
 <a name="string-span"></a>
-<code class=proc-def>string-span&nbsp;&nbsp;</code><var> pred string [start end] → [string string]</var>
+<code class=proc-def>string-span&nbsp;&nbsp;</code><var> string pred [start end] → [string string]</var>
 <dt class=proc-defn>
 <a name="string-break"></a>
-<code class=proc-def>string-break&nbsp;</code><var> pred string [start end] → [string string]</var>
+<code class=proc-def>string-break&nbsp;</code><var> string pred [start end] → [string string]</var>
 <dd class=proc-def>
 
 <code>String-span</code> splits the substring of <var>string</var>
@@ -2285,7 +2281,7 @@ The default port is the value of <code>(current-output-port)</code>.</dd>
 <h1><a name="SampleImp">Sample implementation</a></h1>
 
 <p>
-The sample implementations of this SRFI are (not yet) in the
+The sample implementations of this SRFI are in the
 SRFI repository.  The main implementation is portable but inefficient;
 since efficiency is not a design goal (use texts for that!),
 it should be satisfactory.
@@ -2326,7 +2322,7 @@ module as follows:</p>
 
 <pre>
 (import (except scheme)
-  string->list string-fill))
+  string->list string-fill!))
 </pre>
 
 The other modules, if imported, must be restricted in the same way as shown above.

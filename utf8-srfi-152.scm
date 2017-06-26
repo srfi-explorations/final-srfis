@@ -7,11 +7,12 @@
      string-length string-ref string-set! make-string string substring
      string-copy string->list list->string string-fill!))
 
-  (import (only chicken include error use))
+  (import (only chicken include error use case-lambda
+                        open-input-string open-output-string get-output-string))
 
   ;; Cherry-pick utf8 procedures and re-export them
   (use (only utf8
-    string-length string-ref string-set! make-string string substring list->string))
+    string-length string-ref string-set! make-string string substring list->string display))
   (export string-length string-ref string-set! make-string string substring list->string)
 
   ;; Don't export R5RS procedures
@@ -56,7 +57,9 @@
           string-prefix? string-suffix?)
   (export string-index string-index-right string-skip string-skip-right
           string-contains string-contains-right
-          string-take-while string-drop-while string-break string-span)
+          string-take-while string-take-while-right
+          string-drop-while string-drop-while-right
+          string-break string-span)
   (export string-append string-concatenate string-concatenate-reverse
           string-join)
   (export string-fold string-fold-right string-count

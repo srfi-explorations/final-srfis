@@ -5,7 +5,8 @@
   ;; R5RS+ procedures must not be imported, as we redefine them
   (import (except scheme string->list string-copy string-fill!))
 
-  (import (only chicken include error use))
+  (import (only chicken include error use case-lambda
+                        open-input-string open-output-string get-output-string))
 
   ;; Don't export R5RS procedures
   #;(no-export string? make-string list->string
@@ -48,7 +49,9 @@
           string-prefix? string-suffix?)
   (export string-index string-index-right string-skip string-skip-right
           string-contains string-contains-right
-          string-take-while string-drop-while string-break string-span)
+          string-take-while string-take-while-right
+          string-drop-while string-drop-while-right
+          string-break string-span)
   (export string-append string-concatenate string-concatenate-reverse
           string-join)
   (export string-fold string-fold-right string-count
