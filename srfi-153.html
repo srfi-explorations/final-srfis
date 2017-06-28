@@ -1,0 +1,510 @@
+<!DOCTYPE HTML PUBLIC "" "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>SRFI 153: Immutable Ordered Sets and Bags</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/srfi.css" type="text/css" />
+  </head>
+<body>
+
+<H1>Title</H1>
+
+Immutable ordered sets and bags
+
+<H1>Author</H1>
+
+John Cowan
+
+<p>
+<h1>Status</h1>
+This SRFI is currently in ``draft'' status.
+
+To see an explanation of
+each status that a SRFI can hold, see <a
+href="http://srfi.schemers.org/srfi-process.html">here</a>.
+
+To provide input on this SRFI, please
+<a href="mailto:srfi minus 153 at srfi dot schemers dot org">mail to
+<code>&lt;srfi minus 153 at srfi dot schemers dot org></code></a>.  See
+<a href="../srfi-list-subscribe.html">instructions here</a> to
+subscribe to the list.  You can access previous messages via
+<a href="mail-archive/maillist.html">the archive of the mailing list</a>.
+You can access
+post-finalization messages via
+<a href="http://srfi.schemers.org/srfi-111/post-mail-archive/maillist.html">
+the archive of the mailing list</a>.
+</p>
+
+
+<ul>
+    </ul>
+
+<h1>Abstract</h1><p><em>Isets</em> and <em>ibags</em> (also known as multisets) are immutable collections that can contain any Scheme object.  Isets enforce the constraint that no two elements can be the same in the sense of the iset's associated <em>equality predicate</em>; ibags do not. The elements in an iset or ibag appear in a fixed order determined by the comparator used to create it.
+
+</p>
+
+<h1>Issues</h1>
+
+<ol>
+<li>Should ibags be supported?  Most of the use cases for bags I can
+think of involve counting things and are best served with SRFI 113
+mutable bags.</li>
+
+</ol>
+
+<h1>Rationale</h1>
+
+<p>The sets and bags of <a href="http://srfi.schemers.org/srfi-113/srfi-113.html">SRFI 113</a> may be mutable or immutable, and may depend on either an ordering predicate or a hash function. The sets and bags provided here are always immutable and always ordered.</p>
+
+<p>The names in this SRFI are harmonized with the names used in SRFI 113 and
+<a href="http://srfi.schemers.org/srfi-146/srfi-146.html">SRFI 146</a>.
+
+<p>It's possible to use the general isets of this SRFI to contain characters, but the use of <a href="http://srfi.schemers.org/srfi-14/srfi-14.html">SRFI 14</a> is recommended instead. </p>
+
+<p>Isets and ibags do not have a lexical syntax representation.  It's possible to use <a href="http://srfi.schemers.org/srfi-108/srfi-108.html">SRFI 108</a> quasi-literal constructors to create them in code, but this SRFI does not standardize how that is done.</p>
+
+<p>The interface to general isets and ibags depends on <a href="http://srfi.schemers.org/srfi-128/srfi-128.html">SRFI 128</a> comparators. Comparators conveniently package the equality predicate of the iset with the ordering predicate needed to implement the iset efficiently.</p>
+
+<h1>Specification</h1>
+
+<p>Isets and ibags are mutually disjoint, and disjoint from other types of Scheme objects.</p>
+
+<p>It is an error for any procedure defined in this SRFI to be invoked on isets or ibags with distinct comparators (in the sense of <code>eq?</code>).</p>
+
+<p>It is an error to mutate any object while it is contained in a iset or ibag.</p>
+
+<p>It is an error to add an object to a iset or ibag which does not satisfy the type test predicate of the comparator.</p>
+
+<p>It is an error to add or remove an object for a iset or a ibag while iterating over it.</p>
+
+<p>The procedures of this SRFI are pure functional.</p>
+
+<p>It is an error if comparators used with the procedures of this SRFI do not provide an ordering predicate.
+It is not necessary for them to contain a hash function.</p>
+
+<h2 id="Index">Index</h2>
+
+<ul><li><p><a href="#Constructors">Constructors</a>: <code>iset</code>, <code>iset/ordered</code>, <code>iset-unfold</code>, <code>iset-unfold/ordered</code></p>
+</li><li><p><a href="#Predicates">Predicates</a>: <code>iset?</code>, <code>iset-contains?</code>, <code>iset-empty?</code>, <code>iset-disjoint?</code></p>
+</li><li><p><a href="#Accessors">Accessors</a>: <code>iset-member</code>, <code>iset-element-comparator</code></p>
+</li><li><p><a href="#Updaters">Updaters</a>: <code>iset-adjoin</code>, <code>iset-replace</code>, <code>iset-delete</code>, <code>iset-delete-all</code>, <code>iset-search</code></p>
+</li><li><p><a href="#Thewholeset">The whole iset</a>: <code>iset-size</code>, <code>iset-find</code>, <code>iset-count</code>, <code>iset-any?</code>, <code>iset-every?</code></p>
+</li><li><p><a href="#Mappingandfolding">Mapping and folding</a>: <code>iset-map</code>, <code>iset-map/monotone</code>, <code>iset-for-each</code>, <code>iset-fold</code>, <code>iset-fold/reverse</code>, <code>iset-filter</code>, <code>iset-remove</code>, <code>iset-partition</code></p>
+</li><li><p><a href="#Copyingandconversion">Copying and conversion</a>: <code>iset-copy</code>, <code>iset->list</code>, <code>list->iset</code>, <code>list/ordered->iset</code></p>
+</li><li><p><a href="#Subsets">Subsets</a>: <code>iset=?</code>, <code>iset&lt;?</code>, <code>iset>?</code>, <code>iset&lt;=?</code>, <code>iset>=?</code></p>
+</li><li><p><a href="#Settheoryoperations">Set theory operations</a>: <code>iset-union</code>, <code>iset-intersection</code>, <code>iset-difference</code>, <code>iset-xor</code></p>
+</li><li><p><a href="#Singleelements">Single elements</a>: <code>iset-min-element</code>, <code>iset-max-element</code>, <code>iset-min-value</code>.  <code>iset-max-value</code>, <code>iset-element-predecessor</code>, <code>iset-element-successor</code></p>
+</li><li><p><a href="#Dividingsets">Dividing sets</a>: <code>iset-range=</code>, <code>iset-range&lt;</code>, <code>iset-range></code>, <code>iset-range&lt;=</code>, <code>iset-range>=</code>, <code>iset-split</code>, <code>iset-catenate</code></p>
+</li><li><p><a href="#Additionalbagprocedures">Additional ibag procedures</a>: <code>ibag-sum</code>, <code>ibag-product</code>, <code>ibag-element-count</code>, <code>ibag-for-each-unique</code>, <code>ibag-fold-unique</code>, <code>ibag->iset</code>, <code>iset->ibag</code>, <code>ibag->alist</code>, <code>alist->ibag</code>, <code>alist/ordered->ibag</code></p>
+</li><li><p><a href="#Comparators">Comparators</a>: <code>iset-comparator</code>, <code>ibag-comparator</code></p>
+</li>
+
+</ul>
+
+<h2 id="Isetprocedures">Iset procedures</h2>
+
+<h3 id="Constructors">Constructors</h3>
+
+<p><code>(iset </code><em>comparator</em> <em>element</em> ... <code>)</code></p>
+<p><code>(iset/ordered </code><em>comparator</em> <em>element</em> ... <code>)</code></p>
+
+<p>Returns an iset containing <em>elements</em>.  The <em>comparator</em> argument is a <a href="http://srfi.schemers.org/srfi-128/srfi-128.html">SRFI 128</a> comparator, which is used to control and distinguish the elements of the iset.
+The <code>iset/ordered</code> procedure is the same as <code>iset</code> except that 
+it is an error if the <em>elements</em> are out of order or duplicated.  It may be more efficient.</p>
+
+<p><code>(iset-unfold </code><em>stop? mapper successor seed comparator</em><code>)</code></p>
+<p><code>(iset-unfold/ordered </code><em>stop? mapper successor seed comparator</em><code>)</code></p>
+
+<p>Create an iset as if by <code>iset</code> using <em>comparator</em>.  If the result of applying the predicate <em>stop?</em> to <em>seed</em> is true, return the iset.  Otherwise, apply the procedure <em>mapper</em> to <em>seed</em>.  The value that <em>mapper</em> returns is added to the iset.  Then get a new seed by applying the procedure <em>successor</em> to <em>seed</em>, and repeat this algorithm.
+The <code>iset-unfold/ordered</code> procedure is the same as <code>iset-unfold</code> except that 
+it is an error if the <em>elements</em> are out of order or duplicated.  It may be more efficient.</p>
+
+<h3 id="Predicates">Predicates</h3>
+
+<p><code>(iset? </code><em>obj</em><code>)</code></p>
+
+<p>Returns <code>#t</code> if <em>obj</em> is a iset, and <code>#f</code> otherwise.</p>
+
+<p><code>(iset-contains? </code><em>iset element</em><code>)</code></p>
+
+<p>Returns <code>#t</code> if <em>element</em> is a member of <em>iset</em> and <code>#f</code> otherwise.</p>
+
+<p><code>(iset-empty? </code><em>iset</em><code>)</code></p>
+
+<p>Returns <code>#t</code> if <em>iset</em> has no elements and <code>#f</code> otherwise.</p>
+
+<p><code>(iset-disjoint? </code><em>iset<sub>1</sub> iset<sub>2</sub></em><code>)</code></p>
+
+<p>Returns <code>#t</code> if <em>iset<sub>1</sub></em> and <em>iset<sub>2</sub></em> have no elements in common and <code>#f</code> otherwise.</p>
+
+<h3 id="Accessors">Accessors</h3>
+
+<p><code>(iset-member </code><em>iset element default</em><code>)</code></p>
+
+<p>Returns the element of <em>iset</em> that is equal, in the sense of <em>iset's</em> equality predicate, to <em>element</em>.  If <em>element</em> is not a member of <em>iset</em>, <em>default</em> is returned.</p>
+
+<p><code>(iset-element-comparator </code><em>iset</em><code>)</code></p>
+
+<p>Returns the comparator used to compare the elements of <em>iset</em>.</p>
+
+<h3 id="Updaters">Updaters</h3>
+
+<p><code>(iset-adjoin </code><em>iset element</em> ...<code>)</code></p>
+
+<p>The <code>iset-adjoin</code> procedure returns an iset that uses the same comparator as <em>iset</em> and contains all the values of <em>iset</em>, and in addition each <em>element</em> unless it is already equal (in the sense of the comparator) to one of the existing or newly added members.  It is an error to add an element to <i>iset</i> that does not return <code>#t</code> when passed to the type test procedure of the comparator.</p>
+
+
+<p><code>(iset-replace </code><em>iset element</em><code>)</code></p>
+
+<p>The <code>iset-replace</code> procedure returns an iset that uses the same comparator as <em>iset</em> and contains all the values of <em>iset</em> except as follows:  If <i>element</i> is equal (in the sense of <i>iset</i>'s comparator) to an existing member of <i>iset</i>, then that member is omitted and replaced by <i>element</i>.  If there is no such element in <i>iset</i>, then <i>iset</i> is returned unchanged.</p>
+
+<p><code>(iset-delete </code><em>iset element</em> ...<code>)</code></p>
+
+<p><code>(iset-delete-all </code><em>iset element-list</em><code>)</code></p>
+
+<p>The <code>iset-delete</code> procedure returns an iset containing all the values of <em>iset</em> except for any that are equal (in the sense of <em>iset</em>'s comparator) to one or more of the <em>elements</em>.  Any <em>element</em> that is not equal to some member of the iset is ignored.</p>
+
+
+<p>The <code>iset-delete-all</code> procedure is the same as <code>iset-delete</code>, except that it accepts a single argument which is a list of elements to be deleted.</p>
+
+<p><code>(iset-search </code><em>iset element failure success</em><code>)</code></p>
+
+<p>The <em>iset</em> is searched in order for <em>element</em>.  If it is not found, then the <em>failure</em> procedure is tail-called with two continuation arguments, <em>insert</em> and <em>ignore</em>, and is expected to tail-call one of them.  If <em>element</em> is found, then the <em>success</em> procedure is tail-called with the matching element of <em>iset</em> and two continuations, <em>update</em> and <em>remove</em>, and is expected to tail-call one of them.</p>
+
+<p>The effects of the continuations are as follows (where <em>obj</em> is any Scheme object):</p>
+
+<ul>
+<li><p>Invoking <code>(</code><em>insert obj</em><code>)</code> causes <em>element</em> to be inserted into <em>iset</em>.</p></li>
+<li><p>Invoking <code>(</code><em>ignore obj</em><code>)</code> causes <em>iset</em> to remain unchanged.</p></li>
+<li><p>Invoking <code>(</code><em>update new-element obj</em><code>)</code> causes <em>new-element</em> to be inserted into <em>iset</em> in place of <i>element</i>.</p></li>
+<li><p>Invoking <code>(</code><em>remove obj</em><code>)</code> causes the matching element of <em>iset</em> to be removed from it.</p></li>
+</ul>
+
+<p>In all cases, two values are returned: the possibly updated <em>iset</em> and <em>obj</em>.</p>
+
+<h3 id="Thewholeset">The whole iset</h3><p><code>(iset-size </code><em>iset</em><code>)</code></p><p>
+
+Returns the number of elements in <em>iset</em> as an exact integer.
+
+</p><p><code>(iset-find </code><em>predicate iset failure</em><code>)</code></p><p>
+
+Returns the first element of <em>iset</em> that satisfies <em>predicate</em>, or the result of invoking <em>failure</em> with no arguments if there is none.
+</p><p><code>(iset-count </code><em>predicate iset</em><code>)</code></p><p>
+
+Returns the number of elements of <em>iset</em> that satisfy <em>predicate</em> as an exact integer.
+
+</p><p><code>(iset-any? </code><em>predicate iset</em><code>)</code></p><p>
+
+Returns <code>#t</code> if any element of <em>iset</em> satisfies <em>predicate</em>, or <code>#f</code> otherwise.  Note that this differs from the SRFI 1 analogue because it does not return an element of the iset.
+
+</p><p><code>(iset-every? </code><em>predicate iset</em><code>)</code></p><p>
+
+Returns <code>#t</code> if every element of <em>iset</em> satisfies <em>predicate</em>, or <code>#f</code> otherwise.  Note that this differs from the SRFI 1 analogue because it does not return an element of the iset.  
+
+</p>
+
+<h3 id="Mappingandfolding">Mapping and folding</h3>
+
+<p><code>(iset-map </code><em>proc comparator iset</em><code>)</code></p>
+
+<p>Applies <em>proc</em> to each element of <em>iset</em> in order and returns an iset, created as if by <code>(iset </code><em>comparator</em><code>)</code>, which contains the results of the applications.  For example:</p>
+
+<pre>
+        (iset-map string-ci-comparator symbol->string (iset eq? 'foo 'bar 'baz))
+             => (iset string-ci-comparator "foo" "bar" "baz")
+</pre>
+
+<p>Note that, when <em>proc</em> defines a mapping that is not 1:1, some of the mapped objects may be equivalent in the sense of <em>comparator's</em> equality predicate, and in this case duplicate elements are omitted as in the iset constructor.  For example:</p>
+
+<pre>
+(iset-map (lambda (x) (quotient x 2))
+         integer-comparator
+         (iset integer-comparator 1 2 3 4 5))
+ => (iset integer-comparator 0 1 2)
+</pre>
+
+<p>If the elements are the same in the sense of <code>eqv?</code>, it is unpredictable which one will be preserved in the result.</p>
+
+<p><code>(iset-map/monotone <em>proc</em> <em>comparator</em> <em>iset</em>)</code></p>
+
+<p>Equivalent
+to <code>(iset-map <em>proc</em> <em>comparator</em> <em>iset</em>)</code>,
+but it is an error if <em>proc</em> does not induce a strictly
+monotone iset between the elements with respect to the ordering of the
+comparator of <code><em>iset</em></code> and the ordering
+of <code><em>comparator</em></code>.  Maybe be implemented more
+efficiently than <code>iset-map</code>.
+</p>
+
+<p><code>(iset-for-each </code><em>proc iset</em><code>)</code></p>
+
+<p>Applies <em>proc</em> to <em>iset</em> in order, discarding the returned values.  Returns an unspecified result.</p>
+
+<p><code>(iset-fold </code><em>proc nil iset</em><code>)</code></p>
+
+<p>Invokes <em>proc</em> on each member of <em>iset</em> in order, passing the result of the previous invocation as a second argument.  For the first invocation, <em>nil</em> is used as the second argument.  Returns the result of the last invocation, or <em>nil</em> if there was no invocation.</p>
+
+<p><code>(iset-fold/reverse <em>proc</em> <em>nil</em> <em>iset</em>)</code></p>
+
+<p>Equivalent
+to <code>(iset-fold <em>proc</em> <em>nil</em> <em>iset</em>)</code>
+except that the associations are processed in reverse order with
+respect to the natural ordering of the elements.
+</p>
+
+<p><code>(iset-filter </code><em>predicate iset</em><code>)</code></p>
+
+<p>Returns an iset with the same comparator as <em>iset</em>, containing just the elements of <em>iset</em> that satisfy <em>predicate</em>.</p>
+
+<p><code>(iset-remove </code><em>predicate iset</em><code>)</code></p>
+
+<p>Returns an iset with the same comparator as <em>iset</em>, containing just the elements of <em>iset</em> that do not satisfy <em>predicate</em>.</p>
+
+<p><code>(iset-partition </code><em>predicate iset</em><code>)</code></p>
+
+<p>Returns two values: an iset with the same comparator as <em>iset</em> that contains just the elements of <em>iset</em> that satisfy <em>predicate</em>, and another iset, also with the same comparator,  that contains just the elements of <em>iset</em> that do not satisfy <em>predicate</em>.</p>
+
+<h3 id="Copyingandconversion">Copying and conversion</h3>
+
+<p><code>(iset-copy </code><em>iset</em><code>)</code></p><p>
+
+Returns an iset containing the elements of <em>iset</em>, and using the same comparator.
+
+</p><p><code>(iset->list </code><em>iset</em><code>)</code></p><p>
+
+Returns a newly allocated list containing the members of <em>iset</em> in order.
+
+</p><p><code>(list->iset </code><em>comparator list</em><code>)</code></p><p>
+</p><p><code>(list/ordered->iset </code><em>comparator list</em><code>)</code></p><p>
+
+Returns an iset, created as if by <code>iset</code> using <em>comparator</em>, that contains the elements of <em>list</em>.  Duplicate elements (in the sense of the equality predicate) are omitted.
+The <code>list/ordered->iset</code> procedure is the same as <code>list->iset</code> except that 
+it is an error if the <em>elements</em> are out of order or duplicated.  It may be more efficient.</p>
+
+</p><h3 id="Subsets">Subsets</h3>
+
+<p>Note: The following three predicates do not obey the trichotomy law and therefore do not constitute a total order on isets.</p>
+
+<p><code>(iset=? </code><em>iset<sub>1</sub> iset<sub>2</sub></em> ...<code>)</code>
+
+</p><p>
+
+Returns <code>#t</code> if each <em>iset</em> contains the same elements.
+
+</p><p><code>(iset&lt;? </code><em>iset<sub>1</sub> iset<sub>2</sub></em> ...<code>)</code>
+
+</p><p>
+
+Returns <code>#t</code> if each <em>iset</em> other than the last is a proper subset of the following <em>iset</em>, and <code>#f</code> otherwise.
+
+</p><p><code>(iset>? </code><em>iset<sub>1</sub> iset<sub>2</sub></em> ...<code>)</code>
+
+</p><p>
+
+Returns <code>#t</code> if each <em>iset</em> other than the last is a proper superset of the following <em>iset</em>, and <code>#f</code> otherwise.
+
+</p><p><code>(iset&lt;=? </code><em>iset<sub>1</sub> iset<sub>2</sub></em> ...<code>)</code>
+
+</p><p>
+
+Returns <code>#t</code> if each <em>iset</em> other than the last is a subset of the following <em>iset</em>, and <code>#f</code> otherwise.
+
+</p><p><code>(iset>=? </code><em>iset<sub>1</sub> iset<sub>2</sub></em> ...<code>)</code>
+
+</p><p>
+
+Returns <code>#t</code> if each <em>iset</em> other than the last is a superset of the following <em>iset</em>, and <code>#f</code> otherwise.
+
+</p>
+
+<h3 id="Settheoryoperations">Set theory operations</h3><p><code>(iset-union </code><em>iset<sub>1</sub> iset<sub>2</sub></em> ...<code>)</code>
+
+</p><p><code>(iset-intersection </code><em>iset<sub>1</sub> iset<sub>2</sub></em> ...<code>)</code>
+
+</p><p><code>(iset-difference </code><em>iset<sub>1</sub> iset<sub>2</sub></em> ...<code>)</code>
+
+</p><p><code>(iset-xor </code><em>iset<sub>1</sub> iset<sub>2</sub></em><code>)</code></p><p>
+
+Return an iset that is the union, intersection, asymmetric difference, or symmetric difference of the <em>isets</em>.  Asymmetric difference is extended to more than two isets by taking the difference between the first iset and the union of the others.  Symmetric difference is not extended beyond two isets.  Elements in the result iset are drawn from the first iset in which they appear.
+
+<h2 id="Singleelements">Single elements</h2>
+
+<p><code>(iset-min-element <em>iset</em>)</code></p>
+<p><code>(iset-max-element <em>iset</em>)</code></p>
+
+<p>Returns the least/greatest element contained in the iset <code><em>iset</em></code>.  It is an error for
+  <code><em>iset</em></code> to be empty.
+</p>
+
+<p><code>(iset-min-value <em>iset</em>)</code></p>
+<p><code>(iset-max-value <em>iset</em>)</code></p>
+
+<p>Returns the value associated with the least/greatest element contained
+  in the iset <code><em>iset</em></code>.  It is an error
+  for <code><em>iset</em></code> to be empty.</p>
+
+<p><code>(iset-element-predecessor <em>iset</em> <em>obj</em> <em>failure</em>)</code></p>
+<p><code>(iset-element-successor <em>iset</em> <em>obj</em> <em>failure</em>)</code></p>
+<p>Returns the element contained in the iset <code><em>iset</em></code> that
+immediately precedes/succeeds <code><em>obj</em></code> in the iset's order of
+elements.  If no such element is contained in <code><em>iset</em></code>
+(because <code><em>obj</em></code> is the minimum/maximum element, or
+because <code><em>iset</em></code> is empty), returns the result of tail-calling
+the thunk <code><em>failure</em></code>.
+
+<h2 id="Dividingsets">Dividing sets</h2>
+
+<p><code>(iset-range= <em>iset</em> <em>obj</em>)</code></p>
+<p><code>(iset-range&lt; <em>iset</em> <em>obj</em>)</code></p>
+<p><code>(iset-range> <em>iset</em> <em>obj</em>)</code></p>
+<p><code>(iset-range&lt;= <em>iset</em> <em>obj</em>)</code></p>
+<p><code>(iset-range>= <em>iset</em> <em>obj</em>)</code></p>
+
+<p>Returns a iset containing only the elements of
+the <code><em>iset</em></code> whose elements are equal to, less
+than, greater than, less than or equal to, or greater than or equal
+  to <code><em>obj</em></code>.
+</p>
+
+<p><i>Note: Note that since elements in isets are
+unique, <code>iset-range=</code> returns an iset with at most one
+element.</i></p>
+
+<p><code>(iset-split <em>iset</em> <em>obj</em>)</code></p>
+
+<p>
+  Returns five values, equivalent to the results of invoking
+  <code>(iset-range&lt; <em>iset</em> <em>obj</em>)</code>,
+  <code>(iset-range&lt;= <em>iset</em> <em>obj</em>)</code>,
+  <code>(iset-range= <em>iset</em> <em>obj</em>)</code>,
+  <code>(iset-range>= <em>iset</em> <em>obj</em>)</code>,
+  and
+  <code>(iset-range> <em>iset</em> <em>obj</em>)</code>, but
+  may be more efficient.
+</p>
+
+<p><code>(iset-catenate <em>iset</em><sub>1</sub> <em>element</em> <em>value</em>
+    <em>iset</em></sub>2</sub>)</code></p>
+
+<p>
+Returns an iset using the
+comparator <code><em>comparator</em></code> whose elements
+are the union of the elements of the
+iset <code><em>iset</em><sub>1</sub></code>,
+the iset <code><em>element</em></code>,
+and the elements of <code><em>iset</em><sub>2</sub></code>.  It is an error if the elements
+contained in <code><em>iset</em><sub>1</sub></code> in their
+natural order, the element <em>element</em>, and the elements contained
+in <code><em>iset</em><sub>2</sub></code> in their natural order
+(in that order) do not form a strictly monotone sequence with respect
+to the ordering of <code><em>comparator</em></code>.
+</p>
+
+<h2 id="Ibagprocedures">Ibag procedures</h2><p>
+
+Ibags are like isets, but can contain the same object more than once.  However, if two elements that are the same in the sense of the equality predicate, but not in the sense of <code>eqv?</code>, are both included, it is not guaranteed that they will remain distinct when retrieved from the ibag.  It is an error for a single procedure to be invoked on ibags with different comparators.
+
+</p><p>
+
+The procedures for creating and manipulating ibags are the same as those for isets, except that <code>iset</code> is replaced by <code>ibag</code> in their names, and that adjoining an element to a ibag is effective even if the ibag already contains the element.  If two elements in a ibag are the same in the sense of the ibag's comparator, the implementation may in fact store just one of them.
+</p>
+
+<p>The <code>ibag-union</code>, <code>ibag-intersection</code>, <code>ibag-difference</code>, and <code>ibag-xor</code> procedures behave as follows when both ibags contain elements that are equal in the sense of the ibags' comparator:</p>
+
+<ul>
+<li><p>For <code>ibag-union</code>, the number of equal elements in the result is the largest number of equal elements in any of the original ibags.</p></li>
+
+<li><p>For <code>ibag-intersection</code>, the number of equal elements in the result is the smallest number of equal elements in any of the original ibags.</p></li>
+
+<li><p>For <code>ibag-difference</code>, the number of equal elements in the result is the number of equal elements in the first ibag, minus the number of elements in the other ibags (but not less than zero).</p></li>
+
+<li><p>For <code>ibag-xor</code>, the number of equal elements in the result is the absolute value of the difference between the number of equal elements in the first and second ibags.</p></li></ul>
+
+<h3 id="Additionalbagprocedures">Additional ibag procedures</h3>
+
+<p><code>(ibag-sum </code><em>iset<sub>1</sub> iset<sub>2</sub></em> ... <code>)</code></p>
+
+The <code>ibag-sum</code> procedure returns an ibag containing all the unique elements in all the <em>ibags</em>, such that the count of each unique element in the result is equal to the sum of the counts of that element in the arguments.  It differs from <code>ibag-union</code> by treating identical elements as potentially distinct rather than attempting to match them up.
+
+<p><code>(ibag-product </code><em>n ibag</em><code>)</code></p>
+
+The <code>ibag-product</code> procedure returns an ibag containing all the unique elements in <em>ibag</em>, where the count of each unique element in the ibag is equal to the count of that element in <em>ibag</em> multiplied by <em>n</em>.
+
+</p><p><code>(ibag-unique-size </code><em>ibag</em><code>)</code></p><p>
+
+Returns the number of unique elements of <em>ibag</em>.
+
+</p><p><code>(ibag-element-count </code><em>ibag element</em><code>)</code></p><p>
+
+Returns an exact integer representing the number of times that <em>element</em> appears in <em>ibag</em>.
+
+</p><p><code>(ibag-for-each-unique </code><em>proc ibag</em><code>)</code></p><p>
+
+Applies <em>proc</em> to each unique element of <em>ibag</em> in order, passing the element and the number of times it occurs in <em>ibag</em>, and discarding the returned values.  Returns an unspecified result.
+
+</p><p><code>(ibag-fold-unique </code><em>proc nil ibag</em><code>)</code></p><p>
+
+Invokes <em>proc</em> on each unique element of <em>ibag</em> in order, passing the number of occurrences as a second argument and the result of the previous invocation as a third argument.  For the first invocation, <em>nil</em> is used as the third argument.  Returns the result of the last invocation.
+
+</p><p><code>(ibag->iset </code><em>ibag</em><code>)</code></p><p><code>(iset->ibag </code><em>iset</em><code>)</code></p><p>
+
+The <code>ibag->iset</code> procedure returns an iset containing the unique elements (in the sense of the equality predicate) of <em>ibag</em>.  The <code>iset->ibag</code> procedure returns an ibag containing the elements of <em>iset</em>.  In all cases, the comparator of the result is the same as the comparator of the argument or arguments.
+
+</p><p><code>(ibag->alist </code><em>ibag</em><code>)</code></p><p>
+</p><p><code>(alist->ibag </code><em>alist</em><code>)</code></p><p>
+</p><p><code>(alist/ordered->ibag </code><em>alist</em><code>)</code></p><p>
+
+The <code>ibag->alist</code> procedure returns an alist whose elements are the unique elements of <em>ibag</em> and whose values are the number of occurrences of each element.  The <code>alist->ibag</code> returning an ibag based on <em>comparator</em>, where the elements of <em>alist</em> specify the elements and the corresponding values of <em>alist</em> specify how many times they occur.
+The <code>alist/ordered->ibag</code> procedure is the same as <code>alist->ibag</code> except that
+it is an error if the <em>elements</em> are out of order or duplicated.  It may be more efficient.</p>
+
+<h2 id="Comparators">Comparators</h2><p>
+
+The following comparators are used to compare isets or ibags, and allow isets of isets, ibags of isets, etc.
+
+</p><p><code>iset-comparator</code></p><p><code>ibag-comparator</code></p><p>
+
+Note that these comparators do not provide ordering predicates, as there is no ordering between isets or ibags.  It is an error to compare isets or ibags with different element comparators.
+
+</p><h1>Implementation</h1>
+
+<p>Isets and ibags are implemented as a thin veneer over SRFI 146 mappings.</p>
+
+<p>The implementation registers <code>iset-comparator</code> and
+<code>ibag-comparator</code> with SRFI 128's default comparator, assuming
+the sample implementation of SRFI 128 is being used.  Scheme implementers
+who provide their own implementations of SRFI 128 must change this part
+of the code.</p>
+
+<p>The implementation is (not yet) in the repository of this SRFI.
+</p>
+
+<h1>Copyright</h1>
+
+<p>Copyright (C) John Cowan 2017. All Rights Reserved.</p> 
+
+<p>Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:</p>
+
+<p>The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.</p>
+
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.</p>
+
+    <hr/>
+<address>Editor: <a href="mailto:srfi-editors at srfi dot schemers dot org">
+             Mike Sperber</a></address>
+  
+
+</body></html>
