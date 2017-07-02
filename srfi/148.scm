@@ -99,8 +99,8 @@
        ...)
      (ck-macro-transformer-aux1 bound-identifier=? (ellipsis) ellipsis
 				(literal ...) ((pattern (element => var) ... template) ...)))
-    ((ck-macro-transformer . args)
-     (syntax-error "invalid ck-macro-transformer syntax" (ck-macro-transformer . args)))))
+    ((ck-macro-transformer . _)
+     (syntax-error "invalid ck-macro-transformer syntax"))))
 
 (define-syntax ck-macro-transformer-aux1
   (syntax-rules (=>)
