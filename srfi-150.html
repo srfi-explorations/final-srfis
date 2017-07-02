@@ -170,7 +170,7 @@ reducing the chance of conflicts when hygiene is stripped.
     these identifiers are always bound to something meaningful and
     name clashes have to be avoided anyway, matching across library
     boundaries using the identifiers bound to the accessors works
-    without the problems mentioned above.  (If an identifier names
+    without any of the problems mentioned above.  (If an identifier names
     both a field and an accessor, the matching of the identifier as a
     field name takes precedence.)
   </dd>
@@ -184,7 +184,7 @@ reducing the chance of conflicts when hygiene is stripped.
   parent record-type fields are matched in constructor declarations of
   child record-types, however, differs.  While SRFI 136 uses position
   to identify fields (in the spirit of
-  the <a href="http://www.r6rs.org">R6RS</a>, this SRFI 150 is more in
+  the <a href="http://www.r6rs.org">R6RS</a>), this SRFI 150 is more in
   the spirit of the syntax of SRFI 131 (and thus SRFI 99).  (When
   string field names are silently converted to symbols when moving
   from the syntactic to a procedural layer even the interface of SRFI
@@ -194,10 +194,14 @@ reducing the chance of conflicts when hygiene is stripped.
 <p>
   Specifying a procedural interface (possibly along the lines of SRFI
   99) as an alternative syntactic interface presented in this SRFI is
-  left to a future SRFI when there will have been an agreement on whether keyword
-  objects and/or run-time representation (<em>e.g.</em> in the form of
-  syntactic closures) of renamed identifiers will be included in a
-  future revision of the Scheme report.
+  left to a future SRFI when there will have been an agreement on
+  whether keyword objects and/or run-time representation
+  (<em>e.g.</em> in the form of syntactic closures) of renamed
+  identifiers will be included in a future revision of the Scheme
+  report.  However, following a suggestion Shiro Kawai, a possible
+  procedural interface is outlined below to give implementations a
+  hint how a future specification may look like, which should reduce
+  the risk of mutually incompatible implementations in the future.
 </p>
 
 <h1>Specification</h1>
@@ -322,6 +326,88 @@ A record type definition extends R7RS with the following additional options:
     the a constructor spec.</li>
 </ul>
 
+<h1>Informative Section</h1>
+
+<p>This section is non-normative but may become normative in
+  a future SRFI.
+</p>
+
+<h2>Compatibility to the SRFI 99 Procedural Layer</h2>
+
+<p>
+  For a Scheme system supporting first class identifiers and first
+  class syntactic
+  environments and
+  the <a href="https://srfi.schemers.org/srfi-99/srfi-99.html#ProceduralLayer">procedural
+  layer of SRFI 99</a> it is recommended that the procedural layer of
+  SRFI 99 is extended as described below so that the syntactic layer
+  defined by this SRFI can be based upon it:
+</p>
+
+<ul>
+  <li><p>
+      In the definition of <code>make-rtd</code> in the procedural
+      layer of SRFI 99, a field specifier may take one of the following
+      forms:
+    </p>
+    <ol>
+      <li>an identifier naming the field in the style of this SRFI;</li>
+      <li>a string, character, boolean, number or keyword
+	naming the field in the style of this SRFI;</li>
+      <li>a symbol naming the field in the style of SRFI 99 and SRFI 131;</li>
+      <li>a list of the form <code>(mutable <em>name</em>)</code>,
+      where <em>name</em> is as in 1. &ndash; 3. naming the mutable
+	field;</li>
+      <li>a list of the form <code>(immutable <em>name</em>)</code>,
+	where <em>name</em> is as in 1. &ndash; 3. naming the
+	immutable field.
+      </li>
+    </ol>
+  </li>
+
+  <li>
+    <p>In the defintion of <code>rtd-constructor</code> in the
+      procedure layer of SRFI 99, <em>fieldspecs</em> is a vector of
+      objects naming fields, where each object is of one of the
+      following forms:
+    </p>
+    <ol>
+      <li>an identifier naming the field in the style of this
+	SRFI;</li>
+      <li>a string, character, boolean, number, or keyword naming the
+	field in the style of this SRFI;</li>
+      <li>a symbol naming the field in the style of SRFI 99 and SRFI
+	131;</li>
+      <li>a procedure returned by <code>rtd-accessor</code> naming the
+	field accessor (and thus the field itself) in the style of this SRFI.</li>
+    </ol>
+  </li>
+
+  <li><p>
+      In the definitions of <code>rtd-accessor</code>
+      and <code>rtd-mutator</code>, <em>field</em> is an object of of
+      one the following forms:
+    </p>
+    <ol>
+      <li>an identifier naming the field in the style of this
+	SRFI;</li>
+      <li>a string, character, boolean, number, or keyword naming the
+	field in the style of this SRFI;</li>
+      <li>a symbol naming the field in the style of SRFI 99 and SRFI
+	131;</li>
+      <li>a procedure returned by <code>rtd-accessor</code> naming the
+	field accessor (and thus the field itself) in the style of this SRFI.</li>
+    </ol>
+    <p>
+      An implementation may restrict <code>rtd-accessor</code> to return always the same
+      accessor procedure per field in order to make the naming of field
+      accessors as used by the procedural layer described here
+      unambiguously.
+    </p>
+  </li>
+</ul>
+
+
 <h1>Implementation</h1>
 
 <p>
@@ -358,6 +444,11 @@ lot of wording was copied verbatim from SRFI 131 (and SRFI 136).
 <p>Credit also goes to Alex Shinn for setting up a
 <a href="http://trac.sacrideo.us/wg/wiki/RecordFieldNameHygiene">summary</a>
 parts of the discussion.
+</p>
+
+<p>I would also like to thank Shiro Kawai for suggesting to include
+  the informal section of compatibility with the SRFI 99 procedural
+  layer.
 </p>
 
 <h1>Copyright</h1> Copyright (C) Marc Nieper-Wi&szlig;kirchen (2017).
