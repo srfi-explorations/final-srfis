@@ -1,4 +1,4 @@
-;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved. 
+;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved.
 
 ;; Permission is hereby granted, free of charge, to any person
 ;; obtaining a copy of this software and associated documentation
@@ -31,7 +31,7 @@
 
       (test-assert "Dynamic environments"
 	(dynamic-environment? (current-dynamic-environment)))
-      
+
       (test-equal "Parameter bindings"
 	'b
 	(let*

@@ -1,5 +1,5 @@
 (define-library (srfi 64)
-  (export test-begin	 
+  (export test-begin
 	  test-end test-assert test-eqv test-eq test-equal
 	  test-approximate test-error test-apply test-with-runner
 	  test-match-nth test-match-all test-match-any test-match-name
@@ -29,8 +29,8 @@
 	  test-on-group-begin-simple test-on-group-end-simple
 	  test-on-bad-count-simple test-on-bad-end-name-simple
 	  test-on-final-simple test-on-test-end-simple)
-  (import (scheme base)	  
-	  (scheme complex)	  
+  (import (scheme base)
+	  (scheme complex)
 	  (scheme eval)
 	  (scheme file)
 	  (scheme read)
