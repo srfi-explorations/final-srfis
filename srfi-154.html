@@ -1,0 +1,252 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>SRFI 154: First-class dynamic environment</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/srfi.css" type="text/css" />
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png" />
+  </head>
+
+  <body>
+
+    <h1>Title</h1>
+    
+    First-class dynamic environments
+
+    <h1>Author</h1>
+
+    Marc Nieper-Wi&szlig;kirchen
+
+    <h1>Status</h1>
+    
+    <h1>Abstract</h1>
+
+    Scheme has the notion of the <em>dynamic extent</em> of a
+    procedure call.  A number of standard Scheme procedures and
+    syntaxes
+    like <code>dynamic-wind</code>, <code>call-with-current-continuation</code>,
+    and <code>parameterize</code>
+    deal with the dynamic extent indirectly.
+
+    This SRFI reifies the dynamic extent into a first-class value
+    together with a well-defined procedural interface and a syntax to
+    create procedures that remember not only the environment at
+    creation time but also their dynamic environment. 
+
+    <h1>Issues</h1>
+
+    <p><code>closed-lambda</code> might be in need for a better name.</p>
+
+    <h1>Rationale</h1>
+
+    <p>
+      While the Scheme language is rich enough to reify the concept of
+      the dynamic extent and of the dynamic environment of a procedure
+      &mdash; the sample implementation accompanying this SRFI is a
+      proof of this fact &mdash;, there is no standard on how such a
+      reification is exposed to the user.  It is the purpose of this
+      SRFI to remedy this.
+    </p>
+
+    <p>
+      To give an example why explicit handling of dynamic environments
+      can become necessary, let us consider the following two definitions:
+    </p>
+
+    <pre>
+  (define (safe-sqrt error-handler)
+    (lambda (x)
+      (when (negative? x) 
+        (error-handler "negative argument"))
+      (sqrt x)))
+
+  (define (error-handler msg)
+      (display msg (current-error-port))
+      (newline (current-error-port))
+      'error)
+
+  (define my-safe-sqrt (safe-sqrt error-handler))
+    </pre>
+  
+    <p>
+      When <code>(my-safe-sqrt -1)</code> is executed, an error
+      message is printed on the current error port of the call
+      to <code>my-safe-sqrt</code>.  It may, however, have been the
+      intention of the user that the message is printed to whatever
+      error port was current when the
+      procedure <code>error-handler</code> was defined.  Using the
+      syntax of this SRFI, this can be achieved by changing the
+      definition of <code>errror-handler</code> into:
+    </p>
+
+    <pre>
+  (define error-handler  
+    (closed-lambda (msg)
+      (display msg (current-error-port))
+      (newline (current-error-port))
+      'error))
+    </pre>      
+
+    <p>
+      The same goes not only for error handlers, but for any other
+      type of callback procedure where it often makes sense to
+      reinstate the dynamic environment of the definition of the
+      callback for the dynamic extent of the call to the
+      callback, <i>e.g.</i> to define the callback
+      using <code>closed-lambda</code> as opposed to using a
+      bare <code>lambda</code>.
+    </p>
+
+    <p>
+      In case the error handler from the example above wants to call
+      back on a provided continuation, we have to be a bit more
+      careful so that the continuation is called in the expected
+      dynamic environment:
+    </p>
+
+    <pre>
+  (define (safe-sqrt error-handler)
+    (lambda (x)
+      (when (negative? x) 
+        (error-handler "negative argument" exit))
+      (sqrt x)))
+  
+  (define error-handler
+    (let ((dynamic-environment (current-dynamic-environment)))
+      (lambda (msg exit)
+        (with-dynamic-environment dynamic-environment
+         (lambda () 
+           (display msg (current-error-port))
+           (newline (current-error-port))))
+        (exit 'error))))
+
+  (define my-safe-sqrt (safe-sqrt error-handler))
+    </pre>
+      
+    <p>Another use case
+    is <a href="https://groups.google.com/d/msg/scheme-reports-wg2/CQslZcWTXHM/qBMgusbkBAAJ">the
+    proper implementation of promises</a> and lazy algorithms that
+    work well in the presence
+    of <code>call-with-current-continuation</code> and
+    dynamically-scoped variables.  (A forthcoming planned SRFI will
+    cover promises in this respect.)
+    </p>
+    
+    <h1>Specification</h1>
+
+    <p>
+      Throughout, we use the term <em>dynamic environment</em> for a reified
+      dynamic extent.  In this sense, the <code><em>before</em></code>
+      thunk of a call to <code>dynamic-wind</code>
+      sets up the dynamic environment of the call
+      to <code><em>thunk</em></code>, while
+      the <code><em>after</em></code> thunk restores the dynamic
+      environment of the call to <code>dynamic-wind</code>.
+    </p>
+ 
+    <p>
+      Dynamic environments form a type not necessarily disjoint from
+      other Scheme types.
+    </p>
+    
+    <h2>Procedures</h2>
+    
+    <p><code>(dynamic-environment? <em>obj</em></code>)</p>
+
+    <p>
+      The <code>dynamic-environment?</code> procedure
+      returns <code>#t</code> if its argument is a dynamic environment,
+      and <code>#f</code> otherwise.  Note that promises are not
+      necessarily disjoint from other Scheme types such as procedures.
+    </p>
+
+    <p><code>(current-dynamic-environment)</code></p>
+
+    <p>
+      The <code>current-dynamic-environment</code> procedure returns
+      the current dynamic environment by capturing the dynamic extent
+      of the call to <code>current-dynamic-environment</code>, which
+      can be reinstated by the
+      procedure <code>with-dynamic-environment</code>.
+    </p>
+
+    <p><code>(with-dynamic-environment <em>dynamic-environment</em> <em>thunk</em>)</code></p>
+
+    <p>
+      The <code>with-dynamic-environment</code> procedure calls
+      the <code><em>thunk</em></code> and returns the values yielded
+      by <code><em>thunk</em></code>.  The call
+      to <code><em>thunk</em></code> happens in the dynamic extent
+      captured by the <code><em>dynamic-environment</em></code>.
+    </p>
+
+    <h2>Syntax</h2>
+    
+    <p><code>(closed-lambda &lt;formals&gt; &lt;body&gt;)</code></p>
+
+    <p>A <code>closed-lambda</code> expression is equivalent
+      to <code>lambda</code> expression except that not only the
+      environment but also the dynamic environment in effect when the
+      <code>closed-lambda</code> expression was evaluated is
+      remembered.
+
+      In other words, the expression <code>(closed-lambda
+      &lt;formals&gt; &lt;body&gt;)</code> closes also over the
+      dynamic environment.      
+    </p>
+    
+    <h1>Implementation</h1>
+
+    <p>
+      The <a href="srfi/154.sld">sample implementation</a> is provided
+      as an R7RS-library.  It should be easily adaptable to any Scheme
+      implementation as long as that implementation has a concept of
+      dynamic extents,
+      provides <code>call-with-current-continuation</code>, and has a
+      macro facility (for implementing <code>closed-lambda</code>).
+    </p>
+    
+    <h1>Acknowledgements</h1>
+
+    <p>Thanks go to the SRFI editor for keeping the SRFI process alive
+    and running.</p>
+    
+    <h1>Copyright</h1>
+
+    <p>
+      Copyright (C) Marc Nieper-Wi&szlig;kirchen (2017).  All Rights Reserved. 
+    </p>
+    
+    <p>
+      Permission is hereby granted, free of charge, to any person
+      obtaining a copy of this software and associated documentation files
+      (the "Software"), to deal in the Software without restriction,
+      including without limitation the rights to use, copy, modify, merge,
+      publish, distribute, sublicense, and/or sell copies of the Software,
+      and to permit persons to whom the Software is furnished to do so,
+      subject to the following conditions:
+    </p>
+    
+    <p>
+      The above copyright notice and this permission notice shall be
+      included in all copies or substantial portions of the Software.
+    </p>
+    
+    <p>
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+      EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+      MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+      NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+      BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+      ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+      CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+      SOFTWARE.
+    </p>  
+
+    <hr>
+
+    <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur
+	A. Gleckler</a></address>
+  </body>
+</html>
