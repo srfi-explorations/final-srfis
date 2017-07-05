@@ -1,0 +1,299 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>SRFI 155: Promises</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/srfi.css" type="text/css" />
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png" />
+  </head>
+
+  <body>
+
+<h1>Title</h1>
+
+Promises
+
+<h1>Author</h1>
+
+Marc Nieper-Wi&szlig;kirchen
+
+<h1>Status</h1>
+
+<h1>Abstract</h1>
+
+<p>
+Scheme, like ML, is a programming language with strict evaluations
+while others, like Haskell, use lazy evaluation.  Scheme, however,
+possesses the primitives <code>delay</code> and <code>force</code>
+that make it possible to express lazy algorithms in the Scheme
+programming language.
+</p>
+
+<p>
+Lazy evaluation does not go well in conjunction with imperative,
+non-functional, side effecting code.  It should, however, be
+applicable in a purely functional setting.  This is the case for the
+delayed evaluation model as described in the R7RS as long as no
+dynamically bound variables, also known as parameter objects, are
+present.  It is the purpose of this SRFI to rework the
+specification in the R7RS so that lazy evaluation works with purely
+functional code that makes use of dynamic environments.  This is done
+by remembering the dynamic environment in effect when
+the <code>delay</code> expression is evaluated.
+</p>
+
+<h1>Issues</h1>
+
+<ul>
+  <li>The name of the described feature
+  identifier <code>functional-promises</code> is not yet set in
+    stone.</li>
+  <li>Shall this SRFI define a compatibility library to SRFI 45,
+    named, say, <code>(srfi 45 functional)</code>, that is equivalent to the
+    following?
+<pre>
+  (define-library (srfi 45 functional) 
+    (export delay lazy force eager)
+    (import (rename (srfi 155) (delay-force lazy)
+                               (make-promise eager))))            
+</pre>
+  </li>
+</ul>
+
+<h1>Rationale</h1>
+
+<p>
+In <a href="http://trac.sacrideo.us/wg/ticket/397">ticket #397</a> of
+the Scheme Working Group 1, the question was raised how promises shall
+interact with the dynamic environment, namely
+whether <code>force</code> shall evaluate a promise in the dynamic
+environment of the call to force with first requested its value.  An
+opposing choice would be that <code>force</code> shall evaluate a
+promise in the dynamic environment of the site where the promise was
+created.
+</p>
+
+<p>
+  The ticket was resolved apparently without any ballot or public
+  discussion, and the former semantics was chosen for
+  the <a href="http://trac.sacrideo.us/wg/wiki/R7RSHomePage">R7RS</a>.
+  Accordingly, the description of <code>force</code> in the R7RS
+  says: <q>Consequently, a delayed expression is evaluated using the
+  parameter values and exception handler of the call
+  to <code>force</code> which first requested its value.</q>
+</p>
+
+<p>It is the main thesis of this SRFI that the choice made by the
+  editors of the R7RS
+  was <a href="https://groups.google.com/forum/#!topic/scheme-reports-wg2/CQslZcWTXHM">the
+  wrong one</a>, so this SRFI proposes a correction to
+  the <code>(scheme lazy)</code> library.
+</p>
+
+<p>Lazy algorithms should work well together with purely functional
+  code.  The use of parameter objects (for example functioning as
+  implicit arguments to procedure calls), or more generally
+  calls to <code>dynamic-wind</code> with a pair of <em>before</em> and <em>after</em>
+  thunks that, abstractly, has a clear functional semantics is
+  orthogonal to the question of whether code is purely functional or
+  not.  However, with the semantics of <code>force</code> as currently
+  in the R7RS, the order of evaluation of arguments in otherwise purely
+  functional code suddenly matters:
+</p>
+
+<pre>
+  (let ()
+    (define x (make-parameter 1))
+    (define p (delay (x)))
+    (define (g p) (parameterize ((x 2)) (force p)))
+    (+ (force p) (g p)))
+</pre>
+
+<p>
+  Depending on the order of evaluation, this expression either
+  evaluates to <code>2</code> or <code>4</code>.  Obviously, we don't
+  expect that purely functional code exhibits such a behaviour.
+  (Folks from the Haskell camp would have good reasons to shake their
+  heads in astonishment.)  Reasoning about such code would be very hard.
+</p>
+
+<p>
+  A more realistic example could be provided by a combination of an
+  object system together with some lazy algorithm.  Such an object
+  system may want to refer to the current instance
+  by <code>this</code>.  One choice would be to explicitely
+  thread <code>this</code> in the code (as Python does with
+  explicitely mentioning <em>self</em> at each method definition) or
+  to realize <code>this</code> a syntax parameter (see
+  <a href="https://srfi.schemers.org/srfi-139/srfi-139.html">SRFI 139</a>, a way C++ and Java have chosen.  A third
+  way, more along Python's semantics but without explicitely
+  mentioning <code>this</code> (or <em>self</em>) at every method
+  definition site would be to define <code>this</code> a parameter
+  object (in the sense of the R7RS), which is parameterized at each
+  call site of a method.  Now, if the lazy algorithm
+  references <code>this</code>, most certainly the parameter value
+  of <code>this</code> when initially referred to and not when firstly
+  forced, is the correct one.
+</p>
+
+<p>
+  Unfortunately, the semantics of R7RS would get it wrong.  Does this
+  sound familiar?  Of course!  ECMAScript's functions suffer from the
+  same problem, namely that the value of <code>this</code> is not remembered
+  as part of the closure.  (In ECMAScript 2015 this problem was
+  remedied in form of &ldquo;arrow functions&rdquo;.)
+</p>
+
+<h1>Specification</h1>
+
+<p>We use the term <em>dynamic environment</em> as defined
+  by <a href="https://srfi.schemers.org/srfi-154/srfi-154.html">SRFI
+    154</a>.
+</p>
+
+<h2>Syntax</h2>
+
+<p><code>(delay &lt;expression&gt;)</code></p>
+
+<p>
+  <code>(delay &lt;expression&gt;)</code> returns an object called
+  a <em>promise</em> which at some point in the future can be asked
+  (by the <code>force</code> procedure) to
+  evaluate <code>&lt;expression&gt;</code> in the dynamic environment
+  in effect when the <code>delay</code> expression was evaluated, and
+  deliver the resulting value.  The effect
+  of <code>&lt;expression&gt;</code> returning multiple values is
+  unspecified.
+</p>
+
+<p><code>(delay-force &lt;expression&gt;)</code></p>
+
+<p>
+  The expression <code>(delay-force &lt;expression&gt;)</code> is
+  conceptually similar to <code>(delay (force
+    &lt;expression&gt;))</code>), with the difference that forcing the
+  result of <code>delay-force</code> will in effect result in a tail
+  call to <code>(force &lt;expression&gt;)</code>, while forcing the
+  result of <code>(delay (force &lt;expression&gt;))</code> might
+  not.  Thus iterative lazy algorithms that might result in a long
+  series of chains of <code>delay</code> and <code>force</code> can be
+  rewritten using <code>delay-force</code> to prevent consuming
+  unbounded space during evaluation.
+</p>
+
+<p><i>See <a href="https://srfi.schemers.org/srfi-41/srfi-41.html">SRFI
+      41</a> and <a href="https://srfi.schemers.org/srfi-45/srfi-45.html">SRFI
+      45</a> for a discussion.
+</i></p>
+
+<h2>Procedures</h2>
+
+<p><code>(force <em>promise</em>)</code></p>
+
+<p>The <code>force</code> procedure forces the value of
+  a <em>promise</em> created
+  by <code>delay</code>, <code>delay-force</code>,
+  or <code>make-promise</code>.  If no value has been computed for the
+  promise, the a value is computed in the dynamic environment in
+  effect when the <code>delay</code>, <code>delay-force</code>,
+  or <code>make-promise</code> expression was evaluated, and
+  returned.  The value of the promise must be cached (or
+  &ldquo;memoized&rdquo;) so that if it is forced a second time, the
+  previously computed value is returned.  If <em>promise</em> is not a
+  promise, it may be returned unchanged.
+</p>
+
+<p><code>(promise? <em>obj</em>)</code></p>
+
+<p>The <code>promise?</code> procedure <code>#t</code> if its argument
+  is a promise, and <code>#f</code> otherwise.  Note that promises are
+  not necessarily disjoint from other Scheme types such as procedures.
+</p>
+
+<p><code>(make-promise <em>obj</em>)</code></p>
+
+<p>The <code>make-promise</code> procedure returns a promise which,
+  when forced, will return <em>obj</em>.  It is similar
+  to <code>delay</code>, but does not delay its argument; it is a
+  procedure rather than syntax.  If <code>obj</code> is already a
+  promise, it is returned.
+</p>
+
+<h2>Feature identifiers</h2>
+
+<p>
+  An R7RS implementation that implements promises as described here as
+  part of its <code>(scheme lazy)</code> library provides the feature
+  identifier <code>functional-identifiers</code>.  In that case, the
+  bindings exported by <code>(srfi 155)</code>
+  are the same as the
+  respective bindings exported by <code>(scheme lazy)</code>.
+</p>
+
+<p>
+  Technically, such an R7RS implementation does not completely comform
+  the small language as described by the R7RS.  Nevertheless, such an
+  implementation shall still provide the <code>r7rs</code> feature identifier.
+</p>
+
+<p>
+  It is recommended by this SRFI that future extensions (<i>e.g.</i>
+  <em>R7RS-large</em>) or revisions (<i>e.g.</i> <em>R8RS</em>) of the
+  R7RS correct the R7RS in the sense of this SRFI.
+</p>
+
+<h1>Implementation</h1>
+
+<p>The provided <a href="srfi/155.sld">sample implementation</a> for
+  an R7RS system builds upon the native promise type as defined
+  by <code>(scheme lazy)</code> and the sample implementation of SRFI
+  154.  By adding the sample implementation of SRFI 45, one would get
+  an implementation of this SRFI for any R5RS system.
+</p>
+
+<h1>Acknowledgements</h1>
+
+<p>
+  Credit go to the authors of the R7RS and to Andr&eacute; van Tonder for his
+  SRFI 45 from where most of this SRFI's description of promises and delayed
+  evaluation was taken.
+</p>
+
+<p>
+  Credit also goes to Philip L. Bewig for his fantastic and standard
+  setting SRFI 41 that provides an important use case for promises.
+</p>
+  
+<h1>Copyright</h1>
+Copyright (C) Marc Nieper-Wi&szlig;kirchen (2017).  All Rights Reserved. 
+
+<p>
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
+</p>
+
+<p>
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
+</p>
+
+<p>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+</p>
+
+<hr>
+<address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address>
+</body></html>
