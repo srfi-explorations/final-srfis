@@ -30,7 +30,7 @@ Marc Nieper-Wi&szlig;kirchen
 <h1>Abstract</h1>
 
 <p>
-Scheme, like ML, is a programming language with strict evaluations
+Scheme, like ML, is a programming language with strict evaluation
 while others, like Haskell, use lazy evaluation.  Scheme, however,
 possesses the primitives <code>delay</code> and <code>force</code>
 that make it possible to express lazy algorithms in the Scheme
@@ -75,7 +75,7 @@ In <a href="http://trac.sacrideo.us/wg/ticket/397">ticket #397</a> of
 the Scheme Working Group 1, the question was raised how promises shall
 interact with the dynamic environment, namely
 whether <code>force</code> shall evaluate a promise in the dynamic
-environment of the call to force with first requested its value.  An
+environment of the call to <code>force</code> which first requested its value.  An
 opposing choice would be that <code>force</code> shall evaluate a
 promise in the dynamic environment of the site where the promise was
 created.
@@ -133,7 +133,7 @@ created.
   thread <code>this</code> in the code (as Python does with
   explicitely mentioning <em>self</em> at each method definition) or
   to realize <code>this</code> a syntax parameter (see
-  <a href="https://srfi.schemers.org/srfi-139/srfi-139.html">SRFI 139</a>, a way C++ and Java have chosen.  A third
+  <a href="https://srfi.schemers.org/srfi-139/srfi-139.html">SRFI 139</a>, a way C++ and Java have chosen.)  A third
   way, more along Python's semantics but without explicitely
   mentioning <code>this</code> (or <em>self</em>) at every method
   definition site would be to define <code>this</code> a parameter
@@ -141,7 +141,7 @@ created.
   call site of a method.  Now, if the lazy algorithm
   references <code>this</code>, most certainly the parameter value
   of <code>this</code> when initially referred to and not when firstly
-  forced, is the correct one.
+  forced is the correct one.
 </p>
 
 <p>
@@ -202,7 +202,7 @@ created.
   a <em>promise</em> created
   by <code>delay</code>, <code>delay-force</code>,
   or <code>make-promise</code>.  If no value has been computed for the
-  promise, the a value is computed in the dynamic environment in
+  promise, the value is computed in the dynamic environment in
   effect when the <code>delay</code>, <code>delay-force</code>,
   or <code>make-promise</code> expression was evaluated, and
   returned.  The value of the promise must be cached (or
@@ -239,7 +239,7 @@ created.
 </p>
 
 <p>
-  Technically, such an R7RS implementation does not completely comform
+  Technically, such an R7RS implementation does not completely conform to
   the small language as described by the R7RS.  Nevertheless, such an
   implementation shall still provide the <code>r7rs</code> feature identifier.
 </p>
