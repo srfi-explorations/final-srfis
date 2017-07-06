@@ -20,7 +20,35 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-library (srfi 155)
-  (export delay delay-force force
-	  make-promise promise?)
-  (import (srfi 155 implementation)))
+(define current-forcing-environment (make-parameter #f))
+
+(define (forcing-environment)
+  (unless (current-forcing-environment)
+    (error "forcing-environment: there is no promise being forced"))
+  (current-forcing-environment))
+
+(define-syntax delay
+  (syntax-rules (force)
+    ((delay (force expression))
+     (delay-force expression))
+    ((delay expression)
+     (let ((dynamic-environment (current-dynamic-environment)))
+       (scheme-delay
+	(let ((forcing-environment (current-dynamic-environment)))
+	  (with-dynamic-environment dynamic-environment (lambda ()
+							  (parameterize
+							      ((current-forcing-environment
+								forcing-environment))
+							    expression)))))))))
+
+(define-syntax delay-force
+  (syntax-rules ()
+    ((delay expression)
+     (let ((dynamic-environment (current-dynamic-environment)))
+       (scheme-delay-force
+	(let ((forcing-environment (current-dynamic-environment)))
+	  (with-dynamic-environment dynamic-environment (lambda ()
+							  (parameterize
+							      ((current-forcing-environment
+								forcing-environment))
+							    expression)))))))))

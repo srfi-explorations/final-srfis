@@ -24,7 +24,9 @@
   (export run-tests)
   (import (scheme base)
 	  (srfi 64)
-	  (srfi 155))
+	  (srfi 154)
+	  (srfi 155)
+	  (srfi 155 reflection))
   (begin
     (define integers
       (let next ((n 0))
@@ -67,5 +69,16 @@
       (test-assert (promise? p))
       (test-equal 6 (begin (set! x 10)
 			   (force p)))
+
+      (test-equal "Dynamic environments"
+	'(1 2)
+	(let ((x (make-parameter 1)))
+	  (let ((p
+		 (delay (list (x)
+			      (with-dynamic-environment (forcing-environment) (lambda ()
+										(x)))))))
+	    (parameterize
+		((x 2))
+	      (force p)))))
       
       (test-end))))
