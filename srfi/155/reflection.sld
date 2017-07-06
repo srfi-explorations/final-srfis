@@ -1,4 +1,4 @@
-;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved. 
+;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved.
 
 ;; Permission is hereby granted, free of charge, to any person
 ;; obtaining a copy of this software and associated documentation
@@ -20,17 +20,6 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-
-(define-syntax delay
-  (syntax-rules ()
-    ((delay expression)
-     (let ((dynamic-environment (current-dynamic-environment)))
-       (scheme-delay
-	(with-dynamic-environment dynamic-environment (lambda () expression)))))))
-
-(define-syntax delay-force
-  (syntax-rules ()
-    ((delay expression)
-     (let ((dynamic-environment (current-dynamic-environment)))
-       (scheme-delay-force
-	(with-dynamic-environment dynamic-environment (lambda () expression)))))))
+(define-library (srfi 155 reflection)
+  (export forcing-environment dynamic-environment?)
+  (import (srfi 155 implementation)))

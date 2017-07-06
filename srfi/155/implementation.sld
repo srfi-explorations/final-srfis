@@ -1,4 +1,4 @@
-;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved. 
+;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved.
 
 ;; Permission is hereby granted, free of charge, to any person
 ;; obtaining a copy of this software and associated documentation
@@ -20,7 +20,13 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-library (srfi 155)
+(define-library (srfi 155 implementation)
   (export delay delay-force force
-	  make-promise promise?)
-  (import (srfi 155 implementation)))
+	  make-promise promise?
+	  forcing-environment dynamic-environment?)
+  (import (scheme base)
+	  (rename (scheme lazy)
+		  (delay scheme-delay)
+		  (delay-force scheme-delay-force))
+	  (srfi 154))
+  (include "implementation.scm"))
