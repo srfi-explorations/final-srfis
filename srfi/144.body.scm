@@ -413,10 +413,10 @@
 
 (define (make-fllog-base base)
   (check-flonum! 'make-fllog-base base)
-  (if (flpositive? base)
+  (if (fl>? base 1.0)
       (flop1 'procedure-created-by-make-fllog-base
              (lambda (x) (log x base)))
-      (error "argument to make-fllog-base must be positive" base)))
+      (error "argument to make-fllog-base should be greater than 1.0" base)))
 
 ;;; Trigonometric functions
 
