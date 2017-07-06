@@ -743,6 +743,8 @@ Returns log<sub>10</sub> <em>x</em>.
 <p>
 Returns a procedure that calculates the base-<em>x</em> logarithm of its
 argument.
+If <em>x</em> is 1.0 or less than 1.0, it is an error.
+
 </p>
 <h2 id="Trigonometricfunctions">Trigonometric functions</h2>
 <p>
@@ -832,16 +834,16 @@ Returns two values, log |Γ(<em>x</em>)| without internal overflow, and the sign
 if it is positive and -1.0 if it is negative.  (C99 <tt>lgamma</tt>)
 </p>
 <p>
-<tt>(flfirst-bessel </tt><em>x n</em><tt>)</tt>
+<tt>(flfirst-bessel </tt><em>n x</em><tt>)</tt>
 </p>
 <p>
-Returns the <em>n</em>th order Bessel function of the first kind applied to <em>x</em>, J<sub>n</sub>(x).  (C99 <tt>jn</tt>)
+Returns the <em>n</em>th order Bessel function of the first kind applied to <em>x</em>, J<sub>n</sub>(x).  (<tt>jn</tt>, which is an XSI Extension of C99)
 </p>
 <p>
-<tt>(flsecond-bessel </tt><em>x n</em><tt>)</tt>
+<tt>(flsecond-bessel </tt><em>n x</em><tt>)</tt>
 </p>
 <p>
-Returns the <em>n</em>th order Bessel function of the second kind applied to <em>x</em>, Y<sub>n</sub>(x).  (C99 <tt>yn</tt>)
+Returns the <em>n</em>th order Bessel function of the second kind applied to <em>x</em>, Y<sub>n</sub>(x).  (<tt>yn</tt>, which is an XSI Extension of C99)
 </p>
 <p>
 <tt>(flerf </tt><em>x</em><tt>)</tt>
@@ -859,7 +861,7 @@ Returns the complementary error function, 1 - erf(<em>x</em>).  (C99 <tt>erfc</t
 
 <h1>Implementation</h1>
 
-<p>The implementation of this SRFI is in the repository.  <p>
+<p>A sample implementation of this SRFI is in the repository.  <p>
 
 <p>The sample implementation should run without modification in every
 complete implementation of R7RS-small that uses IEEE-754 double or
@@ -878,13 +880,18 @@ implementation uses only three of those C functions:</p>
 <li>    <code>yn</code>  (to implement <code>flsecond-bessel</code>)</li>
 </ul>
 
+<p>
 Those are the only C functions that provide a worthwhile advantage
 in either accuracy or speed over the completely portable definitions,
 as measured in Larceny.
+</p>
 
-The portable implementations of the Bessel functions are far less
-accurate than the C functions <code>jn</code> and <code>yn</code> when the flonum argument is
-on the order of 1e15.</p>
+<p>
+The portable implementations of the Bessel functions are likely to be
+considerably less accurate than the C functions
+<code>jn</code> and <code>yn</code>
+when the flonum argument is large.
+</p>
 
 <p>A Chicken specialization of this implementation is (not yet) also in the repository:
 the module is in <code>144.scm</code> and additional code in <code>144.chicken.scm</code>.
