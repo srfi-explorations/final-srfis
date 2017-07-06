@@ -53,4 +53,12 @@
 	  (parameterize ((x 'b))
 	    (getter))))
 
+      (test-equal "Multiple values"
+	'(1 2)
+	(call-with-values
+	    (lambda ()
+	      (with-dynamic-environment (current-dynamic-environment) (lambda ()
+									(values 1 2))))
+	  list))
+
       (test-end "SRFI 154"))))

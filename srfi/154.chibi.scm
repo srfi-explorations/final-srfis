@@ -21,25 +21,16 @@
 ;; SOFTWARE.
 
 (define-record-type <dynamic-environment>
-  (make-dynamic-environment proc)
+  (make-dynamic-environment point)
   dynamic-environment?
-  (proc dynamic-environment-proc))
-
+  (point dynamic-environment-point))
 
 (define (current-dynamic-environment)
-  (call-with-current-continuation
-   (lambda (return)
-     (let-values
-	 (((k thunk)
-	   (call-with-current-continuation
-	    (lambda (c)
-	       (return
-		(make-dynamic-environment (lambda (thunk)
-					    (call-with-current-continuation
-					     (lambda (k)
-					       (c k thunk))))))))))
-       (call-with-values thunk k)))))
-
+  (make-dynamic-environment (%dk)))
 
 (define (with-dynamic-environment dynamic-environment thunk)
-  ((dynamic-environment-proc dynamic-environment) thunk))
+  (let ((here (%dk)))
+    (travel-to-point! here (dynamic-environment-point dynamic-environment))
+    (let ((result (thunk)))
+      (travel-to-point! (%dk) here)
+      result)))
