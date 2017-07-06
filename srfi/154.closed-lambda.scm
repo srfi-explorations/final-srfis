@@ -20,26 +20,10 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-record-type <dynamic-environment>
-  (make-dynamic-environment proc)
-  dynamic-environment?
-  (proc dynamic-environment-proc))
-
-
-(define (current-dynamic-environment)
-  (call-with-current-continuation
-   (lambda (return)
-     (let-values
-	 (((k thunk)
-	   (call-with-current-continuation
-	    (lambda (c)
-	       (return
-		(make-dynamic-environment (lambda (thunk)
-					    (call-with-current-continuation
-					     (lambda (k)
-					       (c k thunk))))))))))
-       (call-with-values thunk k)))))
-
-
-(define (with-dynamic-environment dynamic-environment thunk)
-  ((dynamic-environment-proc dynamic-environment) thunk))
+(define-syntax closed-lambda
+  (syntax-rules ()
+    ((closed-lambda formals body)
+     (let ((dynamic-environment (current-dynamic-environment)))
+       (lambda formals
+	 (with-dynamic-environment dynamic-environment (lambda ()
+							 body)))))))
