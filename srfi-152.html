@@ -409,10 +409,13 @@ Ultimately the origin of all these SRFIs is
 <li>characters and SRFI 14 character sets as alternatives to predicates</li>
 </ul>
 
-However, it includes the normalization procedures from R6RS,
+However, it includes the normalization and bytevector conversion procedures from R6RS,
 the <code>string-copy! read-string write-string</code>
 procedures from R7RS-small, and the <code>string-segment</code>
 and <code>string-split</code> procedures from other sources.
+For completeness, <code>string-take-while string-drop-while string-take-while-right
+string-drop-while-right</code> are also provided.
+
 
 <p>
 There are no performance guarantees for any of the procedures in this SRFI.
@@ -652,7 +655,6 @@ and zero or more optional arguments (<var>dict<sub>2</sub> ...</var>).
     satisfies <var>pred</var>,
     proceeding from left (index <var>start</var>)
     to right (index <var>end</var>).
-    <code>string-every</code> 
     These procedures are short-circuiting:
     if <var>pred</var> returns false, <code>string-every</code>
     does not call <var>pred</var> on subsequent characters;
@@ -939,6 +941,7 @@ by <code>string-unfold</code> to be limited by limits on stack size.
     These procedures return a newly allocated (unless empty)
     bytevector containing
     a UTF-8 or UTF-16 encoding of the given substring.
+    (Not SRFI 13 procedures.)
 <p>
     The bytevectors returned by <code>string->utf8</code>,
     <code>string->utf16be</code>, and <code>string->utf16le</code>
@@ -986,6 +989,7 @@ by <code>string-unfold</code> to be limited by limits on stack size.
     These procedures interpret their <var>bytevector</var> argument as
     a UTF-8 or UTF-16 encoding of a sequence of characters,
     and return a string containing that sequence.
+    (Not SRFI 13 procedures.)
 <p>
     The bytevector subrange given to <code>utf16->string</code>
     may begin with a byte order mark (BOM).  If so, that BOM
@@ -1071,7 +1075,6 @@ by <code>string-unfold</code> to be limited by limits on stack size.
 </dt>
 <dd class="proc-def">
   Returns the number of characters within the given string.
-  Must execute in O(1) time.
 </dd>
 
 <!--
@@ -1083,7 +1086,6 @@ by <code>string-unfold</code> to be limited by limits on stack size.
 </dt>
 <dd class="proc-def">
   Returns character <var>string[idx]</var>, using 0-origin indexing.
-  Must execute in O(1) time.
 </dd>
 
 <!--
@@ -1732,7 +1734,7 @@ The optional <var>end</var> argument accommodates that use case.
     together using the delimiter string. 
 
     <p>
-    <var>string-list</var> is a list of strings and/or strings.
+    <var>string-list</var> is a list of strings.
     <var>delimiter</var> is a string.
     The <var>grammar</var> argument is a symbol that determines
     how the delimiter is
@@ -2186,6 +2188,7 @@ use SRFI 115's <code>regexp-split</code> procedure.
    See the Unicode Standard for precise details.
    If the result is equal to the argument in the sense of <tt>string=?</tt>, the argument
    may be returned.
+  (Not SRFI 13 procedures.)
 <pre class="code-example">
 (string-normalize-nfd "\xE9;") => "\x65;\x301;"
 
@@ -2322,7 +2325,7 @@ be sure to do it as follows to avoid conflicts:</p>
 module as follows:</p>
 
 <pre>
-(import (except scheme)
+(import (except scheme
   string->list string-fill!))
 </pre>
 
