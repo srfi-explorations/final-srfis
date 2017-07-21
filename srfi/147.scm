@@ -25,24 +25,24 @@
 
 (scheme-define-syntax expand-transformer
   (scheme-syntax-rules (scheme-syntax-rules syntax-error begin)
-    ((expand-transformer :c (k ...) (scheme-syntax-rules . args))
+    ((expand-transformer (k ...) (scheme-syntax-rules . args))
      (k ... (scheme-syntax-rules . args)))
-    ((expand-transformer :c (k ...) (syntax-error . args))
+    ((expand-transformer (k ...) (syntax-error . args))
      (syntax-error . args))
-    ((expand-transformer c: (k ...) (begin definition ... transformer-spec))
+    ((expand-transformer (k ...) (begin definition ... transformer-spec))
      (begin definition
 	    ...
-	    (expand-transformer c: (k ...) transformer-spec)))   
-    ((expand-transformer c: (k ...) (keyword . args))
+	    (expand-transformer (k ...) transformer-spec)))   
+    ((expand-transformer (k ...) (keyword . args))
      (keyword (:c expand-transformer (k ...)) . args))
-    ((expand-transformer c: (k ...) keyword)
+    ((expand-transformer (k ...) keyword)
      (k ... (scheme-syntax-rules ()
 	      ((_ . args) (keyword . args)))))))
 
 (scheme-define-syntax define-syntax
   (scheme-syntax-rules ()
     ((define-syntax name transformer-spec)
-     (expand-transformer :c (scheme-define-syntax name) transformer-spec))
+     (expand-transformer (scheme-define-syntax name) transformer-spec))
     ((define-syntax . _)
      (syntax-error "invalid define-syntax syntax"))))
 
@@ -59,7 +59,7 @@
     ((let-syntax-aux (keyword ...) () (transformer-spec ...) body*)
      (scheme-let-syntax ((keyword transformer-spec) ...) . body*))
     ((let-syntax-aux keyword* (transformer-spec1 transformer-spec2 ...) transformer-spec* body*)
-     (expand-transformer :c (let-syntax-aux keyword*
+     (expand-transformer (let-syntax-aux keyword*
 					    (transformer-spec2 ...)
 					    transformer-spec*
 					    body*)
@@ -93,7 +93,7 @@
 			(transformer-spec1 transformer-spec2 ...)
 			transformer-spec*
 			body*)
-     (expand-transformer c: (letrec-syntax-aux keyword*
+     (expand-transformer (letrec-syntax-aux keyword*
 					       (transformer-spec2 ...)
 					       transformer-spec*
 					       body*)
@@ -111,25 +111,25 @@
 (scheme-define-syntax syntax-rules
   (scheme-syntax-rules (:c)
     ((syntax-rules (:c k ...) . args)
-     (syntax-rules-aux "state0" (k ...) . args))
+     (syntax-rules-aux "state0" :c (k ...) . args))
     ((syntax-rules . _)
      (syntax-error "invalid syntax-rules syntax"))))
 
 (scheme-define-syntax syntax-rules-aux
   (scheme-syntax-rules ()
-    ((syntax-rules-aux "state0" k* (literal* ...) . rule*)
-     (syntax-rules-aux "state1" k* (... ...) ((literal* ... :c)) rule* () rule*))
+    ((syntax-rules-aux "state0" :c k* (literal* ...) . rule*)
+     (syntax-rules-aux "state1" :c k* (... ...) ((literal* ... :c)) rule* () rule*))
 
-    ((syntax-rules-aux "state0" k* ellipsis (literal* ...) . rule*)
-     (syntax-rules-aux "state1" k* ellipsis (ellipsis (literal* ... :c))
+    ((syntax-rules-aux "state0" :c k* ellipsis (literal* ...) . rule*)
+     (syntax-rules-aux "state1" :c k* ellipsis (ellipsis (literal* ... :c))
        rule* () rule*))
    
-    ((syntax-rules-aux "state1" (k ...) e (l ...) () (rule1* ...) rule2*)
+    ((syntax-rules-aux "state1" :c (k ...) e (l ...) () (rule1* ...) rule2*)
      (k ... (scheme-syntax-rules l ... rule1* ... . rule2*)))
 
-    ((syntax-rules-aux "state1" k* ::: l*
+    ((syntax-rules-aux "state1" :c k* ::: l*
        (((_ . pattern) template) . rule1*) (rule2 ...) rule3*)
-     (syntax-rules-aux "state1" k* ::: l* rule1*
+     (syntax-rules-aux "state1" :c k* ::: l* rule1*
        (rule2
 	...
 	((_ (:c c :::) . pattern)
