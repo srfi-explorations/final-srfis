@@ -665,14 +665,15 @@ These are some of conditions raised when networking error occurs.
           (case b
             ((#xA) #t) ;; newline
             ((#xD) (loop (get-u8 bin))) ;; carriage return
-            (else (put-u8 out b) (loop (get-u8 bin))))))))
+            (else (put-u8 out b) (loop (get-u8 bin)))))))))
   (call-with-socket (socket-accept echo-server-socket)
     (lambda (sock)
       (let ((in (socket-input-port sock))
             (out (socket-output-port sock)))
         (let lp2 ((r (get-line-from-binary-port in)))
-          (put-bytevector out (string-&lt;utf8 (string-append r "\r\n")))
+          (put-bytevector out (string-&gt;utf8 (string-append r "\r\n")))
           (lp2 (get-line-from-binary-port in)))))))
+
 (server-run)
 
 ;; simple echo client
@@ -707,11 +708,12 @@ The following implementation is written in R6RS.
             *shut-rd* *shut-wr* *shut-rdwr*
             address-family socket-domain address-info
             ip-protocol message-type shutdown-method)
-    (import (rnrs) (except (socket impl) socket-port))
+    (import (rnrs) (except (srfi :106 socket impl) socket-port))
 
   (define %address-family `((inet    ,*af-inet*)
                             (inet6   ,*af-inet6*)
                             (unspec  ,*af-unspec*)))
+
   (define %address-info `((canoname     ,*ai-canonname*)
                           (numerichost  ,*ai-numerichost*)
                           (v4mapped     ,*ai-v4mapped*)
@@ -732,7 +734,7 @@ The following implementation is written in R6RS.
 
   (define (lookup who sets name)
     (cond ((assq name sets) => cadr)
-          (else (assertion-violation who "no name defined" name)))
+          (else (assertion-violation who "no name defined" name))))
 
   (define-syntax address-family
     (syntax-rules ()
@@ -775,7 +777,7 @@ The following implementation is written in R6RS.
                                              "duplicate method" m)
                         (loop (cdr methods) (cons (car m) seen)))))
               (else (assertion-violation 'shutdown-method
-                                         "unknown method" (car methods)))))
+                                         "unknown method" (car methods))))))
     (check-methods methods)
     (if (null? (cdr methods))
         (case (car methods)
@@ -798,9 +800,7 @@ The following implementation is written in R6RS.
         (bytevector-copy! bv start buf 0 count)
         (socket-send socket buf)))
     (make-custom-binary-input/output-port 
-         "socket-port" read! write! #f #f #f))
-
-  )
+         "socket-port" read! write! #f #f #f)))
 </pre>
 
 
