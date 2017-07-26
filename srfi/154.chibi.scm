@@ -20,6 +20,19 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-library (srfi 155 reflection)
-  (export forcing-environment dynamic-extent?)
-  (import (srfi 155 implementation)))
+(define-record-type <dynamic-extent>
+  (make-dynamic-extent point)
+  dynamic-extent?
+  (point dynamic-extent-point))
+
+(define (current-dynamic-extent)
+  (make-dynamic-extent (%dk)))
+
+(define (with-dynamic-extent dynamic-extent thunk)
+  (let ((here (%dk)))
+    (travel-to-point! here (dynamic-extent-point dynamic-extent))
+    (%dk (dynamic-extent-point dynamic-extent))
+    (let ((result (thunk)))
+      (travel-to-point! (%dk) here)
+      (%dk here)
+      result)))

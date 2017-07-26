@@ -70,13 +70,13 @@
       (test-equal 6 (begin (set! x 10)
 			   (force p)))
 
-      (test-equal "Dynamic environments"
+      (test-equal "Dynamic extents"
 	'(1 2)
 	(let ((x (make-parameter 1)))
 	  (let ((p
 		 (delay (list (x)
-			      (with-dynamic-environment (forcing-environment) (lambda ()
-										(x)))))))
+			      (with-dynamic-extent (forcing-environment)
+						   (lambda () (x)))))))
 	    (parameterize
 		((x 2))
 	      (force p)))))

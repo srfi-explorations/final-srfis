@@ -32,23 +32,23 @@
     ((delay (force expression))
      (delay-force expression))
     ((delay expression)
-     (let ((dynamic-environment (current-dynamic-environment)))
+     (let ((dynamic-extent (current-dynamic-extent)))
        (scheme-delay
-	(let ((forcing-environment (current-dynamic-environment)))
-	  (with-dynamic-environment dynamic-environment (lambda ()
-							  (parameterize
-							      ((current-forcing-environment
-								forcing-environment))
-							    expression)))))))))
+	(let ((forcing-environment (current-dynamic-extent)))
+	  (with-dynamic-extent dynamic-extent (lambda ()
+						(parameterize
+						    ((current-forcing-environment
+						      forcing-environment))
+						  expression)))))))))
 
 (define-syntax delay-force
   (syntax-rules ()
     ((delay expression)
-     (let ((dynamic-environment (current-dynamic-environment)))
+     (let ((dynamic-extent (current-dynamic-extent)))
        (scheme-delay-force
-	(let ((forcing-environment (current-dynamic-environment)))
-	  (with-dynamic-environment dynamic-environment (lambda ()
-							  (parameterize
-							      ((current-forcing-environment
-								forcing-environment))
-							    expression)))))))))
+	(let ((forcing-environment (current-dynamic-extent)))
+	  (with-dynamic-extent dynamic-extent (lambda ()
+						(parameterize
+						    ((current-forcing-environment
+						      forcing-environment))
+						  expression)))))))))

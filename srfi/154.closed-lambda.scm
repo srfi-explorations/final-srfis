@@ -20,6 +20,10 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-library (srfi 155 reflection)
-  (export forcing-environment dynamic-extent?)
-  (import (srfi 155 implementation)))
+(define-syntax closed-lambda
+  (syntax-rules ()
+    ((closed-lambda formals body)
+     (let ((dynamic-extent (current-dynamic-extent)))
+       (lambda formals
+	 (with-dynamic-extent dynamic-extent (lambda ()
+					       body)))))))

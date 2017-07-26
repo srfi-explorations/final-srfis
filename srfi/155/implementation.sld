@@ -23,7 +23,7 @@
 (define-library (srfi 155 implementation)
   (export delay delay-force force
 	  make-promise promise?
-	  forcing-environment dynamic-environment?)
+	  forcing-environment dynamic-extent?)
   (import (scheme base)
 	  (rename (scheme lazy)
 		  (delay scheme-delay)
