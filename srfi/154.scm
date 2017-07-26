@@ -20,21 +20,13 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-syntax closed-lambda
-  (syntax-rules ()
-    ((closed-lambda formals body)
-     (let ((dynamic-environment (current-dynamic-environment)))
-       (lambda formals
-	 (with-dynamic-environment dynamic-environment (lambda ()
-							 body)))))))
-
-(define-record-type <dynamic-environment>
-  (make-dynamic-environment proc)
-  dynamic-environment?
-  (proc dynamic-environment-proc))
+(define-record-type <dynamic-extent>
+  (make-dynamic-extent proc)
+  dynamic-extent?
+  (proc dynamic-extent-proc))
 
 
-(define (current-dynamic-environment)
+(define (current-dynamic-extent)
   (call-with-current-continuation
    (lambda (return)
      (let-values
@@ -42,12 +34,12 @@
 	   (call-with-current-continuation
 	    (lambda (c)
 	       (return
-		(make-dynamic-environment (lambda (thunk)
+		(make-dynamic-extent (lambda (thunk)
 					    (call-with-current-continuation
 					     (lambda (k)
 					       (c k thunk))))))))))
        (call-with-values thunk k)))))
 
 
-(define (with-dynamic-environment dynamic-environment thunk)
-  ((dynamic-environment-proc dynamic-environment) thunk))
+(define (with-dynamic-extent dynamic-extent thunk)
+  ((dynamic-extent-proc dynamic-extent) thunk))

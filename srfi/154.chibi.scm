@@ -20,17 +20,19 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-library (srfi 154)  
-  (export dynamic-extent?
-          current-dynamic-extent
-	  with-dynamic-extent
-	  closed-lambda)
-  (cond-expand
-    (chibi
-     (import (scheme base)
-	     (only (chibi) travel-to-point! %dk))
-     (include "154.chibi.scm"))
-    (else
-     (import (scheme base))
-     (include "154.scm")))
-  (include "154.closed-lambda.scm"))
+(define-record-type <dynamic-extent>
+  (make-dynamic-extent point)
+  dynamic-extent?
+  (point dynamic-extent-point))
+
+(define (current-dynamic-extent)
+  (make-dynamic-extent (%dk)))
+
+(define (with-dynamic-extent dynamic-extent thunk)
+  (let ((here (%dk)))
+    (travel-to-point! here (dynamic-extent-point dynamic-extent))
+    (%dk (dynamic-extent-point dynamic-extent))
+    (let ((result (thunk)))
+      (travel-to-point! (%dk) here)
+      (%dk here)
+      result)))

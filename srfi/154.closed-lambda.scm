@@ -20,17 +20,10 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-library (srfi 154)  
-  (export dynamic-extent?
-          current-dynamic-extent
-	  with-dynamic-extent
-	  closed-lambda)
-  (cond-expand
-    (chibi
-     (import (scheme base)
-	     (only (chibi) travel-to-point! %dk))
-     (include "154.chibi.scm"))
-    (else
-     (import (scheme base))
-     (include "154.scm")))
-  (include "154.closed-lambda.scm"))
+(define-syntax closed-lambda
+  (syntax-rules ()
+    ((closed-lambda formals body)
+     (let ((dynamic-extent (current-dynamic-extent)))
+       (lambda formals
+	 (with-dynamic-extent dynamic-extent (lambda ()
+					       body)))))))
