@@ -61,4 +61,14 @@
 							      (values 1 2))))
 	  list))
 
+      (test-equal "Nested with-dynamic-extent"
+	1
+	(let* ((x (make-parameter 1))
+	       (e1 (current-dynamic-extent))
+	       (e2 (parameterize ((x 2))
+		     (current-dynamic-extent))))
+	  (with-dynamic-extent e2 (lambda ()
+				    (with-dynamic-extent e1 (lambda ()
+							      (x)))))))
+      
       (test-end "SRFI 154"))))
