@@ -29,8 +29,8 @@
     (define (run-tests)
       (test-begin "SRFI 154")
 
-      (test-assert "Dynamic environments"
-	(dynamic-environment? (current-dynamic-environment)))
+      (test-assert "Dynamic extents"
+	(dynamic-extent? (current-dynamic-extent)))
 
       (test-equal "Parameter bindings"
 	'b
@@ -38,10 +38,10 @@
 	    ((x (make-parameter 'a))
 	     (de (parameterize
 		     ((x 'b))
-		   (current-dynamic-environment))))
+		   (current-dynamic-extent))))
 	  (parameterize
 	      ((x 'c))
-	    (with-dynamic-environment
+	    (with-dynamic-extent
 	     de
 	     (lambda ()
 	       (x))))))
@@ -57,8 +57,8 @@
 	'(1 2)
 	(call-with-values
 	    (lambda ()
-	      (with-dynamic-environment (current-dynamic-environment) (lambda ()
-									(values 1 2))))
+	      (with-dynamic-extent (current-dynamic-extent) (lambda ()
+							      (values 1 2))))
 	  list))
 
       (test-end "SRFI 154"))))

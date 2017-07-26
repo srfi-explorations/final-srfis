@@ -20,17 +20,17 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-record-type <dynamic-environment>
-  (make-dynamic-environment point)
-  dynamic-environment?
-  (point dynamic-environment-point))
+(define-record-type <dynamic-extent>
+  (make-dynamic-extent point)
+  dynamic-extent?
+  (point dynamic-extent-point))
 
-(define (current-dynamic-environment)
-  (make-dynamic-environment (%dk)))
+(define (current-dynamic-extent)
+  (make-dynamic-extent (%dk)))
 
-(define (with-dynamic-environment dynamic-environment thunk)
+(define (with-dynamic-extent dynamic-extent thunk)
   (let ((here (%dk)))
-    (travel-to-point! here (dynamic-environment-point dynamic-environment))
+    (travel-to-point! here (dynamic-extent-point dynamic-extent))
     (let ((result (thunk)))
       (travel-to-point! (%dk) here)
       result)))

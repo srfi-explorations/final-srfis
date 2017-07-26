@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>SRFI 154: First-class dynamic environments</title>
+    <title>SRFI 154: First-class dynamic extents</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/srfi.css" type="text/css" />
     <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png" />
@@ -12,7 +12,7 @@
 
     <h1>Title</h1>
     
-    First-class dynamic environments
+    First-class dynamic extents
 
     <h1>Author</h1>
 
@@ -38,26 +38,32 @@
 
     This SRFI reifies the dynamic extent into a first-class value
     together with a well-defined procedural interface and a syntax to
-    create procedures that remember not only the environment at
-    creation time but also their dynamic environment. 
+    create procedures that remember not only their environment at
+    creation time but also their dynamic extent, which includes their
+    dynamic environment. 
 
     <h1>Issues</h1>
 
-    <p><code>closed-lambda</code> might be in need of a better name.</p>
+    <ul>
+      <li><code>closed-lambda</code> might be in need of a better
+	name.</li>
+    </ul>
 
     <h1>Rationale</h1>
 
     <p>
       While the Scheme language is rich enough to reify the concept of
-      the dynamic extent and of the dynamic environment of a procedure
+      the dynamic extent of a procedure
       &mdash; the sample implementation accompanying this SRFI is a
       proof of this fact &mdash; there is no standard for how such a
       reification is exposed to the user.  It is the purpose of this
-      SRFI to remedy this.
+      SRFI to remedy this.  In particular, Scheme systems may provide
+      faster implementations than the portable sample implementation
+      of this SRFI.
     </p>
 
     <p>
-      To give an example why explicit handling of dynamic environments
+      To give an example why explicit handling of dynamic extents
       can become necessary, let us consider the following two definitions:
     </p>
 
@@ -98,7 +104,7 @@
     <p>
       The same goes not only for error handlers, but for any other
       type of callback procedure where it often makes sense to
-      reinstate the dynamic environment of the definition of the
+      reinstate the dynamic extent of the definition of the
       callback for the dynamic extent of the call to the
       callback, <i>e.g.</i> to define the callback
       using <code>closed-lambda</code> as opposed to using a
@@ -109,7 +115,7 @@
       In case the error handler from the example above wants to call
       back on a provided continuation, we have to be a bit more
       careful so that the continuation is called in the expected
-      dynamic environment:
+      dynamic extent:
     </p>
 
     <pre>
@@ -120,9 +126,9 @@
       (sqrt x)))
   
   (define error-handler
-    (let ((dynamic-environment (current-dynamic-environment)))
+    (let ((dynamic-extent (current-dynamic-extent)))
       (lambda (msg exit)
-        (with-dynamic-environment dynamic-environment
+        (with-dynamic-extent dynamic-extent
          (lambda () 
            (display msg (current-error-port))
            (newline (current-error-port))))
@@ -151,60 +157,59 @@
     </p>
     
     <p>Another use case
-    is <a href="https://groups.google.com/d/msg/scheme-reports-wg2/CQslZcWTXHM/qBMgusbkBAAJ">the
-    proper implementation of promises</a> and lazy algorithms that
-    work well in the presence
-    of <code>call-with-current-continuation</code> and
-    dynamically scoped variables.  (A forthcoming planned SRFI will
-    cover promises in this respect.)
+      is <a href="https://srfi.schemers.org/srfi-155/srfi-155.html">SRFI
+      155</a>, which provides a specification and an implementation of
+      promises such that lazy algorithms using them work well in the presence
+      of <code>call-with-current-continuation</code> and dynamically
+      scoped variables.
     </p>
     
     <h1>Specification</h1>
 
     <p>
-      Throughout, we use the term <em>dynamic environment</em> for a reified
+      Throughout, we reuse the term <em>dynamic extent</em> for a reified
       dynamic extent.  In this sense, the <code><em>before</em></code>
       thunk of a call to <code>dynamic-wind</code>
-      sets up the dynamic environment of the call
+      sets up the dynamic extent of the call
       to <code><em>thunk</em></code>, while
       the <code><em>after</em></code> thunk restores the dynamic
-      environment of the call to <code>dynamic-wind</code>.
+      extent of the call to <code>dynamic-wind</code>.
     </p>
  
     <p>
-      Dynamic environments form a type not necessarily disjoint from
+      Dynamic extents form a type not necessarily disjoint from
       other Scheme types.
     </p>
     
     <h2>Procedures</h2>
     
-    <p><code>(dynamic-environment? <em>obj</em></code>)</p>
+    <p><code>(dynamic-extent? <em>obj</em></code>)</p>
 
     <p>
-      The <code>dynamic-environment?</code> procedure
-      returns <code>#t</code> if its argument is a dynamic environment,
+      The <code>dynamic-extent?</code> procedure
+      returns <code>#t</code> if its argument is a dynamic extent,
       and <code>#f</code> otherwise.  Note that dynamic environments are not
       necessarily disjoint from other Scheme types such as procedures.
     </p>
 
-    <p><code>(current-dynamic-environment)</code></p>
+    <p><code>(current-dynamic-extent)</code></p>
 
     <p>
-      The <code>current-dynamic-environment</code> procedure returns
+      The <code>current-dynamic-extent</code> procedure returns
       the current dynamic environment by capturing the dynamic extent
-      of the call to <code>current-dynamic-environment</code>, which
+      of the call to <code>current-dynamic-extent</code>, which
       can be reinstated by the
-      procedure <code>with-dynamic-environment</code>.
+      procedure <code>with-dynamic-extent</code>.
     </p>
 
-    <p><code>(with-dynamic-environment <em>dynamic-environment</em> <em>thunk</em>)</code></p>
+    <p><code>(with-dynamic-extent <em>dynamic-extent</em> <em>thunk</em>)</code></p>
 
     <p>
-      The <code>with-dynamic-environment</code> procedure calls
+      The <code>with-dynamic-extent</code> procedure calls
       the <code><em>thunk</em></code> and returns the values yielded
       by <code><em>thunk</em></code>.  The call
       to <code><em>thunk</em></code> happens in the dynamic extent
-      captured by the <code><em>dynamic-environment</em></code>.
+      captured by the <code><em>dynamic-extent</em></code>.
     </p>
 
     <h2>Syntax</h2>
@@ -232,11 +237,18 @@
       provides <code>call-with-current-continuation</code>, and has a
       macro facility (for implementing <code>closed-lambda</code>).
     </p>
+
+    <p>
+      The sample implementation includes a special algorithm for use
+      with Chibi Scheme.  This serves as a demonstration how efficient
+      implementations of this specification can be provided by Scheme
+      implementers.
+    </p>
     
     <h1>Acknowledgements</h1>
 
     <p>Thanks go to the SRFI editor for keeping the SRFI process alive
-    and running.</p>
+    and running..</p>
     
     <h1>Copyright</h1>
 

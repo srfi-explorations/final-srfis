@@ -21,9 +21,9 @@
 ;; SOFTWARE.
 
 (define-library (srfi 154)  
-  (export dynamic-environment?
-          current-dynamic-environment
-	  with-dynamic-environment
+  (export dynamic-extent?
+          current-dynamic-extent
+	  with-dynamic-extent
 	  closed-lambda)
   (cond-expand
     (chibi

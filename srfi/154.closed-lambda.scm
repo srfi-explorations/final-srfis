@@ -23,7 +23,7 @@
 (define-syntax closed-lambda
   (syntax-rules ()
     ((closed-lambda formals body)
-     (let ((dynamic-environment (current-dynamic-environment)))
+     (let ((dynamic-extent (current-dynamic-extent)))
        (lambda formals
-	 (with-dynamic-environment dynamic-environment (lambda ()
-							 body)))))))
+	 (with-dynamic-extent dynamic-extent (lambda ()
+					       body)))))))
