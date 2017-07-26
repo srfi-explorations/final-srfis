@@ -75,7 +75,7 @@
 	(let ((x (make-parameter 1)))
 	  (let ((p
 		 (delay (list (x)
-			      (with-dynamic-extent (forcing-environment)
+			      (with-dynamic-extent (forcing-extent)
 						   (lambda () (x)))))))
 	    (parameterize
 		((x 2))

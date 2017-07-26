@@ -20,12 +20,12 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define current-forcing-environment (make-parameter #f))
+(define current-forcing-extent (make-parameter #f))
 
-(define (forcing-environment)
-  (unless (current-forcing-environment)
-    (error "forcing-environment: there is no promise being forced"))
-  (current-forcing-environment))
+(define (forcing-extent)
+  (unless (current-forcing-extent)
+    (error "forcing-extent: there is no promise being forced"))
+  (current-forcing-extent))
 
 (define-syntax delay
   (syntax-rules (force)
@@ -34,11 +34,11 @@
     ((delay expression)
      (let ((dynamic-extent (current-dynamic-extent)))
        (scheme-delay
-	(let ((forcing-environment (current-dynamic-extent)))
+	(let ((forcing-extent (current-dynamic-extent)))
 	  (with-dynamic-extent dynamic-extent (lambda ()
 						(parameterize
-						    ((current-forcing-environment
-						      forcing-environment))
+						    ((current-forcing-extent
+						      forcing-extent))
 						  expression)))))))))
 
 (define-syntax delay-force
@@ -46,9 +46,9 @@
     ((delay expression)
      (let ((dynamic-extent (current-dynamic-extent)))
        (scheme-delay-force
-	(let ((forcing-environment (current-dynamic-extent)))
+	(let ((forcing-extent (current-dynamic-extent)))
 	  (with-dynamic-extent dynamic-extent (lambda ()
 						(parameterize
-						    ((current-forcing-environment
-						      forcing-environment))
+						    ((current-forcing-extent
+						      forcing-extent))
 						  expression)))))))))

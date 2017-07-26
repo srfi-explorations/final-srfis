@@ -20,7 +20,15 @@ Marc Nieper-Wi&szlig;kirchen
 
 <h1>Status</h1>
 
-<p>This SRFI is currently in <em>draft</em> status.  Here is <a href="http://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+155+at+srfi+dotschemers+dot+org">srfi-155@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="http://srfi-email.schemers.org/srfi-155">archive</a>.</p>
+<p>This SRFI is currently in <em>draft</em> status.  Here
+is <a href="http://srfi.schemers.org/srfi-process.html">an
+explanation</a> of each status that a SRFI can hold.  To provide input
+on this SRFI, please send email
+to <code><a href="mailto:srfi+minus+155+at+srfi+dotschemers+dot+org">srfi-155@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.
+To subscribe to the list,
+follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these
+instructions</a>.  You can access previous messages via the mailing
+list <a href="http://srfi-email.schemers.org/srfi-155">archive</a>.</p>
 <ul>
   <li>Received: 2017/7/4</li>
   <li>60-day deadline: 2017/9/2</li>
@@ -43,19 +51,16 @@ non-functional, side effecting code.  It should, however, be
 applicable in a purely functional setting.  This is the case for the
 delayed evaluation model as described in the R7RS as long as no
 dynamically bound variables, also known as parameter objects, are
-present.  It is the purpose of this SRFI to rework the
-specification in the R7RS so that lazy evaluation works with purely
-functional code that makes use of dynamic environments.  This is done
-by remembering the dynamic environment in effect when
+present.  It is the purpose of this SRFI to rework the specification
+in the R7RS so that lazy evaluation works with purely functional code
+that makes use of dynamic environments or, more generally, the dynamic
+extent.  This is done by remembering the dynamic extent in effect when
 the <code>delay</code> expression is evaluated.
 </p>
 
 <h1>Issues</h1>
 
 <ul>
-  <li>The name of the described feature
-  identifier <code>functional-promises</code> is not yet set in
-    stone.</li>
   <li>Shall this SRFI define a compatibility library to SRFI 45,
     named, say, <code>(srfi 45 functional)</code>, that is equivalent to the
     following?
@@ -73,11 +78,11 @@ the <code>delay</code> expression is evaluated.
 <p>
 In <a href="http://trac.sacrideo.us/wg/ticket/397">ticket #397</a> of
 the Scheme Working Group 1, the question was raised how promises shall
-interact with the dynamic environment, namely
+interact with the dynamic extent, namely
 whether <code>force</code> shall evaluate a promise in the dynamic
-environment of the call to <code>force</code> which first requested its value.  An
+extent of the call to <code>force</code> which first requested its value.  An
 opposing choice would be that <code>force</code> shall evaluate a
-promise in the dynamic environment of the site where the promise was
+promise in the dynamic extent of the site where the promise was
 created.
 </p>
 
@@ -95,7 +100,8 @@ created.
   editors of the R7RS
   was <a href="https://groups.google.com/forum/#!topic/scheme-reports-wg2/CQslZcWTXHM">the
   wrong one</a>, so this SRFI proposes a correction to
-  the <code>(scheme lazy)</code> library.
+  the <code>(scheme lazy)</code> library in form of the <code>(scheme
+  promise)</code> library.
 </p>
 
 <p>Lazy algorithms should work well together with purely functional
@@ -154,15 +160,15 @@ created.
 </p>
 
 <p>
-  However, there might be legitimate reasons to access the dynamic environment at the
+  However, there might be legitimate reasons to access the dynamic extent at the
   site of the first invocation to <code>force</code>, for example for
   debugging purposes.  Therefore, this SRFI defines an optional
-  procedure <code>forcing-environment</code>, which returns the dynamic environment (in the sense
+  procedure <code>forcing-extent</code>, which returns the dynamic extent (in the sense
   of <a href="https://srfi.schemers.org/srfi-154/srfi-154.html">SRFI
     154</a>) of the most recent call to <code>force</code>.
   The procedure is optional because their presence complicates the
   semantic model of lazy evaluation again.
-  Using <code>(forcing-environment)</code> makes code as the following possible:
+  Using <code>(forcing-extent)</code> makes code as the following possible:
 </p>
 
 <pre>
@@ -196,16 +202,28 @@ created.
 
 <h1>Specification</h1>
 
-<p>We use the term <em>dynamic environment</em> as defined
-  by <a href="https://srfi.schemers.org/srfi-154/srfi-154.html">SRFI
-    154</a>.
+<p>We use the term <em>dynamic extent</em> for reified dynamic extents
+  as in <a href="https://srfi.schemers.org/srfi-154/srfi-154.html">SRFI
+  154</a>.
 </p>
 
 <p>The mandatory identifiers defined by this specification are
 exported by the <code>(srfi 155)</code>.  The optional identifiers are
 exported by <code>(srfi 155 reflection)</code>.  If an implementation
-provides <code>(srfi 155 reflection)</code> it has to provide all
+provides <code>(srfi 155 reflection)</code>, it has to provide all
 optional identifiers.
+</p>
+
+<p>
+  The author of this SRFI recommends that the interface described in
+  this SRFI will be made available under the namespace <code>(scheme
+  promise)</code> (and <code>(scheme promise reflection)</code>) in
+  future revisions of the Scheme programming language that build upon
+  the R7RS.  When this happens, <code>(scheme lazy)</code> might
+  become deprecated and remain solely for backward-compatibility with
+  the R7RS.  It is further recommended that <code>(scheme
+  stream)</code> of the R7RS-large uses the same semantics with
+  respect to the dynamic extent as this SRFI.
 </p>
 
 <h2>Syntax</h2>
@@ -216,7 +234,7 @@ optional identifiers.
   <code>(delay &lt;expression&gt;)</code> returns an object called
   a <em>promise</em> which at some point in the future can be asked
   (by the <code>force</code> procedure) to
-  evaluate <code>&lt;expression&gt;</code> in the dynamic environment
+  evaluate <code>&lt;expression&gt;</code> in the dynamic extent
   in effect when the <code>delay</code> expression was evaluated, and
   deliver the resulting value.  The effect
   of <code>&lt;expression&gt;</code> returning multiple values is
@@ -257,7 +275,7 @@ combined expression type <code>(delay
   a <em>promise</em> created
   by <code>delay</code>, <code>delay-force</code>,
   or <code>make-promise</code>.  If no value has been computed for the
-  promise, the value is computed in the dynamic environment in
+  promise, the value is computed in the dynamic extent in
   effect when the <code>delay</code>, <code>delay-force</code>,
   or <code>make-promise</code> expression was evaluated, and
   returned.  The value of the promise must be cached (or
@@ -284,10 +302,10 @@ combined expression type <code>(delay
 
 <h3>Optional procedures</h3>
 
-<p><code>(forcing-environment)</code></p>
+<p><code>(forcing-extent)</code></p>
 
-<p>The <code>forcing-environment</code> returns the dynamic
-environment (as defined by <a href="">SRFI 154</a>) in effect at the
+<p>The <code>forcing-extent</code> returns the dynamic
+extent (as defined by <a href="">SRFI 154</a>) in effect at the
 most recent call to <code>force</code>.  It is an error to
 invoke <code>forcing-environment</code> outside the dynamic extent of
 a call to <code>force</code>.
@@ -295,30 +313,7 @@ a call to <code>force</code>.
 
 <p><code>(dynamic-environment? <em>obj</em>)</code></p>
 
-<p>Type predicate for dynamic environments as exported by <codee>(srfi 154)</code>.</p>
-
-<h2>Feature identifiers</h2>
-
-<p>
-  An R7RS implementation that implements promises as described here as
-  part of its <code>(scheme lazy)</code> library provides the feature
-  identifier <code>functional-promises</code>.  In that case, the
-  bindings exported by <code>(srfi 155)</code>
-  are the same as the
-  respective bindings exported by <code>(scheme lazy)</code>.
-</p>
-
-<p>
-  Technically, such an R7RS implementation does not completely conform to
-  the small language as described by the R7RS.  Nevertheless, such an
-  implementation shall still provide the <code>r7rs</code> feature identifier.
-</p>
-
-<p>
-  It is recommended by this SRFI that future extensions (<i>e.g.</i>
-  <em>R7RS-large</em>) or revisions (<i>e.g.</i> <em>R8RS</em>) of the
-  R7RS to correct the R7RS in the sense of this SRFI.
-</p>
+<p>Type predicate for dynamic extent as exported by <codee>(srfi 154)</code>.</p>
 
 <h1>Implementation</h1>
 

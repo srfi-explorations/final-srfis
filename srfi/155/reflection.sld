@@ -21,5 +21,5 @@
 ;; SOFTWARE.
 
 (define-library (srfi 155 reflection)
-  (export forcing-environment dynamic-extent?)
+  (export forcing-extent dynamic-extent?)
   (import (srfi 155 implementation)))
