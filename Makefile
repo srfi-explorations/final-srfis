@@ -23,9 +23,14 @@
 
 .POSIX:
 
-.SILENT: check
+.SILENT: check check-racket
 
 SCHEME = chibi-scheme $(SCHEME_FLAGS)
 
+RACKET = racket $(RACKET_FLAGS)
+
 check:
 	$(SCHEME) tests.scm
+
+check-racket:
+	$(RACKET) tests.rkt

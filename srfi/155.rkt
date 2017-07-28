@@ -20,11 +20,17 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-library (srfi 155 test)
-  (export run-tests)
-  (import (scheme base)
-	  (srfi 64)
-	  (srfi 154)
-	  (srfi 155)
-	  (srfi 155 reflection))
-  (include "test.scm"))
+#lang racket
+
+(provide delay
+	 delay-force
+	 force
+	 make-promise
+	 promise?
+	 forcing-extent
+	 dynamic-extent?)
+
+(require srfi/9
+	 "154.rkt")
+
+(include "155/implementation.157.scm")

@@ -20,35 +20,42 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define current-forcing-environment (make-parameter #f))
+#lang racket
 
-(define (forcing-environment)
-  (unless (current-forcing-environment)
-    (error "forcing-environment: there is no promise being forced"))
-  (current-forcing-environment))
+(provide dynamic-extent?
+	 current-dynamic-extent
+	 with-dynamic-extent
+	 closed-lambda)
 
-(define-syntax delay
-  (syntax-rules (force)
-    ((delay (force expression))
-     (delay-force expression))
-    ((delay expression)
-     (let ((dynamic-environment (current-dynamic-environment)))
-       (scheme-delay
-	(let ((forcing-environment (current-dynamic-environment)))
-	  (with-dynamic-environment dynamic-environment (lambda ()
-							  (parameterize
-							      ((current-forcing-environment
-								forcing-environment))
-							    expression)))))))))
+(require srfi/9)
 
-(define-syntax delay-force
+(define-record-type <dynamic-extent>
+  (make-dynamic-extent proc)
+  dynamic-extent?
+  (proc dynamic-extent-proc))
+
+(define (current-dynamic-extent)
+  (call-with-current-continuation
+   (lambda (return)
+     (let-values
+	 (((k thunk)
+	   (call-with-current-continuation
+	    (lambda (c)
+	       (return
+		(make-dynamic-extent (lambda (thunk)
+                                       (call-with-current-continuation
+                                        (lambda (k)
+                                          (c k thunk))))))))))
+       (call-with-values thunk k)))))
+
+
+(define (with-dynamic-extent dynamic-extent thunk)
+  ((dynamic-extent-proc dynamic-extent) thunk))
+
+(define-syntax closed-lambda
   (syntax-rules ()
-    ((delay expression)
-     (let ((dynamic-environment (current-dynamic-environment)))
-       (scheme-delay-force
-	(let ((forcing-environment (current-dynamic-environment)))
-	  (with-dynamic-environment dynamic-environment (lambda ()
-							  (parameterize
-							      ((current-forcing-environment
-								forcing-environment))
-							    expression)))))))))
+    ((closed-lambda formals body)
+     (let ((dynamic-extent (current-dynamic-extent)))
+       (lambda formals
+	 (with-dynamic-extent dynamic-extent (lambda ()
+					       body)))))))

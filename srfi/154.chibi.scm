@@ -1,4 +1,4 @@
-;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved. 
+;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved.
 
 ;; Permission is hereby granted, free of charge, to any person
 ;; obtaining a copy of this software and associated documentation
@@ -20,11 +20,19 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-library (srfi 155 test)
-  (export run-tests)
-  (import (scheme base)
-	  (srfi 64)
-	  (srfi 154)
-	  (srfi 155)
-	  (srfi 155 reflection))
-  (include "test.scm"))
+(define-record-type <dynamic-extent>
+  (make-dynamic-extent point)
+  dynamic-extent?
+  (point dynamic-extent-point))
+
+(define (current-dynamic-extent)
+  (make-dynamic-extent (%dk)))
+
+(define (with-dynamic-extent dynamic-extent thunk)
+  (let ((here (%dk)))
+    (travel-to-point! here (dynamic-extent-point dynamic-extent))
+    (%dk (dynamic-extent-point dynamic-extent))
+    (let ((result (thunk)))
+      (travel-to-point! (%dk) here)
+      (%dk here)
+      result)))

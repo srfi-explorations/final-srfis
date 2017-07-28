@@ -1,4 +1,4 @@
-;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved. 
+;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved.
 
 ;; Permission is hereby granted, free of charge, to any person
 ;; obtaining a copy of this software and associated documentation
@@ -20,10 +20,17 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-library (srfi 154)
-  (export dynamic-environment?
-          current-dynamic-environment
-	  with-dynamic-environment
+(define-library (srfi 154)  
+  (export dynamic-extent?
+          current-dynamic-extent
+	  with-dynamic-extent
 	  closed-lambda)
-  (import (scheme base))
-  (include "154.scm"))
+  (cond-expand
+    (chibi
+     (import (scheme base)
+	     (only (chibi) travel-to-point! %dk))
+     (include "154.chibi.scm"))
+    (else
+     (import (scheme base))
+     (include "154.scm")))
+  (include "154.closed-lambda.scm"))
