@@ -25,8 +25,13 @@
 	  make-promise promise?
 	  forcing-extent dynamic-extent?)
   (import (scheme base)
-	  (rename (scheme lazy)
-		  (delay scheme-delay)
-		  (delay-force scheme-delay-force))
 	  (srfi 154))
-  (include "implementation.scm"))
+  (cond-expand
+    ((library (srfi 157))
+     (import (srfi 157))
+     (include "implementation.157.scm"))
+    (else
+     (import (rename (scheme lazy)
+		     (delay scheme-delay)
+		     (delay-force scheme-delay-force)))
+     (include "implementation.lazy.scm"))))

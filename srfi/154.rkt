@@ -20,35 +20,42 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define current-forcing-extent (make-parameter #f))
+#lang racket
 
-(define (forcing-extent)
-  (unless (current-forcing-extent)
-    (error "forcing-extent: there is no promise being forced"))
-  (current-forcing-extent))
+(provide dynamic-extent?
+	 current-dynamic-extent
+	 with-dynamic-extent
+	 closed-lambda)
 
-(define-syntax delay
-  (syntax-rules (force)
-    ((delay (force expression))
-     (delay-force expression))
-    ((delay expression)
-     (let ((dynamic-extent (current-dynamic-extent)))
-       (scheme-delay
-	(let ((forcing-extent (current-dynamic-extent)))
-	  (with-dynamic-extent dynamic-extent (lambda ()
-						(parameterize
-						    ((current-forcing-extent
-						      forcing-extent))
-						  expression)))))))))
+(require srfi/9)
 
-(define-syntax delay-force
+(define-record-type <dynamic-extent>
+  (make-dynamic-extent proc)
+  dynamic-extent?
+  (proc dynamic-extent-proc))
+
+(define (current-dynamic-extent)
+  (call-with-current-continuation
+   (lambda (return)
+     (let-values
+	 (((k thunk)
+	   (call-with-current-continuation
+	    (lambda (c)
+	       (return
+		(make-dynamic-extent (lambda (thunk)
+                                       (call-with-current-continuation
+                                        (lambda (k)
+                                          (c k thunk))))))))))
+       (call-with-values thunk k)))))
+
+
+(define (with-dynamic-extent dynamic-extent thunk)
+  ((dynamic-extent-proc dynamic-extent) thunk))
+
+(define-syntax closed-lambda
   (syntax-rules ()
-    ((delay expression)
+    ((closed-lambda formals body)
      (let ((dynamic-extent (current-dynamic-extent)))
-       (scheme-delay-force
-	(let ((forcing-extent (current-dynamic-extent)))
-	  (with-dynamic-extent dynamic-extent (lambda ()
-						(parameterize
-						    ((current-forcing-extent
-						      forcing-extent))
-						  expression)))))))))
+       (lambda formals
+	 (with-dynamic-extent dynamic-extent (lambda ()
+					       body)))))))

@@ -58,22 +58,20 @@ extent.  This is done by remembering the dynamic extent in effect when
 the <code>delay</code> expression is evaluated.
 </p>
 
+<p>
+  Another perceived misfeature of the R7RS model of delayed evaluation
+  is the apparent need of the <code>delay-force</code> special form to
+  express iterative lazy algorthms.  It is shown that
+  the <code>delay-force</code> special form is unneeded and that the
+  implementation can (and should) handle iterative lazy algorithms
+  without space leaks.
+</p>
+
 <h1>Issues</h1>
 
-<ul>
-  <li>Shall this SRFI define a compatibility library to SRFI 45,
-    named, say, <code>(srfi 45 functional)</code>, that is equivalent to the
-    following?
-<pre>
-  (define-library (srfi 45 functional) 
-    (export delay lazy force eager)
-    (import (rename (srfi 155) (delay-force lazy)
-                               (make-promise eager))))            
-</pre>
-  </li>
-</ul>
-
 <h1>Rationale</h1>
+
+<h2>Promises and the dynamic extent</h2>
 
 <p>
 In <a href="http://trac.sacrideo.us/wg/ticket/397">ticket #397</a> of
@@ -166,7 +164,7 @@ created.
   procedure <code>forcing-extent</code>, which returns the dynamic extent (in the sense
   of <a href="https://srfi.schemers.org/srfi-154/srfi-154.html">SRFI
     154</a>) of the most recent call to <code>force</code>.
-  The procedure is optional because their presence complicates the
+  The procedure is optional because its presence complicates the
   semantic model of lazy evaluation again.
   Using <code>(forcing-extent)</code> makes code as the following possible:
 </p>
@@ -200,6 +198,131 @@ created.
   procedure <code>forcing-environment</code> is included.
 </p>
 
+<h2>Iterative lazy algorithms</h2>
+
+<p>
+The R5RS and the R7RS make no guarantee that expressing iterative lazy
+algorithms just with <code>delay</code> and <code>force</code> will
+run in bounded space.  Instead, they provide a special
+form <code>delay-force</code> such that <code>(delay-force
+&lt;expression&gt;)</code> is equivalent to <code>(delay (force
+&lt;expression&gt;))</code> except forcing the resulting promise
+guarantees to evaluate <code>(force &lt;expression&gt;)</code> in tail
+position.  The R7RS gives an example in form of
+the <code>stream-filter</code> procedure that makes use of
+the <code>delay-force</code> form.
+</p>
+
+<p>
+From a user's perspective, the need for this third primitive is not
+optimal, and one may think that a Scheme system properly supporting
+delayed evaluation should handle <code>(delay (force
+&lt;expression&gt;))</code> as gracefully as it does handle calls in
+tail position (as described in section 3.5 of the R7RS).
+</p>
+
+<p>
+As an improvement, it was suggested by Alex Shinn on the mailing list
+of this SRFI that <code>delay</code> should be redefined along
+the following lines:
+</p>
+
+<pre>
+  (define-syntax delay
+    (syntax-rules (force)
+      ((delay (force expression))
+       (delay-force expression)
+      ((delay expression)
+       ...)))</pre>
+
+<p>
+  With this definition, during expansion of <code>delay</code> the system
+  statically detects whether the expression to be delayed is of the
+  form <code>(force &lt;expression&gt;)</code>. This means
+  that <code>delay-force</code> does not have to be exposed anymore
+  and that a Scheme user can write <code>(delay (force
+  &lt;expression&gt;))</code> instead of <code>(delay-force
+  &lt;expression&gt;)</code>.
+</p>
+
+<o>
+  Besides probably being more user-friendly, this redefinition of <code>delay</code>
+  makes the delayed evaluation model also more composable, hence more
+  powerful:  Consider, for example, the following code (making use of
+  <a href="https://srfi.schemers.org/srfi-111/srfi-111.html">SRFI 111:
+  Boxes</a>):
+</p>
+
+<pre>
+  (define-syntax lazy-box
+    (syntax-rules ()
+      ((lazy-box expression)
+       (box (delay expression)))))
+
+  (define-syntax lazy-unbox
+    (syntax-rules ()
+      ((lazy-unbox box)
+       (force (unbox box)))))</pre>
+
+<p>
+The lazy boxes defined by these two keywords wrap a promise in a box.
+The pair of <code>lazy-box</code> and <code>lazy-unbox</code> provides
+the same primitives for lazy boxes as do <code>delay</code>
+and <code>force</code> for non-boxed promises.  Using the suggested
+semantics that <code>(delay (force &lt;expression&gt;))</code> is
+equivalent to <code>(delay-force &lt;expression&gt;)</code>, the
+composition <code>(lazy-box (lazy-unbox &lt;expression&gt;))</code>
+reduces correctly and makes expressing iterative lazy algorithms with
+lazy boxes possible.
+</p>
+
+<p>
+In order to make this work, <code>lazy-unbox</code> has to be defined as
+syntax and not as a procedure.  Had we defined <code>lazy-unbox</code>
+as a procedure, the call to <code>force</code> in tail position would
+have remained hidden from the syntax expander.
+</p>
+
+<p>
+  While the automatic syntactic reduction of <code>(delay (force
+    &lt;expression&gt;))</code> to <code>(delay-force
+    &lt;expression&gt;)</code> is, as this example shows, better than
+  exposing <code>delay-force</code> directly, this necessity of having to
+  define ‘lazy-unbox’ as syntax also shows that the proposed
+  semantics is still a suboptimal choice.  Furthermore, the model
+  breaks down in more complicated cases:
+</p>
+
+<pre>
+  (delay (if flag? (force x) (force y)))</pre>
+ 
+<p>Forcing the result of this expression won't guarantee
+  that <code>(force x)</code> or <code>(force y)</code> are evaluated
+  in a tail position although both calls appear in tail context inside
+  the <code>delay</code> form.
+</p>
+
+<p>
+So again, from a user's perspective, this handling of <code>(delay
+(force &lt;expression&gt;))</code> is still not as graceful as it
+should be. The problem is that the previous solution is based on
+detecting the presence of <code>force</code> syntactically.
+</p>
+
+<p>Instead, what is needed is the following: If
+  evaluating <code>&lt;expression&gt;</code> results in a tail call of
+  the form <code>(force <em>promise</em>)</code>, forcing the result
+  of <code>(delay &lt;expression&gt;)</code> will also result in a
+  tail to <code>(force <em>promise</em>)</code>.
+</p>
+
+<p>It is not possible to achieve this syntactically.  It is, however,
+  possible to implement this requirement using the continuation marks
+  of <a href="https://srfi.schemers.org/srfi-157/srfi-157.html">SRFI
+    157</a>, which is demonstrated by the sample implementation
+  accompanying this SRFI.
+</p>
+
 <h1>Specification</h1>
 
 <p>We use the term <em>dynamic extent</em> for reified dynamic extents
@@ -208,9 +331,10 @@ created.
 </p>
 
 <p>The mandatory identifiers defined by this specification are
-exported by the <code>(srfi 155)</code>.  The optional identifiers are
-exported by <code>(srfi 155 reflection)</code>.  If an implementation
-provides <code>(srfi 155 reflection)</code>, it has to provide all
+exported by the library <code>(srfi 155)</code>.  The optional
+identifiers are exported by the library <code>(srfi 155
+reflection)</code>.  If an implementation provides the
+library <code>(srfi 155 reflection)</code>, it has to provide all
 optional identifiers.
 </p>
 
@@ -241,30 +365,25 @@ optional identifiers.
   unspecified.
 </p>
 
+<p>
+  If forcing the result of <code>(delay &lt;expression&gt;)</code>
+  results in a tail call of the form <code>(force
+    <em>promise</em>)</code>,  forcing of the result is required to
+  also result in a tail call to <code>(force <em>promise</em>)</code>.
+</p>
+
+<p><i>Rationale:</i> This makes iterative lazy algorithms without
+  space leaks possible; see
+  also <a href="https://srfi.schemers.org/srfi-45/srfi-45.html">SRFI
+  45</a>.
+</p>
+
 <p><code>(delay-force &lt;expression&gt;)</code></p>
 
 <p>
-  The expression <code>(delay-force &lt;expression&gt;)</code> is
-  conceptually similar to <code>(delay (force
-    &lt;expression&gt;))</code>), with the difference that forcing the
-  result of <code>delay-force</code> will in effect result in a tail
-  call to <code>(force &lt;expression&gt;)</code>, while forcing the
-  result of <code>(delay (force &lt;expression&gt;))</code> might
-  not.  Thus iterative lazy algorithms that might result in a long
-  series of chains of <code>delay</code> and <code>force</code> can be
-  rewritten using <code>delay-force</code> to prevent consuming
-  unbounded space during evaluation.
-</p>
-
-<p><i>See <a href="https://srfi.schemers.org/srfi-41/srfi-41.html">SRFI
-      41</a> and <a href="https://srfi.schemers.org/srfi-45/srfi-45.html">SRFI
-      45</a> for a discussion.
-</i></p>
-
-<p>Implementations of this SRFI are, moreover, required to detect the
-combined expression type <code>(delay
-    (force <em>expression</em>))</code> statically and to rewrite it into
-  <code>(delay-force <em>expression</em>)</code>.
+  Equivalent to <code>(delay (force &lt;expression&gt;))</code>.  This
+  form is provided only for backward compatibility, and its use is
+  deprecated.
 </p>
 
 <h2>Procedures</h2>
@@ -304,11 +423,19 @@ combined expression type <code>(delay
 
 <p><code>(forcing-extent)</code></p>
 
-<p>The <code>forcing-extent</code> returns the dynamic
-extent (as defined by <a href="">SRFI 154</a>) in effect at the
-most recent call to <code>force</code>.  It is an error to
-invoke <code>forcing-environment</code> outside the dynamic extent of
-a call to <code>force</code>.
+<p>When the value of a promise <code>(delay &lt;expression&gt;)</code>
+  is asked for the first time and <code>&lt;expression&gt;</code> is
+  evaluated, an invokation of <code>(forcing-extent)</code> in the
+  dynamic extent of that evaluation returns the dynamic extent (as
+  defined
+  by <a href="https://srfi.schemers.org/srfi-154/srfi-154.html">SRFI
+  154</a>) of the call to <code>force</code> that initially forced the
+  promise.  If forcing a promise yields a chain of <code>delay</code>
+  and <code>force</code>, the dynamic extent returned
+  by <code>(forcing-extent)</code> is the dynamic extent of the
+  outermost call to <code>force</code> in this chain.  It is an error
+  to invoke <code>forcing-environment</code> outside the dynamic
+  extent of <code>&lt;expression&gt;</code>.
 </p>
 
 <p><code>(dynamic-environment? <em>obj</em>)</code></p>
@@ -318,10 +445,31 @@ a call to <code>force</code>.
 <h1>Implementation</h1>
 
 <p>The provided <a href="srfi/155.sld">sample implementation</a> for
-  an R7RS system builds upon the native promise type as defined
-  by <code>(scheme lazy)</code> and the sample implementation of SRFI
-  154.  By adding the sample implementation of SRFI 45, one would get
-  an implementation of this SRFI for any R5RS system.
+  an R7RS system builds upon the sample implementation
+  of <a href="https://srfi.schemers.org/srfi-154/srfi-154.html">SRFI
+    154</a>.
+</p>
+
+<p>
+  It is a faithful implementation if the presence of the
+  library <code>(srfi 157)</code>
+  of <a href="https://srfi.schemers.org/srfi-157/srfi-157.html">SRFI
+    157: Continuation marks</a> is detected on the host system.
+</p>
+
+<p>
+  Otherwise, the requirement that <code>(force (delay
+    &lt;expression&gt;))</code> results in a tail call to <code>(force
+    <em>promise</em>)</code> whenever
+  evaluating <code>&lt;expression&gt;</code> results in a tail call
+  to <code>(force <em>promise</em>)</code> is only met
+  when <code>&lt;expression&gt;</code> expands into the
+  form <code>(force <em>promise</em>)</code>.
+</p>
+
+<p>
+  Their is also an interface to the implementation as
+  a <a href="srfi/155.rkt">Racket module</a>.
 </p>
 
 <p>
@@ -331,16 +479,19 @@ a call to <code>force</code>.
 <h1>Acknowledgements</h1>
 
 <p>
-  Credit goes to the authors of the R7RS and to Andr&eacute; van Tonder for his
-  SRFI 45 from where most of this SRFI's description of promises and delayed
+  Credit goes to the authors of the R7RS and to Andr&eacute; van
+  Tonder for his
+  <a href="https://srfi.schemers.org/srfi-41/srfi-41.html">SRFI 45</a>
+  from where most of this SRFI's description of promises and delayed
   evaluation was taken.
 </p>
 
 <p>
   Credit also goes to Philip L. Bewig for his fantastic and standard
-  setting SRFI 41, which provides an important use case for promises.
+  setting <a href="https://srfi.schemers.org/srfi-41/srfi-41.html">SRFI
+  41</a>, which provides an important use case for promises.
 </p>
-  
+
 <h1>Copyright</h1>
 Copyright (C) Marc Nieper-Wi&szlig;kirchen (2017).  All Rights Reserved. 
 

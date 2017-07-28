@@ -20,11 +20,9 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-library (srfi 155 test)
-  (export run-tests)
-  (import (scheme base)
-	  (srfi 64)
-	  (srfi 154)
-	  (srfi 155)
-	  (srfi 155 reflection))
-  (include "test.scm"))
+#lang racket
+
+(require (rename-in "srfi/155/test.rkt"
+		    (run-tests run-srfi-155-tests)))
+
+(run-srfi-155-tests)

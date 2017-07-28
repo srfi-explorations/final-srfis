@@ -20,11 +20,30 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-library (srfi 155 test)
-  (export run-tests)
-  (import (scheme base)
-	  (srfi 64)
-	  (srfi 154)
-	  (srfi 155)
-	  (srfi 155 reflection))
-  (include "test.scm"))
+(define current-forcing-extent (make-parameter #f))
+
+(define (forcing-extent)
+  (unless (current-forcing-extent)
+    (error "forcing-extent: there is no promise being forced"))
+  (current-forcing-extent))
+
+(define-syntax delay
+  (syntax-rules (force)
+    ((delay (force expression))
+     (delay-force expression))
+    ((delay expression)
+     (let ((dynamic-extent (current-dynamic-extent)))
+       (scheme-delay
+	(let ((forcing-extent (current-dynamic-extent)))
+	  (with-dynamic-extent dynamic-extent (lambda ()
+						(parameterize
+						    ((current-forcing-extent forcing-extent))
+						  expression)))))))))
+
+(define-syntax delay-force
+  (syntax-rules ()
+    ((delay-force expression)
+     (let ((dynamic-extent (current-dynamic-extent)))
+       (scheme-delay-force
+	(with-dynamic-extent dynamic-extent (lambda ()
+					      expression)))))))
