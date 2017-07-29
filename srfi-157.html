@@ -97,7 +97,8 @@
       the proper implementation of delayed evaluation in a strict
       programming language that allows for iterative lazy algorithms
       without the need of the special <code>delay-force</code> form of
-      the R7RS.
+      the R7RS; see <a href="https://srfi.schemers.org/srfi-155/srfi-155.html">SRFI
+	155: Promises</a>.
     </p>
 
     <h1>Examples</h1>
@@ -120,14 +121,14 @@
     <pre>
   (let ((key (vector 'key)))
     (with-continuation-mark key 1     
-      (continuation->mark-set-&gt;list key (current-continuation-marks)) ; ⇒  (1)</pre>
+      (continuation-mark-set-&gt;list (current-continuation-marks) key))) ; ⇒  (1)</pre>
 
     <pre>
   (let ((key (vector 'key)))
     (with-continuation-mark key 1
       (cons 'foo
         (with-continuation-mark key 2
-          (continuation-mark-set-&gt;list key (current-continuation-marks)))))) ; ⇒ (foo 2 1)</pre>
+          (continuation-mark-set-&gt;list (current-continuation-marks) key))))) ; ⇒ (foo 2 1)</pre>
 
     <p>
       We use the invocation of <code>cons</code> to ensure that the
@@ -143,7 +144,7 @@
   (let ((key (vector 'key)))
     (with-continuation-mark key 1
       (with-continuation-mark key 2
-        (continuation-mark-set-&gt;list key (current-continuation-marks)))))) ; ⇒ (2)</pre>
+        (continuation-mark-set-&gt;list (current-continuation-marks) key)))) ; ⇒ (2)</pre>
     
     <h2>Recursive versus iterative algorithms</h2>
 
@@ -168,13 +169,8 @@
     <pre>
   (define %key (vector 'key))    
 
-  (define-syntax wcm
-    (syntax-rules ()
-      ((wcm value expression)
-       (with-current-continuation-mark %key value expression))))
-
   (define (ccm)
-    (continuation-mark-set-&gt;list %key (current-continuation-marks)))
+    (continuation-mark-set-&gt;list (current-continuation-marks) %key))
 
   (define (fact1 n)
     (if (zero? n)
@@ -182,7 +178,7 @@
           (display (ccm))
           (newline)
           1)
-        (wcm n (* n (fact1 (- n 1))))))
+        (with-continuation-mark %key n (* n (fact1 (- n 1))))))
 
   (define (fact2 n)
     (let loop ((n n) (a 1))
@@ -191,7 +187,7 @@
             (display (ccm))
             (newline)
             a)
-          (wcm n (loop (- n 1) (* n a))))))</pre>
+          (with-continuation-mark %key n (loop (- n 1) (* n a))))))</pre>
 
     <p>Calling <code>(fact1 3)</code> outputs <code>(1 2 3)</code> on
     the console, while calling <code>(fact2 3)</code>
@@ -447,16 +443,20 @@
     </p>
 
     <p>
-      A mature implementation of continuation marks is available
-      in <a href="http://racket-lang.org/">Racket</a>.
+      This SRFI provides an <a href="inferior">implementation</a> in
+      form of a meta-circular interpreter written in R7RS
+      dubbed <em>Inferior Scheme</em>.  Inferior Scheme is a REPL for
+      the Scheme IEEE 1178-1990 standard.  Outside of the standard
+      syntax and procedures, Inferior Scheme provides the syntax and
+      the procedures of this SRFI, and the <code>load</code> procedure
+      of the R4RS.
     </p>
     
     <p>
-      We will provide an implementation in form of a meta-circular
-      interpreter written in R7RS for a core fragment of the Scheme
-      programming language.
+      A mature implementation of continuation marks is available
+      in <a href="http://racket-lang.org/">Racket</a>.
     </p>
-    
+
     <p>
       The author
       of <a href="http://synthcode.com/wiki/chibi-scheme">Chibi
