@@ -174,7 +174,8 @@
 
 (define (compile-assignment expression environment)
   (let ((location (compile-variable (assignment-variable expression) environment))
-	(expression (compile (assignment-expression expression) environment)))
+	(expression `(let ((flag #f))
+		       ,(compile (assignment-expression expression) environment))))
     (if (symbol? location)
 	`(%set! ,location ,expression)
 	`(%set-box! ,(cadr location) ,expression))))
