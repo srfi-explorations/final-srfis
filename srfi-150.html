@@ -34,11 +34,15 @@ This SRFI provides a specification and portable implementation of an
 extension of the ERR5RS record syntax
 of <a href="http://srfi.schemers.org/srfi-131/srfi-131.html">SRFI
 131</a>, where field names inserted by macro transformers are
-effectively renamed.  This makes this SRFI compatible with the
-semantics of the record-type definitions of
+effectively renamed as if the macro transformer inserted a binding.
+This makes this SRFI compatible with the semantics of the record-type
+definitions of
 the <a href="http://trac.sacrideo.us/wg/raw-attachment/wiki/WikiStart/r7rs.pdf">R7RS</a>
-as written.  In addition, field names may also be other types of
-Scheme datums, like numbers and strings.
+as indended by
+its <a href="https://groups.google.com/d/msg/scheme-reports-wg2/oKuhgwaM45w/KXgPrh8oAwAJ">authors</a>.
+In addition, field names may also be other types of Scheme datums,
+like numbers and strings, or
+<a href="https://srfi.schemers.org/srfi-88/srfi-88.html">SRFI 88</a> keyword objects.
 </p>
 
 <h1>Issues</h1>
@@ -47,29 +51,163 @@ Scheme datums, like numbers and strings.
 
 <h1>Rationale</h1>
 
+<h2>The problem of hygiene and record-type field names</h2>
+
 <p>
-There is a still an ongoing discussion about whether the field names
-in record definitions in the style
-of <a href="http://srfi.schemers.org/srfi-9/srfi-9.html">SRFI 9</a>
-should be raw symbols or identifiers (which are effectively being
-renamed when inserted into the output of
-a <code>syntax-rules</code>-macro transformer).  When SRFI 9 was
-finalized, the question was not as important as it is now because at
-that time, record-type definitions were only allowed at top-level,
-reducing the chance of conflicts when hygiene is stripped.
+  Consider the following record-type definition in the style
+  of <a href="https://srfi.schemers.org/srfi-9/srfi-9.html">SRFI 9:
+  Defining Record Types</a>, which was adopted and extended by the
+  R7RS:
+</p>
+
+<pre>
+  (define-record-type <record>
+    (make-record field1 field2)
+    record?
+    (field1 record-field1)
+    (field2 record-field2))</pre>
+
+<p>
+  Both <code>field1</code> and <code>field2</code> are identifiers.  
+  The two formal arguments of the constructor <code>make-record</code>
+  correspond to the two fields with the same names.
 </p>
 
 <p>
-  Scheme working group 1, which created the
-  R7RS, <a href="https://groups.google.com/d/msg/scheme-reports-wg1/lk1ssmvgELs/n1j24HqNp2wJ">was
-  aware</a> of the problems that non-hygienic matching of field names
-  would bring about, and the way the R7RS is worded, an interpretation
-  of the text supporting non-hygienic field names seems to be quite a
-  stretch.
+  If the above record-type definition results from the output of a
+  <code>syntax-rules</code> macro transformer, which in turn may
+  result in the hygienic renaming of identifiers, the question arises
+  how the identifiers making up the formal arguments of the
+  constructor are compared to the identifiers making up the field
+  names.
 </p>
 
-<p>This SRFI proposes to extend the <code>define-record-type</code> of
-  the R7RS exactly as it is done by SRFI 131 with three exceptions:
+<p>There are two reasonable answers to this question: Either the
+  identifiers are considered raw symbols, in which case they are equal
+  if and only if they would denote the same literal if quoted, or they
+  are considered bound identifiers in the region of the record-type
+  definition, in which case they are equal if and only if a binding
+  for one would shadow free references to the other (that is,
+  being <code>bound-identifier=?</code> in the terminology of
+  the <a href="https://people.csail.mit.edu/jaffer/r4rs_12.html#SEC80">appendix
+  to the R4RS</a>).  For simplicity, in the sequel, we will call field
+  names with the former semantics <em>unhygienic</em> field names, and
+  field names with latter semantics <em>hygienic</em> field names.
+  (This terminology is meant to be free of any judgement.)
+</p>
+
+<p>It is not so clear, however, what the answer to this question is,
+  or should be.  SRFI 9 itself does not say much about this.  The
+  specification uses the syntax production
+  rule <code>&lt;identifier&gt;</code> instead
+  of <code>&lt;symbol&gt;</code>, which suggests hygienic matching.
+  The sample implementation accompanying SRFI 9, on the other hand,
+  does unhygienic matching.  It is, however, only a hack, because of
+  the inability of
+  the <a href="http://www.schemers.org/Documents/Standards/R5RS/r5rs.pdf">R5RS</a>
+  to create new types.
+</p>
+
+<p>It may be more illuminating to inspect a proper implementation of
+  this SRFI by its author, Richard Kelsey, which is the implementation of SRFI 9 in
+  <a href="http://s48.org/">Scheme 48</a>.  Here, field names are
+  hygienic, hinting at the intended meaning of field names.
+</p>
+
+<p>There is also another early proper implementation of SRFI 9, namely
+  the one found in <a href="https://racket-lang.org/">Racket</a> by
+  Mike Sperber from 2001, which also does hygienic matching.
+</p>
+
+<p>After the <a href="http://www.r6rs.org/">R6RS</a>, whose record
+  system didn't build upon SRFI
+  9, <a href="https://srfi.schemers.org/srfi-99/srfi-99.html">SRFI 99:
+    ERR5RS Records</a> was proposed, which extends SRFI 9, amongst
+  other things, by a procedural layer.  Although SRFI 99 still speaks
+  of field names as <code>&lt;identifier&gt;</code>s
+  (versus <code>&lt;symbol&gt;</code>s, which would have made it
+  clear), it is clear from the relationship with the accompanying
+  procedural interface that field names have to be unhygienic, making
+  SRFI 99 incompatible with previous implementations of SRFI 9.
+</p>
+
+<p>
+  During conception of the R7RS, Working Group 1 decided for inclusion
+  of SRFI 9, but decided against inclusion of SRFI 99.  Working Group
+  1 was also aware of the question of whether field names should be matched
+  hygienically or not, and 
+  <a href="https://groups.google.com/d/msg/scheme-reports-wg1/lk1ssmvgELs/n1j24HqNp2wJ">arguments
+  in favor of hygienic matching</a> were given.
+</p>
+
+<p>The resulting document of the R7RS does not explicitely state that
+  field names in record-type definitions are matched hygienically.
+  However, the terminology wording of the R7RS gives little room for
+  another interpretation.  (If someone interpreted the R7RS in such a
+  way that field names are unhygienic, by the same reason, pattern
+  variables in <code>syntax-rules</code> would be matched
+  unhygienically as well &emdash; this is relevant for macros
+  producing macro definitions.  However, all implementers and users
+  seem to agree that pattern variables are matched hygienically.)
+  Alex Shinn, chair of Working Group 1,
+  also <a href="https://groups.google.com/d/msg/scheme-reports-wg2/oKuhgwaM45w/U5ZFNzT-AgAJ">confirmed
+  that field names are hygienic in the R7RS</a>.
+</p>
+
+<p>
+  Thus, the R7RS is compatible with the original SRFI 9
+  implementations, but may break SRFI 99 compatibility when
+  record-type definitions result from the output of macro
+  transformers.
+</p>
+
+<p>
+  If the language defined by the R7RS is viewed in isolation, the
+  choice made by Working Group 1 resulted in the more powerful
+  language.  As the R7RS has only <code>syntax-rules</code> macro, the
+  only way for macros to generate new identifiers is through hygienic
+  renaming.  Thus, in the R7RS, <code>syntax-rules</code> macros can
+  produce record types with an unlimited number of fields
+  (making <code>define-record-type</code> truly generative in a second
+  sense).  If field names were unhygienic, the following example
+  wouldn't work (and would not be realisable
+  with <code>syntax-rules</code>, meaning that the various corners of
+  the R7RS wouldn't have fitted well together):
+</p>
+
+<pre>
+  (define *counter* -1)
+  
+  (define-syntax define-record-type/identity
+    (syntax-rules ()
+      ((_ <rtd>
+        (constructor name ...)
+        predicate
+        id
+        field ...)
+      (begin
+        (define-record-type <rtd>
+          (%contructor %id name ...)
+          predicate
+          (%id id)
+	  field ...)
+        (define (constructor . args)
+          (set! *counter* (+ 1 *counter*))
+          (apply %constructor *counter* args))))))</pre>
+
+<h2>The solution proposed by this SRFI</h2>
+
+<p>One reason why SRFI 99 is interesting is that it offers inheritance
+  of record types.  A stripped down version of SRFI 99 without the
+  procedural layer is SRFI 131.  Being forward-compatible with SRFI
+  99, the field names of SRFI 131 are likewise unhygienic, thus being at
+  odds with the semantics of the R7RS.
+</p>
+
+<p>
+  This SRFI proposes to extend the <code>define-record-type</code> of
+  the R7RS exactly as it is done by SRFI 131 with three exceptions so
+  that compatibility with the R7RS semantics is maintained:
 </p>
 
 <ul>
@@ -97,14 +235,15 @@ reducing the chance of conflicts when hygiene is stripped.
 </ul>
 
 <p>
-  The rationale for these changes is as follows:
+  The rationale for these additions is as follows:
 </p>
 
 <dl>
   <dt>Hygiene</dt>
   <dd>
-    Without hygiene, <code>syntax-rules</code>-macro transformers are
-    simply not powerful enough to generate sufficient record-type
+    As has been argued above, without
+    hygiene, <code>syntax-rules</code>-macro transformers are simply
+    not powerful enough to generate sufficient record-type
     definitions.  For example, the following example by Alex Shinn
     would break:
 <pre>
@@ -175,6 +314,17 @@ reducing the chance of conflicts when hygiene is stripped.
     field name takes precedence.)
   </dd>
 </dl>
+
+<p>One purpose of this SRFI is thus to demonstrate that the power of
+  SRFI 131's record types can also be made available on Schemes
+  compatible with the hygienic matching of field names of the R7RS,
+  and that their is no reason for unhygienic field names (being
+  inferior when only <code>syntax-rules</code> are considered), except
+  for SRFI 99 compatiblity (which, as stated above, itself broke
+  compatibilty with prior implementations).  However, at the end of
+  this SRFI, it is outline how principal compatibility with SRFI 99
+  can be achieved if SRFI 99 is suitably extended.
+</p>
 
 <p>
   This SRFI can be viewed as a competitor
