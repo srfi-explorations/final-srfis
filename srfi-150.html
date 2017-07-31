@@ -195,6 +195,13 @@ like numbers and strings, or
           (set! *counter* (+ 1 *counter*))
           (apply %constructor *counter* args))))))</pre>
 
+<p>In fact, even having SRFI 99 at one's disposal, the above problem
+  does not have a simple solution.  Using the procedural layer of SRFI
+  99, one would have to create a symbol for the identity field
+  disjoint from all other field names supplied.  In the absence of
+  unintered symbols, this seems like a deficiency of SRFI 99.
+</p>
+
 <h2>The solution proposed by this SRFI</h2>
 
 <p>One reason why SRFI 99 is interesting is that it offers inheritance
@@ -228,7 +235,7 @@ like numbers and strings, or
     </p>
   </li>
   <li>
-    <p>Instead of using the field names, one can also use the
+    <p>Apart from using the field names, one can also use the
     identifiers bound to the accessors by a record-type
     description to refer to fields in the constructors.
   </li>
@@ -244,7 +251,7 @@ like numbers and strings, or
     As has been argued above, without
     hygiene, <code>syntax-rules</code>-macro transformers are simply
     not powerful enough to generate sufficient record-type
-    definitions.  For example, the following example by Alex Shinn
+    definitions.  To give another sample, the following example by Alex Shinn
     would break:
 <pre>
  (define-syntax define-tuple-type
@@ -290,9 +297,9 @@ like numbers and strings, or
     names (but see below) and the matching of these field names must
     be hygienic as well, the identifier naming the field must either
     be unbound both in the scope of the definition of the parent and
-    the child record-type or has to share the same binding
+    the child record-type or have to share the same binding
     (<em>e.g.</em> as auxiliary syntax) in both scopes.  As this may
-    prove to be difficult to ensure when inheritance should happen
+    prove to be difficult to ensure when inheritance is to happen
     across library boundaries, field names (of fields that are
     supposed to be part of a public interface) may also be constants
     like strings instead of identifiers.  As strings are not being
@@ -318,8 +325,8 @@ like numbers and strings, or
 <p>One purpose of this SRFI is thus to demonstrate that the power of
   SRFI 131's record types can also be made available on Schemes
   compatible with the hygienic matching of field names of the R7RS,
-  and that their is no reason for unhygienic field names (being
-  inferior when only <code>syntax-rules</code> are considered), except
+  and that there is no reason for unhygienic field names (being
+  inferior not only when <code>syntax-rules</code> are considered), except
   for SRFI 99 compatiblity (which, as stated above, itself broke
   compatibilty with prior implementations).  However, at the end of
   this SRFI, it is outlined how principal compatibility with SRFI 99
