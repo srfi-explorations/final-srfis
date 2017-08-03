@@ -21,5 +21,9 @@
 ;; SOFTWARE.
 
 (import (rename (srfi 147 test) (run-tests run-srfi-147-tests)))
+(import (rename (srfi 147 er-macro-transformer test)
+		(run-tests run-srfi-147-er-macro-transformer-tests)))
 
 (run-srfi-147-tests)
+(run-srfi-147-er-macro-transformer-tests)
+
