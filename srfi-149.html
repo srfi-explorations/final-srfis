@@ -29,8 +29,25 @@ Marc Nieper-Wi&szlig;kirchen
   <li>Draft #3 published: 2017/5/2</li>
   <li>Draft #4 published: 2017/7/1</li>
   <li>Finalized: 2017/7/8</li>
+  <li>Post-finalization note added: 2017/8/7</li>
 </ul>
 
+<h2>Post-finalization note</h2>
+  <p>
+    After finalization of this SRFI, a discussion (starting <a href="https://srfi-email.schemers.org/srfi-149/msg/6057423">here</a> on the mailing list) revealed that the behaviour of this SRFI when a pattern variable in a subtemplate is followed by more instances of <code>&lt;ellipsis&gt;</code> than the subpattern in which it occurs differs from how implementations of the R6RS handle this case.  While this SRFI specifies that the input subform is repeated for the innermost excess instances of <code>&lt;ellipsis&gt;</code>, the implementations of the R6RS repeat for the outermost excess instances.
+  </p>
+
+  <p>
+    There is no obvious reason to prefer one convention over the other as there are interesting macros that work with the former convention and not with the latter convention, and vice-versa.
+  </p>
+
+  <p>
+    However, this means that an implementation supporting the R6RS semantics of <code>syntax-rules</code> can never properly support this SRFI because this SRFI requires that <code>(srfi 149)</code> and <code>(scheme base)</code> export the same <code>syntax-rules</code>.
+  </p>
+
+  <p>
+    Therefore, the author of this SRFI now recommends that implementers ignore this extra requirement so that <code>(srfi 149)</code> may export a version of <code>syntax-rules</code> compatible with this SRFI and <code>(scheme base)</code> may export another.  Instead, it is recommended that implementations provide a feature identifier <code>srfi-149-compatible</code> in case the implementation of <code>syntax-rules</code> in <code>(scheme base)</code> has the semantics as specified in this SRFI.
+  </p>
 
 <h1>Abstract</h1>
 
