@@ -2,11 +2,20 @@
 <html>
   <head>
     <title>Named quasi-literal constructors</title>
-    <link href="/admin.css" rel="stylesheet">
-    <link href="/list.css" rel="stylesheet">
-    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+    <link href="../srfi-common/admin.css" rel="stylesheet">
+    <link href="../srfi-common/list.css" rel="stylesheet">
+    <link href="../srfi-common/favicon.png" rel="icon" sizes="192x192" type="image/png">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script type="text/x-mathjax-config">
+     MathJax.Hub.Config({
+       tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+     });
+    </script>
+    <script crossorigin="anonymous" integrity=
+            "sha384-Ra6zh6uYMmH5ydwCqqMoykyf1T/+ZcnOQfFPhDrp2kI4OIxadnhsvvA2vv9A7xYv" src=
+            "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+            type="text/javascript"></script>
   </head>
 
   <body>
@@ -62,4 +71,17 @@
                  value="unsubscribe" >
           <input name="list"
                  type="hidden"
-                 value="srfi-108@srfi.schemers.org" ></form></li></ul></body></html>
+                 value="srfi-108@srfi.schemers.org"></form></li></ul>
+    <h2>Abstract</h2>      <p>This specifies an extensible reader syntax for
+      named value constructors. A reader prefix is followed by a <q>tag</q> (an
+      identifier), and then expressions and literal text parameters. The tag
+      can be though of as a class name, and the expression and literal text are
+      arguments to an object constructor call. The reader translates
+      <code>&amp;<var>tag</var>{...}</code> to a list
+      <code>($construct$:<var>tag</var> ...)</code>, where
+      <code>$construct$:<var>tag</var></code> is normally bound to a predefined
+      macro.
+      <p>This propsal depends on <a href=
+      "srfi-109/">SRFI-109 (extended string quasi-literals)</a> (in spite of
+      having a lower number). It also shares quite of bit of syntax with
+      <a href="srfi-107/">SRFI-107 (XML reader syntax)</a>.</body></html>
