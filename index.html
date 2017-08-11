@@ -2,11 +2,20 @@
 <html>
   <head>
     <title>Comprehensive I/O</title>
-    <link href="/admin.css" rel="stylesheet">
-    <link href="/list.css" rel="stylesheet">
-    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+    <link href="../srfi-common/admin.css" rel="stylesheet">
+    <link href="../srfi-common/list.css" rel="stylesheet">
+    <link href="../srfi-common/favicon.png" rel="icon" sizes="192x192" type="image/png">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script type="text/x-mathjax-config">
+     MathJax.Hub.Config({
+       tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+     });
+    </script>
+    <script crossorigin="anonymous" integrity=
+            "sha384-Ra6zh6uYMmH5ydwCqqMoykyf1T/+ZcnOQfFPhDrp2kI4OIxadnhsvvA2vv9A7xYv" src=
+            "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+            type="text/javascript"></script>
   </head>
 
   <body>
@@ -62,4 +71,47 @@
                  value="unsubscribe" >
           <input name="list"
                  type="hidden"
-                 value="srfi-68@srfi.schemers.org" ></form></li></ul></body></html>
+                 value="srfi-68@srfi.schemers.org"></form></li></ul>
+    <h2>Abstract</h2>      <p>This SRFI defines a comprehensive I/O subsystem
+      for Scheme with three layers, where each layer is built on top of the one
+      below it:
+      <ul>
+        <li>The lowest, primitive layer provides
+        unbuffered I/O, and is close to what a typical operating system
+        offers.
+        <li>The middle layer builds on lazy, mostly
+        functional buffered streams.
+        <li>The upper layer is similar in nature to the
+        ports subsystem in R5RS, and provides conventional, imperative buffered
+        input and output.
+      </ul>
+      <p>The layer architecture is similar to the upper
+      three layers of the I/O subsystem in <a href=
+      "http://www.standardml.org/Basis/">The Standard ML Basis
+      Library</a>.
+      <p>In particular, the subsystem provides
+      <ul>
+        <li>buffered reading and writing
+        <li>arbitrary lookahead at the streams
+        level
+        <li>dynamic redirection of input or output at
+        the ports level
+        <li>binary and text I/O, mixed if needed
+        <li>translated data streams
+        <li>unbuffered I/O at the primitive layer
+        <li>the ability to create arbitrary I/O streams,
+        such as to and from blobs and strings
+      </ul>
+      <p>The subsystem does <em>not</em> provide
+      <ul>
+        <li>formatted I/O
+        <li>non-blocking or selective I/O
+        <li>portable filenames, or any functionality for
+        manipulating filenames
+        <li>filesystem operations
+        <li>socket I/O
+        <li>extremely high-throughput or zero-copy
+        I/O
+      </ul>
+      <p>However, all of these could be added on top of
+      one or several of the layers specified in this SRFI.</body></html>
