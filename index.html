@@ -2,11 +2,20 @@
 <html>
   <head>
     <title>Mixing Scheme and C</title>
-    <link href="/admin.css" rel="stylesheet">
-    <link href="/list.css" rel="stylesheet">
-    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+    <link href="../srfi-common/admin.css" rel="stylesheet">
+    <link href="../srfi-common/list.css" rel="stylesheet">
+    <link href="../srfi-common/favicon.png" rel="icon" sizes="192x192" type="image/png">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script type="text/x-mathjax-config">
+     MathJax.Hub.Config({
+       tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+     });
+    </script>
+    <script crossorigin="anonymous" integrity=
+            "sha384-Ra6zh6uYMmH5ydwCqqMoykyf1T/+ZcnOQfFPhDrp2kI4OIxadnhsvvA2vv9A7xYv" src=
+            "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+            type="text/javascript"></script>
   </head>
 
   <body>
@@ -62,4 +71,28 @@
                  value="unsubscribe" >
           <input name="list"
                  type="hidden"
-                 value="srfi-50@srfi.schemers.org" ></form></li></ul></body></html>
+                 value="srfi-50@srfi.schemers.org"></form></li></ul>
+    <h2>Abstract</h2>      <p>This SRFI describes an interface for calling C
+      functions from Scheme, calling Scheme functions from C, and allocating
+      storage in the Scheme heap. Scheme manages stub functions in C that
+      negotiate between the calling conventions of Scheme and C and the memory
+      allocation policies of both worlds.
+      <p>The following facilities are available for
+      interfacing between Scheme and C:
+      <ul>
+        <li>Scheme code can call C functions.
+        <li>The external interface provides full
+        introspection for all Scheme objects. External code may inspect,
+        modify, and allocate Scheme objects arbitrarily.
+        <li>External code may signal errors to the
+        Scheme system.
+        <li>External code may call back into Scheme.
+        Scheme correctly unrolls the process stack on non-local exits.
+        <li>External modules may register bindings of
+        names to values with a central registry accessible from Scheme.
+        Conversely, Scheme code can register shared bindings for access by C
+        code.
+      </ul>
+      <p>The interface is closely based on that of
+      <a href="http://www.s48.org/">Scheme 48</a> and <a href=
+      "http://www.scsh.net/">scsh</a>.</body></html>
