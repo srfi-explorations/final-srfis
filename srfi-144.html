@@ -35,7 +35,10 @@ John Cowan, Will Clinger
   <li>Finalized: 2017/7/17</li>
   <li>Revised to fix errata:
     <ul>
-      <li>2017/7/20 (Fixed wording error in definition of <code>flround</code>.)</li></ul></li>
+      <li>2017/7/20 (Fixed wording error in definition of <code>flround</code>.)</li>
+      <li>2017/8/18 (Fixed incompatibility with R7RS.  Fixed remarks
+	about <code>fl-greatest</code> and
+	<code>fl-least</code>.)</li></ul></li>
 </ul>
 
 <h1>Abstract</h1>
@@ -81,7 +84,7 @@ Lastly, a few procedures are flonum versions of R7RS-small numeric procedures.
 <h1>Specification</h1>
 
 <p>
-It is required that all flonums have the same range and precision.  This implies that if two flonums are the same in the sense of <tt>=</tt>, they are also the same in the sense of <tt>eqv?</tt>.  That is, if <tt>12.0f0</tt> is a 32-bit inexact number and <tt>12.0</tt> is a 64-bit inexact number, they cannot both be flonums.  In this situation, it is recommended that the 64-bit numbers be flonums.
+It is required that all flonums have the same range and precision.  That is, if <tt>12.0f0</tt> is a 32-bit inexact number and <tt>12.0</tt> is a 64-bit inexact number, they cannot both be flonums.  In this situation, it is recommended that the 64-bit numbers be flonums.
 </p>
 
 <p>When a C99 variable, procedure, macro, or operator is specified for a procedure in this SRFI,
@@ -356,7 +359,7 @@ Bound to &Gamma;(2/3).
 </p>
 <p>
 Bound to the largest/smallest finite flonum.
-(C99 <tt>DBL_MAX</tt> and its negation)
+(e.g. C99 DBL_MAX and C11 DBL_TRUE_MIN)
 </p>
 <p>
 <tt>fl-epsilon</tt>
