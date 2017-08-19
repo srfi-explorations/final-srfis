@@ -162,11 +162,8 @@
          (result2 (fl- x result1)))
     (values result1 result2)))
 
-;;; The 8th draft of SRFI 144 will say flexponent returns the inexact
-;;; integer obtained by truncating toward zero.
-
 (define (flexponent x)
-  (fltruncate (fllog2 (flabs x))))
+  (floor (fllog2 (flabs x))))
 
 (define (flinteger-exponent x)
   (exact (flexponent x)))
@@ -193,6 +190,9 @@
          (values 0.5 (+ 3 (exact (round (fllog2 fl-greatest))))))
         ((flnormalized? x)
          (let* ((result2 (exact (flround (fllog2 x))))
+                (result2 (if (integer? result2)
+                             result2
+                             (round result2)))
                 (two^result2 (inexact (expt 2.0 result2))))
            (if (flinfinite? two^result2)
                (call-with-values
@@ -427,7 +427,7 @@
   (if (fl>? base 1.0)
       (flop1 'procedure-created-by-make-fllog-base
              (lambda (x) (log x base)))
-      (error "argument to make-fllog-base should be greater than 1.0" base)))
+      (error "argument to make-fllog-base must be greater than 1.0" base)))
 
 ;;; Trigonometric functions
 
