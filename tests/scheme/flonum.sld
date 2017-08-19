@@ -307,7 +307,7 @@
                      posinf))
      (test-assert (= (* 2 fl-greatest) posinf))
      (test-assert (= 1 (/ (+ 1 (+ 1.0 fl-epsilon)) 2)))
-     (test-assert (= 0 (/ fl-least 2)))
+     (test-assert (= 0.0 (/ fl-least 2)))
 
      (test-assert (boolean? fl-fast-fl+*))
      (test-assert (exact-integer? fl-integer-exponent-zero))
@@ -397,12 +397,12 @@
      (test/approx (flexponent (flexpt two (flonum +4.5)))
                   (flonum +4))
      (test/approx (flexponent (flexpt two (flonum -4.5)))
-                  (flonum -4))
+                  (flonum -5))
 
      (test (flinteger-exponent (flexpt two (flonum 12)))   12)
      (test (flinteger-exponent (flexpt two (flonum 12.5))) 12)
      (test (flinteger-exponent (flexpt two (flonum -5)))   -5)
-     (test (flinteger-exponent (flexpt two (flonum -4.5))) -4)
+     (test (flinteger-exponent (flexpt two (flonum -4.5))) -5)
 
      (let* ((correct?
              (lambda (x y n)
@@ -907,7 +907,7 @@
                  (let ((f (make-fllog-base base)))
                    (for-each (lambda (x)
                                (test/approx (flexpt (flonum base) (f x)) x))
-                             (filter positive? somereals))))
+                             (filter flpositive? somereals))))
                (map flonum '(3 7 19)))
 
      ;; Trigonometric functions
