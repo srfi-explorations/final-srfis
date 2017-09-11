@@ -926,21 +926,21 @@ by <code>string-unfold</code> to be limited by limits on stack size.
 <a name="string2utf16"></a>
 <a name="string2utf16be"></a>
 <a name="string2utf16le"></a>
-<code class="proc-def">string->utf8&nbsp;&nbsp;&nbsp;</code><var> string [start end] → bytevector</var> (R6-R7RS) (Optional)
+<code class="proc-def">string->utf8&nbsp;&nbsp;&nbsp;</code><var> string → bytevector</var> (R6-R7RS) (Optional)
 </dt>
 <dt class="proc-defi">
-<code class="proc-def">string->utf16&nbsp;&nbsp;&nbsp;</code><var> string [start end] → bytevector</var> (R6RS) (Optional)
+<code class="proc-def">string->utf16&nbsp;&nbsp;&nbsp;</code><var> string → bytevector</var> (R6RS) (Optional)
 </dt>
 <dt class="proc-defi">
-<code class="proc-def">string->utf16be</code><var> string [start end] → bytevector</var> (Optional)
+<code class="proc-def">string->utf16be</code><var> string → bytevector</var> (Optional)
 </dt>
 <dt class="proc-defn">
-<code class="proc-def">string->utf16le</code><var> string [start end] → bytevector</var> (Optional)
+<code class="proc-def">string->utf16le</code><var> string → bytevector</var> (Optional)
 </dt>
 <dd class="proc-def">
     These procedures return a newly allocated (unless empty)
     bytevector containing
-    a UTF-8 or UTF-16 encoding of the given substring.
+    a UTF-8 or UTF-16 encoding of the given string.
     (Not SRFI 13 procedures.)
 <p>
     The bytevectors returned by <code>string->utf8</code>,
@@ -974,16 +974,16 @@ by <code>string-unfold</code> to be limited by limits on stack size.
 <a name="utf162string"></a>
 <a name="utf16be2string"></a>
 <a name="utf16le2string"></a>
-<code class="proc-def">utf8->string&nbsp;&nbsp;&nbsp;</code><var> bytevector [start end] → string</var> (R6-R7RS) (Optional)
+<code class="proc-def">utf8->string&nbsp;&nbsp;&nbsp;</code><var> bytevector → string</var> (R6-R7RS) (Optional)
 </dt>
 <dt class="proc-defi">
-<code class="proc-def">utf16->string&nbsp;&nbsp;</code><var> bytevector [start end] → string</var> (R6RS) (Optional)
+<code class="proc-def">utf16->string&nbsp;&nbsp;</code><var> bytevector → string</var> (R6RS) (Optional)
 </dt>
 <dt class="proc-defi">
-<code class="proc-def">utf16be->string</code><var> bytevector [start end] → string</var> (Optional)
+<code class="proc-def">utf16be->string</code><var> bytevector → string</var> (Optional)
 </dt>
 <dt class="proc-defn">
-<code class="proc-def">utf16le->string</code><var> bytevector [start end] → string</var> (Optional)
+<code class="proc-def">utf16le->string</code><var> bytevector → string</var> (Optional)
 </dt>
 <dd class="proc-def">
     These procedures interpret their <var>bytevector</var> argument as
@@ -1584,9 +1584,10 @@ but with a different order of arguments.  (Not SRFI 13 procedures.)
 specified by <var>start</var> and <var>end</var>
 into the longest initial prefix whose
 elements all satisfy <var>pred</var>, and the remaining tail. 
-<code>Break</code> inverts the sense of the predicate: 
+<code>String-break</code> inverts the sense of the predicate: 
 the tail commences with the first element of the input string
 that satisfies the predicate.
+  (Not SRFI 13 procedures.)
 
 <p>
 In other words: 

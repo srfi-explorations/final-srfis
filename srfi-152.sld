@@ -26,8 +26,8 @@
      (import (only (rnrs bytevectors) string->utf8 string->utf16
                                       utf8->string utf16->string))
      (begin
-       (define (string->utf16be string) (string->utf16 'big))
-       (define (string->utf16le string) (string->utf16 'little))
+       (define (string->utf16be string) (string->utf16 string 'big))
+       (define (string->utf16le string) (string->utf16 string 'little))
        (define (utf16be->string bytevector) (utf16->string bytevector 'big))
        (define (utf16le->string bytevector) (utf16->string bytevector 'little))))
     (else (begin)))
@@ -39,8 +39,8 @@
              string-normalize-nfd string-normalize-nfkd)
      (import (only (rnrs unicode)
              string-normalize-nfc string-normalize-nfkc
-             string-normalize-nfd string-normalize-nfkd))
-    (else (begin))))
+             string-normalize-nfd string-normalize-nfkd)))
+    (else (begin)))
 
   ;; Remaining exports, grouped as in the SRFI
   (export string-null? string-every string-any)
