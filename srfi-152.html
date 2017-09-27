@@ -189,7 +189,6 @@ John Cowan
 <li><a href="#Rationale">Rationale</a></li>
 <li><a href="#Specification">Specification</a>
   <ul>
-  <li><a href="#OptionalProcedures">Optional Procedures</a>
 </li>
   <li><a href="#Notation">Notation</a></li>
     <li><a href="#Predicates">Predicates</a></li>
@@ -211,7 +210,6 @@ John Cowan
 
 <li><a href="#SampleImp">Sample implementations</a></li>
 <li><a href="#Acknowledgements">Acknowledgements</a></li>
-<li><a href="#Links">References and Links</a></li>
 <li><a href="#Copyright">Copyright</a></li>
 </ul>
 
@@ -407,13 +405,12 @@ Ultimately the origin of all these SRFIs is
 <li>titlecase operations</li>
 <li>direct comparison of substrings</li>
 <li>mutation procedures, other than the ones in R7RS-small</li>
-<li>string reversal</li>
+<li>string reversal (even more pointless in a Unicode age)</li>
 <li>characters and SRFI 14 character sets as alternatives to predicates</li>
 </ul>
 
-However, it includes the normalization and bytevector conversion procedures from R6RS,
-the <code>string-copy! read-string write-string</code>
-procedures from R7RS-small, and the <code>string-segment</code>
+In addition, this SRFI includes
+the <code>string-segment</code>
 and <code>string-split</code> procedures from other sources.
 For completeness, <code>string-take-while</code>, <code>string-drop-while</code>, <code>string-take-while-right</code>, and <code>string-drop-while-right</code> are also provided.
 
@@ -440,11 +437,9 @@ in performance between implementations has created a problem
 for programs that use long strings.
 In some systems, long strings are inefficient with respect to space;
 in other systems, long strings are inefficient with respect to time.
-</p>
 
-<p>
 Consequently, this SRFI suggests that Scheme's mutable
-strings be used only for buffers and other relatively short sequences of
+strings be used only for relatively short sequences of
 characters, while using the immutable texts defined by 
 <a href="http://srfi.schemers.org/srfi-135/srfi-135.html">SRFI 135</a>
 for long sequences of characters.
@@ -498,23 +493,6 @@ If a procedure's return value is said to be "unspecified," the
 procedure returns a single result whose value is unconstrained
 and might even vary from call to call.
 </p>
-<h2><a name="OptionalProcedures">Optional Procedures</a></h2>
-<p>
-The string-bytevector conversion and the Unicode casing and
-normalization procedures are marked (Optional) in this SRFI, and
-implementing them is not a requirement of this SRFI.  In particular,
-they are not provided in the sample implementation unless R6RS, R7RS
-or other libraries are present.</p>
-
-<p>This is done primarily for practical reasons: a standalone
-implementation would require bitwise or fixnum procedures and
-Unicode tables not needed for the rest of the SRFI, and adding those
-procedures and tables to the sample implementation would vastly
-increase its size.  Nevertheless, implementors should make an effort
-to provide them.  The UTF-8 conversions and case conversions are
-already required by R7RS-small, and all of them are already required by R6RS.
-</p>
-
 <!--========================================================================-->
 
 <!--========================================================================-->
@@ -919,148 +897,6 @@ by <code>string-unfold</code> to be limited by limits on stack size.
     (See also
     <code>string-concatenate-reverse</code> for the "chunked" variant.)
 
-<!--
-==== string->utf8 string->utf16 string->utf16be string->utf16le
-============================================================================-->
-<dt class="proc-def1">
-<a name="string2utf8"></a>
-<a name="string2utf16"></a>
-<a name="string2utf16be"></a>
-<a name="string2utf16le"></a>
-<code class="proc-def">string->utf8&nbsp;&nbsp;&nbsp;</code><var> string → bytevector</var> (R6-R7RS) (Optional)
-</dt>
-<dt class="proc-defi">
-<code class="proc-def">string->utf16&nbsp;&nbsp;&nbsp;</code><var> string → bytevector</var> (R6RS) (Optional)
-</dt>
-<dt class="proc-defi">
-<code class="proc-def">string->utf16be</code><var> string → bytevector</var> (Optional)
-</dt>
-<dt class="proc-defn">
-<code class="proc-def">string->utf16le</code><var> string → bytevector</var> (Optional)
-</dt>
-<dd class="proc-def">
-    These procedures return a newly allocated (unless empty)
-    bytevector containing
-    a UTF-8 or UTF-16 encoding of the given string.
-    (Not SRFI 13 procedures.)
-<p>
-    The bytevectors returned by <code>string->utf8</code>,
-    <code>string->utf16be</code>, and <code>string->utf16le</code>
-    do not contain a byte-order mark (BOM).
-    <code>string->utf16be</code> returns a big-endian encoding,
-    while <code>string->utf16le</code> returns a little-endian
-    encoding.
-</p>
-<p>
-    The bytevectors returned by <code>string->utf16</code>
-    begin with a BOM that declares an implementation-dependent
-    endianness, and the bytevector elements following that BOM
-    encode the given substring using that endianness.
-</p>
-<p>
-    <i>Rationale:</i>
-    These procedures are consistent with the Unicode standard.
-    Unicode suggests UTF-16 should default to big-endian, but
-    Microsoft prefers little-endian.
-</p>
-</p>
-
-</dd>
-
-<!--
-==== utf8->string utf16->string utf16be->string utf16le->string
-============================================================================-->
-<dt class="proc-def1">
-<a name="utf82string"></a>
-<a name="utf162string"></a>
-<a name="utf16be2string"></a>
-<a name="utf16le2string"></a>
-<code class="proc-def">utf8->string&nbsp;&nbsp;&nbsp;</code><var> bytevector → string</var> (R6-R7RS) (Optional)
-</dt>
-<dt class="proc-defi">
-<code class="proc-def">utf16->string&nbsp;&nbsp;</code><var> bytevector → string</var> (R6RS) (Optional)
-</dt>
-<dt class="proc-defi">
-<code class="proc-def">utf16be->string</code><var> bytevector → string</var> (Optional)
-</dt>
-<dt class="proc-defn">
-<code class="proc-def">utf16le->string</code><var> bytevector → string</var> (Optional)
-</dt>
-<dd class="proc-def">
-    These procedures interpret their <var>bytevector</var> argument as
-    a UTF-8 or UTF-16 encoding of a sequence of characters,
-    and return a string containing that sequence.
-    (Not SRFI 13 procedures.)
-<p>
-    The bytevector subrange given to <code>utf16->string</code>
-    may begin with a byte order mark (BOM).  If so, that BOM
-    determines whether the rest of the subrange is to be
-    interpreted as big-endian or little-endian.  In either case,
-    the BOM will not become a character in the returned string.
-    If the subrange does not begin with a BOM, it is decoded using
-    the same implementation-dependent endianness used by
-    <code>string->utf16</code>.
-</p>
-<p>
-    The <code>utf16be->string</code> and <code>utf16le->string</code>
-    procedures interpret their inputs as big-endian or little-endian,
-    respectively.  If a BOM is present, it is treated as a normal
-    character and will become part of the result.
-</p>
-<p>
-    It is an error if the bytevector subrange given to
-    <code>utf8->string</code> contains invalid UTF-8 byte sequences.
-    For the other three procedures, it is an error if <var>start</var>
-    or <var>end</var> are odd, or if the bytevector subrange contains
-    invalid UTF-16 byte sequences.    
-<p>
-    <em>Compatibility note</em>:  The R6RS version of <code>utf16->string</code>
-    accepts an <i>endianness</i> argument rather than providing two
-    additional procedures.
-</p>
-
-<!-- Previous drafts were based on the R6RS semantics:
-
-  <p>
-    If no <var>endianness</var> argument is passed to
-    <code>utf16->string</code>, then the <var>bytevector</var> is
-    decoded according to UTF-16, which means a UTF-16 byte order mark (BOM)
-    at the beginning of the <var>bytevector</var> will determine
-    the endianness, defaulting to big-endian if no BOM is present;
-    if a BOM is present at the beginning of the <var>bytevector</var>,
-    it will not be present in the string returned by <code>utf16->string</code>.
-    If an <var>endianness</var> argument is passed, it should be
-    the symbol <code>big</code> or the symbol <code>little</code>,
-    indicating whether the <var>bytevector</var> should be decoded
-    as UTF-16BE (<code>big</code>) or UTF-16LE (<code>little</code>);
-    if the <var>mandatory?</var> argument is absent or false, however,
-    a UTF-16 BOM at the beginning of the <var>bytevector</var> will
-    override the given <var>endianness</var> and that BOM will not
-    be present in the string returned by <code>utf16->string</code>.
-    If <var>mandatory?</var> is true, then a BOM at the beginning
-    of the <var>bytevector</var> will not override the given
-    <var>endianness</var>, and will instead be decoded as a regular
-    character and become the first character of the string returned
-    by <code>utf16->string</code>.
-  </p>
-  <p>
-    <i>Note:</i>
-    Passing the symbol <code>big</code> as a second argument to
-    <code>utf16->string</code>, with no third argument, is
-    equivalent to calling <code>utf16->string</code> with just
-    one argument.
-    Passing a true value as the third argument yields the official
-    Unicode semantics for UTF-16BE or UTF-16LE (as determined by
-    the second argument), but Microsoft's preferred semantics is
-    obtained by omitting the third argument and passing the symbol
-    <code>little</code> as second argument.
-  </p>
-
--->
-</dd>
-
-</dl>
-
 
 <!--========================================================================-->
 <h3><a name="Selection">Selection</a></h3>
@@ -1196,7 +1032,7 @@ by <code>string-unfold</code> to be limited by limits on stack size.
 <dd class="proc-defn">
     Returns a string obtained from the given subrange of <var>string</var>
     by skipping
-    over all characters on the left / on the right /
+    over all characters on the left side / on the right side /
     on both sides that satisfy the second argument <var>pred</var>:
     <var>pred</var> defaults to <code>char-whitespace?</code>.
   </p>
@@ -1256,7 +1092,7 @@ by <code>string-unfold</code> to be limited by limits on stack size.
 
 (define (string-set s i c) (string-replace s (string c) i (+ i 1)))
 
-(string-set "String-ref runs in O(n) time." 19 #\1)
+(string-set "String-ref runs in O(n) time." 21 #\1)
     => "String-ref runs in O(1) time."
 </pre>
 </dd>
@@ -1609,40 +1445,6 @@ and <code>break</code> breaks the string at the first element satisfying
 
 
 <!--========================================================================-->
-<h3><a name="CaseConversion">Case conversion</a></h3>
-          
-<dl>
-
-<!--
-==== string-upcase string-downcase string-foldcase
-============================================================================-->
-<dt class="proc-def1">
-<a name="string-upcase"></a>
-<a name="string-downcase"></a>
-<a name="string-foldcase"></a>
-<code class="proc-def">string-upcase&nbsp;&nbsp;</code><var> string → string</var> (R6-R7RS) (Optional)
-</dt>
-<dt class="proc-defi">
-<code class="proc-def">string-downcase</code><var> string → string</var> (R6-R7RS) (Optional)
-</dt>
-<dt class="proc-defn">
-<code class="proc-def">string-foldcase</code><var> string → string</var> (R6-R7RS) (Optional)
-</dt>
-<dd class="proc-def">
-    These procedures return the string obtained by applying
-    Unicode's full uppercasing, lowercasing, or case-folding
-    algorithms
-    to their argument.  In some cases, the length of the result may
-   be different from the length of the argument.
-   If the result is equal to the argument in the sense of <tt>string=?</tt>, the argument
-   may be returned.
-   Note that language-sensitive mappings and foldings are not used.
-</dd>
-
-</dl>
-
-
-<!--========================================================================-->
 <h3><a name="Concatenation">Concatenation</a></h3>
 
 <dl>
@@ -1652,7 +1454,7 @@ and <code>break</code> breaks the string at the first element satisfying
 ============================================================================-->
 <dt class="proc-def">
 <a name="string-append"></a>
-<code class="proc-def">string-append</code><var> string ... → string</var> (R6-R7RS)
+<code class="proc-def">string-append</code><var> string ... → string</var> (R5RS)
 </dt>
 <dd class="proc-def">
     Returns a string whose sequence of characters is the concatenation
@@ -1720,7 +1522,10 @@ For example:
 This procedure is useful when constructing procedures that 
 accumulate character data into lists of string buffers, and wish to
 convert the accumulated data into a single string when done.
-The optional <var>end</var> argument accommodates that use case.
+The optional <var>end</var> argument accommodates that use case
+by allowing the final buffer to be only partially full without
+having to copy it a second time, as <code>string-take</code>
+would require.
 </p>
 </dd>
 
@@ -2120,8 +1925,6 @@ substring of <var>string</var> from <var>start</var> (inclusive)
 to <var>end</var> (exclusive).
 The <var>delimiter</var> is a string to be used as
 the word separator.
-   (Not a SRFI 13 procedure; replaces <code>string-tokenize</code>).
-<p>
 This will often be a single character, but multiple characters are allowed
 for use cases such as splitting on <code>"\r\n"</code>.
 The returned list will have one more item than the number of
@@ -2129,6 +1932,7 @@ non-overlapping occurrences of the delimiter
 in the string.
 If <var>delimiter</var> is an empty string, then the returned list
 contains a list of strings, each of which contains a single character. 
+   (Not a SRFI 13 procedure; replaces <code>string-tokenize</code>).
 
 <p>The <var>grammar</var> is a symbol with the same meaning as
 in the <code>string-join</code> procedure.
@@ -2150,56 +1954,9 @@ as many splits as possible are made.
 It is an error if <var>limit</var> is any other value.
 </p>
 <p>
-To split on a regular expression <var>re</var>,
+To split on a regular expression,
 use SRFI 115's <code>regexp-split</code> procedure.
 </p>
-</dd>
-
-</dl>
-
-<h3><a name="Normalization">Normalization</a></h3>
-<!--
-==== string-normalize-nfd string-normalize-nfkd string-normalize-nfc string-normalize-nfkd
-============================================================================-->
-<dt class="proc-def1">
-<a name="string-normalize-nfc"></a>
-<a name="string-normalize-nfd"></a>
-<a name="string-normalize-nfkc"></a>
-<a name="string-normalize-nfkd"></a>
-<code class="proc-def">string-normalize-nfc</code><var> string → string</var> (R6RS) (Optional)
-</dt>
-<dt class="proc-defi">
-<code class="proc-def">string-normalize-nfkc</code><var> string → string</var> (R6RS) (Optional)
-</dt>
-<dt class="proc-defi">
-<code class="proc-def">string-normalize-nfd</code><var> string → string</var> (R6RS) (Optional)
-</dt>
-<dt class="proc-defn">
-<code class="proc-def">string-normalize-nfkd</code><var> string → string</var> (R6RS) (Optional)
-</dt>
-<dd class="proc-def">
-   These procedures take a string argument and return a string result, 
-   which is the input string normalized to Unicode normalization form
-   C, KC, D, or KD respectively.
-   Roughly speaking,
-   Form D decomposes all characters with canonical decompositions to their equivalents;
-   Form C computes Form D and then
-   attempts to compose default grapheme clusters into single characters when possible.
-   Forms KD and KC use compatibility decompositions as well as canonical decompositions
-   when decomposing (not when composing).
-   See the Unicode Standard for precise details.
-   If the result is equal to the argument in the sense of <tt>string=?</tt>, the argument
-   may be returned.
-  (Not SRFI 13 procedures.)
-<pre class="code-example">
-(string-normalize-nfd "\xE9;") => "\x65;\x301;"
-
-(string-normalize-nfc "\xE9;") => "\xE9;"
-
-(string-normalize-nfd "\x65;\x301;") => "\x65;\x301;"
-
-(string-normalize-nfc "\x65;\x301;") => "\xE9;"
-</pre>
 </dd>
 
 </dl>
@@ -2225,7 +1982,7 @@ The default port is the value of <code>(current-input-port)</code>.</dd>
 ============================================================================-->
 <dt class="proc-def">
 <a name="write-string"></a>
-<code class="proc-def">write-string</code><var> string [port start end]→ g</var> (R7RS-small)
+<code class="proc-def">write-string</code><var> string [port start end]→ unspecified</var> (R7RS-small)
 </dt>
 <dd class="proc-def">
 Writes the characters of <var>string</var> from index <var>start</var> to index
@@ -2241,11 +1998,10 @@ The default port is the value of <code>(current-output-port)</code>.</dd>
 ============================================================================-->
 <dt class="proc-def">
 <a name="string-set!"></a>
-<code class="proc-def">string-set!</code><var> string k char → string</var> (R5RS)
+<code class="proc-def">string-set!</code><var> string k char → unspecified</var> (R5RS)
 </dt>
 <dd class="proc-def">
    The string-set! procedure stores <var>char</var> in element <var>k</var> of <var>string</var>.
-   Returns an unspecified value.
 </dd>
 
 </dl>
@@ -2255,12 +2011,11 @@ The default port is the value of <code>(current-output-port)</code>.</dd>
 ============================================================================-->
 <dt class="proc-def">
 <a name="string-fill!"></a>
-<code class="proc-def">string-fill!</code><var> string [fill start end] → string</var> (R5RS+)
+<code class="proc-def">string-fill!</code><var> string [fill start end] → unspecified</var> (R5RS+)
 </dt>
 <dd class="proc-def">
    The string-fill! procedure stores <var>fill</var> in elements <var>start</var>
    through <var>end</var> of <var>string</var>.
-   Returns an unspecified value.
 </dd>
 
 <!--
@@ -2268,17 +2023,16 @@ The default port is the value of <code>(current-output-port)</code>.</dd>
 ============================================================================-->
 <dt class="proc-def">
 <a name="string-copy!"></a>
-<code class="proc-def">string-copy!</code><var> to at from [start end] → string</var> (R7RS-small)
+<code class="proc-def">string-copy!</code><var> to at from [start end] → unspecified</var> (R7RS-small)
 </dt>
 <dd class="proc-def">
    Copies the characters of string <var>from</var> between <var>start</var> and <var>end</var>
-   <var>to</var> string to, starting at<var>at</var>. The order in which characters
+   <var>to</var> string to, starting at <var>at</var>. The order in which characters
    are copied is unspecified, except that if the source and destination
    overlap, copying takes place as if the source is first
    copied into a temporary string and then into the destination.
    This can be achieved without allocating storage by
    making sure to copy in the correct direction in such circumstances.
-   Returns an unspecified value.
 </dd>
 
 </dl>

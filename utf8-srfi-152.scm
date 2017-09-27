@@ -25,21 +25,6 @@
   ;; Export R5RS+ procedures
   (export string->list string-copy string-fill!)
 
-  ;; Bytevector procedures aren't available on Chicken
-  #;(no-export string->utf8 string->utf16 string->utf16be string->utf16le
-               utf8->string utf16->string utf16be->string utf16le->string)
-
-  ;; Normalization procedures aren't available on Chicken
-  #;(no-export string-normalize-nfc string-normalize-nfkc
-               string-normalize-nfd string-normalize-nfkd)
-
-  ;; Import case-mapping functions from utf-8-casemap and re-export them
-  (export string-upcase string-downcase string-foldcase)
-  (use (rename (only utf8-case-map utf8-string-upcase utf8-string-downcase)
-                  (utf8-string-upcase string-upcase)
-                  (utf8-string-downcase string-downcase)))
-  (define (string-foldcase str) (error "string-foldcase not supported"))
-
   ;; Export R7RS procedures (defined in r7rs-shim file and chicken module)
   (import (only utf8 read-string))
   (export string->vector vector->string string-map string-for-each

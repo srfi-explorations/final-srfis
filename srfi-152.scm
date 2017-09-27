@@ -18,20 +18,6 @@
   ;; Export R5RS+ procedures
   (export string->list string-copy string-fill!)
 
-  ;; Bytevector procedures aren't available on Chicken
-  #;(no-export string->utf8 string->utf16 string->utf16be string->utf16le
-               utf8->string utf16->string utf16be->string utf16le->string)
-
-  ;; Normalization procedures aren't available on Chicken
-  #;(no-export string-normalize-nfc string-normalize-nfkc
-               string-normalize-nfd string-normalize-nfkd)
-
-  ;; Simple case-mapping functions
-  (export string-upcase string-downcase string-foldcase)
-  (define (string-upcase str) (string-map char-upcase str))
-  (define (string-downcase str) (string-map char-downcase str))
-  (define (string-foldcase str) (string-map char-downcase str))  ; good enough for ASCII work
-
   ;; Export R7RS procedures (defined in r7rs-shim file and chicken module)
   (import (only extras read-string))
   (export string->vector vector->string string-map string-for-each

@@ -18,30 +18,6 @@
                read-string write-string
                string-set! string-fill! string-copy!)
 
-  ;; Export bytevector procedures if R6RS library available
-  (cond-expand
-    ((library (rnrs bytevectors))
-     (export string->utf8 string->utf16 string->utf16be string->utf16le
-               utf8->string utf16->string utf16be->string utf16le->string)
-     (import (only (rnrs bytevectors) string->utf8 string->utf16
-                                      utf8->string utf16->string))
-     (begin
-       (define (string->utf16be string) (string->utf16 string 'big))
-       (define (string->utf16le string) (string->utf16 string 'little))
-       (define (utf16be->string bytevector) (utf16->string bytevector 'big))
-       (define (utf16le->string bytevector) (utf16->string bytevector 'little))))
-    (else (begin)))
-
-  ;; Export normalization procedures if R6RS library available
-  (cond-expand
-    ((library (rnrs bytevectors))
-     (export string-normalize-nfc string-normalize-nfkc
-             string-normalize-nfd string-normalize-nfkd)
-     (import (only (rnrs unicode)
-             string-normalize-nfc string-normalize-nfkc
-             string-normalize-nfd string-normalize-nfkd)))
-    (else (begin)))
-
   ;; Remaining exports, grouped as in the SRFI
   (export string-null? string-every string-any)
   (export string-tabulate string-unfold string-unfold-right)
