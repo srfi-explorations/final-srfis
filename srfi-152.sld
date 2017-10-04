@@ -2,12 +2,22 @@
 
 (define-library (srfi-152)
 
-  (import (scheme base))
-  (import (scheme char))
+  (import (rename (scheme base)
+                  (string=? base-string=?)
+                  (string<? base-string<?)
+                  (string>? base-string>?)
+                  (string<=? base-string<=?)
+                  (string>=? base-string>=?))
+          (rename (scheme char)
+                  (string-ci=? base-string-ci=?)
+                  (string-ci<? base-string-ci<?)
+                  (string-ci>? base-string-ci>?)
+                  (string-ci<=? base-string-ci<=?)
+                  (string-ci>=? base-string-ci>=?)))
   (import (scheme cxr))
   (import (scheme case-lambda))
 
-  ;; Don't export R7RS procedures
+  ;; Don't export most R7RS procedures
   #;(no-export string? make-string string
                string->vector string->list list->string vector->string
                string-length string-ref substring string-copy
@@ -17,6 +27,10 @@
                string-append string-map string-for-each
                read-string write-string
                string-set! string-fill! string-copy!)
+
+  ;; but export comparison predicates extended to 0 and 1 arguments:
+  (export string=? string<? string>? string<=? string>=?
+          string-ci=? string-ci<? string-ci>? string-ci<=? string-ci>=?)
 
   ;; Remaining exports, grouped as in the SRFI
   (export string-null? string-every string-any)
@@ -42,4 +56,5 @@
 
   (include "macros.scm")
   (include "portable.scm")
+  (include "extend-comparisons.scm")
 )

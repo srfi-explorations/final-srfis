@@ -3,8 +3,18 @@
 (module srfi-152 ()
 
   ;; R5RS+ procedures must not be imported, as we redefine them
-  (import (except scheme string->list string-copy string-fill!))
-
+  (import (rename (except scheme
+                          string->list string-copy string-fill!)
+                  (string=? base-string=?)
+                  (string<? base-string<?)
+                  (string>? base-string>?)
+                  (string<=? base-string<=?)
+                  (string>=? base-string>=?)
+                  (string-ci=? base-string-ci=?)
+                  (string-ci<? base-string-ci<?)
+                  (string-ci>? base-string-ci>?)
+                  (string-ci<=? base-string-ci<=?)
+                  (string-ci>=? base-string-ci>=?)))
   (import (only chicken include error use case-lambda
                         open-input-string open-output-string get-output-string))
 
@@ -16,7 +26,9 @@
                string-set!)
 
   ;; Export R5RS+ procedures
-  (export string->list string-copy string-fill!)
+  (export string->list string-copy string-fill!
+          string=? string<? string>? string<=? string>=?
+          string-ci=? string-ci<? string-ci>? string-ci<=? string-ci>=? )
 
   ;; Export R7RS procedures (defined in r7rs-shim file and chicken module)
   (import (only extras read-string))
@@ -47,5 +59,6 @@
 
   (include "macros.scm")
   (include "portable.scm")
+  (include "extend-comparisons.scm")
   (include "r7rs-shim.scm")
 )

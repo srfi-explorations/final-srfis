@@ -64,7 +64,7 @@
       (string-join '("foo" "bar" "baz") ";" 'suffix))
 )
 (test-group "srfi-152:gauche:selectors"
-(test "substring" "cde" (substring "abcde" 2))
+(test "substring" "cde" (substring "abcde" 2 5))
 (test "substring" "cd"  (substring "abcde" 2 4))
 (test "string-copy!" "abCDEfg"
        (let ((x (string-copy "abcdefg")))
@@ -149,6 +149,14 @@
 
 
 )
+
+(test-group "srfi-152:extended-comparisons"
+  (test "base cases for extended string comparisons"
+    '(#t #t #t #t #t #t #t #t #t #t)
+    (map (lambda (f) (and (f) (f "foo")))
+         (list string=? string<? string>? string<=? string>=?
+               string-ci=? string-ci<? string-ci>? string-ci<=? string-ci>=?))))
+
 (test-group "srfi-152:gauche:comparison"
 (test "string=?" #t (string=? "foo" "foo"))
 
@@ -328,9 +336,9 @@
 (test-group "srfi-152:gauche:replisplit"
 
 (test "string-replicate" "cdefab"
-       (string-replicate "abcdef" 2))
+       (string-replicate "abcdef" 2 8))
 (test "string-replicate" "efabcd"
-       (string-replicate "abcdef" -2))
+       (string-replicate "abcdef" -2 4))
 (test "string-replicate" "abcabca"
        (string-replicate "abc" 0 7))
 ;; (test "string-replicate" "abcabca"

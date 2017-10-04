@@ -1,4 +1,23 @@
-(import (scheme base) (scheme char) (chibi test) (srfi-152))
+(import (except (scheme base)
+                string=? string<? string>? string<=? string>=?)
+        (except (scheme char)
+                string-ci=? string-ci<? string-ci>? string-ci<=? string-ci>=?)
+        (srfi-152))
+
+(cond-expand
+  ((library (chibi test))
+   (import (chibi test)))
+  ((library (srfi 64))
+   (import (srfi 64))
+   (define-syntax test
+     (syntax-rules ()
+       ((_ arg ...) (test-equal arg ...))))
+   (define-syntax test-exit
+     (syntax-rules ()
+       ((_) (test-end))))
+   (test-begin "srfi-152 top"))
+  (else
+   (error "no suitable test framework available")))
 
 (define (complement proc) (lambda (x) (not (proc x))))
 (define (char-newline? ch) (eqv? ch #\newline))
@@ -149,6 +168,14 @@
 
 
 )
+
+(test-group "srfi-152:extended-comparisons"
+  (test "base cases for extended string comparisons"
+    '(#t #t #t #t #t #t #t #t #t #t)
+    (map (lambda (f) (and (f) (f "foo")))
+         (list string=? string<? string>? string<=? string>=?
+               string-ci=? string-ci<? string-ci>? string-ci<=? string-ci>=?))))
+
 (test-group "srfi-152:gauche:comparison"
 (test "string=?" #t (string=? "foo" "foo"))
 
