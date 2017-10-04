@@ -456,6 +456,11 @@ procedures that have left/right directional variants
 use no suffix to specify left-to-right operation,
 <code>-right</code> to specify
 right-to-left operation, and <code>-both</code> to specify both.
+One discrepancy between SRFI 1 and other SRFIs is in the tabulate
+procedure:  SRFI 1's <code>list-tabulate</code> takes the length argument
+first, before the procedure, whereas all string SRFIs put the procedure
+first, in line with mapping and folding operations.
+
 </p>
 
 
@@ -1377,7 +1382,7 @@ satisfy the predicate <var>pred</var>.
 <dt class=proc-defn>
 <code class=proc-def>string-drop-while-right&nbsp;</code><var> string pred [start end] → string</var>
 <dd class=proc-def>
-Drops the longest initial prefix of the substring of <var>string</var> 
+Drops the longest initial prefix/suffix of the substring of <var>string</var> 
 specified by <var>start</var> and <var>end</var> whose elements all
 satisfy the predicate <var>pred</var>, and returns the rest of the string.
 <p>These are the same as <code>string-trim</code> and <code>string-trim-right</code>,
@@ -1505,6 +1510,11 @@ The optional <var>end</var> argument accommodates that use case
 by allowing the final buffer to be only partially full without
 having to copy it a second time, as <code>string-take</code>
 would require.
+<p>
+Note that reversing a string simply reverses the sequence of code points it
+contains.  Caution should be taken if a grapheme cluster is divided
+between two string arguments.</p>
+
 </p>
 </dd>
 
@@ -1990,7 +2000,7 @@ The default port is the value of <code>(current-output-port)</code>.</dd>
 ============================================================================-->
 <dt class="proc-def">
 <a name="string-fill!"></a>
-<code class="proc-def">string-fill!</code><var> string [fill start end] → unspecified</var> (R5RS+)
+<code class="proc-def">string-fill!</code><var> string fill [start end] → unspecified</var> (R5RS+)
 </dt>
 <dd class="proc-def">
    The string-fill! procedure stores <var>fill</var> in elements <var>start</var>
