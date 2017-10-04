@@ -1,4 +1,8 @@
-(import (scheme base) (scheme char) (srfi-152))
+(import (except (scheme base)
+                string=? string<? string>? string<=? string>=?)
+        (except (scheme char)
+                string-ci=? string-ci<? string-ci>? string-ci<=? string-ci>=?)
+        (srfi-152))
 
 (cond-expand
   ((library (chibi test))
@@ -164,6 +168,14 @@
 
 
 )
+
+(test-group "srfi-152:extended-comparisons"
+  (test "base cases for extended string comparisons"
+    '(#t #t #t #t #t #t #t #t #t #t)
+    (map (lambda (f) (and (f) (f "foo")))
+         (list string=? string<? string>? string<=? string>=?
+               string-ci=? string-ci<? string-ci>? string-ci<=? string-ci>=?))))
+
 (test-group "srfi-152:gauche:comparison"
 (test "string=?" #t (string=? "foo" "foo"))
 
