@@ -109,6 +109,24 @@
   (let-string-start+end (start end) string-copy! s maybe-start+end
     (%substring s start end)))
 
+(cond-expand
+  (chicken
+    #;imported)
+  (else
+    (define read-string
+      (case-lambda
+        ((k) (read-string k (current-input-port)))
+        ((k port)
+          (let loop ((i 0) (o '()))
+            (if (>= i k)
+              (list->string (reverse o))
+              (let ((c (read-char port)))
+                (if (eof-object? c)
+                  (if (= i 0)
+                    c
+                    (list->string (reverse o)))
+                  (loop (+ i 1) (cons c o)))))))))))
+
 ;; Chicken's write-string is incompatible with R7RS
 (define write-string
   (case-lambda

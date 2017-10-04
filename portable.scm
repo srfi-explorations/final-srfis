@@ -140,7 +140,6 @@
       (substring s start end)))
 
 ;;; Basic iterators and other higher-order abstractions
-;;; (string-map proc s [start end])
 ;;; (string-fold kons knil s [start end])
 ;;; (string-fold-right kons knil s [start end])
 ;;; (string-unfold       p f g seed [base make-final])
@@ -153,20 +152,6 @@
 ;;; You want compiler support for high-level transforms on fold and unfold ops.
 ;;; You'd at least like a lot of inlining for clients of these procedures.
 ;;; Don't hold your breath.
-
-(define (string-map proc s . maybe-start+end)
-  (check-arg procedure? proc string-map)
-  (let-string-start+end (start end) string-map s maybe-start+end
-    (%string-map proc s start end)))
-
-(define (%string-map proc s start end)	; Internal utility
-  (let* ((len (- end start))
-	 (ans (make-string len)))
-    (do ((i (- end 1) (- i 1))
-	 (j (- len 1) (- j 1)))
-	((< j 0))
-      (string-set! ans j (proc (string-ref s i))))
-    ans))
 
 (define (string-fold kons knil s . maybe-start+end)
   (check-arg procedure? kons string-fold)
@@ -959,13 +944,6 @@
       (string-set! s i (car clist)))
     s))
 
-
-(define (string->vector s . maybe-start+end)
-  (let-string-start+end (start end) string->list s maybe-start+end
-    (define ans (make-vector (- end start)))
-    (do ((i (- end 1) (- i 1)))
-	((< i start) ans)
-      (vector-set! ans (- i start) (string-ref s i)))))
 
 ;;; Defined by R5RS, so commented out here.
 ;(define (list->string lis) (string-unfold null? car cdr lis))
