@@ -1,4 +1,19 @@
-(import (scheme base) (scheme char) (chibi test) (srfi-152))
+(import (scheme base) (scheme char) (srfi-152))
+
+(cond-expand
+  ((library (chibi test))
+   (import (chibi test)))
+  ((library (srfi 64))
+   (import (srfi 64))
+   (define-syntax test
+     (syntax-rules ()
+       ((_ arg ...) (test-equal arg ...))))
+   (define-syntax test-exit
+     (syntax-rules ()
+       ((_) (test-end))))
+   (test-begin "srfi-152 top"))
+  (else
+   (error "no suitable test framework available")))
 
 (define (complement proc) (lambda (x) (not (proc x))))
 (define (char-newline? ch) (eqv? ch #\newline))
