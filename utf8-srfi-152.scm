@@ -3,9 +3,21 @@
 (module utf8-srfi-152 ()
 
   ;; R5RS+ and utf8 procedures must not be imported, as we redefine them
-  (import (except scheme
-     string-length string-ref string-set! make-string string substring
-     string-copy string->list list->string string-fill!))
+  (import (rename (except scheme
+                          string-length string-ref string-set! make-string string substring
+                          string-copy string->list list->string string-fill!)
+                  (string=? base-string=?)
+                  (string<? base-string<?)
+                  (string>? base-string>?)
+                  (string<=? base-string<=?)
+                  (string>=? base-string>=?)
+                  (string-ci=? base-string-ci=?)
+                  (string-ci<? base-string-ci<?)
+                  (string-ci>? base-string-ci>?)
+                  (string-ci<=? base-string-ci<=?)
+                  (string-ci>=? base-string-ci>=?)))
+  (import (only chicken include error use case-lambda
+                        open-input-string open-output-string get-output-string))
 
   (import (only chicken include error use case-lambda
                         open-input-string open-output-string get-output-string))
@@ -23,7 +35,9 @@
               string-set!)
 
   ;; Export R5RS+ procedures
-  (export string->list string-copy string-fill!)
+  (export string->list string-copy string-fill!
+          string=? string<? string>? string<=? string>=?
+          string-ci=? string-ci<? string-ci>? string-ci<=? string-ci>=? )
 
   ;; Export R7RS procedures (defined in r7rs-shim file and chicken module)
   (import (only utf8 read-string))
@@ -54,5 +68,6 @@
 
   (include "macros.scm")
   (include "portable.scm")
+  (include "extend-comparisons.scm")
   (include "r7rs-shim.scm")
 )

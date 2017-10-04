@@ -149,6 +149,14 @@
 
 
 )
+
+(test-group "srfi-152:extended-comparisons"
+  (test "base cases for extended string comparisons"
+    '(#t #t #t #t #t #t #t #t #t #t)
+    (map (lambda (f) (and (f) (f "foo")))
+         (list string=? string<? string>? string<=? string>=?
+               string-ci=? string-ci<? string-ci>? string-ci<=? string-ci>=?))))
+
 (test-group "srfi-152:gauche:comparison"
 (test "string=?" #t (string=? "foo" "foo"))
 
