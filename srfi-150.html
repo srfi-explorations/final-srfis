@@ -147,7 +147,7 @@ like numbers and strings, or
   another interpretation.  (If someone interpreted the R7RS in such a
   way that field names are unhygienic, by the same reason, pattern
   variables in <code>syntax-rules</code> would be matched
-  unhygienically as well &emdash; this is relevant for macros
+  unhygienically as well &mdash; this is relevant for macros
   producing macro definitions.  However, all implementers and users
   seem to agree that pattern variables are matched hygienically.)
   Alex Shinn, chair of Working Group 1,
@@ -178,23 +178,23 @@ like numbers and strings, or
 
 <pre>
   (define *counter* -1)
-  
+
   (define-syntax define-record-type/identity
     (syntax-rules ()
-      ((_ <rtd>
-        (constructor name ...)
-        predicate
-        id
-        field ...)
-      (begin
-        (define-record-type <rtd>
-          (%contructor %id name ...)
-          predicate
-          (%id id)
-	  field ...)
-        (define (constructor . args)
-          (set! *counter* (+ 1 *counter*))
-          (apply %constructor *counter* args))))))</pre>
+      ((_ rt-name
+	(constructor name ...)
+	predicate
+	id
+	field ...)
+       (begin
+	 (define-record-type rt-name
+	   (%constructor %id name ...)
+	   predicate
+	   (%id id)
+	   field ...)
+	 (define (constructor . args)
+	   (set! *counter* (+ 1 *counter*))
+	   (apply %constructor *counter* args))))))</pre>
 
 <p>In fact, even having SRFI 99 at one's disposal, the above problem
   does not have a simple solution.  Using the procedural layer of SRFI
