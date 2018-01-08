@@ -444,7 +444,9 @@ A record type definition extends R7RS with the following additional options:
     If a <code>&lt;parent&gt;</code> datum is specified and
     not <code>#f</code>, then it must be an identifier bound to a
     record-type descriptor that serves as the parent record-type for
-    the record-type being defined.
+    the record-type being defined.  (A
+    missing <code>&lt;parent&gt;</code> datum is equivalent
+    to <code>#f</code>.)
   </li>
   <li>If <code>#f</code> is specified for the constructor or predicate,
     then no constructor or predicate procedure is defined. (This is
@@ -463,22 +465,23 @@ A record type definition extends R7RS with the following additional options:
 <ul>
   <li>Each of the <code>&lt;field name&gt;</code>s can either be a
     field name or accessor name declared in the
-    same <code>define-record-type</code> form, or any of its ancestor
-    ancestor's field names.  Equality is defined as follows: Two
-    constants are considered equal if they are equal in the sense
-    of <code>equal?</code>.  An identifier is never considered equal
-    to a constant.  Two identifiers appearing in two different
-    instances of <code>define-record-type</code> are considered equal
-    if and only if they have the same lexical binding or the two
-    identifiers are the same (taking renaming due to hygiene into
-    account) and both have no lexical binding.  Two identifiers
-    appearing in the same instance of <code>define-record-type</code>
-    are considered equal if binding one identifier would bind the
-    other identifier (in other words: both identifiers are the same
-    after renaming due to hygiene).  If a field name <code>&lt;field
-    name&gt;</code> is considered equal to an identifier naming a
-    field name and an identifier naming an accessor, the field name
-    takes precedence.  Field names in children shadow field names in parents.
+    same <code>define-record-type</code> form, or any of its
+    ancestor's field names or accessor names.  Equality is defined as
+    follows: Two constants are considered equal if they are equal in
+    the sense of <code>equal?</code>.  An identifier is never
+    considered equal to a constant.  Two identifiers appearing in two
+    different instances of <code>define-record-type</code> are
+    considered equal if and only if they have the same lexical binding
+    or the two identifiers are the same (taking renaming due to
+    hygiene into account) and both have no lexical binding.  Two
+    identifiers appearing in the same instance
+    of <code>define-record-type</code> are considered equal if binding
+    one identifier would bind the other identifier (in other words:
+    both identifiers are the same after renaming due to hygiene).  If
+    a field name <code>&lt;field name&gt;</code> is considered equal
+    to an identifier naming a field name and an identifier naming an
+    accessor, the field name takes precedence.  Field names in
+    children shadow field names in parents.
   </li>
   <li>It is an error if the same field is referenced more than once in
     the a constructor spec.</li>
