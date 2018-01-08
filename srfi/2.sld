@@ -1,4 +1,4 @@
-;; Copyright (C) Marc Nieper-Wißkirchen (2016).  All Rights Reserved. 
+;; Copyright (C) Oleg Kiselyov (2016).  All Rights Reserved. 
 
 ;; Permission is hereby granted, free of charge, to any person
 ;; obtaining a copy of this software and associated documentation
@@ -20,9 +20,7 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-library (srfi 147)
-  (export define-syntax
-	  let-syntax
-	  letrec-syntax
-	  syntax-rules)
-  (import (srfi 147 implementation)))
+(define-library (srfi 2)
+  (export and-let*)
+  (import (scheme base))
+  (include "2.scm"))
