@@ -1,4 +1,4 @@
-;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved. 
+;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved.
 
 ;; Permission is hereby granted, free of charge, to any person
 ;; obtaining a copy of this software and associated documentation
@@ -27,7 +27,7 @@
 
 ;; The record-type definition keyword, which is exported from the library
 (define-syntax define-record-type/150
-  (ck-macro-transformer ()
+  (em-syntax-rules ()
     ((define-record-type/150 type-spec
        constructor-spec
        predicate-spec
@@ -56,25 +56,25 @@
 	,(define-rtd 'rtd-name
 	   'size
 	   'make-subtype
-	   (ck-append
-	    (ck-reverse '((field-name accessor-name mutator-name) ...))
+	   (em-append
+	    (em-reverse '((field-name accessor-name mutator-name) ...))
 	    'parent-fields))))))
 
 ;; Helper macros that set up the parameters of a record-type definition
 
 (define-syntax parse-type-spec
-  (ck-macro-transformer ()
+  (em-syntax-rules ()
     ((parse-type-spec '(rtd parent-rtd)) '(rtd parent-rtd))
     ((parse-type-spec '#f) '(rtd root-rtd))
     ((parse-type-spec 'rtd) '(rtd root-rtd))))
 
 (define-syntax parse-predicate-spec
-  (ck-macro-transformer ()
+  (em-syntax-rules ()
     ((parse-predicate-spec '#f) 'predicate-name)
     ((parse-predicate-spec 'predicate-name) 'predicate-name)))
 
 (define-syntax parse-field-specs
-  (ck-macro-transformer ()
+  (em-syntax-rules ()
     ((parse-field-specs 'index)
      '(index))
     ((parse-field-specs 'index '(name accessor) 'field-specs ...)
@@ -84,38 +84,38 @@
      '(size (name accessor mutator index) fields ...))))
 
 (define-syntax parse-constructor-spec
-  (ck-macro-transformer ()
+  (em-syntax-rules ()
     ((parse-constructor-spec '#f 'parent-fields 'fields)
      (parse-constructor-spec '(constructor-name) 'parent-fields 'fields))
     ((parse-constructor-spec '(constructor-name field ...) 'parent-fields 'fields)
-     `(constructor-name (,(get-mutator 'field 'parent-fields 'fields) ...)))    
+     `(constructor-name (,(get-mutator 'field 'parent-fields 'fields) ...)))
     ((parse-constructor-spec 'constructor-name
 			     '((parent-field-name parent-accessor parent-mutator) ...)
 			     '((field-name accessor mutator) ...))
-     `(constructor-name ,(ck-append (ck-reverse '(parent-mutator ...)) '(mutator ...))))))
+     `(constructor-name ,(em-append (em-reverse '(parent-mutator ...)) '(mutator ...))))))
 
 ;; Locates the mutator of a field in a record-type or one of its ancestors
 
 (define-syntax get-mutator
-  (ck-macro-transformer ()
+  (em-syntax-rules ()
     ((get-mutator 'field
 		  '((parent-field-name parent-accessor parent-mutator) ...)
 		  '((field-name accessor mutator) ...))
-     (ck-cadr
-      (ck-or (ck-assoc 'field '((field-name mutator) ...) ck-equal?)
-	     (ck-assoc 'field '((accessor mutator) ...) ck-equal?)
-	     (ck-assoc 'field '((parent-field-name parent-mutator) ...) ck-equal?/free)
-	     (ck-assoc 'field '((parent-accessor parent-mutator) ...) ck-equal?/free)
-	     (ck-error '"record field not found" 'field))))))
+     (em-cadr
+      (em-or (em-assoc 'field '((field-name mutator) ...) em-equal?)
+	     (em-assoc 'field '((accessor mutator) ...) em-equal?)
+	     (em-assoc 'field '((parent-field-name parent-mutator) ...) em-equal?/free)
+	     (em-assoc 'field '((parent-accessor parent-mutator) ...) em-equal?/free)
+	     (em-error '"record field not found" 'field))))))
 
 (define-syntax define-rtd
-  (ck-macro-transformer ()
+  (em-syntax-rules ()
     ((define-rtd 'rtd 'size 'subtype-constructor 'fields)
      '(define-syntax rtd
-	(ck-macro-transformer ::: ()
+	(em-syntax-rules ::: ()
           ((rtd ':secret) '(size subtype-constructor fields))
 	  ((rtd 'arg :::)
-	   (ck-error "invalid use of record-type descriptor")))))))
+	   (em-error "invalid use of record-type descriptor")))))))
 
 ;; Root record-type descriptor
 
@@ -123,13 +123,13 @@
 
 ;; Auxiliary composable macros
 
-;; Like ck-equal? but identifiers are compared using ck-free-identifier=?
-(define-syntax ck-equal?/free
-  (ck-macro-transformer ()
-    ((ck-equal?/free 'a 'b)
-     (ck-if (ck-and (ck-symbol? 'a) (ck-symbol? 'b))
-	    (ck-free-identifier=? 'a 'b)
-	    (ck-equal? 'a 'b)))))
+;; Like em-equal? but identifiers are compared using em-free-identifier=?
+(define-syntax em-equal?/free
+  (em-syntax-rules ()
+    ((em-equal?/free 'a 'b)
+     (em-if (em-and (em-symbol? 'a) (em-symbol? 'b))
+	    (em-free-identifier=? 'a 'b)
+	    (em-equal? 'a 'b)))))
 
 ;;; Procedures
 
