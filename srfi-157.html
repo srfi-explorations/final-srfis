@@ -492,6 +492,46 @@
 	Scheme</a> <a href="https://groups.google.com/d/msg/chibi-scheme/0V33GBeglkE/n6HVKOWCBgAJ">expressed plans to support continuation marks in his implementation</a>.
     </p>
 
+    <h2>Implementation hints</h2>
+
+    <p>
+      A simple way for an implementation of Scheme to provide
+      continuation marks is to pass two implicit parameters
+      called <em>flag</em> and <em>marks</em> in each call.  The
+      parameter <em>flag</em> is <code>#t</code> in a call if the call
+      is a tail call that occurs in tail context with respect to the
+      form <code>with-continuation-mark</code>, and <code>#f</code>
+      otherwise.  The parameter <em>marks</em> holds the current
+      continuation marks.  The Inferior Scheme implementation bundled
+      with this SRFI uses this approach.  It is detailed in
+      R. Germane's master's thesis (see acknowledgements).
+    </p>
+
+    <p>
+      An implementation of Scheme that employs a global CPS-transform
+      to model continuations can implement continuation marks more
+      efficiently as follows: The current continuation marks are
+      stored in a thread-local mutable cell, which corresponds to the
+      implicit <em>marks</em> parameter from above.  The
+      form <code>with-continuation-marks</code> invokes
+      its <em>expression</em> with a specific special
+      continuation procedure <em>C*</em>.  The presence of that
+      specific continuation procedure as the current continuation
+      corresponds to the <em>flag</em> parameter from above
+      being <code>#t</code>.  (In order for
+      the <code>with-continuation-marks</code> form to be able to
+      return to its continuation, it has to push its continuation onto
+      the current continuation marks so that <em>C*</em> can access it
+      when it is invoked and pass control to it.
+    </p>
+
+    <p>
+      A similar strategy is possible for Scheme implementations that
+      are stack-based.  Passing the special continuation procedure
+      from above is replaced by leaving a specific special return
+      value on the stack.
+    </p>
+
     <h1>Acknowledgements</h1>
 
     <p>
