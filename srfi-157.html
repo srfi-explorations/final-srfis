@@ -32,11 +32,14 @@
 
     <p>
       Continuation marks are a programming language feature that
-      allows one to attach information to and retrieve information from
-      continuations, generalizing stack inspection.  Conceptually, a
-      continuation consists of a number of frames where each frame
-      stands for an active procedure call that is not a tail call.  At
-      most one mark for a given key can be attached to a single frame.
+      allows one to attach information to and retrieve information
+      from continuations, generalizing stack inspection.
+      Conceptually, a continuation consists of a number of frames
+      where each frame stands for an active procedure call that is not
+      a tail call.  A continuation mark is then a key-value pair
+      associated with a frame, with keys compared
+      using <code>eq?</code>.
+      At most one mark for a given key can be attached to a single frame.
     </p>
 
     <p>
@@ -153,9 +156,10 @@
 
     <pre>
   (define (fact1 n)
-    (if (zero? n)
-        1
-        (* n (fact1 (- n 1)))))
+    (let loop ((n n))
+      (if (zero? n)
+          1
+          (* n (loop (- n 1))))))
 
   (define (fact2 n)
     (let loop ((n n) (a 1))
@@ -174,12 +178,13 @@
     (continuation-mark-set-&gt;list (current-continuation-marks) %key))
 
   (define (fact1 n)
-    (if (zero? n)
-        (begin
-          (display (ccm))
-          (newline)
-          1)
-        (with-continuation-mark %key n (* n (fact1 (- n 1))))))
+    (let loop ((n n))
+      (if (zero? n)
+          (begin
+            (display (ccm))
+            (newline)
+            1)
+          (with-continuation-mark %key n (* n (loop (- n 1)))))))
 
   (define (fact2 n)
     (let loop ((n n) (a 1))
@@ -268,7 +273,7 @@
     <pre>
   (define-syntax test-tail-position
     (syntax-rules      
-      ((test-tail-position tail? expression)
+      ((test-tail-position tail expression)
        (test-assert
          (call-with-current-continuation
           (lambda (c)
@@ -357,7 +362,8 @@
     <p>
       Returns an object called a <em>set of continuations
 	marks</em>, which at some point in the future can be asked (by
-	the <code>continuation-mark-set-&gt;list</code>
+      the <code>continuation-mark-set-&gt;list</code>,
+      <code>continuation-mark-set-&gt;list*</code>
       and <code>continuation-mark-set-first</code> procedures) to
       deliver the set of continuation marks of the continuation of the
       call to <code>current-continuation-marks</code> for a given key.

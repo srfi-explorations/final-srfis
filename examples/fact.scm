@@ -26,12 +26,13 @@
   (continuation-mark-set->list (current-continuation-marks) %key))
 
 (define (fact1 n)
-  (if (zero? n)
-      (begin
-	(display (ccm))
-	(newline)
-	1)
-      (with-continuation-mark %key n (* n (fact1 (- n 1))))))
+  (let loop ((n n))
+    (if (zero? n)
+	(begin
+	  (display (ccm))
+	  (newline)
+	  1)
+	(with-continuation-mark %key n (* n (loop (- n 1)))))))
 
 (define (fact2 n)
   (let loop ((n n) (a 1))

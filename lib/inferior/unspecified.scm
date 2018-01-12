@@ -22,7 +22,7 @@
 
 (define-record-type <unspecified>
   (make-unspecified value)
-  unspecified?
+  %unspecified?
   (value unspecified-value))
 
 (define unspecified

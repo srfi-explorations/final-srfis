@@ -132,20 +132,6 @@
 (define (let-body expression)
   (cddr expression))
 
-;; Named let
-(define (named-let? expression)
-  (and (tagged-list? expression 'let)
-       (variable? (cadr expression))))
-
-(define (named-let-tag expression)
-  (cadr expression))
-
-(define (named-let-bindings expression)
-  (caddr expression))
-
-(define (named-let-body expression)
-  (cdddr expression))
-
 ;; Let*
 (define (let*? expression)
   (tagged-list? expression 'let*))
