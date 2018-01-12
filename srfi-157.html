@@ -20,7 +20,16 @@
 
     <h1>Status</h1>
 
-    <p>This SRFI is currently in <em>draft</em> status.  Here is <a href="http://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+157+at+srfi+dotschemers+dot+org">srfi-157@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="http://srfi-email.schemers.org/srfi-157">archive</a>.</p>
+    <p>This SRFI is currently in <em>draft</em> status.  Here
+    is <a href="http://srfi.schemers.org/srfi-process.html">an
+    explanation</a> of each status that a SRFI can hold.  To provide
+    input on this SRFI, please send email
+    to <code><a href="mailto:srfi+minus+157+at+srfi+dotschemers+dot+org">srfi-157@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.
+    To subscribe to the list,
+    follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these
+    instructions</a>.  You can access previous messages via the
+    mailing
+    list <a href="http://srfi-email.schemers.org/srfi-157">archive</a>.</p>
     <ul>
       <li>Received: 2017/7/17</li>
       <li>60-day deadline: 2017/9/15</li>
@@ -45,7 +54,7 @@
     <p>
       Besides stack inspection, continuation marks can be used to
       implement dynamic scope, delimited continuations, or delayed
-      evaluation that is able to handle iterative lazy algorithms. 
+      evaluation that is able to handle iterative lazy algorithms.
     </p>
 
     <p>
@@ -58,7 +67,7 @@
     <p>None at present.</p>
 
     <h1>Rationale</h1>
-  
+
     <p>One of the defining properties of the Scheme programming
       language is that it is <em>properly tail-recursive</em>.  The R7RS defines
       that <q>an implementation is properly tail-recursive if it
@@ -124,7 +133,7 @@
 
     <pre>
   (let ((key (vector 'key)))
-    (with-continuation-mark key 1     
+    (with-continuation-mark key 1
       (continuation-mark-set-&gt;list (current-continuation-marks) key))) ; ⇒  (1)</pre>
 
     <pre>
@@ -149,7 +158,7 @@
     (with-continuation-mark key 1
       (with-continuation-mark key 2
         (continuation-mark-set-&gt;list (current-continuation-marks) key)))) ; ⇒ (2)</pre>
-    
+
     <h2>Recursive versus iterative algorithms</h2>
 
     <p>Consider the following two definitions of a factorial procedure:</p>
@@ -172,7 +181,7 @@
     </p>
 
     <pre>
-  (define %key (vector 'key))    
+  (define %key (vector 'key))
 
   (define (ccm)
     (continuation-mark-set-&gt;list (current-continuation-marks) %key))
@@ -199,7 +208,7 @@
     the console, while calling <code>(fact2 3)</code>
     outputs <code>(1)</code> on the console.
     </p>
-    
+
     <h2>Parameter objects</h2>
 
     <p>
@@ -250,12 +259,12 @@
        (%parameterize rest ((param2 init2 tmp2) ... (param1 init1 tmp1)) body))
       ((%parameterize () body)
        (let () . body))
-      ((%parameterize ((param tmp) . rest) body)     
+      ((%parameterize ((param tmp) . rest) body)
        (with-continuation-mark (param %param-key) (vector tmp)
          (%parameterize rest body)))))</pre>
 
     <h2>Test for tail position</h2>
-    
+
     <p>Some Scheme procedures are required to call certain procedures
       in tail position, and some Scheme forms are required to have
       certain expressions in tail context.
@@ -272,7 +281,7 @@
 
     <pre>
   (define-syntax test-tail-position
-    (syntax-rules      
+    (syntax-rules
       ((test-tail-position tail expression)
        (test-assert
          (call-with-current-continuation
@@ -285,7 +294,7 @@
                                (call-with-immediate-continuation-mark key c))))))
                 (with-continuation-mark key #t expression)
               #f))))))))
-                
+
   (test-tail-position tail
     (apply (tail) 1 2))</pre>
 
@@ -298,11 +307,11 @@
 	the unpleasant passing the <code>tail</code> datum to
 	the <code>test-tail-position</code> macro would not be
 	necessary.</p>
-    
+
     <h1>Specification</h1>
 
     <h2>Continuation marks</h2>
-    
+
     <p>
       We view a continuation as a list of frames where each frame
       represents an active procedure call that is not a tail-call.
@@ -323,9 +332,9 @@
       key in the frames of the continuation, ordered by the ordering
       of frames.
     </p>
-    
+
     <h2>Requirements</h2>
-    
+
     <p>
       An R7RS system that supports this SRFI shall make the identifiers
       defined below available in the <code>(srfi 157)</code> library.
@@ -335,12 +344,12 @@
       On any such system, the last expression within the body of
       a <code>parameterize</code> expression shall occur in a tail context.
     </p>
-    
+
     <h2>Syntax</h2>
 
     <p><code>(with-continuation-mark &lt;key&gt; &lt;value&gt;
 	&lt;expression&gt;)</code></p>
-    
+
     <p>The <code>&lt;key&gt;</code> expression is evaluated to obtain
       a key, the <code>&lt;value&gt;</code> expression is evaluated to
       obtain a value, the key is mapped to the value as a continuation
@@ -354,8 +363,12 @@
       the <code>&lt;expression&gt;</code> is in tail context if
       the <code>with-continuation-mark</code> expression is).
     </p>
-    
+
     <h2>Procedures</h2>
+
+    <p>In the descriptions of the following
+    procedures, <code><em>default</em></code> stands for an optional
+    arguments that defaults to <code>#f</code> if it is not provided.</p>
 
     <p><code>(current-continuation-marks)</code></p>
 
@@ -368,7 +381,7 @@
       deliver the set of continuation marks of the continuation of the
       call to <code>current-continuation-marks</code> for a given key.
     </p>
-    
+
     <p><code>(continuation-marks? <em>obj</em>)</code></p>
 
     <p>
@@ -377,7 +390,7 @@
       sets of continuation marks are not necessarily disjoint from other
       Scheme types such as lists.
     </p>
-    
+
     <p><code>(continuation-mark-set-&gt;list <em>marks</em> <em>key</em>)</code></p>
 
     <p>Returns a newly allocated list containing the marks for
@@ -386,6 +399,7 @@
     </p>
 
     <p><code>(continuation-mark-set-&gt;list* <em>marks</em> <em>list</em>)</code></p>
+    <p><code>(continuation-mark-set-&gt;list* <em>marks</em> <em>list</em> <em>default</em>)</code></p>
 
     <p>Returns a newly allocated list containing vectors of marks in
     the continuation mark set <code><em>marks</em></code>.  The length
@@ -395,16 +409,17 @@
     in <code><em>list</em></code>.  Values for multiple keys appear in
     a single vector only when the marks are for the same continuation
     frame in the continuation mark set <code><em>marks</em></code>.
-    The object <code>#f</code> is used for vector elements to indicate
+    The object <code><em>default</em></code> is used for vector elements to indicate
       the lack of a value.
     </p>
-    
+
     <p><code>(continuation-mark-set-first <em>marks</em> <em>key</em>)</code></p>
+    <p><code>(continuation-mark-set-first <em>marks</em> <em>key</em> <em>default</em>)</code></p>
 
     <p>
       Returns the first element of the list that would be returned
       by <code>(continuation-mark-set-&gt;list <em>marks</em> <em>key</em>)</code>,
-      or <code>#f</code> if the result would be the empty list.
+      or <code><em>default</em></code> if the result would be the empty list.
     </p>
 
     <p>
@@ -412,11 +427,14 @@
     </p>
 
     <pre>
-  (let ((lst (continuation-mark-set-&gt;list <em>marks</em> <em>key</em>))	 
-    (and (not (null? lst))
-         (car lst)))</pre>
-    
+  (let ((lst (continuation-mark-set-&gt;list <em>marks</em> <em>key</em>))
+    (if (not (null? lst))
+        (car lst)
+        default)))</pre>
+
     <p><code>(call-with-immediate-continuation-mark <em>key</em> <em>proc</em>)</code></p>
+    <p><code>(call-with-immediate-continuation-mark <em>key</em> <em>proc</em>
+    <em>default</em>)</code></p>
 
     <p>
       Tail-calls <code><em>proc</em></code> with the value associated
@@ -426,22 +444,23 @@
       to <code>call-with-immediate-continuation-mark</code> were
       replaced with a <code>with-continuation-mark</code> form
       using <code><em>key</em></code> as the key expression).  If no
-      such value exists in the first frame, <code>#f</code> is passed
+      such value exists in the first frame, <code><em>default</em></code> is passed
       to <code><em>proc</em></code>.
     </p>
 
     <p>
       Semantically equivalent to, but may be more efficient than:
     </p>
-    
+
     <pre>
   (let ((secret-key (vector #f)))
     (with-continuation-mark secret-key #f
       (let ((marks
             (continuation-mark-set-&gt;list* (current-continuation-marks)
-                                          (list <em>key</em> secret-key))) 
-        (proc (vector-ref (car marks) 0)))))</pre>
-    
+                                             (list <em>key</em> secret-key)
+                                             <em>default</em>))
+        (<em>proc</em> (vector-ref (car marks) 0)))))</pre>
+
     <h1>Implementation</h1>
 
     <p>
@@ -458,7 +477,7 @@
       the procedures of this SRFI, and the <code>load</code> procedure
       of the R4RS.
     </p>
-    
+
     <p>
       A mature implementation of continuation marks is available
       in <a href="http://racket-lang.org/">Racket</a>.
@@ -469,7 +488,7 @@
       of <a href="http://synthcode.com/wiki/chibi-scheme">Chibi
 	Scheme</a> <a href="https://groups.google.com/d/msg/chibi-scheme/0V33GBeglkE/n6HVKOWCBgAJ">expressed plans to support continuation marks in his implementation</a>.
     </p>
-    
+
     <h1>Acknowledgements</h1>
 
     <p>
@@ -484,7 +503,7 @@
       implementing continuation marks in pure lambda calculus is
       described in great detail.
     </p>
-    
+
     <h1>Copyright</h1>
     Copyright (C) Marc Nieper-Wi&szlig;kirchen (2017).  All Rights Reserved.
 
