@@ -1,4 +1,4 @@
-;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved. 
+;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved.
 
 ;; Permission is hereby granted, free of charge, to any person
 ;; obtaining a copy of this software and associated documentation
@@ -21,7 +21,7 @@
 ;; SOFTWARE.
 
 (let ((key (vector 'key)))
-  (with-continuation-mark key 1     
+  (with-continuation-mark key 1
     (continuation-mark-set->list (current-continuation-marks) key))) ; ⇒  (1)
 
 (let ((key (vector 'key)))

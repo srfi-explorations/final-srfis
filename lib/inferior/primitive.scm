@@ -1,4 +1,4 @@
-;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved. 
+;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved.
 
 ;; Permission is hereby granted, free of charge, to any person
 ;; obtaining a copy of this software and associated documentation
@@ -113,36 +113,39 @@
 	 (or (pred (car list))
 	     (loop (cdr list))))))
 
-(define (%continuation-mark-set->list* flag marks mark-set list)
-  (let loop ((mark-set (cdr mark-set)))
-    (cond
-     ((null? mark-set)
-      '())      
-     ((not (any (lambda (key)
-		  (assq key (car mark-set)))
-		list))
-      (loop (cdr mark-set)))
-     (else
-      (cons (list->vector (map (lambda (key)
-				 (cond
-				  ((assq key (car mark-set)) => cdr)
-				  (else #f)))
-			       list))
-	    (loop (cdr mark-set)))))))
+(define (%continuation-mark-set->list* flag marks mark-set list . default*)
+  (let ((default (and (not (null? default*)) (car default*))))
+    (let loop ((mark-set (cdr mark-set)))
+      (cond
+       ((null? mark-set)
+	'())
+       ((not (any (lambda (key)
+		    (assq key (car mark-set)))
+		  list))
+	(loop (cdr mark-set)))
+       (else
+	(cons (list->vector (map (lambda (key)
+				   (cond
+				    ((assq key (car mark-set)) => cdr)
+				    (else default)))
+				 list))
+	      (loop (cdr mark-set))))))))
 
-(define (%continuation-mark-set-first flag marks mark-set key)
-  (let loop ((mark-set (cdr mark-set)))
-    (cond
-     ((null? mark-set) '())
-     ((assq key (car mark-set)) => cdr)
-     (else (loop (cdr mark-set))))))
+(define (%continuation-mark-set-first flag marks mark-set key . default*)
+  (let ((default (and (not (null? default*)) (car default*))))
+    (let loop ((mark-set (cdr mark-set)))
+      (cond
+       ((null? mark-set) default)
+       ((assq key (car mark-set)) => cdr)
+       (else (loop (cdr mark-set)))))))
 
-(define (%call-with-immediate-continuation-mark flag marks key proc)
-  (let ((mark (and flag
-		   (cond
-		    ((assq key (car marks)) => cdr)
-		    (else #f)))))
-    (proc flag marks mark)))
+(define (%call-with-immediate-continuation-mark flag marks key proc . default*)
+  (let ((default (and (not (null? default*)) (car default*))))
+    (let ((mark (and flag
+		     (cond
+		      ((assq key (car marks)) => cdr)
+		      (else default)))))
+      (proc flag marks mark))))
 
 (define (%load flag marks filename)
   (call-with-input-file filename
