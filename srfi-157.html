@@ -307,10 +307,9 @@
 
     <p><i>Note: </i> Using the syntax parameters
 	of <a href="https://srfi.schemers.org/srfi-139/srfi-139.html">SRFI
-	139</a>, and defining <code>tail</code> as a syntax parameter,
-	the unpleasant passing the <code>tail</code> datum to
-	the <code>test-tail-position</code> macro would not be
-	necessary.</p>
+        139</a> and defining <code>tail</code> as a syntax parameter would
+        eliminate the need for the unpleasant passing of the <code>tail</code>
+        datum to the <code>test-tail-position</code> macro.</p>
 
     <h1>Specification</h1>
 
@@ -318,8 +317,8 @@
 
     <p>
       We view a continuation as a list of frames where each frame
-      represents an active procedure call that is not a tail-call.
-      Each non-tail call of procedure adds a frame to the head of the
+      represents an active procedure call that is not a tail call.
+      Each non-tail call of a procedure adds a frame to the head of the
       list of frames of the current continuation, while tail-calling a
       procedure conceptually reuses the top (or first) frame.
     </p>
@@ -332,7 +331,7 @@
 
     <p>
       The continuation marks for a given key in a continuation
-      conceptually form a list of all values associated to the given
+      conceptually form a list of all values associated with the given
       key in the frames of the continuation, ordered by the ordering
       of frames.
     </p>
@@ -461,8 +460,8 @@
     (with-continuation-mark secret-key #f
       (let ((marks
             (continuation-mark-set-&gt;list* (current-continuation-marks)
-                                             (list <em>key</em> secret-key)
-                                             <em>default</em>))
+                                          (list <em>key</em> secret-key)
+                                          <em>default</em>))
         (<em>proc</em> (vector-ref (car marks) 0)))))</pre>
 
     <h1>Implementation</h1>
@@ -523,7 +522,7 @@
       the <code>with-continuation-marks</code> form to be able to
       return to its continuation, it has to push its continuation onto
       the current continuation marks so that <em>C*</em> can access it
-      when it is invoked and pass control to it.
+      when it is invoked and pass control to it.)
     </p>
 
     <p>
@@ -542,7 +541,7 @@
       specification has been taken over from the Racket
       documentation.  I would also want to
       acknowledge Kimball
-      R. Germane's <a href="http://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=4435&context=etd">master's
+      R. Germane's <a href="http://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=4435&amp;context=etd">master's
       thesis</a>, where a simple global source code transformation for
       implementing continuation marks in pure lambda calculus is
       described in great detail.
