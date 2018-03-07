@@ -11,7 +11,7 @@
 
 <H1>Title</H1>
 
-Ordered sets and bags
+Ordered sets
 
 <H1>Author</H1>
 
@@ -29,7 +29,7 @@ John Cowan
 </ul>
 
 
-<h1>Abstract</h1><p><em>Osets</em> and <em>obags</em> (also known as multisets) are collections that can contain any Scheme objects, provided that a total order exists among the objects.  Osets enforce the constraint that no two elements can be the same in the sense of the oset's associated <em>equality predicate</em>; obags do not. The elements in an oset or obag appear in a fixed order determined by the comparator used to create it.
+<h1>Abstract</h1><p><em>Osets</em> are collections that can contain any Scheme objects, provided that a total order exists among the objects.  Osets enforce the constraint that no two elements can be the same in the sense of the oset's associated <em>equality predicate</em>. The elements in an oset  appear in a fixed order determined by the comparator used to create it.
 
 </p>
 
@@ -39,31 +39,31 @@ None at present.
 
 <h1>Rationale</h1>
 
-<p>The sets and bags of <a href="http://srfi.schemers.org/srfi-113/srfi-113.html">SRFI 113</a> may depend on either an ordering predicate or a hash function. The sets and bags provided here are and always ordered.</p>
+<p>The sets of <a href="http://srfi.schemers.org/srfi-113/srfi-113.html">SRFI 113</a> may depend on either an ordering predicate or a hash function. The sets provided here are always ordered.</p>
 
 <p>The names in this SRFI are harmonized with the names used in SRFI 113 and
 <a href="http://srfi.schemers.org/srfi-146/srfi-146.html">SRFI 146</a>.
 
 <p>It's possible to use the general osets of this SRFI to contain characters, but the use of <a href="http://srfi.schemers.org/srfi-14/srfi-14.html">SRFI 14</a> is recommended instead. </p>
 
-<p>Osets and obags do not have a lexical syntax representation.  It's possible to use <a href="http://srfi.schemers.org/srfi-108/srfi-108.html">SRFI 108</a> quasi-literal constructors to create them in code, but this SRFI does not standardize how that is done.</p>
+<p>Osets do not have a lexical syntax representation.  It's possible to use <a href="http://srfi.schemers.org/srfi-108/srfi-108.html">SRFI 108</a> quasi-literal constructors to create them in code, but this SRFI does not standardize how that is done.</p>
 
-<p>The interface to general osets and obags depends on <a href="http://srfi.schemers.org/srfi-128/srfi-128.html">SRFI 128</a> comparators. Comparators conveniently package the equality predicate of the oset with the ordering predicate needed to implement the oset efficiently.</p>
+<p>The interface to general osets depends on <a href="http://srfi.schemers.org/srfi-128/srfi-128.html">SRFI 128</a> comparators. Comparators conveniently package the equality predicate of the oset with the ordering predicate needed to implement the oset efficiently.</p>
 
 <h1>Specification</h1>
 
-<p>Osets and obags are mutually disjoint, and disjoint from other types of Scheme objects.</p>
+<p>Osets are mutually disjoint, and disjoint from other types of Scheme objects.</p>
 
-<p>It is an error for any procedure defined in this SRFI to be invoked on osets or obags with distinct comparators (in the sense of <code>eq?</code>).</p>
+<p>It is an error for any procedure defined in this SRFI to be invoked on osets with distinct comparators (in the sense of <code>eq?</code>).</p>
 
-<p>It is an error to mutate any object while it is contained in a oset or obag.</p>
+<p>It is an error to mutate any object while it is contained in a oset.</p>
 
-<p>It is an error to add an object to a oset or obag which does not satisfy the type test predicate of the comparator.</p>
+<p>It is an error to add an object to a oset which does not satisfy the type test predicate of the comparator.</p>
 
-<p>It is an error to add or remove an object for a oset or a obag while iterating over it.</p>
+<p>It is an error to add or remove an object for a oset or while iterating over it.</p>
 
 <p>It is an error if comparators used with the procedures of this SRFI do not provide an ordering predicate.
-It is not necessary for them to contain a hash function.</p>
+It is not necessary for them to provide a hash function.</p>
 
 <h2>Linear update</h2>
 
@@ -71,23 +71,23 @@ It is not necessary for them to contain a hash function.</p>
 
   
 <p>It is an error to rely upon these procedures working by side effect.
-so clients of these procedures write in a functional style, but must additionally be sure that, when the procedure is called, there are no other live pointers to the potentially-modified set or bag (hence the term "linear update").</p>
+so clients of these procedures write in a functional style, but must additionally be sure that, when the procedure is called, there are no other live pointers to the potentially-modified oset (hence the term "linear update").</p>
 
 <p>There are two benefits to this convention:</p>
 
 <ul><li><p>Implementations are free to provide the most efficient possible implementation, either functional or side-effecting.</p></li>
 
-<li><p>Programmers may nonetheless continue to assume that osets and obags are purely functional data structures: they may be reliably shared without needing to be copied, uniquified, and so forth.</p></li></ul>
+<li><p>Programmers may nonetheless continue to assume that osets are purely functional data structures: they may be reliably shared without needing to be copied, uniquified, and so forth.</p></li></ul>
 
-<p>In practice, these procedures are most useful for efficiently constructing osets and obags in a side-effecting manner, in some limited local context, before passing the set or bag outside the local construction scope to be used in a functional manner.</p>
+<p>In practice, these procedures are most useful for efficiently constructing osets in a side-effecting manner, in some limited local context, before passing the oset outside the local construction scope to be used in a functional manner.</p>
 
 <p>Scheme provides no assistance in checking the linearity of the potentially side-effected parameters passed to these functions -- there's no linear type checker or run-time mechanism for detecting violations.</p>
 
-<p>Note that if an implementation uses no side effects at all, it is allowed to return existing osets and obags rather than newly allocated ones, even where this SRFI explicitly says otherwise.</p>
+<p>Note that if an implementation uses no side effects at all, it is allowed to return existing osets rather than newly allocated ones, even where this SRFI explicitly says otherwise.</p>
 
 <p>Procedures whose names end in <code>!</code> have the same behavior as
 the corresponding procedures whose names don't have <code>!</code>,
-except for being linear update rather than pure functional.
+except for being linear-update in their (first) oset argument rather than pure functional.
 This is mentioned here once and for all.</p>
 
 <h2 id="Procedureindex">Procedure index</h2>
@@ -95,18 +95,16 @@ This is mentioned here once and for all.</p>
 <ul><li><p><a href="#Constructors">Constructors</a>: <code>oset</code>, <code>oset/ordered</code>, <code>oset-unfold</code>, <code>oset-unfold/ordered</code></p>
 </li><li><p><a href="#Predicates">Predicates</a>: <code>oset?</code>, <code>oset-contains?</code>, <code>oset-empty?</code>, <code>oset-disjoint?</code></p>
 </li><li><p><a href="#Accessors">Accessors</a>: <code>oset-member</code>, <code>oset-element-comparator</code></p>
-</li><li><p><a href="#Updaters">Updaters</a>: <code>oset-adjoin</code>, <code>oset-adjoin!</code>, <code>oset-replace</code>, <code>oset-replace</code>, <code>oset-delete</code>, <code>oset-delete!</code>, <code>oset-delete-all</code>, <code>oset-delete-all!</code>, <code>oset-search</code>, <code>oset-search!</code></p>
+</li><li><p><a href="#Updaters">Updaters</a>: <code>oset-adjoin</code>, <code>oset-adjoin!</code>, <code>oset-replace</code>, <code>oset-replace</code>, <code>oset-delete</code>, <code>oset-delete!</code>, <code>oset-delete-all</code>, <code>oset-delete-all!</code>, <code>oset-pop</code>, <code>oset-pop!</code>, <code>oset-pop/reverse</code>, <code>oset-pop!/reverse</code>, <code>oset-search</code>, <code>oset-search!</code></p>
 
 </li><li><p><a href="#Thewholeset">The whole oset</a>: <code>oset-size</code>, <code>oset-find</code>, <code>oset-count</code>, <code>oset-any?</code>, <code>oset-every?</code></p>
 </li><li><p><a href="#Mappingandfolding">Mapping and folding</a>: <code>oset-map</code>, <code>oset-map/monotone</code>, <code>oset-for-each</code>, <code>oset-fold</code>, <code>oset-fold/reverse</code>, <code>oset-filter</code>, <code>oset-filter!</code>, <code>oset-remove</code>, <code>oset-remove!</code>, <code>oset-partition</code>, <code>oset-partition!</code></p>
 </li><li><p><a href="#Copyingandconversion">Copying and conversion</a>: <code>oset-copy</code>, <code>oset->list</code>, <code>list->oset</code>, <code>list/ordered->oset</code>, <code>list->oset!</code>, <code>list/ordered->oset!</code></p>
 </li><li><p><a href="#Subsets">Subsets</a>: <code>oset=?</code>, <code>oset&lt;?</code>, <code>oset>?</code>, <code>oset&lt;=?</code>, <code>oset>=?</code></p>
 </li><li><p><a href="#Settheoryoperations">Set theory operations</a>: <code>oset-union</code>, <code>oset-union!</code>, <code>oset-intersection</code>, <code>oset-intersection!</code>, <code>oset-difference</code>, <code>oset-difference!</code>, <code>oset-xor</code>, <code>oset-xor!</code></p>
-</li><li><p><a href="#Singleelements">Single elements</a>: <code>oset-min-element</code>, <code>oset-max-element</code>, <code>oset-min-value</code>.  <code>oset-max-value</code>, <code>oset-element-predecessor</code>, <code>oset-element-successor</code></p>
+</li><li><p><a href="#Singleelements">Single elements</a>: <code>oset-min-element</code>, <code>oset-max-element</code>, <code>oset-element-predecessor</code>, <code>oset-element-successor</code></p>
 </li><li><p><a href="#Dividingosets">Dividing osets</a>: <code>oset-range=</code>, <code>oset-range&lt;</code>, <code>oset-range></code>, <code>oset-range&lt;=</code>, <code>oset-range>=</code>, <code>oset-split</code>, <code>oset-catenate</code></p>
-</li><li><p><a href="#Additionalobagprocedures">Additional obag procedures</a>: <code>obag-sum</code>, <code>obag-sum!</code>, <code>obag-product</code>, <code>obag-product!</code>, <code>obag-element-count</code>, <code>obag-for-each-unique</code>, <code>obag-fold-unique</code>, <obag-increment</code>, <code>obag-increment!,</code>, <code>obag-decrement</code>, <code>obag-decrement!</code>, <code>obag->oset</code>, <code>oset->obag</code>, <code>oset->obag</code>, <code>obag->alist</code>, <code>alist->obag</code>, <code>alist->obag!</code>, <code>alist/ordered->obag</code>, <code>alist/ordered->obag!</code></p>
-
-</li><li><p><a href="#Comparators">Comparators</a>: <code>oset-comparator</code>, <code>obag-comparator</code></p>
+</li><li><p><a href="#Comparator">Comparator</a>: <code>oset-comparator</code></p>
 </li>
 
 </ul>
@@ -161,23 +159,58 @@ it is an error if the <em>elements</em> are out of order or duplicated.  It may 
 
 <p><code>(oset-adjoin </code><em>oset element</em> ...<code>)</code></p>
 
-<p>The <code>oset-adjoin</code> procedure returns an oset that uses the same comparator as <em>oset</em> and contains all the values of <em>oset</em>, and in addition each <em>element</em> unless it is already equal (in the sense of the comparator) to one of the existing or newly added members.  It is an error to add an element to <i>oset</i> that does not return <code>#t</code> when passed to the type test procedure of the comparator.</p>
+<p><code>(oset-adjoin! </code><em>oset element</em> ...<code>)</code></p>
+
+<p>The <code>oset-adjoin</code> procedure returns an oset that uses the same comparator as <code>oset</code> and contains all the values of <em>oset</em>, and in addition each <em>element</em> unless it is already equal (in the sense of the comparator) to one of the existing or newly added members.  It is an error to add an element to <i>oset</i> that does not return <code>#t</code> when passed to the type test procedure of the comparator.</p>
 
 
 <p><code>(oset-replace </code><em>oset element</em><code>)</code></p>
+
+<p><code>(oset-replace! </code><em>oset element</em><code>)</code></p>
 
 <p>The <code>oset-replace</code> procedure returns an oset that uses the same comparator as <em>oset</em> and contains all the values of <em>oset</em> except as follows:  If <i>element</i> is equal (in the sense of <i>oset</i>'s comparator) to an existing member of <i>oset</i>, then that member is omitted and replaced by <i>element</i>.  If there is no such element in <i>oset</i>, then <i>oset</i> is returned unchanged.</p>
 
 <p><code>(oset-delete </code><em>oset element</em> ...<code>)</code></p>
 
+<p><code>(oset-delete! </code><em>oset element</em> ...<code>)</code></p>
+
 <p><code>(oset-delete-all </code><em>oset element-list</em><code>)</code></p>
+
+<p><code>(oset-delete-all! </code><em>oset element-list</em><code>)</code></p>
 
 <p>The <code>oset-delete</code> procedure returns an oset containing all the values of <em>oset</em> except for any that are equal (in the sense of <em>oset</em>'s comparator) to one or more of the <em>elements</em>.  Any <em>element</em> that is not equal to some member of the oset is ignored.</p>
 
 
 <p>The <code>oset-delete-all</code> procedure is the same as <code>oset-delete</code>, except that it accepts a single argument which is a list of elements to be deleted.</p>
 
+<p><code>(oset-pop </code><em>oset</em> [ <em>failure</em> ])</code></p>
+
+<p><code>(oset-pop/reverse </code><em>oset</em> [ <em>failure</em> ])</code></p>
+
+<p><code>(oset-pop! </code><em>oset</em> [ <em>failure</em> ])</code></p>
+
+<p><code>(oset-pop!/reverse </code><em>oset</em> [ <em>failure</em> ])</code></p>
+
+<p>The <code>oset-pop</code> procedure chooses the
+smallest element (in the sense of the comparator of <em>oset</em>)
+from <em>oset</em> and returns two
+values, a newly allocated oset that uses the same comparator
+as <em>oset</em> and contains all associations
+of <em>oset</em> except the chosen one, and the chosen
+element itself.
+If <em>oset</em> contains no such element
+and <em>failure</em> is supplied,
+then <em>failure</em> is invoked in tail context on no
+arguments and its values returned.  Otherwise, it is an error.
+</p>
+
+<p>The <code>oset-pop/reverse</code> procedure is the same as
+<code>oset-pop</code> except that it chooses the largest element.
+</p>
+
 <p><code>(oset-search </code><em>oset element failure success</em><code>)</code></p>
+
+<p><code>(oset-search! </code><em>oset element failure success</em><code>)</code></p>
 
 <p>The <em>oset</em> is searched in order for <em>element</em>.  If it is not found, then the <em>failure</em> procedure is tail-called with two continuation arguments, <em>insert</em> and <em>ignore</em>, and is expected to tail-call one of them.  If <em>element</em> is found, then the <em>success</em> procedure is tail-called with the matching element of <em>oset</em> and two continuations, <em>update</em> and <em>remove</em>, and is expected to tail-call one of them.</p>
 
@@ -240,9 +273,9 @@ Returns <code>#t</code> if every element of <em>oset</em> satisfies <em>predicat
 <p>Equivalent
 to <code>(oset-map <em>proc</em> <em>comparator</em> <em>oset</em>)</code>,
 but it is an error if <em>proc</em> does not induce a strictly
-monotone oset between the elements with respect to the ordering of the
-comparator of <code><em>oset</em></code> and the ordering
-of <code><em>comparator</em></code>.  Maybe be implemented more
+monotone oset between the elements with respect to both the ordering of the
+comparator of <em>oset</em> and the ordering
+of <em>comparator</em>.  Maybe be implemented more
 efficiently than <code>oset-map</code>.
 </p>
 
@@ -327,13 +360,23 @@ Returns <code>#t</code> if each <em>oset</em> other than the last is a superset 
 
 </p>
 
-<h3 id="Settheoryoperations">Set theory operations</h3><p><code>(oset-union </code><em>oset<sub>1</sub> oset<sub>2</sub></em> ...<code>)</code>
+<h3 id="Settheoryoperations">Set theory operations</h3>
+
+<p><code>(oset-union </code><em>oset<sub>1</sub> oset<sub>2</sub></em> ...<code>)</code>
+
+<p><code>(oset-union! </code><em>oset<sub>1</sub> oset<sub>2</sub></em> ...<code>)</code>
 
 </p><p><code>(oset-intersection </code><em>oset<sub>1</sub> oset<sub>2</sub></em> ...<code>)</code>
 
+</p><p><code>(oset-intersection! </code><em>oset<sub>1</sub> oset<sub>2</sub></em> ...<code>)</code>
+
 </p><p><code>(oset-difference </code><em>oset<sub>1</sub> oset<sub>2</sub></em> ...<code>)</code>
 
+</p><p><code>(oset-difference! </code><em>oset<sub>1</sub> oset<sub>2</sub></em> ...<code>)</code>
+
 </p><p><code>(oset-xor </code><em>oset<sub>1</sub> oset<sub>2</sub></em><code>)</code></p><p>
+
+</p><p><code>(oset-xor! </code><em>oset<sub>1</sub> oset<sub>2</sub></em><code>)</code></p><p>
 
 Return an oset that is the union, intersection, asymmetric difference, or symmetric difference of the <em>osets</em>.  Asymmetric difference is extended to more than two osets by taking the difference between the first oset and the union of the others.  Symmetric difference is not extended beyond two osets.  Elements in the result oset are drawn from the first oset in which they appear.
 
@@ -342,25 +385,18 @@ Return an oset that is the union, intersection, asymmetric difference, or symmet
 <p><code>(oset-min-element <em>oset</em>)</code></p>
 <p><code>(oset-max-element <em>oset</em>)</code></p>
 
-<p>Returns the least/greatest element contained in the oset <code><em>oset</em></code>.  It is an error for
-  <code><em>oset</em></code> to be empty.
+<p>Returns the least/greatest element contained in the oset <em>oset</em>.  It is an error for
+  <em>oset</em> to be empty.
 </p>
-
-<p><code>(oset-min-value <em>oset</em>)</code></p>
-<p><code>(oset-max-value <em>oset</em>)</code></p>
-
-<p>Returns the value associated with the least/greatest element contained
-  in the oset <code><em>oset</em></code>.  It is an error
-  for <code><em>oset</em></code> to be empty.</p>
 
 <p><code>(oset-element-predecessor <em>oset</em> <em>obj</em> <em>failure</em>)</code></p>
 <p><code>(oset-element-successor <em>oset</em> <em>obj</em> <em>failure</em>)</code></p>
-<p>Returns the element contained in the oset <code><em>oset</em></code> that
-immediately precedes/succeeds <code><em>obj</em></code> in the oset's order of
-elements.  If no such element is contained in <code><em>oset</em></code>
-(because <code><em>obj</em></code> is the minimum/maximum element, or
-because <code><em>oset</em></code> is empty), returns the result of tail-calling
-the thunk <code><em>failure</em></code>.
+<p>Returns the element contained in the oset <em>oset</em> that
+immediately precedes/succeeds <em>obj</em> in the oset's order of
+elements.  If no such element is contained in <em>oset</em>
+(because <em>obj</em> is the minimum/maximum element, or
+because <em>oset</em> is empty), returns the result of tail-calling
+the thunk <em>failure</em>.
 
 <h2 id="Dividingosets">Dividing osets</h2>
 
@@ -371,9 +407,9 @@ the thunk <code><em>failure</em></code>.
 <p><code>(oset-range>= <em>oset</em> <em>obj</em>)</code></p>
 
 <p>Returns a oset containing only the elements of
-the <code><em>oset</em></code> whose elements are equal to, less
+the <em>oset</em> whose elements are equal to, less
 than, greater than, less than or equal to, or greater than or equal
-  to <code><em>obj</em></code>.
+  to <em>obj</em>.
 </p>
 
 <p><i>Note: Note that since elements in osets are
@@ -398,90 +434,32 @@ element.</i></p>
 
 <p>
 Returns an oset using the
-comparator <code><em>comparator</em></code> whose elements
+comparator <em>comparator</em> whose elements
 are the union of the elements of the
-oset <code><em>oset</em><sub>1</sub></code>,
-the oset <code><em>element</em></code>,
-and the elements of <code><em>oset</em><sub>2</sub></code>.  It is an error if the elements
-contained in <code><em>oset</em><sub>1</sub></code> in their
+oset <em>oset</em><sub>1</sub></code>,
+the oset <em>element</em>,
+and the elements of <em>oset</em><sub>2</sub></code>.  It is an error if the elements
+contained in <em>oset</em><sub>1</sub></code> in their
 natural order, the element <em>element</em>, and the elements contained
-in <code><em>oset</em><sub>2</sub></code> in their natural order
+in <em>oset</em><sub>2</sub></code> in their natural order
 (in that order) do not form a strictly monotone sequence with respect
-to the ordering of <code><em>comparator</em></code>.
+to the ordering of <em>comparator</em>.
 </p>
 
-<h2 id="Obagprocedures">Obag procedures</h2><p>
+<h2 id="Comparator">Comparator</h2><p>
 
-Obags are like osets, but can contain the same object more than once.  However, if two elements that are the same in the sense of the equality predicate, but not in the sense of <code>eqv?</code>, are both included, it is not guaranteed that they will remain distinct when retrieved from the obag.  It is an error for a single procedure to be invoked on obags with different comparators.
+The following comparator is used to compare osets, and allow osets of osets, hash tables of osets, etc.
 
-</p><p>
+</p><p><code>oset-comparator</code></p><p>
 
-The procedures for creating and manipulating obags are the same as those for osets, except that <code>oset</code> is replaced by <code>obag</code> in their names, and that adjoining an element to a obag is effective even if the obag already contains the element.  If two elements in a obag are the same in the sense of the obag's comparator, the implementation may in fact store just one of them.
-</p>
-
-<p>The <code>obag-union</code>, <code>obag-intersection</code>, <code>obag-difference</code>, and <code>obag-xor</code> procedures behave as follows when both obags contain elements that are equal in the sense of the obags' comparator:</p>
-
-<ul>
-<li><p>For <code>obag-union</code>, the number of equal elements in the result is the largest number of equal elements in any of the original obags.</p></li>
-
-<li><p>For <code>obag-intersection</code>, the number of equal elements in the result is the smallest number of equal elements in any of the original obags.</p></li>
-
-<li><p>For <code>obag-difference</code>, the number of equal elements in the result is the number of equal elements in the first obag, minus the number of elements in the other obags (but not less than zero).</p></li>
-
-<li><p>For <code>obag-xor</code>, the number of equal elements in the result is the absolute value of the difference between the number of equal elements in the first and second obags.</p></li></ul>
-
-<h3 id="Additionalbagprocedures">Additional obag procedures</h3>
-
-<p><code>(obag-sum </code><em>oset<sub>1</sub> oset<sub>2</sub></em> ... <code>)</code></p>
-
-The <code>obag-sum</code> procedure returns an obag containing all the unique elements in all the <em>obags</em>, such that the count of each unique element in the result is equal to the sum of the counts of that element in the arguments.  It differs from <code>obag-union</code> by treating identical elements as potentially distinct rather than attempting to match them up.
-
-<p><code>(obag-product </code><em>n obag</em><code>)</code></p>
-
-The <code>obag-product</code> procedure returns an obag containing all the unique elements in <em>obag</em>, where the count of each unique element in the obag is equal to the count of that element in <em>obag</em> multiplied by <em>n</em>.
-
-</p><p><code>(obag-unique-size </code><em>obag</em><code>)</code></p><p>
-
-Returns the number of unique elements of <em>obag</em>.
-
-</p><p><code>(obag-element-count </code><em>obag element</em><code>)</code></p><p>
-
-Returns an exact integer representing the number of times that <em>element</em> appears in <em>obag</em>.
-
-</p><p><code>(obag-for-each-unique </code><em>proc obag</em><code>)</code></p><p>
-
-Applies <em>proc</em> to each unique element of <em>obag</em> in order, passing the element and the number of times it occurs in <em>obag</em>, and discarding the returned values.  Returns an unspecified result.
-
-</p><p><code>(obag-fold-unique </code><em>proc nil obag</em><code>)</code></p><p>
-
-Invokes <em>proc</em> on each unique element of <em>obag</em> in order, passing the number of occurrences as a second argument and the result of the previous invocation as a third argument.  For the first invocation, <em>nil</em> is used as the third argument.  Returns the result of the last invocation.
-
-</p><p><code>(obag->oset </code><em>obag</em><code>)</code></p><p><code>(oset->obag </code><em>oset</em><code>)</code></p><p>
-
-The <code>obag->oset</code> procedure returns an oset containing the unique elements (in the sense of the equality predicate) of <em>obag</em>.  The <code>oset->obag</code> procedure returns an obag containing the elements of <em>oset</em>.  In all cases, the comparator of the result is the same as the comparator of the argument or arguments.
-
-</p><p><code>(obag->alist </code><em>obag</em><code>)</code></p><p>
-</p><p><code>(alist->obag </code><em>alist</em><code>)</code></p><p>
-</p><p><code>(alist/ordered->obag </code><em>alist</em><code>)</code></p><p>
-
-The <code>obag->alist</code> procedure returns an alist whose elements are the unique elements of <em>obag</em> and whose values are the number of occurrences of each element.  The <code>alist->obag</code> returning an obag based on <em>comparator</em>, where the elements of <em>alist</em> specify the elements and the corresponding values of <em>alist</em> specify how many times they occur.
-The <code>alist/ordered->obag</code> procedure is the same as <code>alist->obag</code> except that
-it is an error if the <em>elements</em> are out of order or duplicated.  It may be more efficient.</p>
-
-<h2 id="Comparators">Comparators</h2><p>
-
-The following comparators are used to compare osets or obags, and allow osets of osets, obags of osets, etc.
-
-</p><p><code>oset-comparator</code></p><p><code>obag-comparator</code></p><p>
-
-Note that these comparators do not provide ordering predicates, as there is no ordering between osets or obags.  It is an error to compare osets or obags with different element comparators.
+Note that this comparator does not provide ordering predicates, as there is no ordering between osets.  It is an error to compare osets with different element comparators.
 
 </p><h1>Implementation</h1>
 
-<p>Osets and obags are implemented as a thin veneer over SRFI 146 mappings.</p>
+<p>Osets are implemented as a thin veneer over SRFI 146 mappings.</p>
 
-<p>The implementation registers <code>oset-comparator</code> and
-<code>obag-comparator</code> with SRFI 128's default comparator, assuming
+<p>The implementation registers <code>oset-comparator</code>
+with SRFI 128's default comparator, assuming
 the sample implementation of SRFI 128 is being used.  Scheme implementers
 who provide their own implementations of SRFI 128 must change this part
 of the code.</p>
