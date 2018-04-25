@@ -57,6 +57,6 @@
 
   (define (fxbit-field-rotate i count start end)
     (if (fxnegative? count)
-      (fxrotate-bit-field i start end (+ count (- start end)))
+      (fxrotate-bit-field i start end (+ count (- end start)))
       (fxrotate-bit-field i start end count)))
 )
