@@ -11,7 +11,7 @@
   <body>
 
     <h1>Title</h1>
-    
+
     First-class dynamic extents
 
     <h1>Author</h1>
@@ -20,7 +20,16 @@
 
     <h1>Status</h1>
 
-    <p>This SRFI is currently in <em>draft</em> status.  Here is <a href="http://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+154+at+srfi+dotschemers+dot+org">srfi-154@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="http://srfi-email.schemers.org/srfi-154">archive</a>.</p>
+    <p>This SRFI is currently in <em>draft</em> status.  Here
+    is <a href="http://srfi.schemers.org/srfi-process.html">an
+    explanation</a> of each status that a SRFI can hold.  To provide
+    input on this SRFI, please send email
+    to <code><a href="mailto:srfi+minus+154+at+srfi+dotschemers+dot+org">srfi-154@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.
+    To subscribe to the list,
+    follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these
+    instructions</a>.  You can access previous messages via the
+    mailing
+    list <a href="http://srfi-email.schemers.org/srfi-154">archive</a>.</p>
     <ul>
       <li>Received: 2017/7/3</li>
       <li>60-day deadline: 2017/9/1</li>
@@ -34,21 +43,21 @@
     procedure call.  A number of standard Scheme procedures and
     syntaxes
     like <code>dynamic-wind</code>, <code>call-with-current-continuation</code>,
-    and <code>parameterize</code>
-    deal with the dynamic extent indirectly.
+    and <code>parameterize</code> deal with the dynamic extent
+    indirectly.  The same holds true for the procedures and syntaxes
+    dealing with continuation marks as defined
+    by <a href="https://srfi.schemers.org/srfi-157/srfi-157.html">SRFI
+    157</a>.
 
     This SRFI reifies the dynamic extent into a first-class value
     together with a well-defined procedural interface and a syntax to
     create procedures that remember not only their environment at
     creation time but also their dynamic extent, which includes their
-    dynamic environment. 
+    dynamic environment.
 
     <h1>Issues</h1>
 
-    <ul>
-      <li><code>closed-lambda</code> might be in need of a better
-	name.</li>
-    </ul>
+    <p>None currently known.</p>
 
     <h1>Rationale</h1>
 
@@ -71,7 +80,7 @@
     <pre>
   (define (safe-sqrt error-handler)
     (lambda (x)
-      (when (negative? x) 
+      (when (negative? x)
         (error-handler "negative argument"))
       (sqrt x)))
 
@@ -82,7 +91,7 @@
 
   (define my-safe-sqrt (safe-sqrt error-handler))
     </pre>
-  
+
     <p>
       When <code>(my-safe-sqrt -1)</code> is executed, an error
       message is printed on the current error port of the call
@@ -95,12 +104,12 @@
     </p>
 
     <pre>
-  (define error-handler  
-    (closed-lambda (msg)
+  (define error-handler
+    (dynamic-lambda (msg)
       (display msg (current-error-port))
       (newline (current-error-port))
       'error))
-    </pre>      
+    </pre>
 
     <p>
       The same goes not only for error handlers, but for any other
@@ -108,7 +117,7 @@
       reinstate the dynamic extent of the definition of the
       callback for the dynamic extent of the call to the
       callback, <i>e.g.</i> to define the callback
-      using <code>closed-lambda</code> as opposed to using a
+      using <code>dynamic-lambda</code> as opposed to using a
       bare <code>lambda</code>.
     </p>
 
@@ -122,15 +131,15 @@
     <pre>
   (define (safe-sqrt error-handler)
     (lambda (x)
-      (when (negative? x) 
+      (when (negative? x)
         (error-handler "negative argument" exit))
       (sqrt x)))
-  
+
   (define error-handler
     (let ((dynamic-extent (current-dynamic-extent)))
       (lambda (msg exit)
         (with-dynamic-extent dynamic-extent
-         (lambda () 
+         (lambda ()
            (display msg (current-error-port))
            (newline (current-error-port))))
         (exit 'error))))
@@ -146,7 +155,7 @@
       of <code>current-error-port</code> in form of a lexical
       variable.  However note that in general more than one parameter
       object may be accessed in the dynamic extent of the body of
-      the <code>closed-lambda</code> or that they are not necessarily
+      the <code>dynamic-lambda</code> or that they are not necessarily
       known.  In the presence
       of <a href="https://srfi.schemers.org/srfi-39/srfi-39.html">SRFI
       39</a>- parameter objects, which are mutable, the technique of
@@ -156,7 +165,7 @@
       is setup and restored by <code>dynamic-wind</code>.  In all
       these cases, this SRFI provides the cleanest solution.
     </p>
-    
+
     <p>Another use case
       is <a href="https://srfi.schemers.org/srfi-155/srfi-155.html">SRFI
       155</a>, which provides a specification and an implementation of
@@ -164,7 +173,7 @@
       of <code>call-with-current-continuation</code> and dynamically
       scoped variables.
     </p>
-    
+
     <h1>Specification</h1>
 
     <p>
@@ -176,14 +185,19 @@
       the <code><em>after</em></code> thunk restores the dynamic
       extent of the call to <code>dynamic-wind</code>.
     </p>
- 
+
     <p>
       Dynamic extents form a type not necessarily disjoint from
       other Scheme types.
     </p>
-    
+
+    <p>An R7RS system implementing this SRFI shall export the
+      following procedures and the syntax under the library
+      name <code>(srfi 154)</code>.
+    </p>
+
     <h2>Procedures</h2>
-    
+
     <p><code>(dynamic-extent? <em>obj</em></code>)</p>
 
     <p>
@@ -214,20 +228,109 @@
     </p>
 
     <h2>Syntax</h2>
-    
-    <p><code>(closed-lambda &lt;formals&gt; &lt;body&gt;)</code></p>
 
-    <p>A <code>closed-lambda</code> expression is equivalent
+    <p><code>(dynamic-lambda &lt;formals&gt; &lt;body&gt;)</code></p>
+
+    <p>A <code>dynamic-lambda</code> expression is equivalent
       to <code>lambda</code> expression except that not only the
       environment but also the dynamic extent in effect when the
-      <code>closed-lambda</code> expression was evaluated is
+      <code>dynamic-lambda</code> expression was evaluated is
       remembered.
 
-      In other words, the expression <code>(closed-lambda
+      In other words, the expression <code>(dynamic-lambda
       &lt;formals&gt; &lt;body&gt;)</code> closes also over the
-      dynamic extent.      
+      dynamic extent.
     </p>
-    
+
+    <h1>Addendum to SRFI 157</h1>
+
+    <p>Any Scheme system implementing both SRFI 154 and SRFI 157 shall
+      also define the following procedures.
+    </p>
+
+    <p>An R7RS system shall export these procedures under
+      the <code>(srfi 157 key)</code> library name.</p>
+
+    <p><i>Note: It also makes sense for a Scheme system that only
+	implements the continuation marks of SRFI 157 and not the
+	first-class dynamic extents described in this document to
+	implement the following procedures.</i></p>
+
+    <p><code>(make-continuation-mark-key)</code></p>
+
+    <p>The <code>make-continuation-mark-key</code> procedure returns
+      an object that can be used as a key for continuation marks.  The
+      returned object is guaranteed to be different (in the sense
+      of <code>eq?</code>) to any other existing Scheme object
+      including other Scheme objects returned by previous or future
+      invokations of <code>make-continuation-mark-key</code>.
+    </p>
+
+    <p><code>(continuation-mark-key? <em>obj</em>)</code></p>
+
+    <p>The <code>continuation-mark-key?</code> procedure
+    returns <code>#t</code> if <code><em>obj</em></code> is a Scheme
+    object that was returned by a previous invokation
+    of <code>make-continuation-mark-key</code>, and <code>#f</code>,
+      otherwise.
+    </p>
+
+    <p><i>Rationale: Continuation marks can associate values to
+	arbitrary keys, not just keys created
+	by <code>make-continuation-mark-key</code>.  However,
+	continuation marks associated to keys created
+	by <code>make-continuation-mark-key</code> can be more
+	efficient because the implementation is free to store
+	arbitrary metadata inside the key, which it can use to
+	implement continuation marks associated to these keys more
+	efficiently.
+
+	Therefore, it is generally recommended to use continuation
+	marks with these keys.
+    </i></p>
+
+    <p><code>(make-continuation-mark-shallow-key)</code></p>
+
+    <p>The <code>make-continuation-mark-shallow-key</code> procedure
+      returns an object that can be used as a key for continuation
+      marks, called a <em>shallow key</em>.  The returned object is guaranteed to be different (in
+      the sense of <code>eq?</code>) to any other existing Scheme
+      object including other Scheme objects returned by previous or
+      future invokations of <code>make-continuation-mark-shallow-key</code>.
+    </p>
+    <p>
+      The set of continuation marks returned by the
+      procedure <code>(current-continuation-marks)</code> (originally
+      defined in SRFI 157) retains not the full list of all
+      continuation mark values associated with a shallow key but this
+      list truncated after the first element.  (For any other type of
+      key, the set of continuation marks contains the full list of all
+      continuation mark values.)
+    </p>
+
+    <p><code>(continuation-mark-shallow-key? <em>obj</em>)</code></p>
+
+    <p>The <code>continuation-mark-shallow-key?</code> procedure
+      returns <code>#t</code> if <code><em>obj</em></code> is a Scheme
+      object that was returned by a previous invokation
+      of <code>make-continuation-mark-shallow-key</code>, and <code>#f</code>,
+      otherwise.
+    </p>
+
+    <p><i>Rationale: Often, user code is only interested in the latest
+	continuation mark value associated to a key, that is the
+	procedure <code>continuation-mark-set-first</code> instead
+	of <code>continuation-mark-set->list</code> is used.
+	(The implementation of parameter objects in SRFI 157 is an
+	example.)  In conjunction with the first-class dynamic extents
+	of this SRFI, this can lead to space leaks
+	because <code>current-dynamic-extent</code> generally has to
+	capture all continuation mark values and not only the latest.
+	For continuation marks associated to shallow keys,
+	however, <code>current-dynamic-extent</code> only needs to
+	retain the latest values.
+    </i></p>
+
     <h1>Implementation</h1>
 
     <p>
@@ -236,7 +339,7 @@
       implementation as long as that implementation has a concept of
       dynamic extents,
       provides <code>call-with-current-continuation</code>, and has a
-      macro facility (for implementing <code>closed-lambda</code>).
+      macro facility (for implementing <code>dynamic-lambda</code>).
     </p>
 
     <p>
@@ -245,18 +348,38 @@
       implementations of this specification can be provided by Scheme
       implementers.
     </p>
-    
+
+    <p>
+      A full implementation of this specification (including an
+      implementation of SRFI 157 and its extension described here) is
+      provided in the form of a meta-circular interpreter written in
+      R7RS dubbed Inferior Scheme, which is a REPL for the Scheme IEEE
+      1178-1990 standard. Outside of the standard syntax and
+      procedures, Inferior Scheme provides the syntax and the
+      procedures of SRFIs 154, 155, and 157, the <code>load</code>
+      procedure of the R4RS, <code>dynamic-wind</code> of R5RS,
+      and <code>parameterize</code> and <code>make-parameter</code> of
+      R7RS.
+    </p>
+
     <h1>Acknowledgements</h1>
 
     <p>Thanks go to the SRFI editor for keeping the SRFI process alive
-    and running..</p>
-    
+      and running.
+
+      Special thanks go to Jim Rees for playing with and testing this
+      proposed specification.  Fruitful discussions with him led to
+      the definition of shallow keys to prevent space leaks in SRFI
+      155 and other use cases.
+    </p>
+
     <h1>Copyright</h1>
 
     <p>
-      Copyright (C) Marc Nieper-Wi&szlig;kirchen (2017).  All Rights Reserved. 
+      Copyright (C) Marc Nieper-Wi&szlig;kirchen (2017, 2018).  All
+      Rights Reserved.
     </p>
-    
+
     <p>
       Permission is hereby granted, free of charge, to any person
       obtaining a copy of this software and associated documentation files
@@ -266,12 +389,12 @@
       and to permit persons to whom the Software is furnished to do so,
       subject to the following conditions:
     </p>
-    
+
     <p>
       The above copyright notice and this permission notice shall be
       included in all copies or substantial portions of the Software.
     </p>
-    
+
     <p>
       THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
       EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -281,7 +404,7 @@
       ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
       CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
       SOFTWARE.
-    </p>  
+    </p>
 
     <hr>
 
