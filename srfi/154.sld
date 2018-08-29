@@ -24,7 +24,7 @@
   (export dynamic-extent?
           current-dynamic-extent
 	  with-dynamic-extent
-	  closed-lambda
+	  dynamic-lambda
 	  dynamic-extent=?)
   (cond-expand
     (chibi
@@ -34,4 +34,4 @@
     (else
      (import (scheme base))
      (include "154.scm")))
-  (include "154.closed-lambda.scm"))
+  (include "154.dynamic-lambda.scm"))
