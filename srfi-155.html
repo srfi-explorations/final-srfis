@@ -175,7 +175,7 @@ created.
   (import (scheme base)
           (scheme write)
           (srfi 154)
-          (srfi 155))  
+          (srfi 155))
   (define current-logger (make-parameter #f))
   (define (log msg) ((current-logger) msg))
   (define (default-logger msg)
@@ -187,12 +187,12 @@ created.
        (delay (begin (with-dynamic-environment (forcing-environment)
                       (lambda ()
                         (log "promised value calculated just now")))
-                     expression)))))  
+                     expression)))))
   (let ((p (delay 1)))
     (parameterize ((current-logger default-logger))
       (display "The answer is: ")
       (display (+ (force p) 41))
-      (newline)))  
+      (newline)))
 </pre>
 
 <p>In particular, it is possible to implement the semantic model of
@@ -297,7 +297,7 @@ have remained hidden from the syntax expander.
 
 <pre>
   (delay (if flag? (force x) (force y)))</pre>
- 
+
 <p>Forcing the result of this expression won't guarantee
   that <code>(force x)</code> or <code>(force y)</code> are evaluated
   in a tail position although both calls appear in tail context inside
@@ -478,6 +478,20 @@ optional identifiers.
   The sample implementation provides the optional procedures.
 </p>
 
+<p>The portable R7RS implementation can cause unwanted space leaks
+  because it does not use shallow keys for continuation marks (see the
+  addendum to SRFI 157 in SRFI 154).  A full implementation of this
+  specification without any space leaks is provided in the form of a
+  meta-circular interpreter written in R7RS dubbed Inferior Scheme,
+  which is a REPL for the Scheme IEEE 1178-1990 standard. Outside of
+  the standard syntax and procedures, Inferior Scheme provides the
+  syntax and the procedures of SRFIs 154, 155, and 157,
+  the <code>load</code> procedure of the
+  R4RS, <code>dynamic-wind</code> of R5RS,
+  and <code>parameterize</code> and <code>make-parameter</code> of
+  R7RS.
+</p>
+
 <h1>Acknowledgements</h1>
 
 <p>
@@ -495,7 +509,7 @@ optional identifiers.
 </p>
 
 <h1>Copyright</h1>
-Copyright (C) Marc Nieper-Wi&szlig;kirchen (2017).  All Rights Reserved. 
+Copyright (C) Marc Nieper-Wi&szlig;kirchen (2017).  All Rights Reserved.
 
 <p>
   Permission is hereby granted, free of charge, to any person

@@ -20,11 +20,12 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-library (srfi 154)  
+(define-library (srfi 154)
   (export dynamic-extent?
           current-dynamic-extent
 	  with-dynamic-extent
-	  closed-lambda)
+	  closed-lambda
+	  dynamic-extent=?)
   (cond-expand
     (chibi
      (import (scheme base)
