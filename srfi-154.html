@@ -191,6 +191,11 @@
       other Scheme types.
     </p>
 
+    <p>An R7RS system implementing this SRFI shall export the
+      following procedures and the syntax under the library
+      name <code>(srfi 154)</code>.
+    </p>
+
     <h2>Procedures</h2>
 
     <p><code>(dynamic-extent? <em>obj</em></code>)</p>
@@ -237,6 +242,95 @@
       dynamic extent.
     </p>
 
+    <h1>Addendum to SRFI 157</h1>
+
+    <p>Any Scheme system implementing both SRFI 154 and SRFI 157 shall
+      also define the following procedures.
+    </p>
+
+    <p>An R7RS system shall export these procedures under
+      the <code>(srfi 157 key)</code> library name.</p>
+
+    <p><i>Note: It also makes sense for a Scheme system that only
+	implements the continuation marks of SRFI 157 and not the
+	first-class dynamic extents described in this document to
+	implement the following procedures.</i></p>
+
+    <p><code>(make-continuation-mark-key)</code></p>
+
+    <p>The <code>make-continuation-mark-key</code> procedure returns
+      an object that can be used as a key for continuation marks.  The
+      returned object is guaranteed to be different (in the sense
+      of <code>eq?</code>) to any other existing Scheme object
+      including other Scheme objects returned by previous or future
+      invokations of <code>make-continuation-mark-key</code>.
+    </p>
+
+    <p><code>(continuation-mark-key? <em>obj</em>)</code></p>
+
+    <p>The <code>continuation-mark-key?</code> procedure
+    returns <code>#t</code> if <code><em>obj</em></code> is a Scheme
+    object that was returned by a previous invokation
+    of <code>make-continuation-mark-key</code>, and <code>#f</code>,
+      otherwise.
+    </p>
+
+    <p><i>Rationale: Continuation marks can associate values to
+	arbitrary keys, not just keys created
+	by <code>make-continuation-mark-key</code>.  However,
+	continuation marks associated to keys created
+	by <code>make-continuation-mark-key</code> can be more
+	efficient because the implementation is free to store
+	arbitrary metadata inside the key, which it can use to
+	implement continuation marks associated to these keys more
+	efficiently.
+
+	Therefore, it is generally recommended to use continuation
+	marks with these keys.
+    </i></p>
+
+    <p><code>(make-continuation-mark-shallow-key)</code></p>
+
+    <p>The <code>make-continuation-mark-shallow-key</code> procedure
+      returns an object that can be used as a key for continuation
+      marks, called a <em>shallow key</em>.  The returned object is guaranteed to be different (in
+      the sense of <code>eq?</code>) to any other existing Scheme
+      object including other Scheme objects returned by previous or
+      future invokations of <code>make-continuation-mark-shallow-key</code>.
+    </p>
+    <p>
+      The set of continuation marks returned by the
+      procedure <code>(current-continuation-marks)</code> (originally
+      defined in SRFI 157) retains not the full list of all
+      continuation mark values associated with a shallow key but this
+      list truncated after the first element.  (For any other type of
+      key, the set of continuation marks contains the full list of all
+      continuation mark values.)
+    </p>
+
+    <p><code>(continuation-mark-shallow-key? <em>obj</em>)</code></p>
+
+    <p>The <code>continuation-mark-shallow-key?</code> procedure
+      returns <code>#t</code> if <code><em>obj</em></code> is a Scheme
+      object that was returned by a previous invokation
+      of <code>make-continuation-mark-shallow-key</code>, and <code>#f</code>,
+      otherwise.
+    </p>
+
+    <p><i>Rationale: Often, user code is only interested in the latest
+	continuation mark value associated to a key, that is the
+	procedure <code>continuation-mark-set-first</code> instead
+	of <code>continuation-mark-set->list</code> is used.
+	(The implementation of parameter objects in SRFI 157 is an
+	example.)  In conjunction with the first-class dynamic extents
+	of this SRFI, this can lead to space leaks
+	because <code>current-dynamic-extent</code> generally has to
+	capture all continuation mark values and not only the latest.
+	For continuation marks associated to shallow keys,
+	however, <code>current-dynamic-extent</code> only needs to
+	retain the latest values.
+    </i></p>
+
     <h1>Implementation</h1>
 
     <p>
@@ -257,12 +351,15 @@
 
     <p>
       A full implementation of this specification (including an
-      implementation of SRFI 157) is provided in the form of a
-      meta-circular interpreter written in R7RS dubbed Inferior
-      Scheme, which is a REPL for the Scheme IEEE 1178-1990
-      standard. Outside of the standard syntax and procedures,
-      Inferior Scheme provides the syntax and the procedures of SRFIs
-      154, 155, and 157, and the load procedure of the R4RS.
+      implementation of SRFI 157 and its extension described here) is
+      provided in the form of a meta-circular interpreter written in
+      R7RS dubbed Inferior Scheme, which is a REPL for the Scheme IEEE
+      1178-1990 standard. Outside of the standard syntax and
+      procedures, Inferior Scheme provides the syntax and the
+      procedures of SRFIs 154, 155, and 157, the <code>load</code>
+      procedure of the R4RS, <code>dynamic-wind</code> of R5RS,
+      and <code>parameterize</code> and <code>make-parameter</code> of
+      R7RS.
     </p>
 
     <h1>Acknowledgements</h1>
