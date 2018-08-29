@@ -261,28 +261,28 @@
     <p>The <code>make-continuation-mark-key</code> procedure returns
       an object that can be used as a key for continuation marks.  The
       returned object is guaranteed to be different (in the sense
-      of <code>eq?</code>) to any other existing Scheme object
+      of <code>eq?</code>) from any other existing Scheme object
       including other Scheme objects returned by previous or future
-      invokations of <code>make-continuation-mark-key</code>.
+      invocations of <code>make-continuation-mark-key</code>.
     </p>
 
     <p><code>(continuation-mark-key? <em>obj</em>)</code></p>
 
     <p>The <code>continuation-mark-key?</code> procedure
     returns <code>#t</code> if <code><em>obj</em></code> is a Scheme
-    object that was returned by a previous invokation
+    object that was returned by a previous invocation
     of <code>make-continuation-mark-key</code>, and <code>#f</code>,
       otherwise.
     </p>
 
-    <p><i>Rationale: Continuation marks can associate values to
+    <p><i>Rationale: Continuation marks can associate values with
 	arbitrary keys, not just keys created
 	by <code>make-continuation-mark-key</code>.  However,
-	continuation marks associated to keys created
+	continuation marks associated with keys created
 	by <code>make-continuation-mark-key</code> can be more
 	efficient because the implementation is free to store
 	arbitrary metadata inside the key, which it can use to
-	implement continuation marks associated to these keys more
+	implement continuation marks associated with these keys more
 	efficiently.
 
 	Therefore, it is generally recommended to use continuation
@@ -294,9 +294,9 @@
     <p>The <code>make-continuation-mark-shallow-key</code> procedure
       returns an object that can be used as a key for continuation
       marks, called a <em>shallow key</em>.  The returned object is guaranteed to be different (in
-      the sense of <code>eq?</code>) to any other existing Scheme
+      the sense of <code>eq?</code>) from any other existing Scheme
       object including other Scheme objects returned by previous or
-      future invokations of <code>make-continuation-mark-shallow-key</code>.
+      future invocations of <code>make-continuation-mark-shallow-key</code>.
     </p>
     <p>
       The set of continuation marks returned by the
@@ -312,13 +312,13 @@
 
     <p>The <code>continuation-mark-shallow-key?</code> procedure
       returns <code>#t</code> if <code><em>obj</em></code> is a Scheme
-      object that was returned by a previous invokation
+      object that was returned by a previous invocation
       of <code>make-continuation-mark-shallow-key</code>, and <code>#f</code>,
       otherwise.
     </p>
 
     <p><i>Rationale: Often, user code is only interested in the latest
-	continuation mark value associated to a key, that is the
+	continuation mark value associated with a key, that is the
 	procedure <code>continuation-mark-set-first</code> instead
 	of <code>continuation-mark-set->list</code> is used.
 	(The implementation of parameter objects in SRFI 157 is an
@@ -326,7 +326,7 @@
 	of this SRFI, this can lead to space leaks
 	because <code>current-dynamic-extent</code> generally has to
 	capture all continuation mark values and not only the latest.
-	For continuation marks associated to shallow keys,
+	For continuation marks associated with shallow keys,
 	however, <code>current-dynamic-extent</code> only needs to
 	retain the latest values.
     </i></p>
