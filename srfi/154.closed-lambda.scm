@@ -20,9 +20,9 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-syntax closed-lambda
+(define-syntax dynamic-lambda
   (syntax-rules ()
-    ((closed-lambda formals body)
+    ((dynamic-lambda formals body)
      (let ((dynamic-extent (current-dynamic-extent)))
        (lambda formals
 	 (with-dynamic-extent dynamic-extent (lambda ()

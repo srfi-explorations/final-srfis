@@ -1,4 +1,4 @@
-;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved. 
+;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved.
 
 ;; Permission is hereby granted, free of charge, to any person
 ;; obtaining a copy of this software and associated documentation
@@ -53,7 +53,7 @@
 
 ;;; Internal parameters
 
-(define current-forcing-extent (make-parameter #f))
+(define current-forcing-extent (vector #f))
 
 ;;; Internal procedures
 
@@ -97,15 +97,17 @@
 			    (with-dynamic-extent
 			     (promise-dynamic-extent promise)
 			     (lambda ()
-			       (parameterize ((current-forcing-extent forcing-extent))
+			       (with-continuation-mark current-forcing-extent forcing-extent
 				 (with-continuation-mark key c
-							 ((promise-value promise)))))))))))
+				   ((promise-value promise)))))))))))
 		   (unless (promise-done? promise)
 		     (promise-update! promise* promise))
 		   (loop promise)))))))))
 
 (define (forcing-extent)
-  (unless (current-forcing-extent)
-    (error "forcing-extent: there is no promise being forced"))
-  (current-forcing-extent))
-
+  (let ((forcing-extent
+	 (continuation-mark-set-first (current-continuation-marks)
+				      current-forcing-extent)))
+    (unless forcing-extent
+      (error "forcing-extent: there is no promise being forced"))
+    forcing-extent))

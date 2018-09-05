@@ -30,9 +30,17 @@
 
 (define (with-dynamic-extent dynamic-extent thunk)
   (let ((here (%dk)))
-    (travel-to-point! here (dynamic-extent-point dynamic-extent))
-    (%dk (dynamic-extent-point dynamic-extent))
-    (let ((result (thunk)))
-      (travel-to-point! (%dk) here)
-      (%dk here)
-      result)))
+    (cond
+     ((eq? here (dynamic-extent-point dynamic-extent))
+      (thunk))
+     (else
+      (travel-to-point! here (dynamic-extent-point dynamic-extent))
+      (%dk (dynamic-extent-point dynamic-extent))
+      (let ((result (thunk)))
+	(travel-to-point! (%dk) here)
+	(%dk here)
+	result)))))
+
+(define (dynamic-extent=? extent1 extent2)
+  (eq? (dynamic-extent-point extent1)
+       (dynamic-extent-point extent2)))

@@ -1,4 +1,4 @@
-;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved. 
+;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved.
 
 ;; Permission is hereby granted, free of charge, to any person
 ;; obtaining a copy of this software and associated documentation
@@ -49,7 +49,7 @@
 		      count
 		      (force p)))))
   (define x 5)
-  
+
   (test-begin "SRFI 155: Promises")
 
   (test-equal 3 (force (delay (+ 1 2))))
@@ -75,8 +75,25 @@
 	    (q (delay (with-dynamic-extent (forcing-extent) (lambda () (x))))))
 	(parameterize
 	    ((x 2))
-	  (list 
+	  (list
 	   (force (delay-force p))
 	   (force q))))))
-  
+
+  (test-equal "Nested calls"
+    3000
+    (let ()
+      (define integers
+	(let next ((n 0))
+	  (delay (cons n (next (+ n 1))))))
+
+      (define (xtake stream n)
+	(let loop ((s stream) (r '()) (n n))
+	  (if (= n 0)
+	      (reverse r)
+	      (loop (cdr (force s))
+		    (cons (car (force s)) r)
+		    (- n 1)))))
+
+      (length (xtake integers 3000))))
+
   (test-end))

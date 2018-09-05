@@ -1,4 +1,4 @@
-;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved. 
+;; Copyright (C) Marc Nieper-Wißkirchen (2017).  All Rights Reserved.
 
 ;; Permission is hereby granted, free of charge, to any person
 ;; obtaining a copy of this software and associated documentation
@@ -21,6 +21,7 @@
 ;; SOFTWARE.
 
 (define current-forcing-extent (make-parameter #f))
+(define current-extents (make-parameter (vector #f #f)))
 
 (define (forcing-extent)
   (unless (current-forcing-extent)
@@ -32,13 +33,26 @@
     ((delay (force expression))
      (delay-force expression))
     ((delay expression)
-     (let ((dynamic-extent (current-dynamic-extent)))
+     (let ((dynamic-extent
+	    (if (and (vector-ref (current-extents) 1)
+		     (dynamic-extent=? (current-dynamic-extent)
+				       (vector-ref (current-extents) 1)))
+		(vector-ref (current-extents) 0)
+		(current-dynamic-extent))))
        (scheme-delay
 	(let ((forcing-extent (current-dynamic-extent)))
-	  (with-dynamic-extent dynamic-extent (lambda ()
-						(parameterize
-						    ((current-forcing-extent forcing-extent))
-						  expression)))))))))
+	  (with-dynamic-extent dynamic-extent
+			       (lambda ()
+				 (let ((extents
+					(vector dynamic-extent #f)))
+				   (parameterize
+				       ((current-extents
+					 extents)
+					(current-forcing-extent
+					 forcing-extent))
+				     (vector-set! extents 1
+						  (current-dynamic-extent))
+				     expression))))))))))
 
 (define-syntax delay-force
   (syntax-rules ()

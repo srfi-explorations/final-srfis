@@ -25,7 +25,6 @@
   dynamic-extent?
   (proc dynamic-extent-proc))
 
-
 (define (current-dynamic-extent)
   (call-with-current-continuation
    (lambda (return)
@@ -40,6 +39,9 @@
 					       (c k thunk))))))))))
        (call-with-values thunk k)))))
 
+(define (dynamic-extent=? extent1 extent2)
+  (eq? (dynamic-extent-proc extent1)
+       (dynamic-extent-proc extent2)))
 
 (define (with-dynamic-extent dynamic-extent thunk)
   ((dynamic-extent-proc dynamic-extent) thunk))
