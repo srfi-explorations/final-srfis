@@ -44,13 +44,12 @@ list <a href="http://srfi-email.schemers.org/srfi-155">archive</a>.</p>
 Scheme, like ML, is a programming language with strict evaluation
 while others, like Haskell, use lazy evaluation.  Scheme, however,
 possesses the primitives <code>delay</code> and <code>force</code>
-that make it possible to express lazy algorithms in the Scheme
-programming language.
+that make it possible to express lazy algorithms.
 </p>
 
 <p>
 Lazy evaluation does not go well in conjunction with imperative,
-non-functional, side effecting code.  It should, however, be
+non-functional, side-effecting code.  It should, however, be
 applicable in a purely functional setting.  This is the case for the
 delayed evaluation model as described in the R7RS as long as no
 dynamically bound variables, also known as parameter objects, are
@@ -209,7 +208,7 @@ algorithms just with <code>delay</code> and <code>force</code> will
 run in bounded space.  Instead, they provide a special
 form <code>delay-force</code> such that <code>(delay-force
 &lt;expression&gt;)</code> is equivalent to <code>(delay (force
-&lt;expression&gt;))</code> except forcing the resulting promise
+&lt;expression&gt;))</code> except that forcing the resulting promise
 guarantees to evaluate <code>(force &lt;expression&gt;)</code> in tail
 position.  The R7RS gives an example in form of
 the <code>stream-filter</code> procedure that makes use of
@@ -248,7 +247,7 @@ the following lines:
   &lt;expression&gt;)</code>.
 </p>
 
-<o>
+<p>
   Besides probably being more user-friendly, this redefinition of <code>delay</code>
   makes the delayed evaluation model also more composable, hence more
   powerful:  Consider, for example, the following code (making use of
@@ -291,7 +290,7 @@ have remained hidden from the syntax expander.
     &lt;expression&gt;))</code> to <code>(delay-force
     &lt;expression&gt;)</code> is, as this example shows, better than
   exposing <code>delay-force</code> directly, this necessity of having to
-  define ‘lazy-unbox’ as syntax also shows that the proposed
+  define <code>lazy-unbox</code> as syntax also shows that the proposed
   semantics is still a suboptimal choice.  Furthermore, the model
   breaks down in more complicated cases:
 </p>
@@ -300,7 +299,7 @@ have remained hidden from the syntax expander.
   (delay (if flag? (force x) (force y)))</pre>
 
 <p>Forcing the result of this expression won't guarantee
-  that <code>(force x)</code> or <code>(force y)</code> are evaluated
+  that <code>(force x)</code> or <code>(force y)</code> is evaluated
   in a tail position although both calls appear in tail context inside
   the <code>delay</code> form.
 </p>
@@ -316,7 +315,7 @@ detecting the presence of <code>force</code> syntactically.
   evaluating <code>&lt;expression&gt;</code> results in a tail call of
   the form <code>(force <em>promise</em>)</code>, forcing the result
   of <code>(delay &lt;expression&gt;)</code> will also result in a
-  tail to <code>(force <em>promise</em>)</code>.
+  tail call to <code>(force <em>promise</em>)</code>.
 </p>
 
 <p>It is not possible to achieve this syntactically.  It is, however,
@@ -343,7 +342,7 @@ optional identifiers.
 
 <p>
   The author of this SRFI recommends that the interface described in
-  this SRFI will be made available under the namespace <code>(scheme
+  this SRFI be made available under the namespace <code>(scheme
   promise)</code> (and <code>(scheme promise reflection)</code>) in
   future revisions of the Scheme programming language that build upon
   the R7RS.  When this happens, <code>(scheme lazy)</code> might
@@ -443,7 +442,7 @@ optional identifiers.
 
 <p><code>(dynamic-environment? <em>obj</em>)</code></p>
 
-<p>Type predicate for dynamic extent as exported by <codee>(srfi 154)</code>.</p>
+<p>Type predicate for dynamic extent as exported by <code>(srfi 154)</code>.</p>
 
 <h1>Implementation</h1>
 
