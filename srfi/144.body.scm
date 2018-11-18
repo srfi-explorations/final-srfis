@@ -85,10 +85,11 @@
 
 ;;; Constructors
 
+; Implements post-finalization note 1
 (define (flonum x)
   (if (real? x)
       (inexact x)
-      (error "bad argument passed to flonum" x)))
+      +nan.0))
 
 (define fladjacent
   (flop2 'fladjacent
