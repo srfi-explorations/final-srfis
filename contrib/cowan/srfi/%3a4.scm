@@ -1,6 +1,5 @@
 (library (srfi :4)
   (export
-    bv ; FIXME
     make-u8vector make-s8vector make-u16vector make-s16vector make-u32vector
     make-s32vector make-u64vector make-s64vector make-f32vector make-f64vector
     u8vector s8vector u16vector s16vector u32vector
