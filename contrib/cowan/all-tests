@@ -1,24 +1,41 @@
 #!/bin/sh
 
-echo "!!! Compiling Chicken library"
+CSI="csi -q -b"
+CHIBI="chibi-scheme"
+GUILE="guile -L ."
+YPSILON="ypsilon --sitelib=$PWD"
+
+echo "!!! Compiling Chicken (r6rs bytevectors) library"
 csc -J -s r6rs.bytevectors.scm
+echo "!!! Compiling Chicken (srfi x4) library"
+csc -J -s srfi.x4.scm
 
 echo "!!! Testing native (rnrs bytevectors) library with Guile"
-guile -L . r6rs/guile-native-tests.scm | grep -v OK
+$GUILE r6rs/guile-native-tests.scm | grep -v OK
 echo "!!! Testing native (rnrs bytevectors) library with Ypsilon"
-ypsilon --sitelib=$PWD r6rs/ypsilon-native-tests.scm | grep -v OK
+$YPSILON r6rs/ypsilon-native-tests.scm | grep -v OK
 echo "!!! Testing (r6rs bytevectors) library with Chicken"
-csi -q -b r6rs/chicken-tests.scm | grep -v OK
+$CSI r6rs/chicken-tests.scm | grep -v OK
 echo "!!! Testing (r6rs bytevectors) library with Guile"
-guile -L . r6rs/guile-tests.scm | grep -v OK
+$GUILE r6rs/guile-tests.scm | grep -v OK
 echo "!!! Testing (r6rs bytevectors) library with Chibi"
-chibi-scheme r6rs/r7rs-tests.scm | grep -v OK
+$CHIBI r6rs/r7rs-tests.scm | grep -v OK
 echo "!!! Testing (r6rs bytevectors) library with Ypsilon"
-ypsilon --sitelib=$PWD r6rs/ypsilon-tests.scm | grep -v OK
+$YPSILON r6rs/ypsilon-tests.scm | grep -v OK
 
 echo "!!! Testing native (srfi 4) library with Chicken"
-csi -q -b srfi/4/chicken-native-tests.scm | grep -v OK
+$CSI srfi/4/chicken-native-tests.scm | grep -v OK
 echo "!!! Testing (srfi 4) library with Chibi"
-chibi-scheme srfi/4/chibi-tests.scm | grep -v OK
+$CHIBI srfi/4/chibi-tests.scm | grep -v OK
 echo "!!! Testing (srfi 4) library with Ypsilon"
-ypsilon --sitelib=$PWD srfi/4/ypsilon-tests.scm | grep -v OK
+$YPSILON srfi/4/ypsilon-tests.scm | grep -v OK
+
+echo "!!! Testing (srfi x4) library with Chicken"
+$CSI srfi/x4/chicken-tests.scm | grep -v OK
+echo "!!! Testing (xrfi x4) library with Chibi"
+$CHIBI srfi/x4/chibi-tests.scm | grep -v OK
+echo "!!! Testing (srfi x4) library with Guile"
+$GUILE srfi/x4/guile-tests.scm | grep -v OK
+echo "!!! Testing (srfi x4) library with Ypsilon"
+echo "!!! Tests trigger an Ypsilon bug and are skipped"
+# $YPSILON srfi/x4/ypsilon-tests.scm | grep -v OK
