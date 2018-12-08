@@ -375,6 +375,9 @@
   (cond ((not (and (interval? interval1)
 		   (interval? interval2)))
 	 (error "interval-subset?: Not all arguments are intervals: " interval1 interval2))
+        ((not (= (##interval-dimension interval1)
+                 (##interval-dimension interval2)))
+         (error "interval-subset?: The arguments do not have the same dimension: " interval1 interval2))
 	(else
 	 (##interval-subset? interval1 interval2))))
 
