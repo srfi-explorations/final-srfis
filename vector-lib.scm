@@ -675,13 +675,13 @@
 ;;;     (ELT=? <value> <value>) -> boolean
 ;;;   Determine vector equality generalized across element comparators.
 ;;;   Vectors A and B are equal iff their lengths are the same and for
-;;;   each respective elements E_a and E_b (element=? E_a E_b) returns
-;;;   a true value.  ELT=? is always applied to two arguments.  Element
+;;;   each respective elements E_a and E_b (elt=? E_a E_b) returns a
+;;;   true value.  ELT=? is always applied to two arguments.  Element
 ;;;   comparison must be consistent wtih EQ?; that is, if (eq? E_a E_b)
-;;;   results in a true value, then (ELEMENT=? E_a E_b) must result in a
+;;;   results in a true value, then (ELT=? E_a E_b) must result in a
 ;;;   true value.  This may be exploited to avoid multiple unnecessary
 ;;;   element comparisons.  (This implementation does, but does not deal
-;;;   with the situation that ELEMENT=? is EQ? to avoid more unnecessary
+;;;   with the situation that ELT=? is EQ? to avoid more unnecessary
 ;;;   comparisons, but I believe this optimization is probably fairly
 ;;;   insignificant.)
 ;;;   
