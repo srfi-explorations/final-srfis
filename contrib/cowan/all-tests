@@ -7,8 +7,6 @@ YPSILON="ypsilon --sitelib=$PWD"
 
 echo "!!! Compiling Chicken (r6rs bytevectors) library"
 csc -J -s r6rs.bytevectors.scm
-echo "!!! Compiling Chicken (srfi x4) library"
-csc -J -s srfi.x4.scm
 
 echo "!!! Testing native (rnrs bytevectors) library with Guile"
 $GUILE r6rs/guile-native-tests.scm | grep -v OK
@@ -29,13 +27,3 @@ echo "!!! Testing (srfi 4) library with Chibi"
 $CHIBI srfi/4/chibi-tests.scm | grep -v OK
 echo "!!! Testing (srfi 4) library with Ypsilon"
 $YPSILON srfi/4/ypsilon-tests.scm | grep -v OK
-
-echo "!!! Testing (srfi x4) library with Chicken"
-$CSI srfi/x4/chicken-tests.scm | grep -v OK
-echo "!!! Testing (xrfi x4) library with Chibi"
-$CHIBI srfi/x4/chibi-tests.scm | grep -v OK
-echo "!!! Testing (srfi x4) library with Guile"
-$GUILE srfi/x4/guile-tests.scm | grep -v OK
-echo "!!! Testing (srfi x4) library with Ypsilon"
-echo "!!! Tests trigger an Ypsilon bug and are skipped"
-# $YPSILON srfi/x4/ypsilon-tests.scm | grep -v OK
