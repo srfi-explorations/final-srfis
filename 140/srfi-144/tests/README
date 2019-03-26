@@ -1,0 +1,61 @@
+This directory contains tests of SRFI 144.  The primary test suite
+uses Larceny's R7RS test framework (tests/scheme/test.sld), which
+was derived from the tests/r6rs/test.sls file in Racket's R6RS test
+suite.  Racket's R6RS test suite is covered by the LGPL, so that
+derivative work is also covered by the LGPL.  The README2 file in
+this directory includes Racket's copyright notice, which gives
+permission to distribute the derivative work.
+
+================================================================
+Testing correctness
+================================================================
+
+The correctness test suite consists of
+
+    tests/scheme/test.sld
+    tests/scheme/flonum.sld
+    tests/scheme/run/flonum.sps
+
+and should run without modification in any complete implementation
+of R7RS (small).  To run it from the parent directory of the tests
+directory, incant something like:
+
+    larceny --path . --r7rs --program tests/scheme/run/flonum.sps
+    sagittarius -c -L . -r7 tests/scheme/run/flonum.sps
+    chibi-scheme -I . < tests/scheme/run/flonum.sps
+
+In some implementations, it may be necessary to write a little
+program that loads the various files:
+
+    % cat /tmp/temp.scm
+    (load "srfi/144.sld")
+    (load "tests/scheme/test.sld")
+    (load "tests/scheme/flonum.sld")
+    (load "tests/scheme/run/flonum.sps")
+    (exit)
+
+    kawa --r7rs --no-warn-unused -f /tmp/temp.scm
+    gosh -r7 -I . -b < /tmp/temp.scm
+
+Some tests may fail due to minor bugs in current versions of those
+systems, but the current development version of Larceny passes all
+of the correctness tests, with or without using Larceny's FFI.
+
+================================================================
+Testing accuracy and speed
+================================================================
+
+The tests/srfi-144-test.scm file is a Larceny-specific program that
+writes a number of *.data files to the /tmp directory and also
+compares the portable implementations of SRFI 144 procedures against
+the corresponding C99 functions, accessed using Larceny's FFI.  To
+run that program, change the last cond-expand of srfi/144.sld to
+define c-functions-are-available as #f even in Larceny, and incant
+
+    larceny --path . --r7rs --program tests/srfi-144-test.scm
+
+The *.data files assume the C99 functions are perfectly accurate
+(which they are not), and show the rms error for small windows
+around each argument.  The relative error is shown unless the result
+of the C99 function has absolute value less than one, in which case
+the absolute error is shown instead.

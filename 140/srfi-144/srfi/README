@@ -1,0 +1,30 @@
+This directory contains a portable sample implementation of SRFI 144.
+
+The sample implementation should run without modification in every
+complete implementation of R7RS (small) that uses IEEE-754 double or
+single precision arithmetic for inexact reals.  It can also be made
+to work in R5RS or R6RS systems.  (For R5RS, define an appropriate
+value for the c-functions-are-available variable and load the *.scm
+files.  For R6RS, change 144.sld to a 144.sls file that uses R6RS
+library syntax, resolving the cond-expand forms as appropriate for
+your system and replacing include forms by copying included files
+directly into the 144.sls file.)
+
+To show how a Foreign Function Interface (FFI) to C99 math libraries
+could be used to implement some procedures of SRFI 144, the sample
+implementation is configured to use Larceny's FFI when running on an
+x86 processor under Linux or macOS.  Although srfi/144.ffi.scm
+uses Larceny's FFI to make many C functions available, the sample
+implementation uses only three of those C functions:
+
+    fma (to implement fl+*)
+    jn  (to implement flfirst-bessel)
+    yn  (to implement flsecond-bessel)
+
+Those are the only C functions that provide a worthwhile advantage
+in either accuracy or speed over the completely portable definitions,
+as measured in Larceny.
+
+For large x, the portable implementations of the Bessel functions go
+a little out of phase with the corresponding C functions jn and yn.
+The modulus appears to be comparable, at least for small values of n.
