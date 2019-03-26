@@ -1,0 +1,134 @@
+<html><head>
+<style type="text/css">
+body {color: #000; background-color: #FFF}
+div#menu  {font-size: smaller; position: absolute; top: 50px; left: 0; width: 190px; height: 100%}
+div#main  {position: absolute; top: 0; left: 200px; width: 540px; height: 100%}
+div#notes {position: relative; top: 2em; left: 570px; max-width: 200px; height: 0px; font-size: smaller;}
+div#footer {padding-bottom: 50px}
+.result { color: #000; background-color: #FFEADF; width: 100%; padding: 3px}
+.command { color: #000; background-color: #FFEADF; width: 100%; padding: 5px}
+.keyword { color: #800080; background-color: inherit; }
+.type { color: #008000; background-color: inherit; }
+.function { color: #0000FF; background-color: inherit; }
+.variable { color: #B8860B; background-color: inherit; }
+.comment { color: #FF0000; background-color: inherit; }
+.string { color: #BC8F8F; background-color: inherit; }
+.attribute { color: #FF5000; background-color: inherit; }
+.preprocessor { color: #FF00FF; background-color: inherit; }
+.builtin { color: #FF00FF; background-color: inherit; }
+.character { color: #0055AA; background-color: inherit; }
+.syntaxerror { color: #FF0000; background-color: inherit; }
+.diff-deleted { color: #5F2121; background-color: inherit; }
+.diff-added { color: #215F21; background-color: inherit; }
+span.paren1 { color: #AAAAAA; background-color: inherit; }
+span.paren2 { color: #888888; background-color: inherit; }
+span.paren3 { color: #666666; background-color: inherit; }
+span.paren4 { color: #444444; background-color: inherit; }
+span.paren5 { color: #222222; background-color: inherit; }
+span.paren6 { color: #000000; background-color: inherit; }
+</style>
+</head><body><div id="menu"><ol><li><a href="#h2_Introduction">Introduction</a></li><li><a href="#h2_Measurementsandmonotonepredicates">Measurements and monotone predicates</a></li><li><a href="#h2_Conventionsandpreconditions">Conventions and preconditions</a></li><li><a href="#h2_Whole-treeoperations">Whole-tree operations</a><ol><li><a href="#h3_(make-finger-tree)">make-finger-tree</a></li><li><a href="#h3_(finger-treeaddmeasure[element...])">finger-tree</a></li><li><a href="#h3_(finger-tree?obj)">finger-tree?</a></li><li><a href="#h3_(finger-tree-empty?tree)">finger-tree-empty?</a></li><li><a href="#h3_(finger-tree-forcetree)">finger-tree-force</a></li></ol></li><li><a href="#h2_Sequenceoperations">Sequence operations</a><ol><li><a href="#h3_(finger-tree-appendaddmeasuretree1tree2...)">finger-tree-append</a></li><li><a href="#h3_(finger-tree-filteraddmeasureproctree)">finger-tree-filter</a></li><li><a href="#h3_(finger-tree-fold-leftprocseedtree...)">finger-tree-fold-left</a></li><li><a href="#h3_(finger-tree-fold-rightprocseedtree...)">finger-tree-fold-right</a></li><li><a href="#h3_(finger-tree-for-eachproctree...)">finger-tree-for-each</a></li><li><a href="#h3_(finger-tree-lengthtree)">finger-tree-length</a></li><li><a href="#h3_(finger-tree-mapproctree...)">finger-tree-map</a></li><li><a href="#h3_(finger-tree-reverseaddmeasuretree)">finger-tree-reverse</a></li></ol></li><li><a href="#h2_Dequeoperations">Deque operations</a><ol><li><a href="#h3_(finger-tree-lefttree)">finger-tree-left</a></li><li><a href="#h3_(finger-tree-righttree)">finger-tree-right</a></li><li><a href="#h3_(finger-tree-add-leftaddmeasuretreeelement)">finger-tree-add-left</a></li><li><a href="#h3_(finger-tree-add-rightaddmeasuretreeelement)">finger-tree-add-right</a></li><li><a href="#h3_(finger-tree-remove-lefttree)">finger-tree-remove-left</a></li><li><a href="#h3_(finger-tree-remove-righttree)">finger-tree-remove-right</a></li></ol></li><li><a href="#h2_Scanandsplit">Scan and split</a><ol><li><a href="#h3_(finger-tree-scanaddmeasurepredzerotreematchabsent)">finger-tree-scan</a></li><li><a href="#h3_(finger-tree-splitaddmeasurepredzerotreematchabsent)">finger-tree-split</a></li></ol></li><li><a href="#h2_Conversion">Conversion</a><ol><li><a href="#h3_(generator->finger-treeaddmeasuregen[k])">generator->finger-tree</a></li><li><a href="#h3_(list->finger-treeaddmeasurelst)">list->finger-tree</a></li><li><a href="#h3_(finger-tree->generatortree)">finger-tree->generator</a></li><li><a href="#h3_(finger-tree->reverse-generatortree)">finger-tree->reverse-generator</a></li><li><a href="#h3_(finger-tree->listtree)">finger-tree->list</a></li></ol></li></ol></div><div id="main"><div><a name="h1_finger-tree"></a><h1>finger-tree</h1></div><p>
+</p><div id="notes">Kevin Wortman<br></br>Sat Feb  6 01:01:32 2016
+</div><p>
+</p><div><a name="h2_Introduction"></a><h2>Introduction</h2></div><p>
+</p><p>This library implements an abstract <em>2-3 finger tree,</em> as described in <a href="http://www.staff.city.ac.uk/~ross/papers/FingerTree.html">Finger Trees: A Simple General-purpose Data Structure</a> by Ralf Hinze and Ross Paterson.
+</p><p>A finger tree is a <em>pure</em> data structure (a.k.a. <em>immutable</em> or <em>persistent</em>), meaning that operations which take a tree as input leave that tree unchanged and still valid. So a mutation operation, such as adding an element, works by creating and returning a new tree object which shares almost all of its structure with the input tree.
+</p><p>A finger tree stores a collection of <em>elements</em> in <em>left-to-right order</em>. As discussed below, the left-to-right ordering may be oblivious to element contents (i.e. unsorted), in which case the tree is analogous to a deque where left and right correspond to front and back, respectively. Or, the left-to-right ordering may correspond to increasing sorted order according to some kind of key, in which case the tree is analogous to a binary search tree.
+</p><p>Finger trees are remarkably versatile. Finding, adding, or removing the left or right element takes constant amortized time. Finding, adding, removing, or splitting at an arbitrary ordered element takes logarithmic amortized time. Therefore a finger tree can implement a deque competitive with doubly linked list or a self-resizing vector; a set, bag, or map competitive with a self-balancing binary search tree (e.g. AVL or red-black); or a priority queue competitive with a binary heap.
+</p><p>Finger trees are inherently lazy, meaning that many parts of a tree are promises which are only forced when absolutely necessary. Consequently, the worst-case time efficiency of individual procedure calls is difficult to characterize precisely. We say that a procedure takes <em>amortized O(X) time</em> when it contributes at most <em>O(X)</em> time to any sequence of finger tree operations. In particular, some of that <em>O(X)</em> cost may be incurred immediately, while some of the cost may be deferred to some future procedure call that forces a promise. We say that an operation takes <em>strictly O(Y) time</em> when it takes at most <em>O(Y)</em> time immediately, with no time cost deferred to future operations.
+</p><div><a name="h2_Measurementsandmonotonepredicates"></a><h2>Measurements and monotone predicates</h2></div><p>
+</p><p>Finger tree operations expect that tree elements are <em>measurable.</em> Procedures that depend upon measurements take arguments with the following names and required semantics:
+</p><ul>  <li><code>measure</code> is a procedure that maps an element object to a measurement of that object.</li>
+  <li><code>add</code> is a binary measurement-addition procedure. So for any measurements <code>left</code> and <code>right</code>, <code>(add <span>left</span> <span>right</span>)</code> returns the measurement aggregating <code>left</code> and <code>right</code>. It is guaranteed that, as implied by the argument names, that all elements contributing to <code>left</code> are positioned to the left of those elements contributing to <code>right</code>. This operation must be associative, so e.g. if <code><span>m1</span></code>, <code><span>m2</span></code>, and <code><span>m3</span></code> are measurements, then <code>(add <span>m1</span> (add <span>m2</span> <span>m3</span>))</code> must be equivalent to <code>(add (add <span>m1</span> <span>m2</span>) <span>m3</span>)</code>.</li>
+  <li><code>zero</code> is the measurement object corresponding to nothing (no elements at all).</li>
+  <li><code>pred</code> is a predicate procedure that takes a measurement and returns an object interpreted as a boolean (so <code>#f<span>alse</span></code> or non-<code>#f<span>alse</span></code>). The predicate must by <em>monotone,</em> meaning that it returns <code>#f<span>alse</span></code> for sufficiently small measurements, returns non-<code>#f<span>alse</span></code> for sufficiently large measurements, and changes from <code>#f<span>alse</span></code> to non-<code>#f<span>alse</span></code> exactly once.</li>
+</ul><p>
+</p><p>This exceedingly abstract measurement scheme helps finger trees achieve their versatility.
+</p><ul>  <li>To obtain an indexed sequence, have <code>measure</code> return a constant 1, <code>add</code> be integer addition (e.g. <code><span>+</span></code>), and <code>zero</code> be <code><span>0</span></code>.</li>
+  <li>To obtain a set in increasing order, have <code>measure</code> be the identity function, <code>add</code> return its <code>right</code> argument, and <code>zero</code> be a sentinel value analogous to "negative infinity." Note that you could also have <code>add</code> return the maximum of its two arguments, but that would actually be overkill since sorted order implies that <code>right</code> is always greater than <code>left</code>.</li>
+  <li>To obtain a map in increasing key order, have <code>measure</code> be a key getter function, and define <code>add</code> and <code>zero</code> the same was as in a set.</li>
+  <li>A priority queue is the same as a map, except that "keys" are "priorities." Observe that sorted order guarantees that the minimum-priority element is always at the left and the maximum-priority element is always at the right.</li>
+</ul><p>
+</p><p>Note that the Hinze and Paterson describe the space of measurements in terms of a <em>monoid.</em> We avoid that terminology since it is not universally understood in the Scheme community.
+</p><div><a name="h2_Conventionsandpreconditions"></a><h2>Conventions and preconditions</h2></div><p>
+</p><p>The following naming conventions and preconditions apply to all procedures in this library.
+</p><p>It is an error to mutate the internal structure of a finger tree, since finger trees are derived from other trees, so mutating a tree may have unanticipated "ripple effects" on derived trees. This library provides no way of mutating internal structure, so that could only be done with some kind of introspection library.
+</p><p>Mutating an object in a way that changes its measurement invalidates any finger tree containing that object.
+</p><p>Returned finger trees are not necessarily freshly allocated. Indeed, they may be an input finger tree, or part of an input tree.
+</p><p><code>add</code>, <code>measure</code>, <code>pred</code>, and <code>zero</code> must represent measurement operations, as described above, which are mutually compatible and also compatible with the finger tree in question.
+</p><p><code>element</code> is an object which is, or will be, an element of a tree.
+</p><p><code>gen</code> must be a SRFI 121 generator.
+</p><p><code>k</code> must be a non-negative integer.
+</p><p><code>lst</code> must be a list of elements.
+</p><p><code>obj</code> may be any Scheme object.
+</p><p><code>tree</code> must be a finger tree.
+</p><div><a name="h2_Whole-treeoperations"></a><h2>Whole-tree operations</h2></div><p>
+</p><div><a name="h3_(make-finger-tree)"></a><h3><code>(make-finger-tree)</code></h3></div><p>
+Create and return an empty finger tree. Strictly <em>O(1)</em> time.
+</p><div><a name="h3_(finger-treeaddmeasure[element...])"></a><h3><code>(finger-tree add measure [element ...])</code></h3></div><p>
+Create and return a finger tree containing <code>element...</code>, added in left-to-right (forward) order. Strictly <em>O(n)</em> time, where <em>n</em> is the number of elements.
+</p><div><a name="h3_(finger-tree?obj)"></a><h3><code>(finger-tree? obj)</code></h3></div><p>
+Returns <code>#t<span>rue</span></code> if <code>obj</code> is a finger tree, or <code>#f<span>alse</span></code> otherwise. Strictly <em>O(1)</em> time.
+</p><div><a name="h3_(finger-tree-empty?tree)"></a><h3><code>(finger-tree-empty? tree)</code></h3></div><p>
+Returns <code>#t<span>rue</span></code> if <code>tree</code> is empty, or <code>#f<span>alse</span></code> if <code>tree</code> is non-empty. Strictly <em>O(1)</em> time.
+</p><div><a name="h3_(finger-tree-forcetree)"></a><h3><code>(finger-tree-force tree)</code></h3></div><p>
+Force every part of <code>tree</code>, then return <code>tree</code>. Ordinarily there is no need to use this procedure, as finger trees automatically force themselves on an efficient as-needed basis. This procedure exists for special cases where it is beneficial to front-load tree operations, for example if a server builds a tree as a preprocessing step before handling requests. Strictly <em>O(log n)</em> time.
+</p><div><a name="h2_Sequenceoperations"></a><h2>Sequence operations</h2></div><p>
+</p><div><a name="h3_(finger-tree-appendaddmeasuretree1tree2...)"></a><h3><code>(finger-tree-append add measure tree1 tree2 ...)</code></h3></div><p>
+Return a finger tree containing the contents of <code>tree1</code>, <code>tree2</code>, and so on, appended together. Amortized <em>O(k log n)</em> time, where <em>k</em> is the number of trees and <em>n</em> is the greatest number of elements in any tree.
+</p><div><a name="h3_(finger-tree-filteraddmeasureproctree)"></a><h3><code>(finger-tree-filter add measure proc tree)</code></h3></div><p>
+Return a finger tree containing all the elements of <code>tree</code> that satisfy predicate <code>proc</code>. Note that <code>proc</code> is called on each element, not on each measurement. Strictly <em>O(n)</em> time.
+</p><div><a name="h3_(finger-tree-fold-leftprocseedtree...)"></a><h3><code>(finger-tree-fold-left proc seed tree ...)</code></h3></div><p>
+The semantics of this procedure are identical to SRFI 1 <code><span>fold</span></code>, except of course that the containers are finger trees instead of lists. Strictly <em>O(n)</em> time.
+</p><div><a name="h3_(finger-tree-fold-rightprocseedtree...)"></a><h3><code>(finger-tree-fold-right proc seed tree ...)</code></h3></div><p>
+The semantics of this procedure are identical to SRFI 1 <code><span>fold-right</span></code>, except of course that the containers are finger trees instead of lists. Strictly <em>O(n)</em> time.
+</p><div><a name="h3_(finger-tree-for-eachproctree...)"></a><h3><code>(finger-tree-for-each proc tree ...)</code></h3></div><p>
+The semantics of this procedure are identical to SRFI 1 <code><span>for-each</span></code>, except of course that the containers are finger trees instead of lists. Strictly <em>O(n)</em> time.
+</p><div><a name="h3_(finger-tree-lengthtree)"></a><h3><code>(finger-tree-length tree)</code></h3></div><p>
+Return the number of elements in <code>tree</code>. Strictly <em>O(n)</em> time.
+</p><div><a name="h3_(finger-tree-mapproctree...)"></a><h3><code>(finger-tree-map proc tree ...)</code></h3></div><p>
+The semantics of this procedure are identical to SRFI 1 <code><span>map</span></code>, except of course that the containers are finger trees instead of lists. The order of elements is preserved, so this procedure is not suitable for measurement-ordered applications such as sorted sets, since in general, mapping elements permutes their order. Strictly <em>O(n)</em> time.
+</p><div><a name="h3_(finger-tree-reverseaddmeasuretree)"></a><h3><code>(finger-tree-reverse add measure tree)</code></h3></div><p>
+Return a finger tree containing <code>tree</code>'s elements in reverse order. Strictly <em>O(n)</em> time.
+</p><div><a name="h2_Dequeoperations"></a><h2>Deque operations</h2></div><p>
+</p><div><a name="h3_(finger-tree-lefttree)"></a><h3><code>(finger-tree-left tree)</code></h3></div><p>
+Return the leftmost element of <code>tree</code>. It is an error to call this procedure on an empty <code>tree</code>. Strictly <em>O(1)</em> time.
+</p><div><a name="h3_(finger-tree-righttree)"></a><h3><code>(finger-tree-right tree)</code></h3></div><p>
+Return the rightmost element of <code>tree</code>. It is an error to call this procedure on an empty <code>tree</code>. Strictly <em>O(1)</em> time.
+</p><div><a name="h3_(finger-tree-add-leftaddmeasuretreeelement)"></a><h3><code>(finger-tree-add-left add measure tree element)</code></h3></div><p>
+Add <code>element</code> as the new leftmost element of <code>tree</code>, and return the resulting tree. Amortized <em>O(1)</em> time.
+</p><div><a name="h3_(finger-tree-add-rightaddmeasuretreeelement)"></a><h3><code>(finger-tree-add-right add measure tree element)</code></h3></div><p>
+Add <code>element</code> as the new rightmost element of <code>tree</code>, and return the resulting tree. Amortized <em>O(1)</em> time.
+</p><div><a name="h3_(finger-tree-remove-lefttree)"></a><h3><code>(finger-tree-remove-left tree)</code></h3></div><p>
+Remove the leftmost element of <code>tree</code>, and return the resulting tree. It is an error to call this procedure on an empty <code>tree</code>. Amortized <em>O(1)</em> time.
+</p><div><a name="h3_(finger-tree-remove-righttree)"></a><h3><code>(finger-tree-remove-right tree)</code></h3></div><p>
+Remove the rightmost element of <code>tree</code>, and return the resulting tree. It is an error to call this procedure on an empty <code>tree</code>. Amortized <em>O(1)</em> time.
+</p><div><a name="h2_Scanandsplit"></a><h2>Scan and split</h2></div><p>
+</p><div><a name="h3_(finger-tree-scanaddmeasurepredzerotreematchabsent)"></a><h3><code>(finger-tree-scan add measure pred zero tree match absent)</code></h3></div><p>
+</p><p>Search <code>tree</code> for the first element whose measurement satisfies <code>pred</code>. When such a matching element exists, tail-call <code>(<span class="keyword">match</span> <span>element</span>)</code>; otherwise tail-call <code>(absent)</code>.
+</p><p><code>pred</code> must be a monotone predicate, as discussed above.
+</p><p>This procedure is analogous to the search or lookup operation in a search tree. It probes <code>tree</code> without altering it or creating new objects, so has better constant factors than <code><span>finger-tree-split</span></code>.
+</p><p>Strictly <em>O(log n)</em> time, assuming that each call to <code>pred</code> takes <em>O(1)</em> time.
+</p><div><a name="h3_(finger-tree-splitaddmeasurepredzerotreematchabsent)"></a><h3><code>(finger-tree-split add measure pred zero tree match absent)</code></h3></div><p>
+</p><p>Split <code>tree</code> around the first element whose measurement satisfies <code>pred</code>. When such an element exists, tail-call <code>(<span class="keyword">match</span> <span>prefix</span> <span>element</span> <span>suffix</span>)</code>, where <code>prefix</code> is a finger tree containing all elements left of <code>element</code>, <code>element</code> is the match, and <code>suffix</code> is a finger tree containing all elements right of <code>element</code>. Note that <code>prefix</code> and/or <code>suffix</code> may be empty. When no match exists, tail-call <code>(absent)</code>.
+</p><p><code>pred</code> must be a monotone predicate, as discussed above.
+</p><p>This procedure is strictly more powerful than <code><span>finger-tree-scan</span></code>, but since it constructs two new trees, its constant factors are worse. That said, <code><span>finger-tree-split</span></code> can be used to implement several essential higher-level operations.
+</p><ul><li>To insert an element in an ordered tree, split at the location where the new element should be, then reassemble <code>prefix</code>, <code>element</code>, the new element, and <code>suffix</code> with <code><span>finger-tree-append</span></code>.</li>
+<li>To delete an element from an ordered tree, split at the element, then reassemble <code>prefix</code> and <code>suffix</code> with <code><span>finger-tree-append</span></code>, deliberately omitting the deleted element.</li>
+<li>For a predecessor query, split at the element and return the prefix' rightmost element. A successor query is symmetric: return the suffix' leftmost element.</li>
+<li>Partitioning the tree is simply a matter of returning <code>prefix</code> and <code>suffix</code>, possibly adding <code>element</code> to one of the trees depending on how you want the boundary condition to work.</li>
+<li>A range query can be implemented as two successive partition operations.</li>
+</ul><p>
+</p><p>Strictly <em>O(log n)</em> time, assuming that each call to <code>pred</code> takes <em>O(1)</em> time.
+</p><div><a name="h2_Conversion"></a><h2>Conversion</h2></div><p>
+</p><div><a name="h3_(generator->finger-treeaddmeasuregen[k])"></a><h3><code>(generator->finger-tree add measure gen [k])</code></h3></div><p>
+Return a finger tree containing the elements of <code>gen</code>. When <code>k</code> is given, the first <code>k</code> elements are taken; it is an error for <code>gen</code> to have fewer than <code>k</code> elements. Specifying <code>k</code> allows the procedure to avoid restructuring the tree as it goes, improving constant factors. When <code>k</code> is unspecified, the entire contents of <code>gen</code> is taken, and the tree must restructure itself as it goes, worsening constant factors. Strictly <em>O(n)</em> time.
+</p><div><a name="h3_(list->finger-treeaddmeasurelst)"></a><h3><code>(list->finger-tree add measure lst)</code></h3></div><p>
+Return a finger tree containing the elements of <code>lst</code>. This procedure avoids restructuring the tree as it goes, so has fast constant factors. Strictly <em>O(n)</em> time.
+</p><div><a name="h3_(finger-tree->generatortree)"></a><h3><code>(finger-tree->generator tree)</code></h3></div><p>
+Return a generator that yields the elements of <code>tree</code> in left-to-right order. Strictly <em>O(1)</em> time to create the generator, and of course the generator contains n elements.
+</p><div><a name="h3_(finger-tree->reverse-generatortree)"></a><h3><code>(finger-tree->reverse-generator tree)</code></h3></div><p>
+Return a generator that yields the elements of <code>tree</code> in right-to-left order. Strictly <em>O(1)</em> time to create the generator, and of course the generator contains n elements.
+</p><div><a name="h3_(finger-tree->listtree)"></a><h3><code>(finger-tree->list tree)</code></h3></div><p>
+Return a freshly-allocated list containing the elements of <code>tree</code> in left-to-right order. Strictly <em>O(n)</em> time.
+</p><div id="footer"></div></div></body></html>
