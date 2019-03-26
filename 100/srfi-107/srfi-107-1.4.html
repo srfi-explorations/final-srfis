@@ -1,0 +1,948 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>SRFI 107: XML reader syntax</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+  div.title h1 { font-size: small; color: blue }
+  div.title { font-size: xx-large; color: blue; font-weight: bold }
+  h1 { font-size: xx-large; color: blue }
+  h2 { font-size: x-large; color: blue }
+  h3 { font-size: large; color: blue }
+  /* So var inside pre gets same font as var in paragraphs. */
+  var { font-family: monospace; }
+  em.non-terminal { }
+  em.non-termina-def { }
+  code.literal { font-style: normal; font-weight: bold; color: green }
+  code.literal:before { content: "“"; color: black }
+  code.literal:after { content: "”"; color: black }
+</style>
+  </head><body>
+
+<div class="title">
+<H1>Title</H1>
+XML reader syntax
+</div>
+
+<H1>Author</H1>
+<p>Per Bothner <code><a href="mailto:per@bothner.com">&lt;per@bothner.com&gt;</a></code></p>
+
+<h1 id="status">Status</h1>
+<p>
+This SRFI is currently in ``draft'' status.  To see an explanation of
+each status that a SRFI can hold, see <a
+href="http://srfi.schemers.org/srfi-process.html">here</a>.
+
+To provide input on this SRFI, please
+<a href="mailto:srfi minus 107 at srfi dot schemers dot org">mail to
+<code>&lt;srfi minus 107 at srfi dot schemers dot org&gt;</code></a>.  See
+<a href="../../srfi-list-subscribe.html">instructions here</a> to
+subscribe to the list.  You can access previous messages via
+<a href="mail-archive/maillist.html">the archive of the mailing list</a>.
+</p>
+
+<ul>
+      <li>Received: <a href="http://srfi.schemers.org/srfi-107/srfi-107-1.1.html">2012/11/03</a></li>
+
+      <li>Draft: 2012/11/10-2013/01/10</li>
+      <li>Revision: <a href="http://srfi.schemers.org/srfi-107/srfi-107-1.2.html">2013/02/04</a></li>
+      <li>Revision: <a href="http://srfi.schemers.org/srfi-107/srfi-107-1.3.html">2013/11/03</a></li>
+      <li>Revision: <a href="http://srfi.schemers.org/srfi-107/srfi-107-1.4.html">2013/12/09</a></li>
+</ul>
+
+<H1>Abstract</H1>
+<p>
+We specify a reader extension that reads data in a superset of
+XML/HTML format, and produces conventional S-expressions.
+We also suggest a possible semantics interpretation of how these forms
+may be evaluated to produce XML-node values, but this is non-normative.
+
+<h1>Rationale</h1>
+<p>
+While XML may be a poor re-invention of S-expressions,
+many people are familiar with it.  Furthermore, when
+working with XML or HTML data, using XML syntax may be preferable
+to S-expressions.  This specification defines a Scheme
+reader extension matching XML syntax with expression escapes (unquote),
+a translation into standard S-expressions, and a semantics for the latter.
+<p>
+Some other programming languages also define a syntax
+for XML literals.  Examples include
+<A href="http://www.ecma-international.org/publications/standards/Ecma-357.htm">EcmaScript for XML (E4X)</a>,
+<a href="http://msdn.microsoft.com/en-us/library/bb384629.aspx">Visual Basic</a>, <a href="http://www.w3.org/TR/2010/REC-xquery-20101214/#id-element-constructor">XQuery</a>, and Scala.
+<p>
+Here is a simple example:
+<pre>
+#&lt;p&gt;The result is &lt;b&gt;final&lt;/b&gt;!&lt;/p&gt;
+</pre>
+<p>
+This is <q>reader sugar</q> equivalent to the S-expression:
+<pre>
+($xml-element$ () ($resolve-qname$ p) "The result is "
+ ($xml-element$ () ($resolve-qname$ b) "final") "!")
+</pre>
+<p>
+One use case for this syntax is as a standard
+data representation (interchange format) for XML values;
+one can either use the (relatively) human-readable
+syntax or the equivalent de-sugared S-expressions.
+<p>
+When used inside a program,
+the assumption is that such expressions will be evaluated in
+the context of a definition for <code>$xml-element$</code>
+and other forms in this specification.
+The definition of <code>$xml-element$</code> is not formally
+part of this specification, and there may be different libraries
+that provide multiple possible implementations.  For example:
+<ol>
+<li>
+The context may be an HTTP server, and the effect of evaluating
+the <code>$xml-element$</code> form is to assemble the XML or HTML
+response to an HTTP request, perhaps by making
+<a href="http://en.wikipedia.org/wiki/Simple_API_for_XML">SAX-style<a> calls
+to an implicit output port.
+<li>
+Alternatively, an <code>$xml-element$</code> form is a constructor
+for an <dfn>element node</dfn> object similar to
+<a href="http://www.w3.org/TR/DOM-Level-3-Core/">W3C Document Object Model (DOM)</a>.
+This use case subsumes the former, since it is always
+possible to print out (<q>serialize</q>) an element node after it
+has been constructed.  However, the former is probably more efficient.
+</ol>
+
+<p>The syntax provides the
+functionality of  <q>quasi-literals</q>
+since they can contain enclosed expressions, which are <q>unquoted</q>:
+<pre >
+#&lt;em&gt;The total is &amp;[result].&lt;/em&gt;
+</pre>
+<p>Notice the use of <q><code>&amp</code></q>, which is used in XML
+for character and entity references, but we use it as a multi-purpose prefix
+character to avoid adding extra special characters that
+might need escaping.  The Scheme reader turns the above into:
+<pre>
+($xml-element$ () ($resolve-qname$ em) "The total is " $&lt;&lt;$ result $&gt;&gt;$ ".")
+</pre>
+<p>
+
+<p>The value of <var>result</var> is substituted into the output,
+in a similar way to quasi-quotation.
+The special symbols <code>$&lt;&lt;$</code> and <code>$&gt;&gt;$</code>
+allow the implementation of <code>$xml-element$</code> to differentiate
+between literal text and a string literal in an enclosed expression.
+For example some XML processors distinguish between text nodes
+and atomic string values.
+(The same convention is used in SRFI-108 and SRFI-108.)
+
+<p>
+<p><b>Discussion:</b> <i>(Not part of this specification,
+but perhaps a future specification.)</i>
+The XML data model distinguishes between a document node
+and a document element.
+A document element is just an XML element
+node that is the top-level element in a document.
+A document node is a special kind of node whose primary child
+is the document element, but may have other children (comments and
+processing instructions) and DTD properties such as a public identifier.
+This specification provides a syntax for creating XML elements,
+but does not provide a mechanism for representing
+whole XML documents (i.e. document nodes and their properties).
+A possible way to create document values is to use a SRFI-108 named literal.
+For example:
+<pre>
+&amp;xml{&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;body&gt;Hello &amp;[name]!&lt;/&gt;
+&lt;/html&gt;}
+</pre>
+<p>One could also support more structured prefix arguments:
+<pre>
+&amp;xml[version: 1.1 encoding: "UTF-8" standalone: #t
+  doctype: "HTML"
+  public: "-//W3C//DTD HTML 4.01 Transitional//EN"]
+{<!--comment-->
+&lt;html&gt;...&lt;/&gt;
+}
+</pre>
+<p>
+Or just extend <var class="non-terminal">xml-literal</var>:
+<pre>
+#&lt;!DOCTYPE html&gt;&lt;html&gt;
+&lt;body&gt;Hello &amp;[name]!&lt;/&gt;
+&lt;/html&gt;
+</pre>
+
+and/or:
+<pre>
+#&lt;?xml?&gt;&lt;html&gt;
+&lt;body&gt;Hello &amp;[name]!&lt;/&gt;
+&lt;/html&gt;
+</pre>
+
+
+<h1>Specification</h1>
+
+<h2>Syntax</h2>
+
+<p>An <var class="replaceable"><code>xml-literal</code></var> is usually an element constructor.
+We'll cover later the less common processing instruction,
+comment, and CDATA-section forms.
+</p>
+<pre>
+<var class="non-terminal-def">xml-literal</var> ::= <code class="literal">#</code> <var class="non-terminal">xml-constructor</var>
+</pre>
+<pre>
+<var class="non-terminal-def"><code>xml-constructor</code></var> ::= <var class="non-terminal">xml-element-constructor</var>
+  | <var class="non-terminal">xml-PI-constructor</var>
+  | <var class="non-terminal">xml-comment-constructor</var>
+  | <var class="non-terminal">xml-CDATA-constructor</var>
+</pre>
+
+<h3 class="title" id="qualified-names">Qualified names</h3>
+<p>The names of elements and attributes are <var class="firstterm">qualified names</var>
+(QNames).
+The lexical syntax for a QName is either a simple name,
+or a (prefix,local-name) pair.  Specifically:
+</p>
+<pre>
+<var class="non-terminal-def">QName</var> ::= <var class="non-terminal">xml-local-part</var>
+   | <var class="non-terminal">xml-prefix</var> <code class="literal">:</code> <var class="non-terminal">xml-local-part</var>
+<var class="non-terminal-def">xml-local-part</var> ::= <var class="non-terminal">NCName</var>
+<var class="non-terminal-def">xml-prefix</var> ::= <var class="non-terminal">NCName</var>
+</pre>
+An <var class="non-terminal">NCName</var> is similar
+to a Scheme <var class="non-terminal">identifier</var>,
+but with restrictions as defined in the
+<a href="http://www.w3.org/TR/REC-xml-names/#NT-NCName">XML namespaces</a> specification.
+An implementation without full Unicode support <em>may</em>
+restrict <var class="non-terminal">NCName</var> to the following syntax:
+<pre>
+<var class="non-terminal-def" id="NCName-def">NCName</var> ::= <var class="non-terminal">letter</var> (<var class="non-terminal">letter</var> | <var class="non-terminal">digit</var> | <var class="non-terminal">hyphen</var> | <var class="non-terminal">underscore</var> | <var class="non-terminal">period</var>)<sup>*</sup>
+<var class="non-terminal-def">hyphen</var> ::= <code class="literal">-</code>
+<var class="non-terminal-def">underscore</var> ::= <code class="literal">_</code>
+<var class="non-terminal-def">period</var> ::= <code class="literal">.</code>
+</pre>
+As a matter of style, programs are recommended to limit
+<var class="non-terminal">NCName</var> to the above, though
+an implementation <em>should</em> allow the full XML
+<var class="non-terminal">NCName</var> syntax.
+<p>
+Sometimes one needs to calculate the QName at runtime,
+evaluating an expression instead of using a literal QName:
+<pre>
+<var class="non-terminal-def">xml-name-form</var> ::= <var class="non-terminal">QName</var>
+  | <var class="non-terminal">xml-enclosed-expression</var>
+<var class="non-terminal-def">xml-enclosed-expression</var> ::=
+    <code class="literal">[</code> <var class="non-terminal">expression</var><sup>*</sup> <code class="literal">]</code>
+  | <code class="literal">(</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">)</code>
+</pre>
+<p>
+The first variant is the general case; the second variant <code class="literal">(</code><var class="non-terminal">expression</var><sup>+</sup><code class="literal">)</code> is just syntactic sugar for:
+<code class="literal">[(</code><var class="non-terminal">expression</var><sup>+</sup><code class="literal">)]</code>.  For example the following equivalent forms:
+<pre>
+#&lt;[(if be-bold 'strong 'em)]>important&lt;/&gt;
+#&lt;(if be-bold 'strong 'em)>important&lt;/&gt;
+</pre>
+<p>
+When evaluating the <var class="non-terminal">expression</var> (in the first variant), the result is a <q>QName value</q>.  While this specification does
+not define an API or representation for QName values, it is an object
+with three string components: The <dfn>local name</dfn> part,
+the <dfn>prefix</dfn> part,
+and the <dfn>namespace URI</dfn> part.
+The local name and the prefix parts match the parts in a literal QName,
+while the namespace URI part is an arbitrary globally unique string.
+Two QNames are considered equivalent if they have the same
+local name part and namespace URI part, even if the prefix parts are
+different.  The prefix is used for input and output;
+it can be considered a local nickname for a namespace URI.
+The binding from a prefix to a namespace URI can be defined
+using <var class="non-terminal">namespace-declaration-attribute</var>.
+An implementation may also define such bindings using Scheme code; for example
+Kawa has a <code>define-namespace</code> form. 
+<p>
+This specification specifies that a symbol is considered
+equivalent to a QName whose local name part is the string name of the
+symbol, and whose prefix and namespace URI are both empty,
+as long as the name of the symbol matches the syntax of
+<var class="non-terminal">identifier</var>, and does not contain a colon.
+The result is implementation-defined if a symbol's name contains a colon.
+
+<h3 class="title">Element constructors</h3>
+<pre>
+<var class="non-terminal-def">xml-element-constructor</var> ::=
+    <code class="literal">&lt;</code> <var class="non-terminal">QName</var> <var class="non-terminal">xml-attribute</var><sup>*</sup> <code class="literal">&gt;</code> <var class="non-terminal">initial-ignored</var><sup>?</sup> <var class="non-terminal">xml-element-datum</var><sup>*</sup> <code class="literal"><span class="bold"><strong>&lt;/</strong></span></code> <var class="non-terminal"><code>QName</code></var> <code class="literal">&gt;</code>
+  | <code class="literal"><span class="bold"><strong>&lt;</strong></span></code> <var class="non-terminal">xml-name-form</var> <var class="non-terminal">xml-attribute</var><sup>*</sup> <code class="literal"><span class="bold"><strong>&gt;</strong></span></code> <var class="non-terminal">initial-ignored</var><sup>?</sup> <var class="non-terminal">xml-element-datum</var><sup>*</sup> <code class="literal"><span class="bold"><strong>&lt;/&gt;</strong></span></code>
+  | <code class="literal">&lt;</code><var class="non-terminal"> <code>xml-name-form</code></var> <var class="non-terminal">xml-attribute</var><sup>*</sup> <code class="literal">/&gt;</code>
+</pre>
+
+<p>The first <var class="replaceable"><code>xml-element-constructor</code></var> variant uses a literal <var class="replaceable"><code>QName</code></var>,
+and looks like a standard non-empty XML element, where the starting <var class="replaceable"><code>QName</code></var>
+and the ending <var class="replaceable"><code>QName</code></var> must match exactly:
+</p>
+<pre class="screen">#&lt;a href="next.html"&gt;Next&lt;/a&gt;
+</pre>
+<p>As a convenience, you can leave out the name in end-tag:
+</p>
+<pre class="screen">&lt;para&gt;This is a paragraph in &lt;emphasis&gt;DocBook&lt;/&gt; syntax.&lt;/&gt;
+</pre>
+
+<p>You can use an expression to compute the name in the start-tag at runtime -
+in that case you <em>must</em> leave out the name in the end-tag:
+</p>
+<pre class="screen">#&lt;p&gt;This is &lt;[(if be-bold 'strong 'em)]&gt;important&lt;/&gt;!&lt;/p&gt;
+</pre>
+<p>The third <var class="replaceable"><code>xml-element-constructor</code></var> variant above is an XML
+“empty element”; it is equivalent to the second variant
+when there are no <var class="replaceable"><code>xml-element-datum</code></var> items.
+</p>
+<p>(Note that every well-formed XML element, as defined in the XML specifications,
+is a valid <var class="replaceable"><code>xml-element-constructor</code></var>, but not vice versa.)
+</p>
+
+<h3 class="title">Element contents (children)</h3>
+<p>The “contents” (children) of an element
+are a sequence of character (text) data,
+nested nodes, and enclosed (unquoted) expressions.
+The latter are discussed later.
+</p>
+<pre>
+<var class="non-terminal-def">xml-element-datum</var> ::=
+    any character except <code class="literal">&amp;</code>, or <code class="literal">&lt;</code>.
+  | <var class="non-terminal">xml-constructor</var>
+  | <var class="non-terminal">xml-escaped</var>
+</pre>
+<p>The characters <code class="literal">&amp;</code> and
+<code class="literal">&lt;</code> are special and need to be escaped.
+<p>
+The character <code class="literal">&gt;</code> does not have to
+be escaped, but it is good style to always do so, as it makes it
+easier to visually distinguish it from markup.
+(The <a href="http://www.w3.org/community/microxml/">MicroXML</a> 
+proposal does not even allow unquoted <code class="literal">&gt;</code>.)
+The XML and HTML 4.x standards do not allow
+the literal text <code class="literal">]]&gt;</code> in element content,
+for historical reasons of SGML-compatibility.
+For this reason an implementation of this specification <em>may</em>
+warn if literal <code class="literal">]]&gt;</code> is seen. 
+<p>
+A nested <var class="non-terminal">xml-constructor</var>
+is functionally equivalent to an <var class="non-terminal">xml-literal</var>
+(i.e. the <var class="non-terminal">xml-constructor</var> prefixed
+by a <code class="literal">#</code>) inside an enclosed expression.
+For example:
+<pre>
+#&lt;p&gt;This is &lt;em&gt;important&lt;/em&gt;!&lt;/p&gt;
+</pre>
+is equivalent to:
+<pre>
+#&lt;p&gt;This is &amp;[#&lt;em&gt;important&lt;/em&gt;]!&lt;/p&gt;
+</pre>
+<pre>
+<var class="non-terminal-def">xml-escaped</var> ::=
+    <code class="literal">&amp;</code> <var class="non-terminal">xml-enclosed-expression</var>
+  | <code class="literal">&amp;</code> <var class="non-terminal">xml-entity-name</var> <code class="literal">;</code>
+  | <var class="non-terminal">xml-character-reference</var>
+  | <var class="non-terminal">special-escape</var>
+</pre>
+<h3>Character and entity references</h3>
+<pre>
+<var class="non-terminal-def">xml-character-reference</var> ::=
+    <code class="literal">&amp;#</code> <var class="non-terminal">digit</var><sup>+</sup> <code class="literal"><span class="bold"><strong>;</strong></span></code>
+  | <code class="literal">&amp;#x</code> <var class="non-terminal">hex-digit</var><sup>+</sup> <code class="literal">;</code>
+<var class="non-terminal-def">xml-entity-name</var> ::= <var class="non-terminal">NCName</var>
+</pre>
+<p>Here is an example with both hex and decimal character references:
+</p>
+<pre class="screen">#&lt;p&gt;A&amp;#66;C&amp;#x44;E&lt;/p&gt;  &#x027F9  &lt;p&gt;ABCDE&lt;/p&gt;
+</pre>
+<p>
+
+An implementation <em>must</em> support the built-in XML names
+for <var class="replaceable"><code>xml-entity-name</code></var>:
+<code class="literal">lt</code>, <code class="literal">gt</code>, <code class="literal">amp</code>,
+<code class="literal">quot</code>, and <code class="literal">apos</code>, which stand for the characters
+<code class="literal">&lt;</code>, <code class="literal">&gt;</code>, <code class="literal">&amp;</code>, <code class="literal">"</code>, and <code class="literal">'</code>, respectively.
+An implementation <em>should</em> also support
+<a href="http://www.w3.org/2003/entities/2007/w3centities-f.ent">the standard XML entity names</a>
+(though resource-limited or non-Unicode-based implementations
+are not required to),
+and  <em>should</em> also support the standard
+R7RS character names <code>tab</code>, <code>newline</code>,
+<code>return</code>, and <code>space</code>.
+An implementation <em>may</em> support the R7RS character names 
+<code>null</code>, <code>alarm</code>,
+<code>backspace</code>, <code>escape</code>, and <code>delete</code>,
+though these are not valid XML 1.0 characters.
+The following two expressions are equivalent:
+</p>
+<pre class="screen">#&lt;p&gt;&amp;lt; &amp;gt; &amp;amp; &amp;quot; &amp;apos;&lt;/p&gt;
+#&lt;p&gt;&amp;{"&lt; &gt; &amp; \" '"}&lt;/p&gt;
+</pre>
+
+<h3>Indentation and line-endings</h3>
+<p>
+<a href="../srfi-109/srfi-109.html">SRFI-109 (extended string quasi-literals)</a> uses the same style of escape sequences, prefixed by
+<code class="literal">&amp;</code>.
+The following SRFI-109 features are optional for SRFI-107 implementations;
+however, an implementation that provides both
+SRFI-109 and SRFI-107 <em>should</em> provide these convenience features
+in attribute and element content:
+<ul>
+<li>
+line-continuation (using <code>&amp;-</code>);
+<li>
+indentation handling (using <code>&amp;|</code>);
+<li>
+comments (using <code>&amp;#|comment|#</code>); and
+<li>(optionally) format specifiers (as in <code>&amp;~,2f[balance-due]</code>).
+</ul>
+<pre>
+<var class="non-terminal-def">special-escape</var> ::=
+    <var class="non-terminal">intraline-whitespace</var> <code class="literal">&amp;|</code>
+  | <code class="literal">&amp;</code> <var class="non-terminal">nested-comment</var>
+  | <code class="literal">&amp;-</code> <var class="non-terminal">intraline-linespace</var> <var class="non-terminal">line-ending</var>
+<var class="non-terminal-def">initial-ignored</var> ::=
+    <var class="non-terminal">intraline-whitespace</var> <var class="non-terminal">line-ending</var> <var class="non-terminal">intraline-whitespace</var> <code class="literal">&amp;|</code>
+</pre>
+For discussion of these features see the
+<cite>Indentation and line-endings</cite> and <cite>Embedded comments</cite>
+sections of <a href="../srfi-109/srfi-109.html">SRFI-109</a>.
+
+<h3>Attributes</h3>
+<p>
+An attribute associates an attribute name with an attribute value.
+This is done using an <var class="non-terminal">xml-true-attribute</var> form,
+which is an <var class="non-terminal">xml-attribute</var>
+that does <em>not</em> have the form of
+<var class="non-terminal">xml-namespace-declaration-attribute</var>.
+I.e. in a <var class="non-terminal">xml-true-attribute</var> the
+attribute name may not be the special reserved name
+<code class="literal">xmlns</code>, nor may it be a QName whose
+prefix is the special reserved name <code class="literal">xmlns</code>.
+<pre>
+<var class="non-terminal-def">xml-attribute</var> ::=
+    <var class="non-terminal">xml-true-attribute</var>
+  | <var class="non-terminal">xml-namespace-declaration-attribute</var>
+</pre>
+<p>A true attribute has the form <code><var>name</var>=<var>value</var></code>.
+It can also be an enclosed expression that evaluates to an attribute node value.
+<pre>
+<var class="non-terminal-def">xml-true-attribute</var> ::=
+    <var class="non-terminal">xml-name-form</var> <code class="literal">=</code> <var class="non-terminal">xml-attribute-value</var>
+  | <var class="non-terminal">xml-enclosed-expression</var>
+<var class="non-terminal-def">xml-attribute-value</var> ::=
+    <code class="literal">&quot;</code> <var class="non-terminal">quot-attribute-datum</var><sup>*</sup> <code class="literal">&quot;</code>
+  | <code class="literal">'</code> <var class="non-terminal">apos-attribute-datum</var><sup>*</sup> <code class="literal">'</code>
+  | <code class="literal">[</code> <var class="non-terminal">expression</var><sup>*</sup> <code class="literal">]</code>
+  | <code class="literal">(</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">)</code>
+</pre>
+<pre>
+<var class="non-terminal-def">quot-attribute-datum</var> ::=
+    any character except <code class='literal'>&quot;</code>, <code class="literal">&amp;</code>, or <code class="literal">&lt;</code>.
+  | <var class="non-terminal">xml-escaped</var>
+<var class="non-terminal-def">apos-attribute-datum</var> ::=
+    any character except <code class="literal">'</code>, <code class="literal">&amp;</code>, or <code class="literal">&lt;</code>.
+  | <var class="non-terminal">xml-escaped</var>
+</pre>
+</p>
+
+<h3 class="title">Namespace declarations</h3>
+
+<p>An <var class="replaceable"><code>xml-prefix</code></var> is an alias for a namespace-uri,
+and the mapping between them is defined by a <var class="firstterm">namespace declaration attribute</var>,
+which has the form of an <var class="non-terminal">xml-attribute</var>
+where either the QName or the prefix is the special identifier
+<code class="literal">xmlns</code>:
+</p>
+<pre>
+<var class="non-terminal-def">xml-namespace-declaration-attribute</var> ::=
+    <code class="literal">xmlns:</code> <var class="non-terminal">xml-prefix</var> <code class="literal">=</code> <var class="non-terminal">xml-attribute-value</var>
+  | <code class="literal">xmlns=</code> <var class="non-terminal">xml-attribute-value</var>
+</pre>
+<p>The former declares <var class="replaceable"><code>xml-prefix</code></var> as a namespace alias for
+the namespace-uri specified by <var class="replaceable"><code>xml-attribute-value</code></var>
+(which should be a compile-time constant, though an implementation
+<em>may</em> allow a general string-valued expression).
+The second declares that <var class="replaceable"><code>xml-attribute-value</code></var> is the default
+namespace for unprefixed element names.
+(A default namespace declaration is ignored for attribute names.)
+</p>
+
+<h3 class="title">Processing instructions</h3>
+<p>An <var class="replaceable"><code>xml-PI-constructor</code></var> can be used to create an XML
+<var class="firstterm">processing instruction</var>, which can be used to pass
+instructions or annotations to an XML processor or tool.</p>
+<pre>
+<var class="non-terminal-def">xml-PI-constructor</var> ::= <code class="literal">&lt;?</code> <var class="non-terminal">xml-PI-target</var> <var class="non-terminal">xml-PI-content</var> <code class="literal">?&gt;</code>
+<var class="non-terminal-def">xml-PI-target</var> ::= <var class="non-terminal">NCName</var>
+<var class="non-terminal=def">xml-PI-content</var> ::= any characters, not containing <code class="literal">?&gt;</code>.
+</pre>
+<p>For example, the DocBook XSLT stylesheets can use the <code class="literal">dbhtml</code>
+instructions to specify that a specific chapter should be
+written to a named HTML file:
+</p>
+<pre class="screen">#&lt;chapter&gt;&lt;?dbhtml filename="intro.html" ?&gt;
+&lt;title&gt;Introduction&lt;/title&gt;
+...
+&lt;/chapter&gt;
+</pre>
+</div>
+
+<h3 class="title">XML comments</h3>
+<p>You can cause XML comments to be emitted in the XML output document.
+Such comments can be useful for humans reading the XML document,
+but are usually ignored by programs.
+</p>
+<pre>
+<var class="non-terminal-def">xml-comment-constructor</var> ::= <code class="literal">&lt;!--</code> <var class="don-terminal">xml-comment-content</var> <code class="literal">--&gt;</code>
+<var class="dnon-terminal-def">xml-comment-content</var> ::= any characters, not containing <code class="literal">--</code>.
+</pre>
+
+<h3 class="title">CDATA sections</h3>
+<p>A <code>CDATA</code> section can be used to avoid excessive
+quoting in element content.
+</p>
+<pre>
+<var class="non-terminal-def">xml-CDATA-constructor</var> ::= <code class="literal">&lt;![CDATA[</code> <var class="non-terminal">xml-CDATA-content</var> <code class="literal">]]&gt;</code>
+<var class="non-terminal-def">xml-CDATA-content</var> ::= any characters, not containing <code class="literal">]]&gt;</code>.
+</pre>
+<p>
+A CDATA section is semantically equivalent to text
+consisting of the <var class="non-terminal">xml-CDATA-content</var>,
+though some implementations may
+record that the text came from a CDATA so it can be written out the same way.
+<p>The following are equivalent:
+</p>
+<pre class="screen">#&lt;p&gt;Special characters &lt;![CDATA[&lt; &gt; &amp; ' &quot;]]&gt; here.&lt;/p&gt;
+#&lt;p&gt;Special characters &amp;lt; &amp;gt; &amp;amp; &amp;quot; &amp;apos; here.&lt;/p&gt;
+</pre>
+
+<h2>Translation into core S-expressions</h2>
+<p>
+The following specifies how the reader syntax is translated by the reader into
+standard S-expressions. These basically create macro invocations; the
+implementation is responsible for implementing those macros as
+described in the <a href="#translated-forms">Semantics</a> section.  As an example:
+<pre>
+#&lt;a class="title"&gt;Result: &{sum}.&lt;/a&gt;
+</pre>
+is read as if it were:
+<pre>
+($xml-element$ () ($resolve-qname$ a)
+  ($xml-attribute$ 'class "title")
+  "Result: " sum ".")
+</pre>
+<p>
+The <code>()</code> in the result is the translation
+of any namespace declaration attributes - in this case none.
+Here is an example with namespace declarations:
+<pre>
+#&lt;prefix2:a
+   xmlns:prefix1="URI1"
+   xmlns:prefix2="URI&foo;2"
+   xmlns="DURI"&gt;...&lt;/prefix2:a&gt;
+</pre>
+<p>
+This is read as:
+<pre>
+($xml-element$ ((prefix1 "URI1")
+                (prefix2 "URI" $entity$:foo "2")
+                (|| "DURI"))
+               ($resolve-qname$ a prefix2) ...)
+</pre>
+<p>
+The translation is defined in terms of a recursive read-time
+<q>translation function</q> <b>Tr</b> which maps
+an <var class="non-terminal">xml-constructor</var> to an S-expression.
+<p>
+<pre>
+<b>Tr[</b><code class="literal">&lt;</code> <var class="non-terminal">QName</var> <var class="non-terminal">xml-attribute</var><sup>*</sup> <code class="literal">&gt;</code> <var class="non-terminal">xml-element-datum</var><sup>*</sup> <code class="literal">&lt;/</code> <var class="non-terminal">QName</var> <code class="literal">&gt;</code><b>]</b>
+   &#x27fe; <b>Tr[</b><code class="literal">&lt;</code> <var class="non-terminal">QName</var> <var class="non-terminal">xml-attribute</var><sup>*</sup> <code class="literal">&gt;</code> <var class="non-terminal">xml-element-datum</var><sup>*</sup> <code class="literal">&lt;/&gt;</code><b>]</b>
+<b>Tr[</b><code class="literal">&lt;</code> <var class="non-terminal">QName</var> <var class="non-terminal">xml-attribute</var><sup>*</sup> <code class="literal">/&gt;</code><b>]</b>
+   &#x27fe; <b>Tr[</b><code class="literal">&lt;</code> <var class="non-terminal">QName</var> <var class="non-terminal">xml-attribute</var><sup>*</sup> <code class="literal">&gt;&lt;/&gt;</code><b>]</b>
+<b>Tr[</b><code class="literal">&lt;</code> <var class="non-terminal">xml-name-form</var> <var class="non-terminal">xml-attribute</var><sup>*</sup> <code class="literal">&gt;</code> <var class="non-terminal">xml-element-datum</var><sup>*</sup> <code class="literal">&lt;/&gt;</code><b>]</b>
+   &#x27fe; <code class="literal">($xml-element$ (</code><b>TrNamespaceDecl[</b><var class="non-terminal">xml-attribute</var><b>]<sup>*</sup></b> <code class="literal">)</code> <b>TrElementName[</b><var class="non-terminal">xml-name-form</var><b>]</b> <b>TrAttr[</b><var class="non-terminal">xml-attribute</var><b>]</b><sup>*</sup> <b>TrContent[</b><var class="non-terminal">xml-element-datum</var><b>]</b><sup>*</sup> <code class="literal">)</code>
+</pre>
+<p><code><b>TrContent</b></code> is as in <a href="../srfi-109/srfi-109.html#specification-translation">SRFI-109</a>, except we add this rule:
+<pre>
+<b>TrContent[</b><var class="non-terminal">xml-constructor</var><b>]</b>
+   &#x27fe; <b>Tr[</b><var class="non-terminal">xml-constructor</var><b>]</b>
+</pre>
+
+<pre>
+<b>TrAttr[</b><var class="non-terminal">xml-namespace-declaration-attribute</var><b>]</b>
+   &#x27fe; <code class="literal">#|nothing|#</code>
+<b>TrAttr[</b><var class="non-terminal">xml-enclosed-expression</var><b>]</b>
+  &#x27fe; <var class="non-terminal">xml-enclosed-expression</var>
+<b>TrAttr[</b><var class="non-terminal">xml-name-form</var> <code class="literal">=</code> <var class="non-terminal">xml-attribute-value</var><b>]</b>
+   &#x27fe; <code class="literal">($xml-attribute$</code> <b>TrAttrName[</b><var class="non-terminal">xml-name-form</var><b>]</b> <b>TrAttrValue[</b><var class="non-terminal">xml-attribute-value</var><b>]</b> <code class="literal">)</code>
+<b>TrAttrValue[</b><code class="literal">"</code> <var class="non-terminal">quot-attribute-datum</var><sup>*</sup> <code class="literal">"</code><b>]</b>
+   &#x27fe; <b>TrContent[</b><var class="non-terminal">quot-attribute-datum</var><b>]<sup>*</sup></b>
+<b>TrAttrValue[</b><code class="literal">'</code> <var class="non-terminal">apos-attribute-datum</var><sup>*</sup> <code class="literal">'</code><b>]</b>
+   &#x27fe; <b>TrContent[</b><var class="non-terminal">apos-attribute-datum</var><b>]<sup>*</sup></b>
+<b>TrAttrValue[</b><code class="literal">[</code> <var class="non-terminal">expression</var><sup>*</sup> <code class="literal">]</code><b>]</b>
+   &#x27fe; <var class="non-terminal">expression</var><sup>*</sup>
+<b>TrAttrValue[</b><code class="literal">(</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">)</code><b>]</b>
+   &#x27fe; <code class="literal">(</code> <var class="non-terminal">expression<sup>+</sup></var> <code class="literal">)</code>
+</pre>
+
+<!--
+<pre>
+<b>TrChar[</b>any character except &amp;, or &lt;<b>]</b>
+   &#x27fe; any character except &amp;, or &lt;
+<b>TrChar[</b><code class="literal">&amp;#x</code> <var class="replaceable">hex-digit</var><sup>+</sup> <code class="literal">;</code><b>]</b>
+   &#x27fe; <code class="literal">\x</code> <var class="replaceable">hex-digit</var><sup>+</sup> <code class="literal">;</code>
+<b>TrChar[</b><code class="literal">&amp;#x</code> <var class="replaceable">digit</var><sup>+</sup> <code class="literal">;</code><b>]</b>
+   &#x27fe; <code class="literal">\x</code> <i>corresponding hex-digits</i> <code class="literal">;</code>
+<b>TrContent[</b>simple-char<sup>+</sup><b>]</b>
+   &#x27fe; <code class="literal">&quot;</code> <b>TrChar[</b>simple-char<b>]</b><sup>+</sup> <code class="literal">&quot;</code>
+<b>TrContent[</b><code class="literal">&amp;</code> <var class="non-terminal">xml-entity-name</var> <code class="literal">;</code><b>]</b>
+   &#x27fe; <code class="literal">$entity$:</code> <var class="non-terminal">xml-entity-name</var>
+<b>TrContent[</b><code class="literal">&amp;(</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">)</code><b>]</b>
+   &#x27fe;  <code class="literal">$&lt;&lt;$ (</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">) $&gt;&gt;$</code>
+<b>TrContent[</b><code class="literal">&amp;[</code> <var class="non-terminal">expression</var><sup>*</sup> <code class="literal">]</code><b>]</b>
+   &#x27fe;  <code class="literal">$&lt;&lt;$</code> <var class="non-terminal">expression</var><sup>*</sup> <code class="literal">$&gt;&gt;$</code>
+</pre>
+-->
+
+<!--<p>
+<strong>Note:</strong> Some XML processor distinguish XML text nodes
+from atomic string values in various ways.  The critical issue for us here
+is this:  If you have a sequence of atomic string values and you insert
+them as element content, you separate each with a single space.
+If you have a sequence of text nodes and you insert
+them (copy them) as element content, don't don't separate them with spaces.-->
+<p>
+The namespace-declarations are translated to a list of namespace-bindings,
+by default the empty list.  There is a sub-list for each namespace-binding,
+where the first element is the prefix being bound, and the remaining
+elements (usually just a single string literal) an expression that evaluates
+to a namespace URI.  The prefix is a symbol; in the case of a default
+element namespace, the prefix is either the empty symbol (<code class="literal">||</code>) or equivalently the reserved prefix name
+<code>$default-element-namespace$</code>.
+<pre>
+<b>TrNamespaceDecl[</b><var class="non-terminal">xml-true-attribute</var><b>]</b>
+   &#x27fe; <code class="literal">#|nothing|#</code>
+<b>TrNamespaceDecl[</b><code class="literal">xmlns:</code> <var class="non-terminal">xml-prefix</var> <code class="literal">=</code> <var class="non-terminal">xml-attribute-value</var><b>]</b>
+   &#x27fe; <code class="literal">(</code> <var class="non-terminal">xml-prefix</var> <b>TrAttrValue[</b><var class="non-terminal">xml-attribute-value</var><b>]</b> <code class="literal">)</code>
+<b>TrNamespaceDecl[</b><code class="literal">xmlns=</code> <var class="non-terminal">xml-attribute-value</var><b>]</b>
+   &#x27fe; <code class="literal">(|| </code> <b>TrAttrValue[</b><var class="non-terminal">xml-attribute-value</var><b>]</b> <code class="literal">)</code>
+</pre>
+<p>
+Element (tag) names are translated by <code><b>TrElementName</b></code>,
+while attribute names are translated by <code><b>TrAttrName</b></code>.
+These are both handled by <code><b>TrElementOrAttrName</b></code> in both cases.
+However, if there is no namespace-prefix, then attribute names default
+to the empty namespace, but element names default to the current
+default element namespace prefix (indicated by <code>$default-element-namespace$</code>).
+<pre>
+<b>TrElementName[</b><var class="non-terminal">identifier</var><b>]</b>
+   &#x27fe; <code class="literal">($resolve-qname$</code> <var class="non-terminal">identifier</var> <code class="literal">)</code>
+<b>TrAttrName[</b><var class="non-terminal">identifier</var><b>]</b>
+   &#x27fe; <code class="literal">(quote</code> <var class="non-terminal">identifier</var> <code class="literal">)</code>
+<b>TrAttrName[</b><var class="non-terminal">other-form</var><b>]</b>
+   &#x27fe; <b>TrElementOrAttrName[</b><var class="non-terminal">other-form</var><b>]</b>
+<b>TrElementName[</b><var class="non-terminal">other-form</var><b>]</b>
+   &#x27fe; <b>TrElementOrAttrName[</b><var class="non-terminal">other-form</var><b>]</b>
+<b>TrElementOrAttrName[</b><var class="non-terminal">prefix</var><code class="literal">:</code><var class="non-terminal">local-name</var><b>]</b>
+   &#x27fe; <code class="literal">($resolve-qname$</code> <var class="non-terminal">local-name</var> <var class="non-terminal">prefix</var> <code class="literal">)</code>
+<b>TrElementOrAttrName[</b><code class="literal">(</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">)</code><b>]</b>
+   &#x27fe; <code class="literal">(</code> <var class="non-terminal">expression</var><sup>+</sup> <code class="literal">)</code>
+<b>TrElementOrAttrName[</b><code class="literal">[</code> <var class="non-terminal">expression</var> <code class="literal">]</code><b>]</b>
+   &#x27fe; <var class="non-terminal">expression</var>
+</pre>
+<p>The special node constructors are translated similarly:
+(<b>Note:</b> This is simplified, since these forms should not handle
+escape characters the way element and attribute content does.)
+<pre>
+<b>Tr[</b><code class="literal">&lt;![CDATA[</code><var class="non-terminal">xml-CDATA-content</var><code class="literal">]]&gt;</code><b>]</b>
+   &#x27fe; <code class="literal">($xml-CDATA$</code> <code class="literal">"</code><var class="non-terminal">xml-CDATA-content</var><code class="literal">")</code>
+<b>Tr[</b><code class="literal">&lt;--</code><var class="non-terminal">xml-comment-content</var><code class="literal">--&gt;</code><b>]</b>
+   &#x27fe; <code class="literal">($xml-comment$</code> <code class="literal">"</code><var class="non-terminal">xml-comment-content</var><code class="literal">")</code>
+<b>Tr[</b><code class="literal">&lt;?</code> <var class="non-terminal">xml-PI-target</var> <var class="non-terminal">xml-PI-content</var> <code class="literal">?&gt;</code><b>]</b>
+   &#x27fe; <code class="literal">($xml-processing-instruction$ "</code> <var class="non-terminal">xml-PI-target</var> <code class="literal">"</code> <b>TrContent[</b><var class="non-terminal">xml-PI-content</var><b>]</b><code clas="literal">)</code>
+</pre>
+
+<h2 id="translated-forms">Semantics</h2>
+<p>
+The above translation maps the new reader syntax to 
+S-expressions using macros specified in this section.
+Of course it is possible to write these macro forms directly,
+though they are less human-readable.  However, code generators
+and macros may target these macros.  This format can also
+be used as an interchange format.
+When below we say that an expression "creates an element node"
+we may that we create a representation of an element value.
+The default implementation <em>should</em> create a unique object,
+of a sub-type of XML-node.
+However, a keyword such as <code>$xml-element$</code>
+may be bound to a user-defined macro,
+in which case the element value may be something very different
+and perhaps emphemeral, such as a network encoding.
+<p>
+The specification does not define a Scheme API for working with XML data.
+It assumes there is some data type which we here call an <dfn>XML-node</dfn>.
+This specification does not require the XML-node type to be distinct from
+other types.  Many Scheme XML libraries just use lists to encode XML-nodes.
+However, newer Schemes that have an extensible type system
+are encouraged to make XML-node a distinct type.
+This follows the <a href="http://www.w3.org/TR/DOM-Level-3-Core/">W3C Document Object Model (DOM)</a>.
+
+<h3>Contructors and other bindings</h3>
+<pre>
+<code class="literal">($xml-element$</code> <code class="literal">(</code> <var class="non-terminal">namespace-binding</var><sup>*</sup> <code class="literal">)</code> <var class="non-terminal">name</var> <var class="non-terminal">attribute</var><sup>*</sup> <var class="non-terminal">content</var><sup>*</sup> <code class="literal">)</code> 
+</pre>
+<p>
+Creates an element node.
+<p>
+Each <var class="non-terminal">namespace-binding</var>
+is a list of the form <code>(<var class="non-terminal">prefix</var> <var class="non-terminal">namespace-uri-part</var><sup>+</sup>)</code>.
+The <var class="non-terminal">prefix</var> is a literal symbol
+that represents a namespace prefix; a zero-length symbol
+is equivalent to the symbol <code>$default-element-namespace$</code>.
+Each <var class="non-terminal">namespace-uri-part</var> is an expression that
+evaluates to a string; the namespace-URI is the concatenation of the parts.
+Normally there will be a single  <var class="non-terminal">namespace-uri-part</var> that is a literal string; there may also be entity references.
+An implementation <em>may</em> allow non-literal expressions,
+but is not required to.
+<p>
+The <var class="non-terminal">name</var> is an expression that
+evaluates to a symbol or a QName, most commonly a quoted symbol
+or a <code>$resolve-qname$</code> form.
+<p>
+The binding for <code>$xml-element$</code> must be a macro, not a function,
+because each <var class="non-terminal">namespace-binding</var>
+adds a (prefix,URI)-binding in the lexical context.  That binding is used to evaluate QNames in the remaining parameters, which are all expressions, including the <var class="non-terminal">name<var>.
+<p>
+Each <var class="non-terminal">attribute</var> is usually
+an <code>$xml-attribute$</code> form, but an implementation may support
+other expressions that evaluate to <q>attribute nodes</q>.
+Each <var class="non-terminal">content</var> is an expression
+that evaluates to element content, handled as described in the
+<a href="#enclosed-expression-handling">Handling of enclosed expressions</a> section.
+<pre>
+<code class="literal">($xml-attribute$</code> <var class="non-terminal">name</var> <var class="non-terminal">content</var><sup>*</sup> <code class="literal">)</code> 
+</pre>
+<p>
+Creates an attribute node from the parameters.
+The <var class="replaceable">name</var> is an expression that evaluates to a symbol or QName value.  The <var class="non-terminal">content</var> arguments
+are concatenated to produce the attribute value.
+
+<pre>
+<code class="literal">($resolve-qname$</code> <var class="non-terminal">local-name</var> [<var class="non-terminal">prefix</var>]<code class="literal">)</code> 
+</pre>
+<p>
+Resolve the gives <var class="non-terminal">prefix</var>/<var class="non-terminal">local-name</var>-pair to a QName value, depending on the currently active namespace bindings.  Both arguments are literal
+unquoted symbols.  If <var class="non-terminal">prefix</var> is
+missing it defaults <code class="literal">$default-element-namespace$</code>.
+<pre>
+<code class="literal">($xml-comment$</code> <var class="non-terminal">content</var><sup>*</sup> <code class="literal">)</code> 
+</pre>
+<pre>
+<code class="literal">($xml-CDATA$</code> <var class="non-terminal">content</var><sup>*</sup> <code class="literal">)</code> 
+</pre>
+<pre>
+<code class="literal">($xml-processing-instruction$</code> <var class="non-terminal">xml-PI-target</var> <var class="non-terminal">content</var><sup>*</sup> <code class="literal">)</code> 
+</pre>
+Creates a comment, CDATA, or processing instruction (PI) node.
+The <var class="non-terminal">xml-PI-target</var> should be a string
+that matches <code>NCName</code>.
+The <var class="non-terminal">content</var> arguments should be strings,
+which are concatenated.
+
+<pre>
+<code class="literal">$entity$:</code><var class="non-terminal">xml-entity-name</var>
+</pre>
+<p>
+The <var class="non-terminal">xml-entity-name</var> is an unquoted symbol.
+Returns a string value matching the entity name.
+For example:
+<pre>
+$entity$:lt &#x027F9; "&lt;"
+</pre>
+<pre>
+<code class="literal">$&lt;&lt;$</code>
+<code class="literal">$&gt;&gt;$</code>
+</pre>
+<p>These serve to delimit enclosed expressions,
+but are otherwise ignored in <var class="non-terminal">content</var>.
+A simple implementation is to bind them to unique objects.
+
+<h3 class="title" id="enclosed-expression-handling">Handling of enclosed expressions</h3>
+<p>
+Both element content and attribute values may contain
+<var class="non-terminal">xml-enclosed-expression</var>s.
+These are expressions evaluated at runtime, where the
+evaluated result becomes part of the element content or the attribute value.
+<p>
+If the expression evaluates to an element, comment, or
+processing node, and the context is element content,
+then the node is added as a child of the element.
+It is unspecified if the node is copied or shared.
+It is also unspecified if the expression result is some
+other kind of XML-node, or the context is an attribute value.
+<p>
+If the expression evaluates to a string, the result is pasted
+as a text (child) content of an element or a substring of an
+attribute value, respectively.
+<p>
+If the expression evaluates to a CDATA segment, the result
+is equivalent to the string value of the segment.
+<p>
+If the expression evaluates to some other scalar value
+(including numbers, booleans, and characters) the value
+is converted to a string according to implementation-specified
+rules.  An implementation <em>may</em> convert a value as if
+using <code>display</code>.
+Alternatively, an implementation <em>may</em> convert
+a value to yield a canonical representation according to the XML
+Schema specification.  (In the latter case, booleans <code>#f</code>
+and <code>#t</code> should yield <code>false</code> and <code>true</code>,
+respectively.)
+<p>
+If the expression evaluates to a list or vector, then each element
+is inserted into the element or attribute content.  Spaces are inserted
+between two elements if neither element is an XML-node.
+<p>
+Note that some XML specifications (include XML Schema and the
+<a href="http://www.w3.org/TR/xpath-datamodel/">XQuery and XPath data model</a>)
+have the concept of <dfn>typed value</dfn> of a node.
+The typed value may be a number, a string, or another
+atomic type.  The typed value may also be a sequence of strings,
+numbers, or other atomic values.  Some implementations
+may optionally store the typed value instead of or in addition
+to the text value.  For example:
+<pre>
+#&lt;prices&gt;&amp;(vector 230 599 98 763)&lt;/prices&gt;
+</pre>
+<p>
+It is undefined if in the XML-node the contents is stored as a
+sequence of four integers, or as the string <code>"230 599 98 763"</code>,
+as long as the result prints the same way.
+
+<h3>Output of XML nodes</h3>
+<p>
+If XML-node is a separate data-type, implementations
+are encouraged to use this XML-literal format when writing to an output port,
+since this provides input-output round-tripping.
+Specifically, calling <code>write</code> on an XML-node <em>should</em> write
+an <var class="non-terminal">xml-literal</var> (with an initial
+<code class="literal">#</code>).
+Calling <code>display</code> on an XML-node <em>should</em> write
+an <var class="non-terminal">xml-constructor</var> (without an initial
+<code class="literal">#</code>).
+The <var class="non-terminal">xml-constructor</var> <em>should</em> be in
+standard XML syntax without using any of extensions in this specification,
+such as an unnamed end-tag,
+or an unescaped <code class="literal">]]&gt;</code>.
+In fact, it is strongly recommended that if <code class="literal">&gt;</code>
+appears in element or attribute content
+it should be written as the escaped form <code class="literal">&amp;gt;</code>.
+In addition, control characters (in attribute content also including
+newline or tab) should be escaped using character references.
+<p>Alternatively, for <code>display</code> (not <code>write</code>), if the
+output port is an extended port that can handle <q>rich text</q> then an
+implementation <em>may</em> instead display a styled representation.
+For example if the XML-node is compatible with HTML, and the
+output port is inserting text into a browser document, then the implementation
+may copy the DOM into the browser, perhaps resulting in styled text.
+
+<h1>Implementation</h1>
+<p>The implementation is necessarily non-portable, though the
+Translation section provides a template for the reader part.
+<p>
+The <a href="http://www.gnu.org/software/kawa/index.html">Kawa Scheme</a>
+implementation has <a href="http://www.gnu.org/software/kawa/XML-literals.html">working support</a> for this reader extension.
+<h2>Handling namespaces</h2>
+<p>
+Implementing of the <a href="#translated-forms">Translated forms</a>
+should mostly be obvious: Just call an appropriate function to
+create the XML-node.  Handling namespace definitions is non-obvious, however.
+The form:
+<pre>
+($xml-element$ ((<var class="non-terminal">prefix</var> <var class="non-terminal">namespace-uri-part</var><sup>+</sup>)<sup>*</sup>) <var class="non-terminal">name</var> <var class="non-terminal">attribute</var><sup>*</sup> <var class="non-terminal">content</var><sup>*</sup>)
+</pre>
+can be translated into something like:
+<pre>
+(let ()
+  (define-namespace <var class="non-terminal">prefix</var> (string-append <var class="non-terminal">namespace-uri-part</var><sup>+</sup>))<sup>*</sup>
+  (make-element name</var> <var class="non-terminal">attribute</var><sup>*</sup> <var class="non-terminal">content</var><sup>*</sup>)
+</pre>
+<p>
+The translation is more complicated if in-scope namespace bindings
+are part of the run-time properties of the constructed element.
+In that case the set of binding needs to be passed to the
+<code>make-element</code> function.
+<p>
+The initial environment has predefined:
+<pre>
+(define-namespace $default-element-namespace$ "")
+</pre>
+<p>
+A simple way to implement <code>define-namespace</code> is to expand:
+<pre>
+(define-namespace <var class="non-terminal">prefix</var> <var class="non-terminal">namespace-uri</var>)
+</pre>
+to:
+<pre>
+(define $namespace$:<var class="non-terminal">prefix</var> <var class="non-terminal">namespace-uri</var>)
+</pre>
+<p>
+In that case:
+<pre>
+($resolve-qname$ <var class="non-terminal">local-name</var> <var class="non-terminal">prefix</var>)
+</pre>
+<p>
+could be implemented as:
+<pre>
+(make-qname <var class="non-terminal">local-name</var> <var class="non-terminal">prefix</var> $namespace$:<var class="non-terminal">prefix</var>)
+</pre>
+<p>
+assuming a 3-argument <code>make-qname</code> function that creates a QName
+with the given local-name, prefix, and namespace-uri.
+Implementations <em>should</em> provide a custom error message in the case
+<code>$namespace$:<var class="non-terminal">prefix</var></code> is
+undefined, rather than depend on a generic error message.
+
+<h2>Test suite</h2>
+<p>There is a test suite in the
+<a href="http://sourceware.org/viewvc/kawa/trunk/testsuite/xml-test.scm?view=co">Kawa source tree</a>.
+<!--
+There will be testsuite.  This will test at least:
+<ul>
+<li>Quoted forms allow portable testing of the reader translation.
+<li>Format/or write of non-quoted forms allow semi-portable
+testing of read-write round-tripping.
+<li>Some non-portable tests may be appropriate, for example
+using Kawa functionality.
+</ul>
+-->
+
+<h1>Copyright</h1>
+<p>
+Copyright (C) Per Bothner 2013</p>
+<p>
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:</p>
+<p>
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.</p>
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
+<hr />
+<address>Author: <a href="mailto:per@bothner.com">Per Bothner</a></address>
+<address>Editor: <a href="mailto:srfi-editors at srfi dot schemers dot org">
+             Mike Sperber</a></address>
+</body>
+</html>
