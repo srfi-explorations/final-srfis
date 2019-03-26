@@ -1,6 +1,7 @@
 language: c
 script:
-- curl https://github.com/ashinn/chibi-scheme/archive/0.8.tar.gz > chibi-scheme-0.8.tar.gz
-- tar -xzf chibi-scheme-0.8.tar.gz
-- (cd chibi-scheme-0.8 && PREFIX=$HOME make install)
+- mkdir ~/chibi-scheme
+- travis_retry curl -L https://github.com/ashinn/chibi-scheme/archive/0.8.tar.gz |
+  tar -xz --strip-components=1 -C ~/chibi-scheme
+- (cd chibi-scheme && PREFIX=$HOME make install)
 - chibi-scheme -e '(begin (display "Hello world") (newline))'
