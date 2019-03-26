@@ -1,0 +1,104 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 3.2//EN">
+<html>
+  <head>
+    <title>Intermediate hash tables</title>
+    <link href="/admin.css" rel="stylesheet">
+    <link href="/list.css" rel="stylesheet">
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script type="text/x-mathjax-config">
+     MathJax.Hub.Config({
+       tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+     });
+    </script>
+    <script crossorigin="anonymous" integrity=
+            "sha384-Ra6zh6uYMmH5ydwCqqMoykyf1T/+ZcnOQfFPhDrp2kI4OIxadnhsvvA2vv9A7xYv" src=
+            "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+            type="text/javascript"></script>
+  </head>
+
+  <body>
+    <h1>SRFI 125: Intermediate hash tables</h1>
+    <p class="authors">by John Cowan, Will Clinger</p>
+    <p class="status">status: <em>final</em> (2015/5/28)</p><span class="see-also">See also <a href="/srfi-69/">SRFI 69: Basic hash tables</a> and <a href="/srfi-126/">SRFI 126: R6RS-based hashtables</a>.</span>
+
+    <ul class="info">
+      <li><a href="srfi-125.html">The SRFI Document</a></li>
+      <li><a href="https://srfi-email.schemers.org/srfi-125/">Discussion Archive</a></li>
+      <li><a href="https://github.com/scheme-requests-for-implementation/srfi-125">Git repo (on Github)</a></li>
+      <li>
+        <a href="mailto:srfi-125@srfi.schemers.org">srfi-125@<span class="antispam">nospam</span>srfi.schemers.org (subscribers only)</a></li>
+      <li>
+        <form method="POST" action="https://www.simplelists.com/subscribe.php">
+          <div class="title">Subscribe to srfi-125 mailing list</div>
+          <input name="email"
+                 placeholder="email address"
+                 tabindex="1"
+                 type="email" >
+          <input name="name"
+                 placeholder="full name"
+                 tabindex="2"
+                 type="text" >
+          <p>
+            <input id="sub-digest"
+                   name="digest"
+                   tabindex="3"
+                   type="checkbox"
+                   value="digest" >
+            <label for="sub-digest">daily digest?</label></p>
+          <input class="submit"
+                 name="submit"
+                 tabindex="4"
+                 type="submit"
+                 value="Subscribe to srfi-125" >
+          <input type="hidden" name="action" value="subscribe">
+          <input type="hidden" name="list" value="srfi-125@srfi.schemers.org"></form></li>
+      <li>
+        <form method="POST" action="https://www.simplelists.com/subscribe.php">
+          <p class="title">Unsubscribe from srfi-125 mailing list</p>
+          <input name="email"
+                 placeholder="email address"
+                 tabindex="5"
+                 type="email" >
+          <input class="submit"
+                 name="submit"
+                 tabindex="6"
+                 type="submit"
+                 value="Unsubscribe from srfi-125" >
+          <input name="action"
+                 type="hidden"
+                 value="unsubscribe" >
+          <input name="list"
+                 type="hidden"
+                 value="srfi-125@srfi.schemers.org"></form></li></ul>
+    <h2>Abstract</h2>      <p>This SRFI defines an interface to hash tables,
+      which are widely recognized as a fundamental data structure for a wide
+      variety of applications. A hash table is a data structure that:
+      <ul>
+        <li>Is disjoint from all other types.
+        <li>
+          Provides a mapping from objects known as
+          <em>keys</em> to corresponding objects known as
+          <em>values</em>.
+          <ul>
+            <li>Keys may be any Scheme objects in some
+            kinds of hash tables, but are restricted in other kinds.
+            <li>Values may be any Scheme objects.
+          </ul>
+        <li>Has no intrinsic order for the key-value
+        <em>associations</em> it contains.
+        <li>Provides an <em>equality predicate</em>
+        which defines when a proposed key is the same as an existing key. No
+        table may contain more than one value for a given key.
+        <li>Provides a <em>hash function</em> which maps
+        a candidate key into a non-negative exact integer.
+        <li>Supports mutation as the primary means of
+        setting the contents of a table.
+        <li>Provides key lookup and destructive update
+        in (expected) amortized constant time, provided a satisfactory hash
+        function is available.
+        <li>Does not guarantee that whole-table
+        operations work in the presence of concurrent mutation of the whole
+        hash table (values may be safely mutated).
+      </ul></body></html>
