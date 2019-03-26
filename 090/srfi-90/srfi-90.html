@@ -1,0 +1,302 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 90: Extensible hash table constructor</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/srfi.css" type="text/css" />
+  </head>
+
+  <body>
+
+<H1>Title</H1>
+
+Extensible hash table constructor
+
+<H1>Author</H1>
+
+Marc Feeley
+
+<H1>Status</H1>
+
+This SRFI is currently in ``final'' status.  To see an explanation of
+each status that a SRFI can hold, see <A
+HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+
+To provide input on this SRFI, please <A
+HREF="mailto:srfi minus 90 at srfi dot schemers dot org">mail to
+<code>&lt;srfi minus 90 at srfi dot schemers dot org&gt;</code></A>.  See <A
+HREF="../srfi-list-subscribe.html">instructions here</A> to subscribe to
+the list.  You can access previous messages via <A
+HREF="mail-archive/maillist.html">the archive of the mailing list</A>.
+
+
+<P><UL>
+<LI>Received: 2006/04/01</LI>
+<LI>Draft: 2006/04/12 - 2006/06/11</LI>
+<LI>Revised: 2007/03/28</LI>
+<LI>Final: 2007/07/10</LI>
+</UL>
+
+<H1>Abstract</H1>
+
+<P>
+This SRFI specifies the procedure <TT>make-table</TT>, a hash table
+constructor compatible with <a href="http://srfi.schemers.org/srfi-69/">SRFI 69
+(Basic hash tables)</a>.  The procedure <TT>make-table</TT>
+allows various parameters of the hash
+table to be specified with optional named parameters when it is
+constructed.  These parameters are: the initial size, the minimum and
+maximum load factor, the key equivalence function, the key hashing
+function, whether the references to the keys are weak, and similarly
+for the values.  By using optional named parameters, as specified in
+<a href="http://srfi.schemers.org/srfi-89/">SRFI 89 (Optional positional and named parameters)</a>, the constructor's API can be easily
+extended in a backward compatible way by other SRFIs and Scheme
+implementations.
+<P>
+
+<H1>Rationale</H1>
+
+<P>
+SRFI 69 specifies ``basic hash tables''.  It provides the procedure
+<TT>make-hash-table</TT> to construct hash tables, and a set of
+procedures to operate on hash tables.
+</P>
+
+<P>
+SRFI 69's <TT>make-hash-table</TT> accepts two optional positional
+parameters: a procedure to test whether two keys are equal and a
+procedure to hash keys.  There are several other hash table
+implementations (in Scheme and other languages) which allow other
+aspects of the hash table to be specified when the hash table is
+constructed, mainly to improve performance.  For instance:
+</P>
+
+<OL>
+
+<LI>
+<STRONG>The initial size of the hash table</STRONG>.  This parameter
+is useful to reduce the cost of resizing the hash table when it is
+known that the hash table will contain many keys.  Even though
+SRFI 69 does not provide a <I>size</I> parameter, the implementation
+in SRFI 69 handles the third optional positional parameter as a
+<I>size</I> parameter.
+
+<LI>
+<STRONG>The minimum and maximum load of the hash table</STRONG>.
+These parameters are useful to control the amount of key collisions,
+which affects performance of hash table lookup, insertion, and
+resizing.  The load is a measure of space efficiency.  It is the space
+used by the (active) key/value associations divided by the total space
+used by the hash table.  A load close to 0 offers fast lookup and
+insertion operations, but is not space efficient.  A load close to 1
+is very space efficient, but operations are slow.  The implementation
+can dynamically resize the hash table to keep the load roughly between
+the minimum and maximum load (the load may not be exactly within the
+bounds due to implementation constraints, such as keeping at least one
+free entry in the hash table and requiring the size of the table to be
+a prime number).
+
+<LI>
+<STRONG>The ``strength'' of references to the keys and
+values</STRONG>.  Some runtime systems support two types of object
+references: <I>weak</I> references and <I>strong</I> references.  When
+the garbage collector determines that the only references to an object
+are weak, it can reclaim that object.  In the case of hash tables, if
+the keys are considered to be weak references then the garbage
+collector can reclaim the key and that entry of the hash table if the
+key is only referred to with weak references.  This feature is
+particularly useful with <TT>eq?</TT> hash tables to attach
+auxiliary information to objects without affecting the liveness of
+these objects (for example serial numbers and access mutexes).
+Similarly, if the values are considered to be weak references then the
+garbage collector can reclaim the value and that entry of the hash
+table if the value is only referred to with weak references.
+
+</OL>
+
+<P>
+These parameters have reasonable implementation
+dependent default values:
+</P>
+
+<OL>
+
+<LI>
+<STRONG>Initial size:</STRONG> 0 or a small number
+
+<LI>
+<STRONG>Minimum load:</STRONG> 0.5
+
+<LI>
+<STRONG>Maximum load:</STRONG> 0.8
+
+<LI>
+<STRONG>Key reference weakness:</STRONG> false
+
+<LI>
+<STRONG>Value reference weakness:</STRONG> false
+
+</OL>
+
+<P>
+Given that there are several parameters and that they all have
+reasonable default values, it is appropriate to use optional named
+parameters to pass them to the constructor.  This makes it possible
+for other SRFIs and Scheme implementations to extended the API in a
+backward compatible way.
+</P>
+
+<H1>Specification</H1>
+
+<P>
+The <TT>make-table</TT> procedure accepts optional named
+parameters as though it was defined using the
+<a href="http://srfi.schemers.org/srfi-89/">SRFI 89
+(Optional positional and named parameters)</a> <TT>define*</TT> form
+like this:
+</P>
+
+<PRE>
+    (define* (make-table
+              (test:        test        equal?)
+              (hash:        hash        <I>H</I>)
+              (size:        size        <I>S</I>)
+              (min-load:    min-load    <I>MINL</I>)
+              (max-load:    max-load    <I>MAXL</I>)
+              (weak-keys:   weak-keys   #f)
+              (weak-values: weak-values #f))
+      ...)
+</PRE>
+
+<P>
+The default values <I>S</I>, <I>MINL</I>, and <I>MAXL</I> are
+implementation dependent.  The default value <I>H</I> is also
+implementation dependent but it must be consistent with the
+<I>test</I> parameter (i.e. <TT>(test X Y)</TT> implies <TT>(= (hash X)
+(hash Y))</TT>).  If supplied explicitly the <I>test</I>
+parameter must be a two-parameter equivalence procedure, the
+<I>hash</I> parameter must be a one-parameter hash function
+consistent with <I>test</I>, the <I>size</I> parameter
+must be a nonnegative exact integer, and the <I>min-load</I>
+and <I>max-load</I> parameters must be real numbers in the
+range 0 to 1 and <I>min-load</I> must be less than <I>max-load</I>.
+</P>
+
+<P>
+The parameters <I>size</I>, <I>min-load</I>, <I>max-load</I>,
+<I>weak-keys</I> and <I>weak-values</I> provide information that can
+be useful to improve the performance of the runtime system.  However,
+the implementation can choose to ignore any of these parameters if
+they have no meaning for the runtime system.  In other words these are
+purely advisory parameters.
+</P>
+
+<PRE>
+    (define t1 (make-table))
+
+    (define t2 (make-table size: 1000))
+
+    (define t3 (make-table hash: string-length))
+
+    (define t4 (make-table test: eq? weak-keys: #t))
+
+    (define obj2sn (make-table test: eq? weak-keys: #t))
+    (define sn2obj (make-table test: equal? weak-values: #t))
+    (define last-sn 0)
+
+    (define (object-&#62;serial-number obj)
+      (or (hash-table-ref/default obj2sn obj #f)
+          (let ((sn (+ last-sn 1)))
+            (set! last-sn sn)
+            (hash-table-set! obj2sn obj sn)
+            (hash-table-set! sn2obj sn obj)
+            sn)))
+
+    (define (serial-number-&#62;object sn)
+      (hash-table-ref/default sn2obj sn #f))
+
+    (define obj1 (list 1 11))
+    (define obj2 (list 2 22))
+    (define obj3 (list 3 33))
+
+    (object-&#62;serial-number obj1)  ==&#62;  1
+    (object-&#62;serial-number obj2)  ==&#62;  2
+    (object-&#62;serial-number obj1)  ==&#62;  1
+
+    (set! obj2 'void)
+
+    (object-&#62;serial-number obj3)  ==&#62;  3
+    (serial-number-&#62;object 1)     ==&#62;  (1 11)
+    (serial-number-&#62;object 2)     ==&#62;  (2 22) or #f
+</PRE>
+
+<H1>Implementation</H1>
+
+<P>
+The following implementation requires <a
+href="http://srfi.schemers.org/srfi-69/">SRFI 69 (Basic hash
+tables)</a> and <a href="http://srfi.schemers.org/srfi-89/">SRFI 89
+(Optional positional and named parameters)</a>.  It defines the
+<TT>make-table</TT> procedure to accept its parameters using
+optional named parameters and passes them to <TT>make-hash-table</TT>:
+</P>
+
+<PRE>
+(define make-table
+  (let ((absent (list 'absent)))
+    (lambda* ((test:        test        absent)
+              (hash:        hash        absent)
+              (size:        size        0)
+              (min-load:    min-load    0)
+              (max-load:    max-load    1)
+              (weak-keys:   weak-keys   #f)
+              (weak-values: weak-values #f))
+      (cond ((eq? test absent)
+             (if (eq? hash absent)
+                 (make-hash-table)
+                 (make-hash-table equal? hash)))
+            ((eq? hash absent)
+             (make-hash-table test))
+            (else
+             (make-hash-table test hash))))))
+</PRE>
+
+<P>
+Note that the implementation conforms to this SRFI even though it
+ignores the parameters <I>size</I>, <I>min-load</I>, <I>max-load</I>,
+<I>weak-keys</I> and <I>weak-values</I>.  A more complete treatment of
+these parameters would require implementation dependent changes to the
+runtime system.
+</P>
+
+<h1>Copyright</h1>
+
+Copyright (C) Marc Feeley (2006). All Rights Reserved.
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+<p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+<hr>
+
+<address>
+  Editor: <a href="mailto:srfi-editors at srfi dot schemers dot org">Donovan Kolbly</a>
+</address>
+
+</body>
+</html>
