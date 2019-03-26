@@ -1,0 +1,114 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 3.2//EN">
+<html>
+  <head>
+    <title>Permitting and Supporting Extended Character Sets</title>
+    <link href="/admin.css" rel="stylesheet">
+    <link href="/list.css" rel="stylesheet">
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script type="text/x-mathjax-config">
+     MathJax.Hub.Config({
+       tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+     });
+    </script>
+    <script crossorigin="anonymous" integrity=
+            "sha384-Ra6zh6uYMmH5ydwCqqMoykyf1T/+ZcnOQfFPhDrp2kI4OIxadnhsvvA2vv9A7xYv" src=
+            "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+            type="text/javascript"></script>
+  </head>
+
+  <body>
+    <h1>SRFI 52: Permitting and Supporting Extended Character Sets</h1>
+    <p class="authors">by Thomas Lord (lord@emf.net aka lord@gnu.org)</p>
+    <p class="status">status: <em>withdrawn</em> (2004/06/17)</p>
+
+    <ul class="info">
+      <li><a href="srfi-52.html">The SRFI Document</a></li>
+      <li><a href="https://srfi-email.schemers.org/srfi-52/">Discussion Archive</a></li>
+      <li><a href="https://github.com/scheme-requests-for-implementation/srfi-52">Git repo (on Github)</a></li>
+      <li>
+        <a href="mailto:srfi-52@srfi.schemers.org">srfi-52@<span class="antispam">nospam</span>srfi.schemers.org (subscribers only)</a></li>
+      <li>
+        <form method="POST" action="https://www.simplelists.com/subscribe.php">
+          <div class="title">Subscribe to srfi-52 mailing list</div>
+          <input name="email"
+                 placeholder="email address"
+                 tabindex="1"
+                 type="email" >
+          <input name="name"
+                 placeholder="full name"
+                 tabindex="2"
+                 type="text" >
+          <p>
+            <input id="sub-digest"
+                   name="digest"
+                   tabindex="3"
+                   type="checkbox"
+                   value="digest" >
+            <label for="sub-digest">daily digest?</label></p>
+          <input class="submit"
+                 name="submit"
+                 tabindex="4"
+                 type="submit"
+                 value="Subscribe to srfi-52" >
+          <input type="hidden" name="action" value="subscribe">
+          <input type="hidden" name="list" value="srfi-52@srfi.schemers.org"></form></li>
+      <li>
+        <form method="POST" action="https://www.simplelists.com/subscribe.php">
+          <p class="title">Unsubscribe from srfi-52 mailing list</p>
+          <input name="email"
+                 placeholder="email address"
+                 tabindex="5"
+                 type="email" >
+          <input class="submit"
+                 name="submit"
+                 tabindex="6"
+                 type="submit"
+                 value="Unsubscribe from srfi-52" >
+          <input name="action"
+                 type="hidden"
+                 value="unsubscribe" >
+          <input name="list"
+                 type="hidden"
+                 value="srfi-52@srfi.schemers.org"></form></li></ul>
+    <h2>Abstract</h2>      <p>This SRFI describes how to modify the
+      <i>Revised Report</i> (<a href=
+      "http://www.schemers.org/Documents/Standards/R5RS/">R5RS</a>) in order to
+      enable conforming implementations to use an extended character set such
+      as (but not limited to) <a href=
+      "http://www.unicode.org">Unicode</a>.
+      <p>Changes to some requirements of the report are
+      recommended. Currently, the <i>Revised Report</i> contains requirements
+      which are difficult or impossible to satisfy with some extended character
+      sets.
+      <p>New required procedures are proposed,
+      specified, and included in the reference implementation. These procedures
+      enable portable Scheme programs to manipulate Scheme source texts and
+      source data accurately, even in implementations using extended character
+      sets.
+      <p>This SRFI concludes with some suggestions for
+      implementors interested in providing good Unicode support, using these
+      suggestions to illustrate how the proposed changes to the <i>Revised
+      Report</i> can "play out" in Unicode-based Scheme.
+      <p>This SRFI does <b>not</b> attempt to provide a
+      comprehensive library for global text processing. For example, one issue
+      in global text processing is the need for linguistically-sensitive,
+      locale-sensitive procedures for sorting strings. Such procedures are
+      beyond the scope of this SRFI. On the other hand, by making Scheme
+      compatible with extended character sets, this SRFI is a step in the
+      direction of permitting global text processing standard libraries to be
+      developed in a form portable across all conforming
+      implementations.
+      <p>This SRFI does <b>not</b> propose that
+      implementations be required to support Unicode or any other extended
+      character set. It does not specify a representation for Unicode
+      characters or strings. It <b>does</b> revise the specifications of the
+      report so that <code>char?</code> values <i>may be</i> Unicode (or other)
+      characters.
+      <p>The reference implementation included should
+      prove to be easily ported to and effective for all ASCII-only
+      implementations and for many implementations using an 8-bit character set
+      which is an extension of ASCII (it will require very minor modifications
+      for each particular implementation). Other implementations may need to
+      use a different implementation.</body></html>
