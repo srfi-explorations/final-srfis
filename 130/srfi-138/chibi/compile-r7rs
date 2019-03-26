@@ -1,0 +1,46 @@
+#! /bin/sh
+
+set -e
+
+if [ -n "$COMPILE_R7RS" -a "$0" != "$COMPILE_R7RS" ]; then
+    exec "$COMPILE_R7RS" "$@"
+fi
+
+outfile=
+cmdline=chibi-scheme
+
+while getopts :A:D:I:o: name
+do
+    case $name in
+	A) cmdline="$cmdline -A $OPTARG";;
+	D) cmdline="$cmdline -D $OPTARG";;
+	I) cmdline="$cmdline -I $OPTARG";;
+	o) outfile="$OPTARG";;
+	:) printf "%s: error: argument missing after ‘-%s’\n" $0 $OPTARG
+	   exit 2;;
+	?) printf "%s: error: unrecognized command line option ‘-%s’\n" $0 $OPTARG
+	exit 2;;
+    esac
+done
+
+shift $(($OPTIND - 1))
+
+if [ -z "$1" ]; then
+   exit 0
+fi
+
+if [ -z "$outfile" ]; then
+    outfile=$(basename -- "$1" .scm)
+fi;
+
+cat <<EOF >"$outfile"
+#! /bin/sh
+#|
+$cmdline -- "\$0" "\$@"
+exit \$?
+|#
+EOF
+
+cat "$1" >>"$outfile"
+
+chmod a+x "$outfile"
