@@ -1,0 +1,415 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html><head>
+<title>SRFI 95: Sorting and Merging</title>
+</head>
+<body>
+
+<H1>Title</H1>
+
+Sorting and Merging
+
+<H1>Author</H1>
+
+Aubrey Jaffer
+
+<h1>Status</h1>
+
+This SRFI is currently in ``draft'' status.  To see an explanation of
+each status that a SRFI can hold, see 
+<A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+
+To provide input on this SRFI, please 
+<A HREF="mailto:srfi-95@srfi.schemers.org">mail to
+<code>&lt;srfi-95@srfi.schemers.org&gt;</code></A>.  See 
+<A HREF="../../srfi-list-subscribe.html">instructions here</A> to subscribe to
+the list.  You can access previous messages via 
+<A HREF="mail-archive/maillist.html">the archive of the mailing list</A>.
+
+
+<P><UL>
+
+<LI>Received: 2006/10/11</LI>
+<LI>Draft: 2006/10/17 - 2006/12/16</LI>
+</UL>
+
+<h1>Abstract</h1>
+
+Sorting and Merging are useful operations deserving a common API.
+<p>
+
+<h1>Issues</h1>
+
+<ul>
+
+<li> It has been suggested that the algorithms be required to call
+     <var>key</var> arguments no more than once per element.  Doing so
+     requires that additional storage be allocated, invalidating the
+     allocation limits of <code>sort!</code> and <code>merge!</code>.
+<p>
+<li> These procedures are stable only for <var>less?</var> predicates
+     which return <CODE>#f</CODE> when applied to identical arguments.
+     With non-empty sequence arguments <var>less?</var> can easily be
+     tested.  Should these procedures signal an error when given
+     reflexive predicates?  Should they silently replace
+     <var>less?</var> with
+
+<pre>(lambda (<var>a</var> <var>b</var>) (not (<var>less?</var> <var>b</var> <var>a</var>)))</pre>
+<p>
+</ul>
+
+<h1>Rationale</h1>
+
+When <a href="http://srfi.schemers.org/srfi-32/srfi-32.html">SRFI 32 Sort Libraries</a>
+was withdrawn, it had 28 procedures for what should have been a
+clean, simple interface.  These 28 arose for several reasons:
+
+<ul>
+
+<li> List and Vector versions were separated, even though Scheme has
+     manifest types which eliminate any ambiguity as to the caller's
+     intentions.
+
+<li> Four varieties of algorithms were provided (quick, heap, insert,
+     merge) even though quick, heap, and insert sorts have no
+     significant advantage over merge-sort.
+
+<li> Sort and stable-sort varieties were included, even though an
+     unstable sort has no performance advantage.
+
+<li> Four delete-neighbor-dups procedures were included.
+
+</ul>
+
+This SRFI's sort procedures operate on lists and arrays, which
+includes vectors; the merge procedures operate on lists.
+<p>
+<a href="http://srfi.schemers.org/srfi-32/srfi-32.html">SRFI 32</a>'s
+vector routines took optional arguments to restrict their operations
+to a subrange of the vector.  Subranges of
+<a href="http://srfi.schemers.org/srfi-63/srfi-63.html">SRFI 63</a>
+vectors and arrays (using <code>make-shared-array</code> or
+<a href="http://swiss.csail.mit.edu/~jaffer/SLIB">SLIB</a>'s
+<code>subarray</code>) eliminate the need for these optional
+arguments.
+<p>
+The present SRFI procedures take a single optional key procedure
+equivalent to Common-Lisp's <samp>&amp;KEY</samp> argument.
+<p>
+
+<h1>Specification</h1>
+
+These procedures are stable when called with predicates which return
+<CODE>#f</CODE> when applied to identical arguments.  These procedures have
+asymptotic time and space needs no larger than <I>O(N*log(N))</I>, where
+<I>N</I> is the sum of the lengths of the sequence arguments.
+
+
+<P>
+All five functions take an optional <VAR>key</VAR> argument corresponding
+to a CL-style <SAMP>`&#38;key'</SAMP> argument.  A <VAR>less?</VAR>  predicate with a
+<VAR>key</VAR> argument behaves like:
+
+
+
+<PRE>
+(lambda (x y) (<VAR>less?</VAR> (<VAR>key</VAR> x) (<VAR>key</VAR> y)))
+</PRE>
+
+<P>
+The <SAMP>`!'</SAMP> variants sort in place; <CODE>sort!</CODE> returns its
+<VAR>sequence</VAR> argument.
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>sorted?</B> <I>sequence less?</I>
+<DD>
+<DT><U>Function:</U> <B>sorted?</B> <I>sequence less? key</I>
+<DD>
+Returns <CODE>#t</CODE> when the sequence argument is in non-decreasing
+order according to <VAR>less?</VAR> (that is, there is no adjacent pair
+<CODE>... x y ...</CODE> for which <CODE>(less? y x)</CODE>).
+
+
+<P>
+Returns <CODE>#f</CODE> when the sequence contains at least one out-of-order
+pair.  It is an error if the sequence is not a list or array
+(including vectors and strings).
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>merge</B> <I>list1 list2 less?</I>
+<DD>
+<DT><U>Function:</U> <B>merge</B> <I>list1 list2 less? key</I>
+<DD>
+Merges two sorted lists, returning a freshly allocated list as its
+result.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>merge!</B> <I>list1 list2 less?</I>
+<DD>
+<DT><U>Function:</U> <B>merge!</B> <I>list1 list2 less? key</I>
+<DD>
+Merges two sorted lists, re-using the pairs of <VAR>list1</VAR> and
+<VAR>list2</VAR> to build the result.  If <CODE>merge!</CODE> is compiled, then
+no new pairs will be allocated.  The first pair of the result will be
+either the first pair of <VAR>list1</VAR> or the first pair of <VAR>list2</VAR>.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>sort</B> <I>sequence less?</I>
+<DD>
+<DT><U>Function:</U> <B>sort</B> <I>sequence less? key</I>
+<DD>
+Accepts a list or array (including vectors and strings) for
+<VAR>sequence</VAR>; and returns a completely new sequence which is sorted
+according to <VAR>less?</VAR>.  The returned sequence is the same type as
+the argument <VAR>sequence</VAR>.  Given valid arguments, it is always the
+case that:
+
+
+
+<PRE>
+(sorted? (sort <VAR>sequence</VAR> <VAR>less?</VAR>) <VAR>less?</VAR>) => #t
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>Function:</U> <B>sort!</B> <I>sequence less?</I>
+<DD><A NAME="IDX1438"></A>
+<DT><U>Function:</U> <B>sort!</B> <I>sequence less? key</I>
+<DD><A NAME="IDX1439"></A>
+Returns <VAR>sequence</VAR> which has been mutated to order its elements
+according to <VAR>less?</VAR>.  If the argument <VAR>sequence</VAR> is a list
+and <CODE>sort!</CODE> is compiled, then no new pairs will be allocated.  If
+the argument <VAR>sequence</VAR> is an array (including vectors and
+strings), then the sorted elements are returned in the array
+<VAR>sequence</VAR>.
+</DL>
+
+
+<h1>Implementation</h1>
+
+<a href="http://cvs.savannah.gnu.org/viewcvs/slib/slib/sort.scm?view=markup">slib/sort.scm</a>
+implements procedures for R4RS or R5RS compliant Scheme
+implementations with arrays as implemented by
+<a href="http://savannah.gnu.org/cgi-bin/viewcvs/slib/slib/array.scm?rev=HEAD&amp;content-type=text/vnd.viewcvs-markup">slib/array.scm</a> or
+<a href="http://srfi.schemers.org/srfi-63/srfi-63.html">SRFI 63</a>.
+<p>
+<pre>
+;;; "sort.scm" Defines: sorted?, merge, merge!, sort, sort!
+;;; Author : Richard A. O'Keefe (based on Prolog code by D.H.D.Warren)
+;;;
+;;; This code is in the public domain.
+
+;;; Updated: 11 June 1991
+;;; Modified for scheme library: Aubrey Jaffer 19 Sept. 1991
+;;; Updated: 19 June 1995
+;;; (sort, sort!, sorted?): Generalized to strings by jaffer: 2003-09-09
+;;; (sort, sort!, sorted?): Generalized to arrays by jaffer: 2003-10-04
+;;; jaffer: 2006-10-08:
+;;; (sort, sort!, sorted?, merge, merge!): Added optional KEY argument.
+
+(require 'array)
+
+(define (rank-1-array-&gt;list array)
+  (define dimensions (array-dimensions array))
+  (do ((idx (+ -1 (car dimensions)) (+ -1 idx))
+       (lst '() (cons (array-ref array idx) lst)))
+      ((&lt; idx 0) lst)))
+
+(define (sort:make-predicate caller less? opt-key)
+  (case (length opt-key)
+    ((0) less?)
+    ((1) (let ((key (car opt-key)))
+           (lambda (a b) (less? (key a) (key b)))))
+    (else (slib:error caller 'too-many-args (cdr opt-key)))))
+
+;;; (sorted? sequence less?)
+;;; is true when sequence is a list (x0 x1 ... xm) or a vector #(x0 ... xm)
+;;; such that for all 1 &lt;= i &lt;= m,
+;;;     (not (less? (list-ref list i) (list-ref list (- i 1)))).
+;@
+(define (sorted? seq less? . opt-key)
+  (set! less? (sort:make-predicate 'sorted? less? opt-key))
+  (cond ((null? seq) #t)
+        ((array? seq)
+         (let ((dims (array-dimensions seq)))
+           (define dimax (+ -1 (car dims)))
+           (or (&lt;= dimax 0)
+               (do ((i 1 (+ i 1)))
+                   ((or (= i dimax)
+                        (less? (array-ref seq i)
+                               (array-ref seq (- i 1))))
+                    (= i dimax))))))
+        (else
+         (let loop ((last (car seq)) (next (cdr seq)))
+           (or (null? next)
+               (and (not (less? (car next) last))
+                    (loop (car next) (cdr next))))))))
+
+;;; (merge a b less?)
+;;; takes two lists a and b such that (sorted? a less?) and (sorted? b less?)
+;;; and returns a new list in which the elements of a and b have been stably
+;;; interleaved so that (sorted? (merge a b less?) less?).
+;;; Note:  this does _not_ accept arrays.  See below.
+;@
+(define (merge a b less? . opt-key)
+  (set! less? (sort:make-predicate 'merge less? opt-key))
+  (cond ((null? a) b)
+        ((null? b) a)
+        (else (let loop ((x (car a)) (a (cdr a)) (y (car b)) (b (cdr b)))
+                ;; The loop handles the merging of non-empty lists.  It has
+                ;; been written this way to save testing and car/cdring.
+                (if (less? y x)
+                    (if (null? b)
+                        (cons y (cons x a))
+                        (cons y (loop x a (car b) (cdr b))))
+                    ;; x &lt;= y
+                    (if (null? a)
+                        (cons x (cons y b))
+                        (cons x (loop (car a) (cdr a) y b))))))))
+
+(define (sort:merge! a b less?)
+  (define (loop r a b)
+    (if (less? (car b) (car a))
+        (begin
+          (set-cdr! r b)
+          (if (null? (cdr b))
+              (set-cdr! b a)
+              (loop b a (cdr b))))
+        ;; (car a) &lt;= (car b)
+        (begin
+          (set-cdr! r a)
+          (if (null? (cdr a))
+              (set-cdr! a b)
+              (loop a (cdr a) b)))))
+  (cond ((null? a) b)
+        ((null? b) a)
+        ((less? (car b) (car a))
+         (if (null? (cdr b))
+             (set-cdr! b a)
+             (loop b a (cdr b)))
+         b)
+        (else                           ; (car a) &lt;= (car b)
+         (if (null? (cdr a))
+             (set-cdr! a b)
+             (loop a (cdr a) b))
+         a)))
+
+;;; (merge! a b less?)
+;;; takes two sorted lists a and b and smashes their cdr fields to form a
+;;; single sorted list including the elements of both.
+;;; Note:  this does _not_ accept arrays.
+;@
+(define (merge! a b less? . opt-key)
+  (sort:merge! a b (sort:make-predicate 'merge! less? opt-key)))
+
+(define (sort:sort! seq less?)
+  (define (step n)
+    (cond ((&gt; n 2)
+           (let* ((j (quotient n 2))
+                  (a (step j))
+                  (k (- n j))
+                  (b (step k)))
+             (sort:merge! a b less?)))
+          ((= n 2)
+           (let ((x (car seq))
+                 (y (cadr seq))
+                 (p seq))
+             (set! seq (cddr seq))
+             (cond ((less? y x)
+                    (set-car! p y)
+                    (set-car! (cdr p) x)))
+             (set-cdr! (cdr p) '())
+             p))
+          ((= n 1)
+           (let ((p seq))
+             (set! seq (cdr seq))
+             (set-cdr! p '())
+             p))
+          (else
+           '())))
+  (cond ((array? seq)
+         (let ((dims (array-dimensions seq))
+               (vec seq))
+           (set! seq (rank-1-array-&gt;list seq))
+           (do ((p (step (car dims)) (cdr p))
+                (i 0 (+ i 1)))
+               ((null? p) vec)
+             (array-set! vec (car p) i))))
+        (else ;; otherwise, assume it is a list
+         (step (length seq)))))
+
+;;; (sort! sequence less?)
+;;; sorts the list, array, or string sequence destructively.  It uses
+;;; a version of merge-sort invented, to the best of my knowledge, by
+;;; David H. D.  Warren, and first used in the DEC-10 Prolog system.
+;;; R. A. O'Keefe adapted it to work destructively in Scheme.
+;;; A. Jaffer modified to always return the original pair.
+;@
+(define (sort! seq less? . opt-key)
+  (define ret (sort:sort! seq (sort:make-predicate 'sort! less? opt-key)))
+  (if (not (eq? ret seq))
+      (do ((crt ret (cdr crt)))
+	  ((eq? (cdr crt) seq)
+	   (set-cdr! crt ret)
+	   (let ((scar (car seq)) (scdr (cdr seq)))
+	     (set-car! seq (car ret)) (set-cdr! seq (cdr ret))
+	     (set-car! ret scar) (set-cdr! ret scdr)))))
+  seq)
+
+;;; (sort sequence less?)
+;;; sorts a array, string, or list non-destructively.  It does this
+;;; by sorting a copy of the sequence.  My understanding is that the
+;;; Standard says that the result of append is always "newly
+;;; allocated" except for sharing structure with "the last argument",
+;;; so (append x '()) ought to be a standard way of copying a list x.
+;@
+(define (sort seq less? . opt-key)
+  (set! less? (sort:make-predicate 'sort less? opt-key))
+  (cond ((array? seq)
+         (let ((dimensions (array-dimensions seq)))
+           (define newra (apply make-array seq dimensions))
+           (do ((sorted (sort:sort! (rank-1-array-&gt;list seq) less?)
+                        (cdr sorted))
+                (i 0 (+ i 1)))
+               ((null? sorted) newra)
+             (array-set! newra (car sorted) i))))
+        (else (sort:sort! (append seq '()) less?))))
+</pre>
+
+
+<h1>Copyright</h1>
+Copyright (C) Aubrey Jaffer 2006. All Rights Reserved.
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+</p><p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+</p><p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+    </p><hr>
+    <address>Editor: <a href="mailto:srfi-editors@srfi.schemers.org">David Van Horn</a></address>
+  </body></html>
