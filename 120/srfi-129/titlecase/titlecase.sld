@@ -1,0 +1,7 @@
+(define-library (titlecase)
+  (import (scheme base))
+  (import (scheme char))
+  (export char-title-case? char-titlecase string-titlecase)
+  (include "titlemaps.scm")
+  (include "titlecase-impl.scm")
+)
