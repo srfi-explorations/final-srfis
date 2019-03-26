@@ -1,0 +1,4283 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html40/loose.dtd">
+<html><head>
+<title>SRFI 77: Preliminary Proposal for R6RS Arithmetic</title>
+<style type="text/css">
+  .add { color: red; }
+  .del { color: red; text-decoration: line-through; }
+  .sub { vertical-align: sub; text-size: tiny; }
+</style>
+</head>
+<body>
+
+<H1>Title</H1>
+
+Preliminary Proposal for R6RS Arithmetic
+
+<H1>Authors</H1>
+
+William D Clinger and Michael Sperber
+
+<H1>Status</H1>
+This SRFI is currently in ``draft'' status.  For an explanation of
+each status that a SRFI can hold, see 
+<A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.  You can
+access the discussion via <A HREF="mail-archive/maillist.html">the
+archive of the mailing list</A>.
+
+<UL>
+<LI>Received: 2005-10-05
+<LI>Draft: 2005-10-05 - 2005-12-03
+<LI>Draft extended: 2005-12-04 - 2006-02-02
+</UL>
+
+<blockquote style="background-color: #e8e8e8;">
+<p>
+   This SRFI is being submitted by members of the Scheme Language
+   Editor's Committee as part of the R6RS Scheme standardization
+   process.  The purpose of such ``R6RS SRFIs'' is to inform the
+   Scheme community of features and design ideas under consideration
+   by the editors and to allow the community to give the editors some
+   direct feedback that will be considered during the design process.
+</p>
+<p>
+   At the end of the discussion period, this SRFI will be withdrawn.
+   When the R6RS specification is finalized, the SRFI may be revised
+   to conform to the R6RS specification and then resubmitted with the
+   intent to finalize it.  This procedure aims to avoid the situation
+   where this SRFI is inconsistent with R6RS.  An inconsistency
+   between R6RS and this SRFI could confuse some users.  Moreover it
+   could pose implementation problems for R6RS compliant Scheme
+   systems that aim to support this SRFI.  Note that departures from
+   the SRFI specification by the Scheme Language Editor's Committee
+   may occur due to other design constraints, such as design
+   consistency with other features that are not under discussion as
+   SRFIs.
+</p>
+</blockquote>
+
+<h1>Table of contents</h1>
+
+    <ul>
+      <li><a href="#Abstract">Abstract</a></li>
+      <li><a href="#Issues">Issues</a></li>
+      <li><a href="#Rationale">Rationale</a></li>
+      <li><a href="#Specification">Specification</a>
+	<ul>
+	  <li><a href="#ExternalRepresentations">External Representations</a></li>
+	  <li><a href="#SafeUnsafeMode">Safe and Unsafe Mode</a></li>
+	  <li><a href="#EquivalenceOfObjects">Equivalence of
+	  Objects</a></li>
+	  <li><a href="#NumericalTypePredicates">Numerical Type
+	  Predicates</a></li>
+	  <li><a href="#GenericConversions">Generic
+	  Conversions</a></li>
+	  <li><a href="#NumericalIO">Numerical Input and
+	  Output</a></li>
+	  <li><a href="#integer-division">Integer Division</a></li>
+	  <li><a href="#Fixnums">Fixnums</a></li>
+	  <li><a href="#Flonums">Flonums</a></li>
+	  <li><a href="#FixnumFlonumConversions">Fixnum/Flonum
+	  Conversions</a></li>
+	  <li><a href="#exact">Exact Arithmetic</a></li>
+	  <li><a href="#inexact">Inexact Arithmetic</a></li>
+	  <li><a href="#r5rs-generic">R5RS-style Generic
+	  Arithmetic</a></li>
+	  <li><a href="#exact-generic">Generic Exact
+	  Arithmetic</a></li>
+	</ul>
+	</li>
+      <li><a href="#design-rationale">Design Rationale</a>
+	<ul>
+	  <li><a href="#LuciersProposal">Lucier's Proposal</a></li>
+	  <li><a href="#ComplexIssues">The Issues</a>
+	    <ul>
+	      <li><a href="#ComplexIssuesNumericalTypes">Numerical
+	      Types</a></li>
+	      <li><a href="#ComplexIssuesClosureProperties">Closure
+	      Properties</a></li>
+	      <li><a href="#ComplexIssuesRepresentationTypes">Representation Types</a></li>
+	      <li><a
+	      href="#ComplexIssuesRepresentationSpecificOperations">Representation-specific Operations</a></li>
+	      <li><a href="#ComplexIssuesFlowAnalysis">Flow
+	      Analysis</a></li>
+	      <li><a
+	      href="#ComplexIssuesFlowAnalysisProblems">Problems With
+	      Flow Analysis</a></li>
+	    </ul>
+	    </li>
+	  <li><a href="#Recommendations">Recommendations</a></li>
+	  <li><a href="#FlonumsReals">Flonums</a></li>
+	</ul>
+      </li>
+      <li><a href="#ReferenceImplementation">Reference Implementation</a></li>
+      <li><a href="#References">References</a></li>
+      <li><a href="#Acknowledgements">Acknowledgements</a></li>
+      <li><a href="#Copyright">Copyright</a></li>
+    </ul>
+
+
+<h1><a name="Abstract">Abstract</a></h1>
+
+<p>
+Scheme's arithmetic system was designed to allow a wide variety of
+implementations.  After many years of implementation experience,
+however, most implementations now fall into a small number of
+categories, and the benefits of continued experimentation no longer
+justify the confusion and portability problems that have resulted from
+giving implementations so much freedom in this area.  Moreover, the
+R5RS generic arithmetic is difficult to implement as efficiently as
+purely fixnum or purely flonum arithmetic.  (Fixnum arithmetic is
+typically limited-precision integer arithmetic implemented using the
+underlying machine's representation; flonum arithmetic is typically
+limited-precision floating-point arithmetic using the underlying
+machine's representation.)
+
+<P>
+This SRFI is an effort to extend and clarify the R5RS arithmetic to
+make it more portable, more comprehensive, and enable faster programs.
+
+<P>
+Furthermore, one of us (Sperber) has argued that Scheme's arithmetic
+requires radical overhaul.  The other (Clinger) agrees that revisions
+are needed.  This SRFI describes revisions that would satisfy both of
+us and states the choice between both of them as an issue to be
+resolved in the discussion period of this SRFI.  Whether these
+revisions qualify as radical is best left to the judgement of
+individual readers.
+
+<p>
+This SRFI proposes to revise section 6.2 ("Numbers") of R5RS by:
+</p>
+<ul>
+<li>requiring a Scheme implementation to provide the full tower,
+    including exact rationals of arbitrary precision, exact
+    rectangular complex numbers with rational real and imaginary
+    parts, and inexact real and complex arithmetic
+<li>defining fixnum arithmetic (parameterized by precision)
+<li>defining flonum arithmetic (inexactly)
+<li>defining new procedures for performing exact arithmetic
+<li>defining new procedures for performing inexact arithmetic
+<li>describing the external representation and semantics of
+    0.0, -0.0, infinities and NaNs for systems
+    that implement inexact real arithmetic using IEEE binary
+    floating point
+<li>changing the specification of <code>eqv?</code> to
+    behave more sensibly with inexact numbers
+<li>defining Scheme's real numbers to be the complex numbers
+    whose imaginary part is an exact zero
+<li>adding an external representation for inexact numbers
+    that expresses the precision of a binary floating point
+    representation
+<li>defining procedures for some new operations, including integer
+    division and bitwise operations
+    remainder on real numbers, 
+<li>restricting the domains of some R5RS procedures
+<li>clarifying the semantics of some R5RS procedures
+<li>possibly changing the semantics of some R5RS procedures
+</ul>
+
+
+<h1><a name="Issues">Issues</a></h1>
+
+<P>
+Members of the Scheme community are encouraged to express themselves
+on the following issues:
+</p>
+
+<ul>
+<li>Instead of requiring the full numeric tower, R6RS could
+    require only the fixnum/flonum base, and make the full tower
+    available as modules in the standard library.
+<li>The main problem with banishing the full tower to a library
+    is that <code>read</code>, <code>write</code>, and several
+    other procedures must know about the external representations
+    of all numbers.
+<li>Should a minimum precision be required for fixnums or flonums?
+<li>Should the range of a fixnum be restricted to a power of two?
+    To a two's complement range?
+<li>The fixnum operations provide efficient fixnums that "wrap."
+    However, they do not give efficient access to the hardware facilities
+    for carry and overflow.  This would be desirable to implement
+    efficient generic arithmetic on fixnums portably.  On the other hand,
+    there isn't much experience with formulating a portable interface to these
+    facilities.
+<li>
+  The fixnum operators wrap on overflow, i.e., they perform modular
+  arithmetic.  For many purposes, it would be better
+  for them to signal an error in safe mode.  Since the modulus is
+  implementation-dependent, portable code cannot generally take advantage
+  of the wrapping.  Instead, applications are likely to use fixnums simply
+  to avoid the overhead of generic arithmetic under the assumption that
+  all quantities computed fit in the fixnum range, and feedback if this
+  turns out not to be the case will be valuable.  On the other hand,
+  the wrapping semantics can also be useful, i.e., in the coding of a
+  practical implementation of bignums in terms of fixnums.  It may be
+  that we should consider including two sets of operators: <code>fx</code> operators
+  that signal an error upon overflow and <code>wfx</code> operators that wrap.
+<li>Should the binary fixnum/flonum operations allow other than
+    two arguments?
+<li>What are the semantics of "safe mode" and "unsafe mode"?
+    (This is a much larger question that R6RS should address.)
+<li>Should R6RS allow other inexact reals beside the flonums?
+    This draft does allow them, at the cost of some complications and
+    additions such as <code>real-&gt;flonum</code>.
+    (See the <a href="#design-rationale">Design Rationale</a>.)
+<li>Should the R5RS procedures for generic arithmetic (e.g. <code>+</code>)
+    remain in R6RS?  Here are five possible answers, phrased in
+    terms of the <code>+</code> procedure:
+    <ol>
+    <li><code>+</code> is not defined in R6RS.
+    <li><code>+</code> is defined to be a synonym for the <code>ex+</code>,
+        so its domain is restricted to exact arguments, and always
+        returns an exact result.
+    <li><code>+</code> is defined as the union of the <code>ex+</code>
+        and <code>in+</code> procedures, so all of its arguments are
+        required to have the same exactness, and the exactness of its
+        result is the same as the exactness of its arguments.
+    <li><code>+</code> is defined as in R5RS, but with the increased
+        portability provided by requiring the full numeric tower.
+        This alternative is described in the section 
+	<a href="#r5rs-generic">R5RS-style Generic Arithmetic</a>.
+    <li><code>+</code> is defined to return an exact result in all
+        cases, even if one or more of its arguments is inexact.
+        This alternative is described in the section 
+	<a href="#exact-generic">Generic Exact Arithmetic</a>.
+    </ol>
+    Will Clinger prefers the 4th possibility, Mike Sperber the 5th.
+<li>If R6RS does not adopt a R5RS-style model for the generic arithmetic,
+    should it still provide more R5RS-compatible generic arithmetic as
+    a library?
+<li>The external representations of 0.0, -0.0, infinities and NaNs
+    must be specified.  The notations used here are used
+    by several other languages, and have been adopted by several
+    implementations of Scheme, but other notations are possible.
+<li>The fixnum, flonum, and inexact arithmetic come with a full deck
+    of operations, including some that are defined in terms of
+    integers (such as 
+    <code>quotient+remainder</code>, <code>gcd</code> and <code>lcm</code>), and others that are easily abused
+    (such as <code>fxabs</code>).  Should these be pruned?
+<li>The R5RS says this:
+<blockquote>
+<P>
+<EM>Rationale:</EM>
+<CODE>Magnitude</CODE> is the same as <CODE>abs</CODE> for a real argument,
+but <CODE>abs</CODE> must be present in all implementations, whereas
+<CODE>magnitude</CODE> need only be present in implementations that support
+general complex numbers.
+</blockquote>
+    Given that this SRFI suggests requiring all implementations to
+    support the general complex numbers, should <code>abs</code> (and
+    <code>exabs</code> and <code>inabs</code>) be removed?
+<li>The <code>real?</code>, <code>rational?</code>, and <code>integer?</code> predicates must
+    return false for complex numbers with an imaginary part
+    of inexact zero, as non-realness is now contagious.
+    This causes possibly unexpected behavior: <SAMP>`(zero?
+    0+0.0i)'</SAMP> returns true despite <SAMP>`(integer?
+    0+0.0i)'</SAMP> returning false.
+    Possibly, new predicates <code>realistic?</code>,
+    <code>rationalistic?</code>, and <code>integral?</code> should be
+    added to say that a number can be coerced to the specified type
+    (and back) without loss.
+    (See the <a href="#design-rationale">Design Rationale</a>.)
+<li>Most Scheme implementations represent an inexact complex number as
+    a pair of two inexact reals, representing the real and imaginary
+    parts of the number, respectively.  Should R6RS mandate the
+    presence of such a representation (while allowing additional
+    alternative representations), thus allowing it to more
+    meaningfully discuss semantic issues such as branch cuts?
+<li>The <code>x|53</code> default for the mantissa width discriminates
+against implementations that default to unusually good representations,
+such as IEEE extended precision.  Are there any such implementations?
+Do we expect such implementations in the near future?
+<li>Should `<code>(floor +inf.0)</code>' return <code>+inf.0</code> or
+    signal an error instead?  (Similarly for <code>ceiling</code>,
+    <code>flfloor</code>, <code>infloor</code>, etc.)
+<li>The bitwise operations operate on exact integers only.  Should
+    they live in the section on exact arithmetic?  Should they carry
+    <code>ex</code> prefixes?  Or should they be extended to work
+    on inexact integers as well?
+<li>The division between regular procedures and library procedures is
+    somewhat arbitrary.
+</ul>
+
+<h1><a name="Rationale">Rationale</a></h1>
+
+<p>
+Most implementations of Scheme fall into
+one of the following categories:
+</p>
+<ul>
+<li>fixnums only (now rare except in toy implementations)
+<li>fixnums and flonums only
+<li>exact rationals and flonums only (no imaginary numbers)
+<li>the complete numeric tower
+</ul>
+Under R5RS, it is hard to write programs whose arithmetic
+is portable across the above categories, and it is unnecessarily
+difficult even to write programs whose arithmetic is portable
+between different implementations in the same category.
+
+<p>
+The portability problems can most easily be solved by requiring
+all implementations to support the full numeric tower.  To
+prevent that requirement from making Scheme substantially more
+difficult to implement, we provide a reference implementation
+that constructs the full numeric tower from a fixnum/flonum base.
+To ensure the portability of such reference implementations,
+the fixnum/flonum base must be described and (at least partially)
+standardized.
+</p>
+
+<p>
+Fixnum/flonum arithmetic is already supported by many systems,
+mainly for efficiency.  Standardization of fixnum/flonum
+arithmetic would increase the portability of code that uses it,
+but we cannot standardize the precision of fixnum/flonum arithmetic
+without making it inefficient on some systems, which would defeat
+its purpose.  We therefore propose to specify the syntax and much
+of the semantics of fixnum/flonum arithmetic, but to make the
+precision a parameter of the specification.
+</p>
+
+<p>
+Several details of R5RS are inconsistent or incomplete with
+respect to the IEEE standards for binary floating point arithmetic,
+which are generally used to implement Scheme's inexact real
+arithmetic.  Furthermore, some details of R5RS make it
+unnecessarily difficult to implement Scheme's arithmetic efficiently.
+</p>
+
+<P>
+This SRFI is incompatible with <a href="http://srfi.schemers.org/srfi-70/">SRFI 70</a> 
+<a href="#jaffer-2005">[Jaffer 2005]</a> in several ways, including:
+</p>
+<ul>
+<li>This SRFI defines a real number to be a complex number whose
+    imaginary part is an exact zero.  (See the <a
+    href="#design-rationale">Design Rationale</a> for a discussion.)
+<li>This SRFI regards <code>+nan.0</code> as a real number whose value is so
+    indeterminate that it might represent any real number within
+    the closed interval [<code>-inf.0</code>,<code>+inf.0</code>].
+</ul>
+Both of the above differences are motivated by <a
+href="#ComplexIssuesClosureProperties">closure properties</a> that
+make it easier for an implementation to generate efficient numerical
+code.
+
+<p>
+Moreover, unlike SRFI 70, this SRFI doesn't extend
+<code>quotient</code>, <code>remainder</code>, and <code>modulo</code>
+to real numbers, but instead provides additional operations
+<code>div</code> and <code>mod</code>, which are slightly more
+generally applicable and easier to specify.  It also does not extend
+the <code>gcd</code> and <code>lcm</code> to rational numbers.  
+
+<P>
+The sections on <a href="#Fixnums">Fixnums</a>, <a
+href="#Flonums">Flonums</a>, <a href="#exact">Exact Arithmetic</a>,
+and <a href="#inexact">Inexact Arithmetic</a> are new in the SRFI and
+not in SRFI 70.  Moreover, the section <a
+href="#exact-generic">Generic Exact Arithmetic</a> is also new here.
+This SRFI also omits SRFI 70's discussion of infinities and offers its
+own.
+
+<P>
+Other, more minor differences with SRFI 70 are highlighted in the
+hypertext.  (The sections mentioned in the previous paragraph are not
+marked up, as they would be (almost in the case of generic exact
+arithmetic) completely red.
+
+<P>
+This SRFI describes several alternative approaches to completely
+generic arithmetic.  The alternative described in the section <a
+href="#r5rs-generic">R5RS-style Generic Arithmetic</a> follows the
+essence of R5RS, with the advantage of historical continuity and
+contagiousness of inexact operations.  The alternative described in
+section <a href="#exact-generic">Generic Exact Arithmetic</a> has
+exactness be contagious, with the advantage of greater transparency
+and the validity of standard algebraic laws
+over the R5RS-style generic arithmetic.  The section describing
+generic exact
+arithmetic opens with a more detailed rationale.  Other alternatives
+build on the exact arithmetic described in section <a href="#exact">Exact Arithmetic</a>
+and the inexact arithmetic described in section <a href="#inexact">Inexact Arithmetic</a>.
+
+
+<h1><a name="Specification">Specification</a></h1>
+
+<P>
+We assume that Section 6.2.3 ("Implementation restrictions") of R5RS
+remains essentially as it stands.  The text of this SRFI describes the
+differences between the proposed additions and changes to R5RS and/or
+SRFI 70.
+
+<h2><a name="ExternalRepresentations">External Representations</a></h2>
+
+<p>
+This SRFI adds the following external representations to Scheme:
+</p>
+<ul>
+<li><code>+inf.0</code> represents the result of
+    <code>(/ 1.0 0.0)</code>
+<li><code>-inf.0</code> represents the result of
+    <code>(/ -1.0 0.0)</code>
+<li><code>+nan.0</code> represents the result of
+    <code>(/ 0.0 0.0)</code>, and may represent other NaNs as well.
+    (This SRFI does not require read/write invariance for NaNs.)
+<li>If <var>x</var> is an external representation of an inexact
+    real number according to R5RS, and <var>p</var> is a
+    sequence of 1 or more decimal digits, then
+    <var>x</var><code>|</code><var>p</var>
+    is an external representation that denotes the
+    best binary floating point approximation to <var>x</var>
+    using a <var>p</var>-bit significand.
+    For example, <code>1.1|53</code> is an external representation for the
+    best approximation to 1.1 in IEEE double precision.
+<li>If <var>x</var> is an external representation of an inexact
+    real number according to R5RS, then <var>x</var> by
+    itself should be regarded as equivalent to
+    <code><var>x</var><code>|</code>53</code>.
+</ul>
+
+<p>
+Implementations that use binary floating point representations
+of real numbers should represent <var>x</var><code>|</code><var>p</var>
+using a <var>p</var>-bit significand if practical, or by a greater
+precision if a <var>p</var>-bit significand is not practical, or
+by the largest available precision if <var>p</var> or more bits
+of significand is not practical within the implementation.
+</p>
+
+<BLOCKQUOTE>
+<p>
+<em>Note:</em>
+The precision of a significand should not be confused with the
+number of bits used to represent the significand.  In the IEEE
+floating point standards, for example, the significand's most
+significant bit is implicit in single and double precision but
+is explicit in extended precision.  Whether that bit is implicit
+or explicit does not affect the mathematical precision.
+In implementations that use binary floating point, the default
+precision can be calculated by calling the following procedure:
+</p>
+<p>
+<pre>
+    (define (precision)
+      (do ((n 0 (+ n 1))
+           (x 1.0 (/ x 2.0)))
+        ((= 1.0 (+ 1.0 x)) n)))
+</pre>
+</BLOCKQUOTE>
+
+<BLOCKQUOTE>
+<p>
+<em>Note:</em>
+When the underlying floating-point representation is IEEE double
+precision, the <code>|</code><var>p</var> suffix should not be omitted for all cases:
+Denormalized numbers have diminished precision, and therefore should
+carry a <code>|</code><var>p</var> suffix with the actual width of the signficand.
+</BLOCKQUOTE>
+
+<p>
+The <code>number-&gt;string</code> procedure is generalized
+over the R5RS version
+to support the <var>x</var><code>|</code><var>p</var> notation.
+</p>
+
+<p>
+To be consistent with this SRFI,
+the <code>write</code> procedure would be required to write
+inexact numbers in the external representation produced by
+<code>number-&gt;string</code> with one argument.
+</p>
+
+<p>
+    Implementations are not required to use floating-point
+    representations, but every implementation is required to
+    designate a subset of its inexact reals as flonums, and
+    to convert certain external representations into flonums.
+</p>
+
+<P>The R6RS section on the lexical structure of numerical tokens should read as as
+follows:
+</P>
+
+<BLOCKQUOTE>
+<P>
+The following rules for <code>&lt;num R&gt;</code>, <code>&lt;complex R&gt;</code>,
+<code>&lt;real R&gt;</code>, <code>&lt;ureal R&gt;</code>,
+<code>&lt;uinteger R&gt;</code>, and <code>&lt;prefix R&gt;</code> should be replicated for R = 2, 8, 10,
+and 16.  There are no rules for <code>&lt;decimal 2&gt;</code>, <code>&lt;decimal 8&gt;</code>, and
+<code>&lt;decimal 16&gt;</code>, which means that numbers containing decimal points
+or exponents or mantissa widths must be in decimal radix.
+
+<PRE>
+&lt;num R&gt;  --&gt; &lt;prefix R&gt; &lt;complex R&gt;
+&lt;complex R&gt; --&gt; &lt;real R&gt; | &lt;real R&gt; @ &lt;real R&gt;
+    | &lt;real R&gt; + &lt;ureal R&gt; i | &lt;real R&gt; - &lt;ureal R&gt; i
+    | &lt;real R&gt; + i | &lt;real R&gt; - i
+    | + &lt;ureal R&gt; i | - &lt;ureal R&gt; i | + i | - i
+&lt;real R&gt; --&gt; &lt;sign&gt; &lt;ureal R&gt;
+&lt;ureal R&gt;  --&gt;  &lt;uinteger R&gt;
+    |  &lt;uinteger R&gt; / &lt;uinteger R&gt;
+    |  &lt;decimal R&gt; &lt;mantissa width&gt;
+    |  inf.0 | nan.0
+&lt;decimal 10&gt;  --&gt;  &lt;uinteger 10&gt; &lt;suffix&gt;
+    |  . &lt;digit 10&gt;+ #* &lt;suffix&gt;
+    |  &lt;digit 10&gt;+ . &lt;digit 10&gt;* #* &lt;suffix&gt;
+    |  &lt;digit 10&gt;+ #* . #* &lt;suffix&gt;
+&lt;uinteger R&gt;  --&gt;  &lt;digit R&gt;+ #*
+&lt;prefix R&gt;  --&gt;  &lt;radix R&gt; &lt;exactness&gt;
+    |  &lt;exactness&gt; &lt;radix R&gt;
+
+&lt;suffix&gt;  --&gt;  &lt;empty&gt;
+    |  &lt;exponent marker&gt; &lt;sign&gt; &lt;digit 10&gt;+
+&lt;exponent marker&gt;  --&gt;  e  |  s  |  f  |  d  |  l
+&lt;mantissa width&gt; -&gt; &lt;empty&gt;
+    | | &lt;digit 10&gt;+
+&lt;sign&gt;  --&gt;  &lt;empty&gt;  |  +  |  -
+&lt;exactness&gt;  --&gt;  &lt;empty&gt;  |  #i  |  #e
+&lt;radix 2&gt;  --&gt;  #b
+&lt;radix 8&gt;  --&gt;  #o
+&lt;radix 10&gt;  --&gt;  &lt;empty&gt;  |  #d
+&lt;radix 16&gt;  --&gt;  #x
+&lt;digit 2&gt;  --&gt;  0  |  1
+&lt;digit 8&gt;  --&gt;  0  |  1  |  2  |  3  |  4  |  5  |  6  |  7
+&lt;digit 10&gt;  --&gt;  0  |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9
+&lt;digit 16&gt;  --&gt;  &lt;digit 10&gt;  |  a  |  b  |  c  |  d  |  e  |  f
+</PRE>
+</BLOCKQUOTE>
+
+<p>
+    If a <code>&lt;decimal 10&gt;</code> does not contain a non-empty <code>&lt;mantissa width&gt;</code>
+    and does not contain one of the exponent markers <code>s</code>, <code>f</code>, <code>d</code>, or <code>l</code>,
+    but does contain a decimal point or the exponent marker e, then
+    it is an external representation for a flonum.
+    Furthermore <code>inf.0</code>, <code>+inf.0</code>, <code>-inf.0</code>, <code>nan.0</code>, <code>+nan.0</code>, and <code>-nan.0</code> are
+    external representations for flonums.  Some or all of the other
+    external representations for inexact reals may also represent
+    flonums, but that is not required by this SRFI.
+</p>
+<p>
+    If a <code>&lt;decimal 10&gt;</code> contains a non-empty <code>&lt;mantissa width&gt;</code> or one
+    of the exponent markers <code>s</code>, <code>f</code>, <code>d</code>, or <code>l</code>, then it represents an
+    inexact number, but does not necessarily represent a flonum.
+    </p>
+
+
+
+
+<h2><a name="SafeUnsafeMode">Safe and Unsafe Mode</a></h2>
+
+<P>
+This SRFI allows a Scheme implementation to run code in one of two global
+modes: "safe" and "unsafe" mode.  These affect the fixnum and the
+flonum operations.  In safe mode, these operations must check that
+their arguments are actually fixnums or flonums respectively, or
+perform possible additional checking as required by the specifications
+of the operations.  In unsafe mode, these operations must provide no
+such checking.  This distinction allows an implementation to generate
+efficient numerical code at the cost of avoiding run-time checking.
+The R6RS should require a Scheme implementation to provide the safe
+mode.
+
+<p>
+This SRFI uses the phrase "all bets are off" to describe that the
+behavior of a procedure is unspecified for certain arguments in unsafe
+mode.  Specifically, a procedure call for which all bets are off is
+free to crash the system.
+</p>
+
+<h2><a name="EquivalenceOfObjects">Equivalence of Objects</a></h2>
+
+<p>
+    The R6RS specification of eqv? for numbers should be changed
+    as follows.
+</p>
+
+<p>
+    The <code>eqv?</code> procedure returns <code>#t</code> if:
+
+<ul>
+<li> <var>obj1</var> and <var>obj2</var> are both exact numbers, and are numerically
+          equal (see <code>=</code>, section see section 6.2
+          Numbers).</li>
+<li>
+    <var>obj1</var> and <var>obj2</var> are both inexact numbers, are numerically
+          equal (see <code>=</code>, section see section 6.2 Numbers), and
+          yield the same results (in the sense of <code>eqv?</code>) when passed
+          as arguments to any other procedure that can be defined
+          as a finite composition of Scheme's standard arithmetic
+          procedures.</li>
+</ul>
+
+<p>
+    The <code>eqv?</code> procedure returns <code>#f</code> if:
+</p>
+
+<ul>
+<li> one of <var>obj1</var> and <var>obj2</var> is an exact number but the other is
+	an inexact number. </li>
+<li><var>obj1</var> and <var>obj2</var> are numbers for which the <code>=</code> procedure
+ returns <code>#f</code>. </li>
+<li><var>obj1</var> and <var>obj2</var> yield different results (in the sense of
+	<code>eqv?</code>) when passed as arguments to any other procedure
+          that can be defined as a finite composition of Scheme's
+          standard arithmetic procedures.
+      </li>
+    </ul>
+
+
+
+<h2><a name="NumericalTypePredicates">Numerical Type Predicates</a></h2>
+
+<font color=red>
+The following description is a revised form of the description
+given in SRFI 70.  Changes from SRFI 70 are highlighted in red.
+</font>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>number?</CODE> <var>obj</var>
+<DT><U>procedure:</U> <CODE>complex?</CODE> <var>obj</var>
+<DT><U>procedure:</U> <CODE>real?</CODE> <var>obj</var>
+<DT><U>procedure:</U> <CODE>rational?</CODE> <var>obj</var>
+<DT><U>procedure:</U> <CODE>integer?</CODE> <var>obj</var>
+<DD>
+
+
+<P>
+These numerical type predicates can be applied to any kind of
+argument, including non-numbers.  They return <TT>#t</TT> if the object is
+of the named type, and otherwise they return <TT>#f</TT>.
+In general, if a type predicate is true of a number then all higher
+type predicates are also true of that number.  Consequently, if a type
+predicate is false of a number, then all lower type predicates are
+also false of that number.
+
+
+<p>
+If <VAR>z</VAR> is
+<font color=red><strike>an inexact</strike> a complex</font> number, then
+<SAMP>`(real? <VAR>z</VAR>)'</SAMP> is true if and only if
+<SAMP>`(zero? (imag-part <VAR>z</VAR>))'</SAMP>
+<font color=red>
+and <SAMP>`(exact? (imag-part <VAR>z</VAR>))'</SAMP> are both</font> true.
+</p>
+
+<p>
+<font color=red>
+If <VAR>x</VAR> is a real number, then
+<SAMP>`(rational? <VAR>x</VAR>)'</SAMP> is true if and only if
+there exist exact integers <var>k1</var> and <var>k2</var>
+such that
+<SAMP>`(= <var>x</var> (/ <var>k1</var> <var>k2</var>))'</SAMP>
+and
+<SAMP>`(= (numerator <var>x</var>) <var>k1</var>)'</SAMP>
+and
+<SAMP>`(= (denominator <var>x</var>) <var>k2</var>)'</SAMP>
+are all true.
+Thus infinities and NaNs are not rational numbers.
+</font>
+</p>
+
+<FONT color="red"><STRIKE>
+If <VAR>x</VAR> is an inexact
+real number, then <SAMP>`(integer? <VAR>x</VAR>)'</SAMP> is true if and only if
+</STRIKE>
+</FONT>
+
+<PRE style="color:red; text-decoration: line-through">
+    (and (finite? <VAR>x</VAR>) (= <VAR>x</VAR> (round <VAR>x</VAR>)))
+</PRE>
+
+<font color="red">If <VAR>q</VAR> is a rational number, then
+<SAMP>`(integer? <VAR>q</VAR>)'</SAMP> is true if and only if
+<SAMP>`(= (denominator <VAR>q</VAR>) 1)'</SAMP>
+is true.
+</font>
+
+<PRE>
+(complex? 3+4i)                        ==&gt;  #t
+(complex? 3)                           ==&gt;  #t
+(real? 3)                              ==&gt;  #t
+(real? -2.5+0.0i)                      ==&gt;  <span class=add>#f</span>
+<span class=add>(real? -2.5+0i)                        ==&gt;  #t</span>
+(real? -2.5)                           ==&gt;  #t
+(real? #e1e10)                         ==&gt;  #t
+(real? -inf.0)                         ==&gt;  #t
+<span class=add>(real? +nan.0)                         ==&gt;  #t</span>
+(rational? -inf.0)                     ==&gt;  #f
+<span class=add>(rational? +nan.0)                     ==&gt;  #f</span>
+(rational? 6/10)                       ==&gt;  #t
+(rational? 6/3)                        ==&gt;  #t
+(integer? 3+0i)                        ==&gt;  #t
+(integer? 3.0)                         ==&gt;  #t
+(integer? 8/4)                         ==&gt;  #t
+
+<span class=add>(number? +nan.0)                       ==&gt;  #t</span>
+<span class=add>(complex? +nan.0)                      ==&gt;  #t</span>
+(complex? +inf.0)                      ==&gt;  #t
+<span class=add>(real? +nan.0)                         ==&gt;  #t</span>
+<span class=add>(rational? +nan.0)                     ==&gt;  #f</span>
+(integer? -inf.0)                      ==&gt;  #f
+</PRE>
+
+
+<BLOCKQUOTE>
+<P>
+<EM>Note:</EM>
+The behavior of these type predicates on inexact numbers is
+unreliable, because any inaccuracy may
+affect the result.
+</BLOCKQUOTE>
+
+
+<BLOCKQUOTE>
+<P>
+<font color=red>
+<strike>
+<EM>Note:</EM>
+In many implementations the <CODE>rational?</CODE> procedure will be the same
+
+as <CODE>real?</CODE>, and the <CODE>complex?</CODE> procedure will be the same as
+
+
+<CODE>number?</CODE>, but unusual implementations may be able to represent
+
+some irrational numbers exactly or may extend the number system to
+support some kind of non-complex numbers.
+</strike>
+</font>
+</BLOCKQUOTE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>exact?</CODE> <VAR>z</VAR>
+<DT><U>procedure:</U> <CODE>inexact?</CODE> <VAR>z</VAR>
+<DD>
+
+<P>
+These numerical predicates provide tests for the exactness of a
+quantity.  For any Scheme number, precisely one of these predicates
+is true.
+
+<PRE>
+(exact? 5)                   ==&gt;  #t
+(inexact? +inf.0)            ==&gt;  #t
+</PRE>
+</DL>
+
+
+<h2><a name="GenericConversions">Generic Conversions</a></h2>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>exact-&gt;inexact</CODE> <VAR>z</VAR>
+<DT><U>procedure:</U> <CODE>inexact-&gt;exact</CODE> <VAR>z</VAR>
+<DD>
+<P>
+<CODE>Exact-&gt;inexact</CODE> returns an inexact representation of <VAR>z</VAR>.
+The value returned is the
+inexact number that is numerically closest to the argument.
+If an exact argument has no reasonably close inexact equivalent,
+then a violation of an implementation restriction may be reported.
+
+
+<P>
+<CODE>Inexact-&gt;exact</CODE> returns an exact representation of
+<VAR>z</VAR>.  The value returned is the exact number that is numerically
+closest to the argument.
+If an inexact argument has no reasonably close exact equivalent,
+then a violation of an implementation restriction may be reported.
+
+<P>
+These procedures implement the natural one-to-one correspondence between
+exact and inexact integers throughout an
+implementation-dependent range.
+<P>
+<CODE>Exact-&gt;inexact</CODE> and
+<CODE>inexact-&gt;exact</CODE> are idempotent.
+
+</DL>
+
+<DL class=add>
+<DT><U>procedure:</U> <CODE>real-&gt;flonum</CODE> <VAR>x</VAR>
+<DD>
+<P>
+<CODE>Real-&gt;flonum</CODE> returns a flonum representation of
+<VAR>x</VAR>, which must be a real number.
+
+The value returned is a flonum that is numerically closest to the
+argument.
+
+<BLOCKQUOTE>
+<P>
+<EM>Rationale:</EM> The flonums are a subset of the inexact reals, but
+    may be a proper subset.  The <code>real-&gt;flonum</code> procedure converts
+    an arbitrary real to the flonum type required by flonum-specific
+    procedures.
+</BLOCKQUOTE>
+
+<BLOCKQUOTE>
+<P>
+<EM>Note:</EM> If flonums are represented in binary floating point,
+    then implementations are strongly encouraged to break ties
+    by preferring the floating point representation whose least
+    significant bit is zero.
+</BLOCKQUOTE>
+
+</DL>
+
+<h2><a name="NumericalIO">Numerical Input and Output</a></h2>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>number-&gt;string</CODE> <var>z</var>
+<DT><U>procedure:</U> <CODE>number-&gt;string</CODE> <var>z</var> <var>radix</var>
+<DT><FONT color="red"><U>procedure:</U> <CODE>number-&gt;string</CODE> <var>z</var> <var>radix</var> <var>precision</var></FONT>
+<DD>
+
+
+<P>
+<VAR>Radix</VAR> must be an exact integer, either 2, 8, 10, or 16.
+If omitted, <VAR>radix</VAR> defaults to 10.
+If a <VAR>precision</VAR> is specified, then <var>z</var> must be an
+inexact complex number, <VAR>precision</VAR> must be an exact
+positive integer, and the <VAR>radix</VAR> must be 10.
+The procedure <CODE>number-&gt;string</CODE> takes a
+number and a radix and returns as a string an external representation of
+the given number in the given radix such that
+
+
+
+<PRE>
+(let ((number <VAR>number</VAR>)
+      (radix <VAR>radix</VAR>))
+  (eqv? number
+        (string-&gt;number (number-&gt;string number
+                                        radix)
+                        radix)))
+</PRE>
+
+<P>
+is true.  It is an error if no possible result makes this expression true.
+
+<P>
+<FONT COLOR="red">
+If a <VAR>precision</VAR> is specified, then the representations of
+the inexact real components of the result, unless they are infinite or
+NaN, specify an explicit &lt;mantissa width&gt; <VAR>p</VAR>, and
+<VAR>p</VAR> is the least <VAR>p</VAR> &ge; <VAR>precision</VAR> for
+which the above expression is true.</font>
+
+<P>
+If <VAR>z</VAR> is inexact, the radix is 10, and the above expression
+and condition
+can be satisfied by a result that contains a decimal point,
+then the result contains a decimal point and is expressed using the
+minimum number of digits (exclusive of exponent, trailing
+zeroes, and mantissa width) needed to make the above expression and
+condition true
+[<A HREF="#burger-dybvig-1996">Burger, Dybvig 1996</A>; <A HREF="#clinger-1990">Clinger 1990</A>];
+otherwise the format of the result is unspecified.
+
+
+<P>
+The result returned by <CODE>number-&gt;string</CODE>
+never contains an explicit radix prefix.
+
+
+<BLOCKQUOTE>
+<P>
+<EM>Note:</EM>
+The error case can occur only when <VAR>z</VAR> is not a complex number
+or is a complex number with a non-rational real or imaginary part.
+</BLOCKQUOTE>
+
+
+<BLOCKQUOTE>
+<P>
+<EM>Rationale:</EM>
+If <VAR>z</VAR> is an inexact number represented using binary floating
+point, and the radix is 10, then the above expression is normally satisfied by
+a result containing a decimal point.  The unspecified case
+allows for infinities, NaNs, and representations other than binary
+floating point.
+</BLOCKQUOTE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>string-&gt;number</CODE> <var>string</var>
+<DT><U>procedure:</U> <CODE>string-&gt;number</CODE> <var>string</var> <var>radix</var>
+<DD>
+
+
+<P>
+Returns a number of the maximally precise representation expressed by the
+given <VAR>string</VAR>.  <VAR>Radix</VAR> must be an exact integer, either 2, 8, 10,
+or 16.  If supplied, <VAR>radix</VAR> is a default radix that may be overridden
+by an explicit radix prefix in <VAR>string</VAR> (e.g. <TT>"#o177"</TT>).  If <VAR>radix</VAR>
+is not supplied, then the default radix is 10.  If <VAR>string</VAR> is not
+a syntactically valid notation for a number, then <CODE>string-&gt;number</CODE>
+returns <TT>#f</TT>.
+
+
+
+<PRE>
+(string-&gt;number "100")                 ==&gt;  100
+(string-&gt;number "100" 16)              ==&gt;  256
+(string-&gt;number "1e2")                 ==&gt;  100.0
+(string-&gt;number "15##")                ==&gt;  1500.0
+(string->number "+inf.0")              ==&gt;  +inf.0
+(string->number "-inf.0")              ==&gt;  -inf.0
+<span class=add>(string->number "+nan.0")              ==&gt;  +nan.0</span>
+</PRE>
+
+
+<BLOCKQUOTE>
+<P>
+<FONT color="red"><STRIKE>
+<EM>Note:</EM>
+The domain of <CODE>string-&gt;number</CODE> may be restricted by implementations
+in the following ways.  <CODE>String-&gt;number</CODE> is permitted to return
+<TT>#f</TT> whenever <VAR>string</VAR> contains an explicit radix prefix.
+If all numbers supported by an implementation are real, then
+<CODE>string-&gt;number</CODE> is permitted to return <TT>#f</TT> whenever
+<VAR>string</VAR> uses the polar or rectangular notations for complex
+numbers.  If all numbers are integers, then
+<CODE>string-&gt;number</CODE> may return <TT>#f</TT> whenever
+the fractional notation is used. If all numbers are exact, then
+<CODE>string-&gt;number</CODE> may return <TT>#f</TT> whenever
+an exponent marker or explicit exactness prefix is used, or if
+a <TT>#</TT> appears in place of a digit.  If all inexact
+numbers are integers, then
+<CODE>string-&gt;number</CODE> may return <TT>#f</TT> whenever
+a decimal point is used.
+An implementation may return <CODE>#f</CODE> for <CODE>"+nan.0"</CODE>.</STRIKE></FONT>
+</BLOCKQUOTE>
+
+</DL>
+
+<h2><a name="integer-division">Integer Division</a></h2>
+
+<P>
+<FONT COLOR="red">The <code>div</code>, <code>mod</code>,
+<code>div+mod</code>, and <code>quotient+remainder</code>
+procedures are new and not in SRFI 70.  The definitions of
+<code>quotient</code> and <code>remainder</code> are as in
+R5RS, not as in SRFI 70.</font>
+
+<P>
+For various kinds of arithmetic (fixnum, flonum, exact, inexact, and
+generic), this SRFI provides operations for performing integer
+division.  Their variants differ mainly in the domains they operate
+on, not in substance.  The following specification is of the general
+variant.  Later sections will link back to this one where appropriate.
+</P>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>div+mod</CODE> <var>x1</var> <var>x2</var>
+<DT><U>library procedure:</U> <CODE>div</CODE> <var>x1</var> <var>x2</var>
+<DT><U>library procedure:</U> <CODE>mod</CODE> <var>x1</var> <var>x2</var>
+<DD>
+
+These implement integer division and remainder on real numbers.  
+<CODE>div</CODE> returns an integer; <CODE>mod</code> returns a real:
+<code>div+mod</code> returns two values, an integer and a real.
+
+<PRE>
+(div <VAR>x1</VAR> <VAR>x2</VAR>)                  ==&gt; <VAR>n<span class=sub>d</span></VAR>
+(mod <VAR>x1</VAR> <VAR>x2</VAR>)                  ==&gt; <VAR>x<span class=sub>m</span></VAR>
+(div+mod <VAR>x1</VAR> <VAR>x2</VAR>)              ==&gt; (div <VAR>x1</VAR> <VAR>x2</VAR>) (mod <VAR>x1</VAR> <VAR>x2</VAR>) ; two return values
+</PRE>
+
+where:
+	<ol>
+	  <li><VAR>x1</VAR> = <VAR>n<span class=sub>d</span></VAR> * <VAR>x2</VAR> +
+	  <VAR>x<span class=sub>m</span></VAR>.</li>
+	  <li>0 &lt;= <VAR>x<span class=sub>m</span></VAR> &lt; <VAR>x2</VAR> if <VAR>x2</VAR>
+	  &gt; 0</li>
+	  <li><VAR>x2</VAR>/2 &lt;= <VAR>x<span class=sub>m</span></VAR> &lt;
+	  -<VAR>x2</VAR>/2 if <VAR>x2</VAR> &lt; 0</li>
+	</ol>
+Moreover:
+<PRE>
+(div <VAR>x1</VAR> 0)                  ==&gt; 0
+</PRE>	
+
+<BLOCKQUOTE>
+<P>
+<EM>Rationale:</EM> These operations generalize integer division to real
+numbers.  Moreover, even on integers they are better suited than
+<CODE>quotient</CODE> and <CODE>remainder</CODE> to implement modular
+reduction.  For details, see the paper by Egner et. al 
+<A href="#egner-at-al-2004">[Egner et al. 2004]</A>.
+</BLOCKQUOTE>
+</DD>
+</DL>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>quotient+remainder</CODE> <var>n1</var> <var>n2</var>
+<DT><U>library procedure:</U> <CODE>quotient</CODE> <var>n1</var> <var>n2</var>
+<DT><U>library procedure:</U> <CODE>remainder</CODE> <var>n1</var> <var>n2</var>
+<DT><U>library procedure:</U> <CODE>modulo</CODE> <var>n1</var> <var>n2</var>
+<DD>
+
+<P>
+These procedures implement number-theoretic (integer)
+division.  <VAR>n2</VAR> should be non-zero.
+<code>Quotient</code>, <code>remainder</code>, and <code>modulo</code>
+return integers; <code>quotient+remainder</code> returns two integers.
+
+<PRE>
+(quotient+remainder <VAR>n1</VAR> <VAR>n2</VAR>)         ==&gt; (quotient <VAR>n1</VAR> <VAR>n2</VAR>) (remainder <VAR>n1</VAR> <VAR>n2</VAR>) ; two return values
+</PRE>
+
+<P>
+If <VAR>n1</VAR>/<VAR>n2</VAR> is an integer:
+
+<PRE>
+(quotient <VAR>n1</VAR> <VAR>n2</VAR>)                   ==&gt; <VAR>n1</VAR>/<VAR>n2</VAR>
+(remainder <VAR>n1</VAR> <VAR>n2</VAR>)                  ==&gt; 0
+(modulo <VAR>n1</VAR> <VAR>n2</VAR>)                     ==&gt; 0
+</PRE>
+
+If <VAR>n1</VAR>/<VAR>n2</VAR> is not an integer:
+
+<PRE>
+(quotient <VAR>n1</VAR> <VAR>n2</VAR>)                   ==&gt; <VAR>n<span class=sub>q</span></VAR>
+(remainder <VAR>n1</VAR> <VAR>n2</VAR>)                  ==&gt; <VAR>n<span class=sub>r</span></VAR>
+(modulo <VAR>n1</VAR> <VAR>n2</VAR>)                     ==&gt; <VAR>n<span class=sub>m</span></VAR>
+</PRE>
+
+<P>
+where <VAR>n<span class=sub>q</span></VAR> is <VAR>n1</VAR>/<VAR>n2</VAR> rounded towards zero,
+0 &lt; |<VAR>n<span class=sub>r</span></VAR>| &lt; |<VAR>n2</VAR>|, 0 &lt; |<VAR>n<span class=sub>m</span></VAR>| &lt; |<VAR>n2</VAR>|,
+<VAR>n<span class=sub>r</span></VAR> and <VAR>n<span class=sub>m</span></VAR> differ from
+<VAR>n1</VAR> by an integral multiple of <VAR>n2</VAR>,
+<VAR>n<span class=sub>r</span></VAR> has the same sign as <VAR>n1</VAR>, and
+<VAR>n<span class=sub>m</span></VAR> has the same sign as <VAR>n2</VAR>.
+
+<P>
+From this we can conclude that for integers <VAR>n1</VAR> and <VAR>n2</VAR> with
+<VAR>n2</VAR> not equal to 0,
+
+<PRE>
+     (= <VAR>n1</VAR> (+ (* <VAR>n2</VAR> (quotient <VAR>n1</VAR> <VAR>n2</VAR>))
+           (remainder <VAR>n1</VAR> <VAR>n2</VAR>)))
+                                       ==&gt;  #t
+</PRE>
+
+provided all numbers involved in that computation are exact.
+
+
+<PRE>
+(quotient+remainder 13 4)              ==&gt;  3 1
+(modulo 13 4)                          ==&gt;  1
+(remainder 13 4)                       ==&gt;  1
+
+(quotient+remainder -13 4)             ==&gt;  -3 -1
+(modulo -13 4)                         ==&gt;  3
+(remainder -13 4)                      ==&gt;  -1
+
+(quotient+remainder -13 4)             ==&gt;  -3 1
+(modulo 13 -4)                         ==&gt;  -3
+(remainder 13 -4)                      ==&gt;  1
+
+(modulo -13 -4)                        ==&gt;  -1
+(remainder -13 -4)                     ==&gt;  -1
+</PRE>
+
+<P>
+<CODE>Quotient</CODE>, <CODE>remainder</CODE> and <CODE>modulo</CODE>
+can easily be defined through <CODE>div</CODE> and <CODE>mod</CODE>:
+
+<PRE>
+(define (sign n)
+  (cond
+    ((positive? n) 1)
+    ((negative? n) -1)
+    (else 0)))
+
+(define (quotient n1 n2)
+  (* (sign n1) (sign n2) (div (abs n1) (abs n2))))
+
+(define (remainder n1 n2)
+  (* (sign n1) (mod (abs n1) (abs n2))))
+
+(define (modulo n1 n2)
+  (* (sign n2) (mod (* (sign n2) n1) (abs n2))))
+</PRE>
+
+
+</DD>
+</DL>
+
+<h2><a name="Fixnums">Fixnums</a></h2>
+
+<p>
+A subset range of the exact integers is denoted as the set of fixnums.
+Conversely, a fixnum is an exact integer whose value lies within this
+fixnum range.
+</p>
+
+<p>
+Every implementation must define its fixnum range as a closed
+interval [<var>lo</var>, <var>hi</var>] such that <var>lo</var>
+and <var>hi</var> are (mathematical) integers with
+<var>lo</var> &lt;= 0 &lt; 1 &lt;= <var>hi</var>.
+Every mathematical integer within an implementation's fixnum
+range must correspond to an exact integer that is representable
+within the implementation.
+The fixnum operations of an implementation will perform
+arithmetic modulo <var>hi-lo+1</var>.
+</p>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>fixnum?</CODE> <var>obj</var>
+<DD>
+
+<P>This returns <TT>#t</TT> if <var>obj</var> is a fixnum, and
+otherwise returns <TT>#f</TT>.
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>least-fixnum</CODE>
+<DT><U>procedure:</U> <CODE>greatest-fixnum</CODE>
+<DD>
+
+<P>These procedures return <var>lo</var> and <var>hi</var>, the
+minimum and the maximum value of the fixnum range, respectively.
+</DL>
+
+
+<P>
+We will use <var>fx</var>, <var>fx1</var> and <var>fx2</var> as metavariables
+that range over fixnums.
+</P>
+<p>
+If an argument to the following procedures that corresponds to a fixnum
+metavariable is not actually a fixnum, then these procedures signal an
+error, unless the implementation is running in unsafe mode, in which
+case all bets are off.
+</p>
+
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>fx=</CODE> <var>fx1</var> <var>fx2</var>
+<DT><U>procedure:</U> <CODE>fx&gt;</CODE> <var>fx1</var> <var>fx2</var>
+<DT><U>procedure:</U> <CODE>fx&lt;</CODE> <var>fx1</var> <var>fx2</var>
+<DT><U>procedure:</U> <CODE>fx&gt;=</CODE> <var>fx1</var> <var>fx2</var>
+<DT><U>procedure:</U> <CODE>fx&lt;=</CODE> <var>fx1</var> <var>fx2</var>
+<DD>
+
+<P>
+These procedures return <TT>#t</TT> if their arguments are (respectively):
+equal, monotonically increasing, monotonically decreasing,
+monotonically nondecreasing, or monotonically nonincreasing,
+<code>#f</code> otherwise.
+</P>
+</DD>
+</DL>
+
+<P>
+<DL>
+<DD>
+<DT><U>library procedure:</U> <CODE>fxzero?</CODE> <VAR>fx</VAR>
+<DT><U>library procedure:</U> <CODE>fxpositive?</CODE> <VAR>fx</VAR>
+<DT><U>library procedure:</U> <CODE>fxnegative?</CODE> <VAR>fx</VAR>
+<DT><U>library procedure:</U> <CODE>fxodd?</CODE> <VAR>fx</VAR>
+<DT><U>library procedure:</U> <CODE>fxeven?</CODE> <VAR>fx</VAR>
+<DD>
+
+
+<P>
+These numerical predicates test a fixnum for a particular property,
+returning <TT>#t</TT> or <TT>#f</TT>.  <CODE>Fxzero?</code> tests if
+the number is zero, <code>fxpositive?</code> tests if it is greater
+than zero, <code>fxnegative?</code> tests if it is less
+than zero, <code>fxodd?</code> tests if it is odd, 
+<code>fxeven?</code> tests if it is even. 
+</P>
+</DL>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>fxmax</CODE> <var>fx1</var> <var>fx2</var>
+<DT><U>library procedure:</U> <CODE>fxmin</CODE> <var>fx1</var> <var>fx2</var>
+<DD>
+
+
+<P>
+These procedures return the maximum or minimum of their arguments.
+</P>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>fx+</CODE> <var>fx1</var> <var>fx2</var>
+<DT><U>procedure:</U> <CODE>fx-</CODE> <var>fx1</var> <var>fx2</var>
+<DT><U>procedure:</U> <CODE>fx*</CODE> <var>fx1</var> <var>fx2</var>
+<DD>
+
+<P>
+These procedures return the unique fixnum that is congruent
+mod <var>hi-lo+1</var> to the sum, difference, or product of
+their arguments.
+</p>
+
+</dl>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>fxabs</CODE> <VAR>fx</VAR>
+<DD>
+
+<P>
+This procedure returns <SAMP>`(fx- 0 <VAR>fx</VAR>)'</SAMP> if
+<VAR>fx</VAR> is negative, <VAR>fx</VAR> otherwise.
+
+</P>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>fxdiv+mod</CODE> <var>fx1</var> <var>fx2</var>
+<DT><U>library procedure:</U> <CODE>fxdiv</CODE> <var>fx1</var> <var>fx2</var>
+<DT><U>library procedure:</U> <CODE>fxmod</CODE> <var>fx1</var> <var>fx2</var>
+<DT><U>library procedure:</U> <CODE>fxquotient</CODE> <var>fx1</var> <var>fx2</var>
+<DT><U>library procedure:</U> <CODE>fxmodulo+remainder</CODE> <var>fx1</var> <var>fx2</var>
+<DT><U>library procedure:</U> <CODE>fxmodulo</CODE> <var>fx1</var> <var>fx2</var>
+<DT><U>library procedure:</U> <CODE>fxremainder</CODE> <var>fx1</var> <var>fx2</var>
+<DD>
+
+<P>
+These procedures implement number-theoretic integer division 
+modulo <var>hi-lo+1</var>.  See the section on <a href="#integer-division">
+Integer Division</a>.
+</p>
+</dl>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>fxgcd</CODE> <var>fx1</var> <var>fx2</var>
+<DT><U>library procedure:</U> <CODE>fxlcm</CODE> <var>fx1</var> <var>fx2</var>
+<DD>
+<P>
+These procedures return the greatest common divisor or least common
+multiple of their arguments 
+modulo <var>hi-lo+1</var>.
+</DD>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>fxbitwise-not</CODE> <var>fx</var>
+<DD>
+<P>
+Returns the fixnum which is the one's-complement of its argument.
+congruent mod <var>hi-lo+1</var>.
+</DD>
+</DL>
+
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>fxbitwise-and</CODE> <var>fx1</var> <var>fx2</var>
+<DT><U>procedure:</U> <CODE>fxbitwise-ior</CODE> <var>fx1</var> <var>fx2</var>
+<DT><U>procedure:</U> <CODE>fxbitwise-xor</CODE> <var>fx1</var> <var>fx2</var>
+<DD>
+<P>
+The <CODE>fxbitwise-and</CODE> procedure returns the fixnum which is the bit-wise "and" of 
+the two's complement representations of its
+arguments modulo <var>hi-lo+1</var>.
+The <CODE>fxbitwise-ior</CODE> procedure returns the fixnum which is
+the bit-wise inclusive "or" of
+the two's complement representations of its
+arguments modulo <var>hi-lo+1</var>.
+The <CODE>fxbitwise-xor</CODE> procedure returns the fixnum which is the
+bit-wise "exclusive or" of the two's complement representations of its
+arguments modulo <var>hi-lo+1</var>.
+</DD>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>fxarithmetic-shift</CODE> <var>fx1</var> <var>fx2</var>
+<DD>
+<P>
+This procedure conceptually shifts the two's complement representation of
+<VAR>fx1</VAR> <VAR>fx2</VAR> bits left when <VAR>fx2</VAR> &gt; 0,
+and -<VAR>fx2</VAR> bits right when <VAR>fx2</VAR> &lt; 0, extending
+the sign.  (It returns <VAR>fx1</VAR> when <VAR>fx2</VAR> = 0.)  It
+returns the result of that shift congruent mod <var>hi-lo+1</var>.
+</DD>
+</DL>
+
+
+<h2><a name="Flonums">Flonums</a></h2>
+
+<P>
+    Implementations are not required to use floating-point
+    representations, but every implementation is required to
+    designate a subset of its inexact reals as flonums, and
+    to convert certain external representations into flonums.
+    The flonums are closed under the flonum operations described
+    in this section.
+</P>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>flonum?</CODE> <var>obj</var>
+<DD>
+
+<P>This returns <TT>#t</TT> if <var>obj</var> is a flonum, and
+otherwise returns <TT>#f</TT>.
+</DL>
+
+
+<p>
+We will use <var>fl</var>, <var>fl1</var> and <var>fl2</var> as
+metavariables that range over flonums, and <var>ifl</var>,
+<var>ifl1</var> and <var>ifl2</var> as metavariables that range over
+integral flonums, i.e. flonums that represent integers.
+</p>
+<p>
+If an argument to the following procedures that corresponds to a
+(integral) flonum metavariable is not actually a (integral) flonum,
+then these procedures signal an error, unless the implementation is
+running in unsafe mode, in which case all bets are off.
+</p>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>fl=</CODE> <var>fl1</var> <var>fl2</var>
+<DT><U>procedure:</U> <CODE>fl&lt;</CODE> <var>fl1</var> <var>fl2</var>
+<DT><U>procedure:</U> <CODE>fl&lt;=</CODE> <var>fl1</var> <var>fl2</var>
+<DT><U>procedure:</U> <CODE>fl&gt;</CODE> <var>fl1</var> <var>fl2</var>
+<DT><U>procedure:</U> <CODE>fl&gt;=</CODE> <var>fl1</var> <var>fl2</var>
+<DD>
+
+<P>
+These procedures return <TT>#t</TT> if their arguments are (respectively):
+equal, monotonically increasing, monotonically decreasing,
+monotonically nondecreasing, or monotonically nonincreasing,
+<code>#f</code> otherwise.  These
+predicates are required to be transitive.
+</P>
+
+<P>
+<PRE>
+(fl= +inf.0 +inf.0)           ==&gt;  #t
+(fl= -inf.0 +inf.0)           ==&gt;  #f
+(fl= -inf.0 -inf.0)           ==&gt;  #t
+(fl= 0.0 -0.0)                ==&gt;  <I>unspecified</I>
+(fl&lt; 0.0 -0.0)                ==&gt;  <I>unspecified</I>
+(fl= +nan.0 <var>fl</var>)               ==&gt;  <I>unspecified</I>
+(fl= +nan.0 <var>fl</var>)               ==&gt;  <I>unspecified</I>
+(fl&lt; +nan.0 <var>fl</var>)               ==&gt;  <I>unspecified</I>
+</PRE>
+
+The following behavior is strongly recommended but not required by 
+R6RS:
+<P>
+<pre>
+(fl= 0.0 -0.0)                 ==&gt;  #t
+(fl&lt; -0.0 0.0)                 ==&gt;  #f
+(fl= +nan.0 +nan.0)            ==&gt;  #f
+</pre>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>flinteger?</CODE> <var>fl</var>
+<DT><U>procedure:</U> <CODE>flzero?</CODE> <var>fl</var>
+<DT><U>procedure:</U> <CODE>flpositive?</CODE> <var>fl</var>
+<DT><U>procedure:</U> <CODE>flnegative?</CODE> <var>fl</var>
+<DT><U>procedure:</U> <CODE>flodd?</CODE> <var>ifl</var>
+<DT><U>procedure:</U> <CODE>fleven?</CODE> <var>ifl</var>
+<DT><U>procedure:</U> <CODE>flnan?</CODE> <var>fl</var>
+<DD>
+
+
+<P>
+These numerical predicates test a flonum for a particular property,
+returning <TT>#t</TT> or <TT>#f</TT>.
+<CODE>Flinteger?</CODE> tests it if the number is an integer,
+<CODE>flzero?</code> tests if
+it is <code>fl=</code> to zero, <code>flpositive?</code> tests if it is greater
+than zero, <code>flnegative?</code> tests if it is less
+than zero, <code>flodd?</code> tests if it is odd, 
+<code>fleven?</code> tests if it is even,
+<code>flnan?</code> tests if it is a NaN.
+</P>
+
+<P>
+<PRE>
+(flnegative? -0.0) ==&gt; #f
+</PRE>
+
+<BLOCKQUOTE>
+<p>
+<em>Note:</em>
+`<code>(flnegative? -0.0)</code>' must return <code>#f</code>,
+else it would lose the correspondence with
+<code>(fl< -0.0 0.0)</code>, which is <code>#f</code>
+according to the IEEE standards.
+</p>
+</blockquote>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>flmax</CODE> <var>fl1</var> <var>fl2</var>
+<DT><U>procedure:</U> <CODE>flmin</CODE> <var>fl1</var> <var>fl2</var>
+<DD>
+
+<P>
+These procedures return the maximum or minimum of their arguments.
+</P>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>fl+</CODE> <var>fl1</var> <var>fl2</var>
+<DT><U>procedure:</U> <CODE>fl-</CODE> <var>fl1</var> <var>fl2</var>
+<DT><U>procedure:</U> <CODE>fl*</CODE> <var>fl1</var> <var>fl2</var>
+<DT><U>procedure:</U> <CODE>fl/</CODE> <var>fl1</var> <var>fl2</var>
+<DD>
+
+
+<P>
+These procedures return the flonum sum, difference,
+product, or quotient of their flonum arguments.
+In general, they should return the flonum that best
+approximates the mathematical sum, difference, or quotient of their arguments.
+(For implementations that represent flonums as IEEE
+binary floating point numbers, the meaning of "best"
+is reasonably well-defined by the IEEE standards.)
+</P>
+
+<P>
+For undefined quotients, <code>fl/</code> behaves as specified by the
+IEEE standards:
+
+<PRE>
+(fl/ 1.0 0.0)  ==> +inf.0
+(fl/ -1.0 0.0) ==> -inf.0
+(fl/ 0.0 0.0)  ==> +nan.0
+</PRE>
+</dl>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>flabs</CODE> <var>fl</var>
+<DD>
+<P>
+This returns the absolute value of its argument.
+<P>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>fldiv+mod</CODE> <var>fl1</var> <var>fl2</var>
+<DT><U>library procedure:</U> <CODE>fldiv</CODE> <var>fl1</var> <var>fl2</var>
+<DT><U>library procedure:</U> <CODE>flmod</CODE> <var>fl1</var> <var>fl2</var>
+<DT><U>library procedure:</U> <CODE>flquotient</CODE> <var>ifl1</var> <var>ifl2</var>
+<DT><U>library procedure:</U> <CODE>flmodulo+remainder</CODE> <var>ifl1</var> <var>ifl2</var>
+<DT><U>library procedure:</U> <CODE>flmodulo</CODE> <var>ifl1</var> <var>ifl2</var>
+<DT><U>library procedure:</U> <CODE>flremainder</CODE> <var>ifl1</var> <var>ifl2</var>
+<DD>
+
+<P>
+These procedures implement number-theoretic integer division.  See the
+section on <a href="#integer-division">Integer Division</a>.  For zero
+divisors, the procedures may return <code>+nan.0</code> or some
+meaningless flonum.
+</p>
+</dl>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>flgcd</CODE> <var>ifl1</var> <var>ifl2</var>
+<DT><U>library procedure:</U> <CODE>fllcm</CODE> <var>ifl1</var> <var>ifl2</var>
+<DD>
+<P>
+These procedures return the greatest common divisor or least common
+multiple of their arguments.
+</DD>
+</DL>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>flnumerator</CODE> <var>fl</var>
+<DT><U>library procedure:</U> <CODE>fldenominator</CODE> <var>fl</var>
+<DD>
+<P>
+These procedures return the numerator or denominator of their
+argument as a flonum; the result is computed as if the argument was represented as
+a fraction in lowest terms.  The denominator is always positive.  The
+denominator of 0 is defined to be 1.
+<PRE>
+(flnumerator +inf.0)           ==&gt;  +inf.0
+(flnumerator -inf.0)           ==&gt;  -inf.0
+(fldenominator +inf.0)         ==&gt;  1.0
+(fldenominator -inf.0)         ==&gt;  1.0
+(flnumerator 0.75)             ==&gt;  3.0 ; example
+(fldenominator 0.75)           ==&gt;  4.0 ; example
+</PRE>
+
+The following behavior is strongly recommended but not required by 
+R6RS:
+
+<pre>
+(flnumerator -0.0)             ==&gt; -0.0
+</pre>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>flfloor</CODE> <var>fl</var>
+<DT><U>procedure:</U> <CODE>flceiling</CODE> <var>fl</var>
+<DT><U>procedure:</U> <CODE>fltruncate</CODE> <var>fl</var>
+<DT><U>procedure:</U> <CODE>flround</CODE> <var>fl</var>
+<DD>
+<P>
+These procedures return integral flonums for flonum arguments that are
+not infinities or NaNs.  For such arguments,
+<CODE>flfloor</CODE> returns the largest integral flonum not larger than <VAR>fl</VAR>.
+<CODE>Flceiling</CODE> returns the smallest integral flonum not smaller than <VAR>fl</VAR>.
+<CODE>Fltruncate</CODE> returns the integral flonum closest to <VAR>fl</VAR> whose absolute
+value is not larger than the absolute value of <VAR>fl</VAR>.  <CODE>Flround</CODE> returns the
+closest integral flonum to <VAR>fl</VAR>, rounding to even when <VAR>fl</VAR> is halfway between two
+integers.
+
+<BLOCKQUOTE>
+<P>
+<EM>Rationale:</EM>
+<CODE>Flround</CODE> rounds to even for consistency with the default rounding
+mode specified by the IEEE floating point standard.
+</BLOCKQUOTE>
+
+<P>
+<PRE>
+(flfloor +inf.0)                       ==&gt;  +inf.0
+(flceiling -inf.0)                     ==&gt;  -inf.0
+</PRE>
+</dl>
+
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>flexp</CODE> <var>fl</var>
+<DT><U>procedure:</U> <CODE>fllog</CODE> <var>fl</var>
+<DT><U>procedure:</U> <CODE>flsin</CODE> <var>fl</var>
+<DT><U>procedure:</U> <CODE>flcos</CODE> <var>fl</var>
+<DT><U>procedure:</U> <CODE>fltan</CODE> <var>fl</var>
+<DT><U>procedure:</U> <CODE>flasin</CODE> <var>fl</var>
+<DT><U>procedure:</U> <CODE>flatan1</CODE> <var>fl</var>
+<DT><U>procedure:</U> <CODE>flatan2</CODE> <var>fl1</var> <var>fl2</var>
+<DD>
+
+<P>
+These procedures compute the usual transcendental functions.  <CODE>Fllog</CODE>
+computes the natural logarithm of <VAR>fl</VAR> (not the base ten logarithm).
+<CODE>Flasin</CODE>, <CODE>Flacos</CODE>, and <CODE>Flatan1</CODE> compute arcsine (sin<SUP>-1</SUP>),
+arccosine (cos<SUP>-1</SUP>), and arctangent (tan<SUP>-1</SUP>), respectively.
+<CODE>`(flatan1 <var>fl1</var> <var>fl2</var>)'</CODE> computes the
+arc tangent of <var>fl1</var>/<var>fl2</var>.  The range of
+<CODE>flatan1</CODE> and <CODE>flatan2</CODE> lies between -pi/2 and
+pi/2, both inclusive if -0.0 is distinguished, both exclusive otherwise.
+
+<P>
+In general, the mathematical functions log, arcsine, arccosine, and
+arctangent are multiply defined.
+The value of log <VAR>z</VAR> is defined to be the one whose imaginary
+part lies in the range from -pi (exclusive) to pi (inclusive).
+With log defined this way, the values of sin<SUP>-1</SUP> <VAR>fl</VAR>, cos<SUP>-1</SUP> <VAR>z</VAR>,
+and tan<SUP>-1</SUP> <VAR>z</VAR> are according to the following formulae:
+
+
+<P>
+sin<SUP>-1</SUP> <VAR>z</VAR> = -i log (i <VAR>z</VAR> + sqrt(1 - <VAR>z</VAR><SUP>2</SUP>))
+
+
+<P>
+cos<SUP>-1</SUP> <VAR>z</VAR> = pi / 2 - sin<SUP>-1</SUP> <VAR>z</VAR>
+
+
+<P>
+tan<SUP>-1</SUP> <VAR>z</VAR> = (log (1 + i <VAR>z</VAR>) - log (1 - i <VAR>z</VAR>)) / (2 i)
+
+
+
+<P>
+If the function has a real-valued limit as its argument tends toward
+positive infinity, then that is the value returned by the function
+applied to <SAMP>+inf.0</SAMP>.
+
+If the function has a real-valued limit as its argument tends toward
+negative infinity, then that is the value returned by the function
+applied to <SAMP>-inf.0</SAMP>.
+
+<P>
+In the event that these formulae do
+not yield a real result for the given arguments, the
+result may be <code>+nan.0</code>, or may be some meaningless flonum.
+
+<P>
+Implementations that use IEEE binary floating point
+arithmetic are encouraged to follow the relevant
+standards for these procedures.
+
+<P>
+Specifically, the range of <CODE>`(flatan2 <var>x</var>
+<var>y</var>)'</CODE> is as in the following table. The asterisk (*)
+indicates that the entry applies to implementations that distinguish
+minus zero.
+
+<P>
+<table>
+<tr>
+<td></td>
+<th><var>y</var> Condition</th>
+<th><var>x</var> Condition</th>
+<th>Range of result</th>
+
+<tbody>
+<tr>
+<td></td>
+<td><var>y</var> = 0.0</td>
+<td><var>x</var> &gt; 0.0</td>
+<td>0.0</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = +0.0</td>
+<td><var>x</var> &gt; 0.0</td>
+<td>+0.0</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = -0.0</td>
+<td><var>x</var> &gt; 0.0</td>
+<td>-0.0</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &gt; 0.0</td>
+<td><var>x</var> &gt; 0.0</td>
+<td>0.0 &lt; result&lt; pi/2</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &gt; 0.0</td>
+<td><var>x</var> = 0.0</td>
+<td>pi/2</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &gt; 0.0</td>
+<td><var>x</var> &lt; 0.0</td>
+<td>pi/2 &lt; result&lt; pi</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> = 0.0</td>
+<td><var>x</var> &lt; 0</td>
+<td>pi</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = +0.0</td>
+<td><var>x</var> &lt; 0.0</td>
+<td>+pi</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = -0.0</td>
+<td><var>x</var> &lt; 0.0</td>
+<td>-pi</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &lt; 0.0</td>
+<td><var>x</var> &lt; 0.0</td>
+<td>-pi&lt; result&lt; -pi/2</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &lt; 0.0</td>
+<td><var>x</var> = 0.0</td>
+<td>-pi/2</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &lt; 0.0</td>
+<td><var>x</var> &gt; 0.0</td>
+<td>-pi/2 &lt; result&lt; 0.0</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> = 0.0</td>
+<td><var>x</var> = 0.0</td>
+<td>undefined</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = +0.0</td>
+<td><var>x</var> = +0.0</td>
+<td>+0.0</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = -0.0</td>
+<td><var>x</var> = +0.0</td>
+<td>-0.0</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = +0.0</td>
+<td><var>x</var> = -0.0</td>
+<td>+pi</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = -0.0</td>
+<td><var>x</var> = -0.0</td>
+<td>-pi</td>
+</tr>
+</tbody>
+</table>
+
+
+<P>
+The above specification follows the 
+<A HREF="http://www.lispworks.com/documentation/HyperSpec/Issues/iss192_w.htm">
+branch cut specification of Common Lisp</A> in <A
+HREF="#pitman-1996">[Pitman 1996]</A>, and 
+<A HREF="#steele-1990">[Steele 1990]</A>, which in turn
+cites <A HREF="#penfield-1981">[Penfield 1981]</A>; refer to these sources for more detailed
+discussion of branch cuts, boundary conditions, and implementation of
+these functions.
+
+<PRE>
+(flexp +inf.0)                ==&gt; +inf.0
+(flexp -inf.0)                ==&gt; 0.0
+(fllog +inf.0)                ==&gt; +inf.0
+(fllog 0.0)                   ==&gt; -inf.0
+(fllog -0.0)                  ==&gt; unspecified ; if -0.0 is distinguished
+(fllog -inf.0)                ==&gt; +nan.0
+(flatan1 -inf.0)              ==&gt; -1.5707963267948965
+(flatan1 +inf.0)              ==&gt; 1.5707963267948965
+</PRE>
+</DL>
+
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>flsqrt</CODE> <var>fl</var>
+<DD>
+<P>
+Returns the principal square root of <VAR>z</VAR>. For a negative
+argument, the result may be <code>+nan.0</code>, or may be some
+meaningless flonum.  With <code>flexp</code> and <code>fllog</code>
+defined as above, the value of <code>`(flsqrt <var>fl</var>)'</code>
+is defined as <CODE>`(flexp (fl/ (fllog <var>fl</var>) 2.0))'</CODE>.
+
+<PRE>
+(flsqrt +inf.0)               ==>  +inf.0
+</PRE>
+
+</DL>
+
+<p>
+<DL>
+<DT><U>procedure:</U> <CODE>flexpt</CODE> <var>fl1</var> <var>fl2</var>
+<DD>
+<p>
+Returns <VAR>fl1</VAR> raised to the power <VAR>fl2</VAR>.
+For nonzero <VAR>fl1</VAR>
+
+<P>
+<VAR>fl1</VAR><SUP><VAR>fl2</VAR></SUP> = e<SUP><VAR>z2</VAR> log <VAR>z1</VAR></SUP>
+
+<P>
+0<SUP><VAR>fl</VAR></SUP> is 1 if <VAR>z</VAR> = 0, and 0 if
+<VAR>fl</VAR> is positive.  
+Otherwise, the result may be <code>+nan.0</code>, or may be some
+meaningless flonum.
+</DL>
+
+<h2><a name="FixnumFlonumConversions">Fixnum/Flonum Conversions</a></h2>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>fixnum-&gt;flonum</CODE> <var>fx</var>
+<DT><U>procedure:</U> <CODE>flonum-&gt;fixnum</CODE> <var>fl</var>
+<DD>
+
+<p>
+The <code>fixnum-&gt;flonum</code>
+and <code>flonum-&gt;fixnum</code>
+procedures provide for explicit conversions
+between fixnums and flonums.  The <code>fixnum-&gt;flonum</code>
+procedure returns, for a flonum argument, its numerically closest
+fixnum.
+The <code>flonum-&gt;fixnum</code>
+procedure returns, for a fixnum argument, its numerically closest
+flonum.
+Programmers should understand that these procedures
+cannot be expected to return results that are
+numerically equal to their arguments.
+</p>
+
+<p>
+For example, suppose the fixnum range is [-8388608,8388607]
+and flonums are represented in IEEE double precision.  Then
+</p>
+<pre>
+(fixnum-&gt;flonum 8388608)         ==&gt; 8388608.0
+(flonum-&gt;fixnum 3.14159265)      ==&gt; 3
+(flonum-&gt;fixnum -inf.0)          ==&gt; -8388608
+(flonum-&gt;fixnum 1e20)            ==&gt; 8388607
+</pre>
+
+<p>
+If the argument to <code>fixnum-&gt;flonum</code> is not a fixnum, or
+the argument to <code>flonum-&gt;fixnum</code> is NaN or not a flonum,
+then an error is signalled, unless the implementation is
+running in unsafe mode, in which case all bets are off.
+</p>
+
+</dl>
+
+<h2><a name="exact">Exact Arithmetic</A></h2>
+
+<p>
+The exact arithmetic provides generic operations on exact numbers;
+these operations correspond to their mathematical counterparts.  The
+exact numbers include rationals of arbitrary precision, and exact
+rectangular complex numbers.  A rational number with a denominator of
+1 is indistinguishable from its numerator.  An exact rectangular
+complex number with a zero imaginary part is indistinguishable from
+its real part.
+</p>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>exnumber?</CODE> <var>ex</var>
+<DT><U>procedure:</U> <CODE>excomplex?</CODE> <var>ex</var>
+<DT><U>procedure:</U> <CODE>exrational?</CODE> <var>ex</var>
+<DT><U>procedure:</U> <CODE>exinteger?</CODE> <var>ex</var>
+<DD>
+<P>
+These numerical type predicates can be applied to any kind of
+argument, including non-numbers.  They return <TT>#t</TT> if the object is
+an exact number of the named type, and otherwise return <TT>#f</TT>.
+In general, if a type predicate is true of a number then all higher
+type predicates are also true of that number.  Consequently, if a type
+predicate is false of a number, then all lower type predicates are
+also false of that number.
+</P>
+</DL>
+
+<p>
+We will use <var>ex</var>, <var>ex1</var>, <var>ex2</var>, and
+<var>ex3</var> as metavariables that range over the exact complex
+numbers,
+<var>ef</var>, <var>ef1</var>, <var>ef2</var>, and
+<var>ef3</var> as metavariables that range over the exact rational
+numbers,
+and
+<var>ei</var>, <var>ei1</var>, <var>ei2</var>, and
+<var>ei3</var> as metavariables that range over the exact integers.
+</p>
+
+<p>
+If an argument to the following procedures that corresponds to an exact
+(rational, integer) metavariable is not actually an exact (rational,
+integer) number, then these procedures signal an error, even in unsafe
+mode.
+</p>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>ex=</CODE> <var>ex1</var> <var>ex2</var> <var>ex3</var> ...
+<DT><U>procedure:</U> <CODE>ex&gt;</CODE> <var>ef1</var> <var>ef2</var> <var>ef3</var> ...
+<DT><U>procedure:</U> <CODE>ex&lt;</CODE> <var>ef1</var> <var>ef2</var> <var>ef3</var> ...
+<DT><U>procedure:</U> <CODE>ex&gt;=</CODE> <var>ef1</var> <var>ef2</var> <var>ef3</var> ...
+<DT><U>procedure:</U> <CODE>ex&lt;=</CODE> <var>ef1</var> <var>ef2</var> <var>ef3</var> ...
+<DD>
+
+<P>
+These procedures return <TT>#t</TT> if their arguments are (respectively):
+equal, monotonically increasing, monotonically decreasing,
+monotonically nondecreasing, or monotonically nonincreasing
+<code>#f</code> otherwise.
+</P>
+</DD>
+</DL>
+
+<P>
+<DL>
+<DD>
+<DT><U>library procedure:</U> <CODE>exzero?</CODE> <VAR>ex</VAR>
+<DT><U>library procedure:</U> <CODE>expositive?</CODE> <VAR>ef</VAR>
+<DT><U>library procedure:</U> <CODE>exnegative?</CODE> <VAR>ef</VAR>
+<DT><U>library procedure:</U> <CODE>exodd?</CODE> <VAR>ei</VAR>
+<DT><U>library procedure:</U> <CODE>exeven?</CODE> <VAR>ei</VAR>
+<DD>
+
+<P>
+These numerical predicates test an exact number for a particular property,
+returning <TT>#t</TT> or <TT>#f</TT>.
+<CODE>Exzero?</code> tests if
+the number is <code>ex=</code> to zero, <code>expositive?</code> tests if it is greater
+than zero, <code>exnegative?</code> tests if it is less
+than zero, <code>exodd?</code> tests if it is odd, 
+<code>exeven?</code> tests if it is even. 
+</P>
+</DL>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>exmax</CODE> <var>ef1</var> <var>ef2</var> ...
+<DT><U>library procedure:</U> <CODE>exmin</CODE> <var>ef1</var> <var>ef2</var> ...
+<DD>
+
+<P>
+These procedures return the maximum or minimum of their arguments.
+</P>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>ex+</CODE> <var>ex1</var> <var>ex2</var> ...
+<DT><U>procedure:</U> <CODE>ex*</CODE> <var>ex1</var> <var>ex2</var> ...
+<DD>
+
+<P>
+These procedures return the sum or product of their arguments.
+</p>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>ex-</CODE> <var>ex1</var> <var>ex2</var> ...
+<DT><U>procedure:</U> <CODE>ex-</CODE> <var>ex</var>
+<DT><U>procedure:</U> <CODE>ex/</CODE> <var>ex1</var> <var>ex2</var> ...
+<DT><U>procedure:</U> <CODE>ex/</CODE> <var>ex</var>
+<DD>
+
+<P>
+With two or more arguments, these procedures return the difference or
+quotient of their arguments, associating to the left.  With one
+argument, however, they return the additive or multiplicative inverse
+of their argument. <CODE>Ex/</CODE> signals an error
+if a divisor is 0.
+</p>
+
+</dl>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>exabs</CODE> <VAR>ef</VAR>
+<DD>
+
+<P>
+This procedure returns the absolute value of its argument.
+
+</P>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>exdiv+mod</CODE> <var>ef1</var> <var>ef2</var>
+<DT><U>library procedure:</U> <CODE>exdiv</CODE> <var>ef1</var> <var>ef2</var>
+<DT><U>library procedure:</U> <CODE>exmod</CODE> <var>ef1</var> <var>ef2</var>
+<DT><U>library procedure:</U> <CODE>exquotient</CODE> <var>ei1</var> <var>ei2</var>
+<DT><U>library procedure:</U> <CODE>exmodulo+remainder</CODE> <var>ei1</var> <var>ei2</var>
+<DT><U>library procedure:</U> <CODE>exmodulo</CODE> <var>ei1</var> <var>ei2</var>
+<DT><U>library procedure:</U> <CODE>exremainder</CODE> <var>ei1</var> <var>ei2</var>
+<DD>
+
+<P>
+These procedures implement number-theoretic integer division.  See the
+section on <a href="#integer-division">Integer Division</a>.  For zero
+divisors, these procedures signal an error.
+</p>
+</dl>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>exgcd</CODE> <var>ei1</var> <var>ei2</var> ...
+<DT><U>library procedure:</U> <CODE>exlcm</CODE> <var>ei1</var> <var>ei2</var> ...
+<DD>
+<P>
+These procedures return the greatest common divisor or least common
+multiple of their arguments.
+</DD>
+</DL>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>exnumerator</CODE> <var>ef</var>
+<DT><U>library procedure:</U> <CODE>exdenominator</CODE> <var>ef</var>
+<DD>
+<P>
+These procedures return the numerator or denominator of their argument.
+The result is computed as if the argument was represented as a
+fraction in lowest terms.  The denominator is always positive.  The
+denominator of 0 is defined to be 1.
+</DD>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>exfloor</CODE> <var>ef</var>
+<DT><U>procedure:</U> <CODE>exceiling</CODE> <var>ef</var>
+<DT><U>procedure:</U> <CODE>extruncate</CODE> <var>ef</var>
+<DT><U>procedure:</U> <CODE>exround</CODE> <var>ef</var>
+<DD>
+<P>
+These procedures return exact integers.
+<CODE>Exfloor</CODE> returns the largest integer not larger than <VAR>ef</VAR>.
+<CODE>Exceiling</CODE> returns the smallest integer not smaller than <VAR>ef</VAR>.
+<CODE>Extruncate</CODE> returns the integer closest to <VAR>ef</VAR> whose absolute
+value is not larger than the absolute value of <VAR>ef</VAR>.  <CODE>Exround</CODE> returns the
+closest integer to <VAR>ef</VAR>, rounding to even when <VAR>ef</VAR> is halfway between two
+integers.
+</DL>
+
+<p>
+<DL>
+<DT><U>procedure:</U> <CODE>exexpt</CODE> <var>ef1</var> <var>ei2</var>
+<DD>
+<p>
+Returns <VAR>ef1</VAR> raised to the power <VAR>ei2</VAR>.
+0<SUP><VAR>ei</VAR></SUP> is 1 if <VAR>ei</VAR> = 0 and 0 if
+<VAR>ei</VAR> is positive.
+Otherwise, this procedure signals an error.
+</DL>
+
+<p>
+<DL>
+<DT><U>procedure:</U> <CODE>exmake-rectangular</CODE> <var>ex1</var> <var>ex2</var>
+<DT><U>procedure:</U> <CODE>exreal-part</CODE> <var>ex</var>
+<DT><U>procedure:</U> <CODE>eximag-part</CODE> <var>ex</var>
+<DD>
+<p>
+The arguments of <code>exmake-rectangular</code> must be exact
+rationals.  Suppose <VAR>z</VAR> is a complex number such that
+<VAR>z</VAR> = <VAR>ef1</VAR> + <VAR>ef2</VAR>*i.  Then:
+<PRE>
+(exmake-rectangular <VAR>ef1</VAR> <VAR>ef2</VAR>) ==&gt; <VAR>z</VAR>
+(exreal-part <VAR>z</VAR>)              ==&gt; <VAR>ef1</VAR>
+(eximag-part <VAR>z</VAR>)              ==&gt; <VAR>ef2</VAR>
+</PRE>
+</DL>
+
+<h2><a name="inexact">Inexact Arithmetic</A></h2>
+
+<p>
+The inexact arithmetic provides generic operations on inexact numbers.  The
+inexact numbers include inexact reals and inexact complex numbers, both of
+which are distinguishable from the exact numbers.  The inexact complex
+numbers include the flonums, and the procedures described here behave
+consistently with the corresponding flonum procedures if passed flonum
+arguments.
+</p>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>innumber?</CODE> <var>obj</var>
+<DT><U>procedure:</U> <CODE>incomplex?</CODE> <var>obj</var>
+<DT><U>procedure:</U> <CODE>inreal?</CODE> <var>obj</var>
+<DT><U>procedure:</U> <CODE>inrational?</CODE> <var>obj</var>
+<DT><U>procedure:</U> <CODE>ininteger?</CODE> <var>obj</var>
+<DD>
+<P>
+These numerical type predicates can be applied to any kind of
+argument, including non-numbers.  They return <TT>#t</TT> if the object is
+an inexact number of the named type, and otherwise they return <TT>#f</TT>.
+In general, if a type predicate is true of a number then all higher
+type predicates are also true of that number.  Consequently, if a type
+predicate is false of a number, then all lower type predicates are
+also false of that number.
+</P>
+</DL>
+
+<p>
+We will use <var>in</var>, <var>in1</var>, <var>in2</var>, and
+<var>in3</var> as metavariables that range over the inexact numbers,
+<var>ir</var>, <var>ir1</var>, <var>ir2</var>, and <var>ir3</var> as
+metavariables that range over the inexact real numbers,
+<var>if</var>, <var>if1</var>, <var>if2</var>, and <var>if3</var> as
+metavariables that range over the inexact rationals. and
+<var>ii</var>, <var>ii1</var>, <var>ii2</var>, and <var>ii3</var> as
+metavariables that range over the inexact integers.
+</p>
+
+<p>
+If an argument to the following procedures that corresponds to an inexact
+metavariable is not actually an inexact number, then these procedures signal an
+error, even in unsafe mode.  The same holds true for arguments corresponding to inexact
+real metavariables.
+</p>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>in=</CODE> <var>in1</var> <var>in2</var> <var>in3</var> ...
+<DT><U>procedure:</U> <CODE>in&gt;</CODE> <var>ir1</var> <var>ir2</var> <var>ir3</var> ...
+<DT><U>procedure:</U> <CODE>in&lt;</CODE> <var>ir1</var> <var>ir2</var> <var>ir3</var> ...
+<DT><U>procedure:</U> <CODE>in&gt;=</CODE> <var>ir1</var> <var>ir2</var> <var>ir3</var> ...
+<DT><U>procedure:</U> <CODE>in&lt;=</CODE> <var>ir1</var> <var>ir2</var> <var>ir3</var> ...
+<DD>
+
+<P>
+These procedures return <TT>#t</TT> if their arguments are (respectively):
+equal, monotonically increasing, monotonically decreasing,
+monotonically nondecreasing, or monotonically nonincreasing
+<code>#f</code> otherwise.  These
+predicates are required to be transitive.
+</P>
+</DD>
+</DL>
+
+<P>
+<DL>
+<DD>
+<DT><U>library procedure:</U> <CODE>inzero?</CODE> <var>in</var>
+<DT><U>library procedure:</U> <CODE>inpositive?</CODE> <var>ir</var>
+<DT><U>library procedure:</U> <CODE>innegative?</CODE> <var>ir</var>
+<DT><U>library procedure:</U> <CODE>inodd?</CODE> <var>ii</var>
+<DT><U>library procedure:</U> <CODE>ineven?</CODE> <var>ii</var>
+<DT><U>library procedure:</U> <CODE>innan?</CODE> <var>in</var>
+<DD>
+
+<P>
+These numerical predicates test an inexact number for a particular property,
+returning <TT>#t</TT> or <TT>#f</TT>.
+<CODE>Inzero?</code> tests if
+the number is <code>in=</code> to zero, <code>inpositive?</code> tests if it is greater
+than zero, <code>innegative?</code> tests if it is less
+than zero, <code>inodd?</code> tests if it is odd, 
+<code>ineven?</code> tests if it is even,
+<code>innan?</code> tests if it is a NaN.
+</P>
+</DL>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>inmax</CODE> <var>ir1</var> <var>ir2</var> ...
+<DT><U>library procedure:</U> <CODE>inmin</CODE> <var>ir1</var> <var>ir2</var> ...
+<DD>
+
+<P>
+These procedures return the maximum or minimum of their arguments.
+</P>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>in+</CODE> <var>in1</var> <var>in2</var> ...
+<DT><U>procedure:</U> <CODE>in*</CODE> <var>in1</var> <var>in2</var> ...
+<DD>
+
+<P>
+These procedures return the sum or product of their arguments.
+</p>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>in-</CODE> <var>in1</var> <var>in2</var> ...
+<DT><U>procedure:</U> <CODE>in-</CODE> <var>in</var>
+<DT><U>procedure:</U> <CODE>in/</CODE> <var>in1</var> <var>in2</var> ...
+<DT><U>procedure:</U> <CODE>in/</CODE> <var>in</var>
+<DD>
+
+<P>
+With two or more arguments, these procedures return the difference or
+quotient of their arguments, associating to the left.  With one
+argument, however, they return the additive or multiplicative inverse
+of their argument.
+</p>
+
+</dl>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>inabs</CODE> <VAR>in</VAR>
+<DD>
+
+<P>
+This procedure returns the absolute value of its argument.
+
+</P>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>indiv+mod</CODE> <var>ir1</var> <var>ir2</var>
+<DT><U>library procedure:</U> <CODE>indiv</CODE> <var>ir1</var> <var>ir2</var>
+<DT><U>library procedure:</U> <CODE>inmod</CODE> <var>ir1</var> <var>ir2</var>
+<DT><U>library procedure:</U> <CODE>inquotient</CODE> <var>ii1</var> <var>ii2</var>
+<DT><U>library procedure:</U> <CODE>inmodulo+remainder</CODE> <var>ii1</var> <var>ii2</var>
+<DT><U>library procedure:</U> <CODE>inmodulo</CODE> <var>ii1</var> <var>ii2</var>
+<DT><U>library procedure:</U> <CODE>inremainder</CODE> <var>ii1</var> <var>ii2</var>
+<DD>
+
+<P>
+These procedures implement number-theoretic integer division.  See the
+section on <a href="#integer-division">Integer Division</a>.  For zero
+divisors, these procedures signal an error or may return some
+meaningless inexact number.
+</p>
+</dl>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>ingcd</CODE> <var>ii1</var> <var>ii2</var> ...
+<DT><U>library procedure:</U> <CODE>inlcm</CODE> <var>ii1</var> <var>ii2</var> ...
+<DD>
+<P>
+These procedures return the greatest common divisor or least common
+multiple of their arguments.
+</DD>
+</DL>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>innumerator</CODE> <var>if</var>
+<DT><U>library procedure:</U> <CODE>indenominator</CODE> <var>if</var>
+<DD>
+<P>
+These procedures return the numerator or denominator of their argument.
+The result is computed as if the argument was represented as a
+fraction in lowest terms.  The denominator is always positive.  The
+denominator of 0 is defined to be 1.
+</DD>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>infloor</CODE> <var>ir</var>
+<DT><U>procedure:</U> <CODE>inceiling</CODE> <var>ir</var>
+<DT><U>procedure:</U> <CODE>intruncate</CODE> <var>ir</var>
+<DT><U>procedure:</U> <CODE>inround</CODE> <var>ir</var>
+<DD>
+<P>
+These procedures return inexact integers
+for real arguments that are
+not infinities or NaNs.  For such arguments,
+<CODE>infloor</CODE> returns the largest integer not larger than <VAR>ir</VAR>.
+<CODE>Inceiling</CODE> returns the smallest integer not smaller than <VAR>ir</VAR>.
+<CODE>Intruncate</CODE> returns the integer closest to <VAR>in</VAR> whose absolute
+value is not larger than the absolute value of <VAR>in</VAR>.  <CODE>Inround</CODE> returns the
+closest integer to <VAR>in</VAR>, rounding to even when <VAR>in</VAR> is halfway between two
+integers.
+
+<BLOCKQUOTE>
+<P>
+<EM>Rationale:</EM>
+<CODE>Round</CODE> rounds to even for consistency with the default rounding
+mode specified by the IEEE floating point standard.
+</BLOCKQUOTE>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>inexp</CODE> <var>in</var>
+<DT><U>procedure:</U> <CODE>inlog</CODE> <var>in</var>
+<DT><U>procedure:</U> <CODE>insin</CODE> <var>in</var>
+<DT><U>procedure:</U> <CODE>incos</CODE> <var>in</var>
+<DT><U>procedure:</U> <CODE>intan</CODE> <var>in</var>
+<DT><U>procedure:</U> <CODE>inasin</CODE> <var>in</var>
+<DT><U>procedure:</U> <CODE>inatan</CODE> <var>in</var>
+<DT><U>procedure:</U> <CODE>inatan</CODE> <var>ir1</var> <var>ir2</var>
+<DD>
+
+<P>
+These procedures compute the usual transcendental functions.  <CODE>Inlog</CODE>
+computes the natural logarithm of <VAR>in</VAR> (not the base ten logarithm).
+<CODE>Inasin</CODE>, <CODE>Inacos</CODE>, and <CODE>Inatan</CODE> compute arcsine (sin<SUP>-1</SUP>),
+arccosine (cos<SUP>-1</SUP>), and arctangent (tan<SUP>-1</SUP>), respectively.
+The two-argument variant of <CODE>Inatan</CODE> computes <SAMP>`(inangle
+(inmake-rectangular <VAR>ir1</VAR> <VAR>ir2</VAR>))'</SAMP> (see below).
+
+<P>
+In general, the mathematical functions log, arcsine, arccosine, and
+arctangent are multiply defined.
+The value of log <VAR>z</VAR> is defined to be the one whose imaginary
+part lies in the range from -pi (inclusive if -0.0 is distinguished,
+exclusive otherwise) to pi (inclusive).
+With log defined this way, the values of sin<SUP>-1</SUP> <VAR>z</VAR>, cos<SUP>-1</SUP> <VAR>z</VAR>,
+and tan<SUP>-1</SUP> <VAR>z</VAR> are according to the following formulae:
+
+
+<P>
+sin<SUP>-1</SUP> <VAR>z</VAR> = -i log (i <VAR>z</VAR> + sqrt(1 - <VAR>z</VAR><SUP>2</SUP>))
+
+
+<P>
+cos<SUP>-1</SUP> <VAR>z</VAR> = pi / 2 - sin<SUP>-1</SUP> <VAR>z</VAR>
+
+
+<P>
+tan<SUP>-1</SUP> <VAR>z</VAR> = (log (1 + i <VAR>z</VAR>) - log (1 - i <VAR>z</VAR>)) / (2 i)
+
+<P>
+If the function has a real-valued limit as its argument tends toward
+positive infinity, then that is the value returned by the function
+applied to <CODE>+inf.0</CODE>.
+
+If the function has a real-valued limit as its argument tends toward
+negative infinity, then that is the value returned by the function
+applied to <CODE>-inf.0</CODE>.
+
+<P>
+In the event that these formulae do
+not yield a real result for the given arguments, the
+result may be <code>+nan.0</code>, or may be some meaningless inexact number.
+
+<P>
+Specifically, the range of <CODE>`(inatan <var>x</var>
+<var>y</var>)'</CODE> is as in the following table. The asterisk (*)
+indicates that the entry applies to implementations that distinguish
+minus zero.
+
+<P>
+<table>
+<tr>
+<td></td>
+<th><var>y</var> Condition</th>
+<th><var>x</var> Condition</th>
+<th>Range of result</th>
+
+<tbody>
+<tr>
+<td></td>
+<td><var>y</var> = 0.0</td>
+<td><var>x</var> &gt; 0.0</td>
+<td>0.0</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = +0.0</td>
+<td><var>x</var> &gt; 0.0</td>
+<td>+0.0</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = -0.0</td>
+<td><var>x</var> &gt; 0.0</td>
+<td>-0.0</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &gt; 0.0</td>
+<td><var>x</var> &gt; 0.0</td>
+<td>0.0 &lt; result&lt; pi/2</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &gt; 0.0</td>
+<td><var>x</var> = 0.0</td>
+<td>pi/2</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &gt; 0.0</td>
+<td><var>x</var> &lt; 0.0</td>
+<td>pi/2 &lt; result&lt; pi</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> = 0.0</td>
+<td><var>x</var> &lt; 0</td>
+<td>pi</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = +0.0</td>
+<td><var>x</var> &lt; 0.0</td>
+<td>+pi</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = -0.0</td>
+<td><var>x</var> &lt; 0.0</td>
+<td>-pi</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &lt; 0.0</td>
+<td><var>x</var> &lt; 0.0</td>
+<td>-pi&lt; result&lt; -pi/2</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &lt; 0.0</td>
+<td><var>x</var> = 0.0</td>
+<td>-pi/2</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &lt; 0.0</td>
+<td><var>x</var> &gt; 0.0</td>
+<td>-pi/2 &lt; result&lt; 0.0</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> = 0.0</td>
+<td><var>x</var> = 0.0</td>
+<td>undefined</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = +0.0</td>
+<td><var>x</var> = +0.0</td>
+<td>+0.0</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = -0.0</td>
+<td><var>x</var> = +0.0</td>
+<td>-0.0</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = +0.0</td>
+<td><var>x</var> = -0.0</td>
+<td>+pi</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = -0.0</td>
+<td><var>x</var> = -0.0</td>
+<td>-pi</td>
+</tr>
+</tbody>
+</table>
+
+
+<P>
+The above specification follows the 
+<A HREF="http://www.lispworks.com/documentation/HyperSpec/Issues/iss192_w.htm">
+branch cut specification of Common Lisp</A> in <A
+HREF="#pitman-1996">[Pitman 1996]</A>, and 
+<A HREF="#steele-1990">[Steele 1990]</A>, which in turn
+cites <A HREF="#penfield-1981">[Penfield 1981]</A>; refer to these sources for more detailed
+discussion of branch cuts, boundary conditions, and implementation of
+these functions.
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>insqrt</CODE> <var>in</var>
+<DD>
+<P>
+Returns the principal square root of <VAR>z</VAR>. For a negative
+argument, the result may be <code>+nan.0</code>, or may be some
+meaningless inexact number.  With <code>inlog</code> defined as above,
+the value of <code>`(insqrt <var>in</var>)'</code> is defined as
+<CODE>`(inexp (in/ (inlog <var>in</var>) 2.0))'</CODE>.
+
+</DL>
+
+<p>
+<DL>
+<DT><U>procedure:</U> <CODE>inexpt</CODE> <var>in1</var> <var>in2</var>
+<DD>
+<P>
+Returns <VAR>in1</VAR> raised to the power <VAR>in2</VAR>.
+For nonzero <VAR>in1</VAR>
+
+<P>
+<VAR>in1</VAR><SUP><VAR>in2</VAR></SUP> = e<SUP><VAR>in2</VAR> log <VAR>in1</VAR></SUP>
+
+
+<P>
+0.0<SUP><VAR>z</VAR></SUP> is 1 if <VAR>z</VAR> = 0.0, and 0.0 if
+<SAMP>`(inreal-part <VAR>z</VAR>)'</SAMP> is positive.  
+Otherwise, this procedure reports a violation of an implementation restriction
+or returns an unspecified number.
+</DL>
+
+<p>
+<DL>
+<DT><U>procedure:</U> <CODE>inmake-rectangular</CODE> <var>ir1</var> <var>ir2</var>
+<DT><U>procedure:</U> <CODE>inmake-polar</CODE> <var>ir1</var> <var>ir2</var>
+<DT><U>procedure:</U> <CODE>inreal-part</CODE> <var>in</var>
+<DT><U>procedure:</U> <CODE>inimag-part</CODE> <var>in</var>
+<DT><U>procedure:</U> <CODE>inmagnitude</CODE> <var>in</var>
+<DT><U>procedure:</U> <CODE>inangle</CODE> <var>in</var>
+<DD>
+<p>
+Suppose 
+<VAR>in1</VAR>, <VAR>in2</VAR>, <VAR>in3</VAR>, and <VAR>in4</VAR>
+are inexact rational numbers, and
+<VAR>z</VAR> is a complex number,
+such that
+<VAR>z</VAR> = <VAR>in1</VAR> + <VAR>in2</VAR>*i = <VAR>in3</VAR> *
+e<SUP>i*<VAR>in4</VAR></SUP>.  Then (inexactly):
+<PRE>
+(inmake-rectangular <VAR>in1</VAR> <VAR>in2</VAR>) ==&gt; <VAR>z</VAR>
+(inmake-rectangular <VAR>in3</VAR> <VAR>in4</VAR>) ==&gt; <VAR>z</VAR>
+(inreal-part <VAR>z</VAR>)              ==&gt; <VAR>in1</VAR>
+(inimag-part <VAR>z</VAR>)              ==&gt; <VAR>in2</VAR>
+(inmagnitude <VAR>z</VAR>)              ==&gt; |<VAR>in3</VAR>|
+(inangle <VAR>z</VAR>)                  ==&gt; <VAR>in<span class=sub>angle</span></VAR>
+</PRE>
+
+<P>
+where -pi &lt;= <VAR>in</VAR><span class=sub>angle</span> &lt;= pi with
+<VAR>in<span class=sub>angle</span></VAR> = <VAR>in4</VAR> + 2pi <VAR>n</VAR> for
+some integer <VAR>n</VAR>.
+
+<P>
+<PRE>
+(inangle -1.0)         ==&gt; pi
+(inangle -1.0+0.0)     ==&gt; pi
+(inangle -1.0-0.0)     ==&gt; -pi ; if -0.0 is distinguished
+</PRE>
+
+</DL>
+
+
+<h2><a name="r5rs-generic">R5RS-style Generic Arithmetic</a></h2>
+
+<P>In this model of arithmetic, the section on exactness reads as follows:
+
+<BLOCKQUOTE>
+Scheme numbers are either <I>exact</I> or <I>inexact</I>.  A number is
+exact if it was written as an exact constant or was derived from exact
+numbers using only exact operations.  A number is inexact if it <FONT
+COLOR=red><STRIKE>is infinite, if it </STRIKE></FONT>was written as an
+inexact constant, if it was derived using inexact ingredients, or if
+it was derived using inexact operations. <FONT COLOR=red>The generic
+operations all implement inexact operations.</FONT>  Thus inexactness
+is a contagious property of a number.
+
+<P>
+<FONT COLOR="red"><STRIKE>Each exact number corresponds to a single mathematical number.  It is
+the programmer's responsibility to avoid using exact numbers with
+magnitude or precision too large to be represented in the
+implementation.
+For inexact numbers,
+it is the programmer's responsibility to
+avoid using
+complex numbers with magnitude too large to be
+represented in the implementation.</STRIKE></FONT>
+
+<P>
+<FONT COLOR="red">It is the programmer's responsibility to avoid using
+numbers with magnitude or significant too large to be represented in
+the implementation.</font>
+
+
+<P>
+If two implementations produce exact results for a computation 
+that did not involve inexact intermediate results <FONT COLOR="red">or the
+results of numerical predicates</FONT>, the two ultimate results will be
+mathematically equivalent.  This is generally not true of computations
+involving inexact numbers because approximate methods such as floating
+point arithmetic may be used, but it is the duty of each
+implementation to make the result as close as practical to the
+mathematically ideal result.
+
+<P>
+Rational operations such as <CODE>+</CODE> should always produce
+exact results when given exact arguments.
+<FONT COLOR=red><STRIKE>If the operation is unable to produce an exact result,
+then it may either report the violation of an implementation restriction
+or it may silently coerce its
+result to an inexact value.
+See section 6.2.3.
+</STRIKE></FONT>
+
+<P>
+With the exception of <CODE>inexact-&#62;exact</CODE>
+<FONT COLOR="red"><STRIKE><code>exact-round</code>, <code>exact-ceiling</code>,
+<code>exact-floor</code>, and <code>exact-truncate</code></STRIKE></FONT>,
+the operations
+described in this section must
+return inexact results when given any inexact arguments.
+</BLOCKQUOTE>
+
+<P>
+The procedures described here behave
+consistently with the inexact arithmetic if passed inexact
+arguments, and
+consistently with the exact arithmetic if passed exact
+arguments.
+
+<p>
+We will use <var>z</var>, <var>z1</var>, <var>z2</var>, and
+<var>z3</var> as metavariables that range over the complex numbers,
+<var>x</var>, <var>x1</var>, <var>x2</var>, and <var>x3</var> as
+metavariables that range over the real numbers,
+<var>q</var>, <var>q1</var>, <var>q2</var>, and <var>q3</var> as
+metavariables that range over the rationals. and
+<var>n</var>, <var>n1</var>, <var>n2</var>, and <var>n3</var> as
+metavariables that range over the inexact integers.
+</p>
+
+<p>
+If an argument to the following procedures that corresponds to a
+metavariable is not in the set specified for that metavariable, then
+these procedures signal an error, even in unsafe mode.
+</p>
+
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>=</CODE> <var>z1</var> <var>z2</var> <var>z3</var> ...
+<DT><U>procedure:</U> <CODE>&lt;</CODE> <var>x1</var> <var>x2</var> <var>x3</var> ...
+<DT><U>procedure:</U> <CODE>&gt;</CODE> <var>x1</var> <var>x2</var> <var>x3</var> ...
+<DT><U>procedure:</U> <CODE>&lt;=</CODE> <var>x1</var> <var>x2</var> <var>x3</var> ...
+<DT><U>procedure:</U> <CODE>&gt;=</CODE> <var>x1</var> <var>x2</var> <var>x3</var> ...
+<DD>
+
+
+<P>
+These procedures return <TT>#t</TT> if their arguments are (respectively):
+equal, monotonically increasing, monotonically decreasing,
+monotonically nondecreasing, or monotonically nonincreasing
+<code>#f</code> otherwise.
+
+<PRE>
+(= +inf.0 +inf.0)           ==&gt;  #t
+(= -inf.0 +inf.0)           ==&gt;  #f
+(= -inf.0 -inf.0)           ==&gt;  #t
+</PRE>
+
+For any real number <VAR>x</VAR> that is neither infinite nor NaN:
+
+<PRE>
+(&lt; -inf.0 <VAR>x</VAR> +inf.0))        ==>  #t
+(&gt; +inf.0 <VAR>x</VAR> -inf.0))        ==>  #t
+</PRE>
+
+<P>
+These predicates are required to be transitive.
+
+
+
+<BLOCKQUOTE>
+<P>
+<EM>Note:</EM>
+The traditional implementations of these predicates in Lisp-like
+languages are not transitive.
+</BLOCKQUOTE>
+
+
+<BLOCKQUOTE>
+<P>
+<EM>Note:</EM>
+While it is not an error to compare inexact numbers using these
+predicates, the results may be unreliable because a small inaccuracy
+may affect the result; this is especially true of <CODE>=</CODE> and <CODE>zero?</CODE>.
+
+
+When in doubt, consult a numerical analyst.
+</BLOCKQUOTE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>zero?</CODE> <VAR>z</VAR>
+<DT><U>library procedure:</U> <CODE>positive?</CODE> <VAR>x</VAR>
+<DT><U>library procedure:</U> <CODE>negative?</CODE> <VAR>x</VAR>
+<DT><U>library procedure:</U> <CODE>odd?</CODE> <VAR>n</VAR>
+<DT><U>library procedure:</U> <CODE>even?</CODE> <VAR>n</VAR>
+<DT><U>library procedure:</U> <CODE>nan?</CODE> <VAR>z</VAR>
+<DD>
+
+
+<P>
+These numerical predicates test a number for a particular property,
+returning <TT>#t</TT> or <TT>#f</TT>.  See note above.
+<CODE>Zero?</code> tests if
+the number is <code>=</code> to zero, <code>positive?</code> tests if it is greater
+than zero, <code>negative?</code> tests if it is less
+than zero, <code>odd?</code> tests if it is odd, 
+<code>even?</code> tests if it is even,
+<code>nan?</code> tests if it is a NaN.
+
+
+<PRE>
+(positive? +inf.0)            ==>  #t
+(negative? -inf.0)            ==>  #t
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>max</CODE> <var>x1</var> <var>x2</var> ...
+<DT><U>library procedure:</U> <CODE>min</CODE> <var>x1</var> <var>x2</var> ...
+<DD>
+
+
+<P>
+These procedures return the maximum or minimum of their arguments.
+
+
+
+<PRE>
+(max 3 4)                              ==&gt;  4    ; exact
+(max 3.9 4)                            ==&gt;  4.0  ; inexact
+</PRE>
+
+For any real number <VAR>x</VAR>:
+
+<PRE>
+(max +inf.0 <VAR>x</VAR>)                         ==&gt;  +inf.0
+(min -inf.0 <VAR>x</VAR>)                         ==&gt;  -inf.0
+</PRE>
+
+
+<BLOCKQUOTE>
+<P>
+<EM>Note:</EM>
+If any argument is inexact, then the result will also be inexact (unless
+the procedure can prove that the inaccuracy is not large enough to affect the
+result, which is possible only in unusual implementations).  If <CODE>min</CODE> or
+<CODE>max</CODE> is used to compare numbers of mixed exactness, and the numerical
+value of the result cannot be represented as an inexact number without loss of
+accuracy, then the procedure may report a violation of an implementation
+restriction.
+</BLOCKQUOTE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>+</CODE> <var>z1</var> ...
+<DT><U>procedure:</U> <CODE>*</CODE> <var>z1</var> ...
+<DD>
+
+<P>
+These procedures return the sum or product of their arguments.
+
+<PRE>
+(+ 3 4)                                ==&gt;  7
+(+ 3)                                  ==&gt;  3
+(+)                                    ==&gt;  0
+(+ +inf.0 +inf.0)                      ==&gt;  +inf.0
+(+ +inf.0 -inf.0)                      ==&gt;  +nan.0
+
+(* 4)                                  ==&gt;  4
+(*)                                    ==&gt;  1
+(* 5 +inf.0)                           ==&gt;  +inf.0
+(* -5 +inf.0)                          ==&gt;  -inf.0
+(* +inf.0 +inf.0)                      ==&gt;  +inf.0
+(* +inf.0 -inf.0)                      ==&gt;  -inf.0
+(* 0 +inf.0)                           ==&gt;  +nan.0
+</PRE>
+
+For any real number <VAR>x</VAR> that is neither
+infinite nor NaN:
+
+<PRE>
+(+ +inf.0 <VAR>x</VAR>)                           ==&gt;  +inf.0
+(+ -inf.0 <VAR>x</VAR>)                           ==&gt;  -inf.0
+<span class=add>(+ +nan.0 <VAR>x</VAR>)                           ==&gt;  +nan.0</span>
+<span class=add>(* +nan.0 <VAR>x</VAR>)                           ==&gt;  +nan.0</span>
+</PRE>
+
+<P>
+If any of these procedures are applied to mixed non-rational real and
+non-real complex arguments, they either report a violation of an implementation restriction
+or return an unspecified number.
+</DL>
+
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>-</CODE> <var>z1</var> <var>z2</var>
+<DT><U>procedure:</U> <CODE>-</CODE> <VAR>z</VAR>
+<DT><U><FONT COLOR="red"><STRIKE>optional</STRIKE></FONT> procedure:</U> <CODE>-</CODE> <var>z1</var> <var>z2</var> ...
+<DT><U>procedure:</U> <CODE>/</CODE> <var>z1</var> <var>z2</var>
+<DT><U>procedure:</U> <CODE>/</CODE> <VAR>z</VAR>
+<DT><U><FONT COLOR="red"><STRIKE>optional</STRIKE></FONT> procedure:</U> <CODE>/</CODE> <var>z1</var> <var>z2</var> ...
+<DD>
+
+
+<P>
+With two or more arguments, these procedures return the difference or
+quotient of their arguments, associating to the left.  With one argument,
+however, they return the additive or multiplicative inverse of their argument.
+
+
+<PRE>
+(- 3 4)                                ==&gt;  -1
+(- 3 4 5)                              ==&gt;  -6
+(- 3)                                  ==&gt;  -3
+(- +inf.0 +inf.0)                      ==&gt;  +nan.0
+
+(/ 3 4 5)                              ==&gt;  3/20
+(/ 3)                                  ==&gt;  1/3
+(/ 0.0)                                ==&gt;  +nan.0
+(/ 1.0 0)                              ==&gt;  +inf.0
+(/ -1 0.0)                             ==&gt;  -inf.0
+(/ +inf.0)                             ==&gt;  0.0
+(/ 0 0.0)                              ==&gt;  <span class=del>+nan.0</span> <span class=add>unspecified</span>
+(/ 0.0 0)                              ==&gt;  +nan.0
+(/ 0.0 0.0)                            ==&gt;  +nan.0
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>abs</CODE> <var>x</var>
+<DD>
+
+
+<P>
+<CODE>Abs</CODE> returns the absolute value of its argument.
+
+
+
+<PRE>
+(abs -7)                               ==&gt;  7
+(abs -inf.0)                           ==&gt;  +inf.0
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>div+mod</CODE> <var>x1</var> <var>x2</var>
+<DT><U>library procedure:</U> <CODE>div</CODE> <var>x1</var> <var>x2</var>
+<DT><U>library procedure:</U> <CODE>mod</CODE> <var>x1</var> <var>x2</var>
+<DT><U>library procedure:</U> <CODE>quotient</CODE> <var>n1</var> <var>n2</var>
+<DT><U>library procedure:</U> <CODE>modulo+remainder</CODE> <var>n1</var> <var>n2</var>
+<DT><U>library procedure:</U> <CODE>modulo</CODE> <var>n1</var> <var>n2</var>
+<DT><U>library procedure:</U> <CODE>remainder</CODE> <var>n1</var> <var>n2</var>
+<DD>
+
+<P>
+These procedures implement number-theoretic integer division.  See the
+section on <a href="#integer-division">Integer Division</a>.
+</p>
+</dl>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>gcd</CODE> <VAR><FONT COLOR=red><STRIKE>r1</STRIKE> n1</FONT></VAR> ...
+<DT><U>library procedure:</U> <CODE>lcm</CODE> <VAR><FONT COLOR=red><STRIKE>r1</STRIKE> n1</FONT></VAR> ...
+<DD>
+<P>
+<FONT COLOR="red">Note: This is the R5RS definition.</FONT>
+
+<P>
+These procedures return the greatest common divisor or least common
+multiple of their arguments.  The result is always non-negative.
+<P>
+<FONT COLOR=red><STRIKE>For exact integer arguments, these procedures are the familiar number
+theoretic operators:</STRIKE></FONT>
+
+<PRE>
+(gcd 32 -36)                           ==&gt;  4
+(gcd)                                  ==&gt;  0
+(lcm 32 -36)                           ==&gt;  288
+(lcm 32.0 -36)                         ==&gt;  288.0 ; inexact
+(lcm)                                  ==&gt;  1
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>numerator</CODE> <VAR>q</VAR>
+<DT><U>procedure:</U> <CODE>denominator</CODE> <VAR>q</VAR>
+<DD>
+
+<P>
+These procedures return the numerator or denominator of their
+argument; the result is computed as if the argument was represented as
+a fraction in lowest terms.  The denominator is always positive.  The
+denominator of 0 is defined to be 1.
+
+
+
+<PRE>
+(numerator (/ 6 4))                    ==&gt;  3
+(denominator (/ 6 4))                  ==&gt;  2
+(denominator
+  (exact-&gt;inexact (/ 6 4)))            ==&gt;  2.0
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>floor</CODE> <var>x</var>
+<DT><U>procedure:</U> <CODE>ceiling</CODE> <var>x</var>
+<DT><U>procedure:</U> <CODE>truncate</CODE> <var>x</var>
+<DT><U>procedure:</U> <CODE>round</CODE> <var>x</var>
+<DD>
+<P>
+<FONT COLOR="red"><STRIKE>These procedures accept finite real numbers and return integers.</STRIKE>
+These procedures return inexact integers on
+inexact arguments that are not infinities or NaNs,
+and exact integers on exact rational arguments.
+For such arguments,</FONT>
+<CODE>floor</CODE> returns the largest integer not larger than <VAR>x</VAR>.
+<CODE>Ceiling</CODE> returns the smallest integer not smaller than <VAR>x</VAR>.
+<CODE>Truncate</CODE> returns the integer closest to <VAR>x</VAR> whose absolute
+value is not larger than the absolute value of <VAR>x</VAR>.  <CODE>Round</CODE> returns the
+closest integer to <VAR>x</VAR>, rounding to even when <VAR>x</VAR> is halfway between two
+integers.
+
+<BLOCKQUOTE>
+<P>
+<EM>Rationale:</EM>
+<CODE>Round</CODE> rounds to even for consistency with the default rounding
+mode specified by the IEEE floating point standard.
+</BLOCKQUOTE>
+
+
+<BLOCKQUOTE>
+<P>
+<EM>Note:</EM>
+If the argument to one of these procedures is inexact, then the result
+will also be inexact.  If an exact value is needed, the
+result should be passed to the <CODE>inexact-&gt;exact</CODE> procedure.
+</BLOCKQUOTE>
+
+
+<PRE>
+(floor -4.3)                           ==&gt;  -5.0
+(ceiling -4.3)                         ==&gt;  -4.0
+(truncate -4.3)                        ==&gt;  -4.0
+(round -4.3)                           ==&gt;  -4.0
+
+(floor 3.5)                            ==&gt;  3.0
+(ceiling 3.5)                          ==&gt;  4.0
+(truncate 3.5)                         ==&gt;  3.0
+(round 3.5)                            ==&gt;  4.0  ; inexact
+
+(round 7/2)                            ==&gt;  4    ; exact
+(round 7)                              ==&gt;  7
+
+(floor +inf.0)                         ==&gt;  +inf.0
+(ceiling -inf.0)                       ==&gt;  -inf.0
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>rationalize</CODE> <var>x</var> <var>y</var>
+<DD>
+
+<P>
+<CODE>Rationalize</CODE> returns the <EM>simplest</EM> rational number
+differing from <VAR>x</VAR> by no more than <VAR>y</VAR>.  A rational number r<span class=sub>1</span> is
+<EM>simpler</EM>  than another rational number
+
+r<span class=sub>2</span> if r<span class=sub>1</span> = p<span class=sub>1</span>/q<span class=sub>1</span> and r<span class=sub>2</span> = p<span class=sub>2</span>/q<span class=sub>2</span> 
+(in lowest terms) and |p<span class=sub>1</span>|&lt;= |p<span class=sub>2</span>| and |q<span class=sub>1</span>| &lt;= |q<span class=sub>2</span>|.
+Thus 3/5 is simpler than 4/7.
+Although not all rationals are comparable in this ordering (consider 2/7
+and 3/5) any interval contains a rational number that is simpler than
+every other rational number in that interval (the simpler 2/5 lies
+between 2/7 and 3/5).  Note that 0 = 0/1 is the simplest rational of
+all.
+
+
+
+<PRE>
+(rationalize
+  (inexact-&gt;exact .3) 1/10)            ==&gt; 1/3    ; exact
+(rationalize .3 1/10)                  ==&gt; #i1/3  ; inexact
+
+(rationalize +inf.0 3)                 ==&gt;  +inf.0
+(rationalize +inf.0 +inf.0)            ==&gt;  +nan.0
+(rationalize 3 +inf.0)                 ==&gt;  0
+</PRE>
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>exp</CODE> <VAR>z</VAR>
+<DT><U>procedure:</U> <CODE>log</CODE> <VAR>z</VAR>
+<DT><U>procedure:</U> <CODE>sin</CODE> <VAR>z</VAR>
+<DT><U>procedure:</U> <CODE>cos</CODE> <VAR>z</VAR>
+<DT><U>procedure:</U> <CODE>tan</CODE> <VAR>z</VAR>
+<DT><U>procedure:</U> <CODE>asin</CODE> <VAR>z</VAR>
+<DT><U>procedure:</U> <CODE>acos</CODE> <VAR>z</VAR>
+<DT><U>procedure:</U> <CODE>atan</CODE> <VAR>z</VAR>
+<DT><U>procedure:</U> <CODE>atan</CODE> <VAR>y</VAR> <VAR>x</VAR>
+<DD>
+
+
+<P>
+These procedures compute the usual transcendental functions.  <CODE>Log</CODE>
+computes the natural logarithm of <VAR>z</VAR> (not the base ten logarithm).
+<CODE>Asin</CODE>, <CODE>acos</CODE>, and <CODE>atan</CODE> compute arcsine (sin<SUP>-1</SUP>),
+arccosine (cos<SUP>-1</SUP>), and arctangent (tan<SUP>-1</SUP>), respectively.
+The two-argument variant of <SAMP>`atan'</SAMP> computes <TT>(angle
+(make-rectangular <VAR>x</VAR> <VAR>y</VAR>))</TT> (see below)<FONT color="red"><STRIKE>, even in implementations
+that don't support general complex numbers</STRIKE></FONT>.
+
+
+<P>
+In general, the mathematical functions log, arcsine, arccosine, and
+arctangent are multiply defined.  The value of log <VAR>z</VAR> is
+defined to be the one whose imaginary part lies in the range from -pi
+<FONT color="red"><STRIKE>(exclusive)</STRIKE> (inclusive if -0.0 is
+distinguished, exclusive otherwise)</FONT> to pi (inclusive).
+
+<P class=add>
+The value of log <VAR>z</VAR> for non-real <VAR>z</VAR> is defined in
+terms of log on real numbers as
+
+<P class=add>
+log <VAR>z</VAR> = log |<VAR>z</VAR>| + <VAR>x<span class=sub>angle</span></VAR>i
+
+<P class=add>
+where <VAR>x<span class=sub>angle</span></VAR> is the angle of <VAR>z</VAR> as
+specified below.
+
+<P>
+<FONT color="red">With log defined this way,</FONT> the values of
+sin<SUP>-1</SUP> <VAR>z</VAR>, cos<SUP>-1</SUP> <VAR>z</VAR>, and
+tan<SUP>-1</SUP> <VAR>z</VAR> are according to the following formulae:
+
+
+<P>
+sin<SUP>-1</SUP> <VAR>z</VAR> = -i log (i <VAR>z</VAR> + sqrt(1 - <VAR>z</VAR><SUP>2</SUP>))
+
+
+<P>
+cos<SUP>-1</SUP> <VAR>z</VAR> = pi / 2 - sin<SUP>-1</SUP> <VAR>z</VAR>
+
+
+<P>
+tan<SUP>-1</SUP> <VAR>z</VAR> = (log (1 + i <VAR>z</VAR>) - log (1 - i <VAR>z</VAR>)) / (2 i)
+
+
+<P>
+If the function has a real-valued limit as its argument tends toward
+positive infinity, then that is the value returned by the function
+applied to <CODE>+inf.0</CODE>.
+
+If the function has a real-valued limit as its argument tends toward
+negative infinity, then that is the value returned by the function
+applied to <CODE>-inf.0</CODE>.
+
+<P>
+<FONT color="red">
+In the event that these formulae do
+not yield a real result for the given arguments, the
+result may be <code>+nan.0</code>, or may be some meaningless inexact
+number.
+</FONT>
+
+<div class=add>
+<P>
+Specifically, the range of <CODE>`(atan <var>x</var>
+<var>y</var>)'</CODE> is as in the following table. The asterisk (*)
+indicates that the entry applies to implementations that distinguish
+minus zero.
+
+<P>
+<table>
+<tr>
+<td></td>
+<th><var>y</var> Condition</th>
+<th><var>x</var> Condition</th>
+<th>Range of result</th>
+
+<tbody>
+<tr>
+<td></td>
+<td><var>y</var> = 0.0</td>
+<td><var>x</var> &gt; 0.0</td>
+<td>0.0</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = +0.0</td>
+<td><var>x</var> &gt; 0.0</td>
+<td>+0.0</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = -0.0</td>
+<td><var>x</var> &gt; 0.0</td>
+<td>-0.0</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &gt; 0.0</td>
+<td><var>x</var> &gt; 0.0</td>
+<td>0.0 &lt; result&lt; pi/2</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &gt; 0.0</td>
+<td><var>x</var> = 0.0</td>
+<td>pi/2</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &gt; 0.0</td>
+<td><var>x</var> &lt; 0.0</td>
+<td>pi/2 &lt; result&lt; pi</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> = 0.0</td>
+<td><var>x</var> &lt; 0</td>
+<td>pi</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = +0.0</td>
+<td><var>x</var> &lt; 0.0</td>
+<td>+pi</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = -0.0</td>
+<td><var>x</var> &lt; 0.0</td>
+<td>-pi</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &lt; 0.0</td>
+<td><var>x</var> &lt; 0.0</td>
+<td>-pi&lt; result&lt; -pi/2</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &lt; 0.0</td>
+<td><var>x</var> = 0.0</td>
+<td>-pi/2</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> &lt; 0.0</td>
+<td><var>x</var> &gt; 0.0</td>
+<td>-pi/2 &lt; result&lt; 0.0</td>
+</tr>
+
+<tr>
+<td></td>
+<td><var>y</var> = 0.0</td>
+<td><var>x</var> = 0.0</td>
+<td>undefined</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = +0.0</td>
+<td><var>x</var> = +0.0</td>
+<td>+0.0</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = -0.0</td>
+<td><var>x</var> = +0.0</td>
+<td>-0.0</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = +0.0</td>
+<td><var>x</var> = -0.0</td>
+<td>+pi</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = -0.0</td>
+<td><var>x</var> = -0.0</td>
+<td>-pi</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = +0.0</td>
+<td><var>x</var> = 0</td>
+<td>pi/2</td>
+</tr>
+
+<tr>
+<td>*</td>
+<td><var>y</var> = -0.0</td>
+<td><var>x</var> = 0</td>
+<td>-pi/2</td>
+</tr>
+
+</tbody>
+</table>
+</div>
+
+<P>
+The above specification follows the 
+<FONT COLOR="red">
+<A HREF="http://www.lispworks.com/documentation/HyperSpec/Issues/iss192_w.htm">
+branch cut specification of Common Lisp</A> in <A
+HREF="#pitman-1996">[Pitman 1996]</A>, and </font>
+<A HREF="#steele-1990">[Steele 1990]</A>, which in turn
+cites <A HREF="#penfield-1981">[Penfield 1981]</A>; refer to these sources for more detailed
+discussion of branch cuts, boundary conditions, and implementation of
+these functions.
+
+<PRE>
+(exp +inf.0)                   ==&gt; +inf.0
+(exp -inf.0)                   ==&gt; 0.0
+(log +inf.0)                   ==&gt; +inf.0
+(log 0.0)                      ==&gt; -inf.0
+(log -inf.0)                   ==&gt; <span class=del>+nan.0</span> <span class=add><I>unspecified</I></span>
+(atan -inf.0)                  ==&gt; -1.5707963267948965
+(atan +inf.0)                  ==&gt; 1.5707963267948965
+<span class=add>(log -1.0+0.0i)                ==&gt; 0.0+<VAR>pi</VAR>i</span>
+<span class=add>(log -1.0-0.0i)                ==&gt; 0.0-<VAR>pi</VAR>i ; if -0.0 is distinguished</span>
+</PRE>
+
+<P>
+<FONT color="red"><STRIKE>The functions <CODE>sin</CODE>, <CODE>cos</CODE>, <CODE>tan</CODE>,
+<CODE>asin</CODE>, and <CODE>acos</CODE> either return
+<CODE>+nan.0</CODE> or
+report a violation of an implementation restriction
+when given <CODE>+inf.00</CODE>,
+<CODE>-inf.0</CODE>, or <CODE>+nan.0</CODE> as an argument.
+</STRIKE></FONT>
+
+
+
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>sqrt</CODE> <VAR>z</VAR>
+<DD>
+
+
+<P>
+Returns the principal square root of <VAR>z</VAR>.  For <FONT
+color="red"><STRIKE>real</STRIKE> rational</FONT> <VAR>z</VAR>, the
+result will have either positive real part, or zero real part and
+non-negative imaginary part.  <FONT color="red">With <code>exp</code> and <code>log</code>
+defined as above, the value of <code>`(sqrt <var>z</var>)'</code>
+<CODE>`(exp (/ (log <var>z</var>) 2.0))'</CODE>.
+</FONT>
+
+<PRE>
+(sqrt -5)                   ==&gt;  0.0+2.23606797749979i
+(sqrt +inf.0)               ==&gt;  +inf.0
+(sqrt -inf.0)               ==&gt;  <span class=del>+nan.0</span> <span class=add><I>unspecified</I></span>
+</PRE>
+
+</DL>
+
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>expt</CODE> <var>z1</var> <var>z2</var>
+<DD>
+
+
+<P>
+Returns <VAR>z1</VAR> raised to the power <VAR>z2</VAR>.
+<FONT color="red">For nonzero <VAR>z1</VAR></FONT>
+
+<P>
+<FONT color="red"><VAR>z1</VAR><SUP><VAR>z2</VAR></SUP> = e<SUP><VAR>z2</VAR> log <VAR>z1</VAR></SUP></FONT>
+
+
+<P>
+<FONT color="red">
+0<SUP><VAR>z</VAR></SUP> is 1 if <VAR>z</VAR> = 0, and 0 if
+<SAMP>`(real-part <VAR>z</VAR>)'</SAMP> is positive.  
+Otherwise, this procedure reports a violation of an implementation restriction
+or returns an unspecified number.
+</FONT>
+
+<FONT COLOR="red"><STRIKE>0^0 is 1.</STRIKE></FONT>
+<P>
+<FONT COLOR="red"><STRIKE>For inexact arguments not both zero</STRIKE></FONT>
+<PRE>
+<span class=del>(define (expt <VAR>z1</VAR> <VAR>z2</VAR>) (exp (* (if (zero? <VAR>z1</VAR>) (real-part <VAR>z2</VAR>) <VAR>z2</VAR>) (log <VAR>z1</VAR>))))</span>
+</PRE>
+
+<CODE><FONT COLOR="red"><STRIKE>(expt 0.0 </STRIKE></FONT><VAR><FONT COLOR="red"><STRIKE>z</STRIKE></FONT></VAR><FONT COLOR="red"><STRIKE>)</STRIKE></FONT></CODE><BR>
+<FONT COLOR="red"><STRIKE>returns 1.0 for </STRIKE></FONT><VAR><FONT COLOR="red"><STRIKE>z</STRIKE></FONT></VAR> <FONT COLOR="red"><STRIKE>equal to 0;</STRIKE></FONT><BR>
+<FONT COLOR="red"><STRIKE>returns 0.0 for </STRIKE></FONT><VAR><FONT COLOR="red"><STRIKE>z</STRIKE></FONT></VAR> <FONT COLOR="red"><STRIKE>having positive real part (including +/0.);</STRIKE></FONT><BR>
+<FONT COLOR="red"><STRIKE>returns +/0. for </STRIKE></FONT><VAR><FONT COLOR="red"><STRIKE>z</STRIKE></FONT></VAR> <FONT COLOR="red"><STRIKE>having negative real part (including -/0.); and</STRIKE></FONT><BR>
+<FONT COLOR="red"><STRIKE>returns 0/0. or reports a violation of an implementation restriction otherwise.</STRIKE></FONT>
+
+
+<PRE>
+(expt 5 3)                  ==&gt;  125
+(expt 5 -3)                 ==&gt;  1/125
+(expt 5 0)                  ==&gt;  1
+(expt 0 5)                  ==&gt;  0
+(expt 0 5+.0000312i)        ==&gt;  0
+(expt 0 -5)                 ==&gt;  <span class=del>+inf.0</span> <span class=add><I>unspecified</I></span>
+(expt 0 -5+.0000312i)       ==&gt;  <span class=del>+inf.0</span> <span class=add><I>unspecified</I></span>
+(expt 0 0)                  ==&gt;  <span class=del>+nan.0</span> <span class=add></span>
+(expt 0.0 0.0)              ==&gt;  <span class=del>+nan.0</span> <span class=add>1.0</span>
+</PRE>
+
+
+</DL>
+
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>make-rectangular</CODE> <var>x1</var> <var>x2</var>
+<DT><U>procedure:</U> <CODE>make-polar</CODE> <var>x3</var> <var>x4</var>
+<DT><U>procedure:</U> <CODE>real-part</CODE> <VAR>z</VAR>
+<DT><U>procedure:</U> <CODE>imag-part</CODE> <VAR>z</VAR>
+<DT><U>procedure:</U> <CODE>magnitude</CODE> <VAR>z</VAR>
+<DT><U>procedure:</U> <CODE>angle</CODE> <VAR>z</VAR>
+<DD>
+
+
+<P>
+<FONT color="red"><STRIKE>These procedures are part of every implementation that supports
+general
+complex numbers.</STRIKE></FONT>  Suppose <VAR>x1</VAR>, <VAR>x2</VAR>, <VAR>x3</VAR>, and <VAR>x4</VAR> are
+real numbers and <VAR>z</VAR> is a complex number such that
+
+
+
+<P>
+<VAR>z</VAR> = <VAR>x1</VAR> + i <VAR>x2</VAR> = <VAR>x3</VAR> e<SUP>i <VAR>x4</VAR></SUP>
+
+
+<P>
+Then
+
+
+
+<PRE>
+(make-rectangular <VAR>x1</VAR> <VAR>x2</VAR>)               ==&gt; <VAR>z</VAR>
+(make-polar <VAR>x3</VAR> <VAR>x4</VAR>)                     ==&gt; <VAR>z</VAR>
+(real-part <VAR>z</VAR>)                          ==&gt; <VAR>x1</VAR>
+(imag-part <VAR>z</VAR>)                          ==&gt; <VAR>x2</VAR>
+(magnitude <VAR>z</VAR>)                          ==&gt; |<VAR>x3</VAR>|
+(angle <VAR>z</VAR>)                              ==&gt; x<span class=sub>angle</span>
+</PRE>
+
+<P>
+where -pi <FONT color="red"><STRIKE>&lt;</STRIKE>&lt;=</FONT> x<span class=sub>angle</span>
+&lt;= pi with <VAR>x<span class=sub>angle</span></VAR> = <VAR>in4</VAR> + 2pi
+<VAR>n</VAR> for some integer <VAR>n</VAR>.
+
+<P>
+<PRE>
+(angle -1)                    ==&gt; pi
+(angle +inf.0)                ==&gt; 0.0
+(angle -inf.0)                ==&gt; pi
+<FONT COLOR="red">(angle -1.0+0.0)              ==&gt; pi</font>
+<FONT COLOR="red">(angle -1.0-0.0)              ==&gt; -pi ; if -0.0 is distinguished</font>
+</PRE>
+
+<BLOCKQUOTE>
+<P>
+<FONT COLOR="red"><STRIKE><EM>Rationale:</EM>
+<CODE>Magnitude</CODE> is the same as <CODE>abs</CODE> for a real argument,
+but <CODE>abs</CODE> must be present in all implementations, whereas
+<CODE>magnitude</CODE> need only be present in implementations that support
+general complex numbers</STRIKE></FONT>.
+</BLOCKQUOTE>
+
+</DL>
+
+<P>
+<DL>
+<DT><FONT COLOR="red"><U>procedure:</U> <CODE>bitwise-and</CODE> <var>ei1</var> <var>ei2</var> ...</font>
+<DT><FONT COLOR="red"><U>procedure:</U> <CODE>bitwise-ior</CODE> <var>ei1</var> <var>ei2</var> ...</font>
+<DT><FONT COLOR="red"><U>procedure:</U> <CODE>bitwise-xor</CODE> <var>ei1</var> <var>ei2</var> ...</font>
+<DD>
+<P>
+<FONT COLOR="red">
+The <code>bitwise-and</code> procedure returns the exact integer which is the bit-wise "and" of the
+two's complement representations of its
+arguments.
+The <code>bitwise-ior</code> procedure returns the exact integer which
+is the bit-wise inclusive "or" of the two's
+complement representations of its
+arguments.
+The <code>bitwise-xor</code> procedure returns the exact integer which is the
+bit-wise "exclusive or" of the two's complement representations of its
+arguments.
+</font>
+</DD>
+</DL>
+
+<P>
+<DL>
+<DT><FONT COLOR="red"><U>procedure:</U> <CODE>arithmetic-shift</CODE> <var>ei1</var> <var>ei2</var></font>
+<DD>
+<P>
+<FONT COLOR="red">
+This conceptually shifts the two's complement representation of
+<VAR>ei1</VAR> <VAR>ei2</VAR> bits left when <VAR>ei2</VAR> &gt; 0,
+and -<VAR>ei2</VAR> bits right when <VAR>ei2</VAR> &lt; 0, extending
+the sign.  It returns <VAR>ei1</VAR> when <VAR>ei2</VAR> = 0.
+</font>
+</DD>
+</DL>
+
+<h2><a name="exact-generic">Generic Exact Arithmetic</a></h2>
+
+<p>This specification of exact arithmetic is an alternative to the
+R5RS-style generic arithmetic described in the previous section.
+
+
+<p>
+The exact generic arithmetic provides generic operations on exact and
+inexact rational and complex numbers.  Each inexact number, except for
+infinities and NaNs and complex numbers with infinite or NaN real or
+imaginary part, is taken to represent a unique exact rational
+number or exact complex number with exact rational real and imaginary
+parts, namely the one produced by <code>inexact-&gt;exact</code>.
+With this provision, the generic exact operations correspond to their
+mathematical counterparts.  
+</p>
+
+<P>
+    <BLOCKQUOTE><em>Note:</em> In this section, changes with respect SRFI 70
+aren't marked specially---otherwise, the entire section would be in
+red.
+    </blockquote>
+
+<P>In this model of arithmetic, the section on exactness reads as follows:
+<font color=red>
+Changes from the description of exactness in the previous section are
+highlighted in red.
+</font>
+
+<BLOCKQUOTE>
+Scheme numbers are either <I>exact</I> or <I>inexact</I>.  A number is
+exact if it was written as an exact constant or was derived from exact
+numbers using only exact operations.  A number is inexact if it was
+written as an inexact constant, if it was derived using inexact
+ingredients, or if it was derived using inexact operations.  The
+generic operations all implement <FONT
+color="red"><strike>inexact</strike> exact</FONT> operations.
+Consequently, <FONT color="red"><strike>inexactness</strike>
+exactness</FONT> is a contagious property of a number.
+
+<P>
+It is the programmer's responsibility to avoid using
+numbers with magnitude or significand too large to be represented in
+the implementation.
+
+<P>
+If two implementations produce exact results for a computation <FONT
+COLOR="red">using only the operations described in this section</FONT>
+that did not involve inexact <FONT COLOR="red"><STRIKE>intermediate
+results or the results of numerical predicates</STRIKE></FONT> inputs
+<FONT COLOR=red>(which include the literals representing inexact
+numbers)</FONT>, the two ultimate results will be mathematically
+equivalent.  <FONT COLOR="red"><STRIKE>This is generally not true of
+computations involving inexact numbers because approximate methods
+such as floating point arithmetic may be used, but it is the duty of
+each implementation to make the result as close as practical to the
+mathematically ideal result.</STRIKE> </FONT>
+
+<FONT COLOR="red">
+The transition from exactness to inexactness is always explicit
+through <code>exact-&gt;inexact</code>, <code>real-&gt;flonum</code>
+(or indirectly through I/O).  Consequently, inexactness cannot
+implicitly contaminate a computation that started out with exact
+numbers and does not use the (explicitly) inexact operations.
+</FONT>
+
+<P>
+<FONT COLOR=red><STRIKE>
+Rational operations such as <CODE>+</CODE> should always produce
+exact results when given exact arguments.
+If the operation is unable to produce an exact result,
+then it may either report the violation of an implementation restriction
+or it may silently coerce its
+result to an inexact value.
+See section 6.2.3.
+</STRIKE></FONT>
+
+<P>
+<FONT COLOR=red><STRIKE>
+With the exception of <CODE>exact-&#62;inexact</CODE>
+the operations
+described in this section must
+return inexact results when given any inexact arguments.
+</STRIKE></FONT>
+</BLOCKQUOTE>
+
+<BLOCKQUOTE>
+<P>
+<EM>Rationale:</EM> This departure from the R5RS semantics abandons
+the notion that the same program may compute either exactly or inexactly,
+depending on the input numbers.  Each generic procedure always
+performs the same computation, which is in contrast to R5RS where the
+generic procedures perform different operations depending on their
+inputs.  This means that the generic operations reliably fulfill the
+standard algebraic laws.  For a more detailed treatment of the
+subject, refer to the paper by Egner et al. <A
+href="#egner-at-al-2004">[Egner et al. 2004]</A>.
+
+</BLOCKQUOTE>
+
+<p>
+We will use <var>zf</var>, <var>zf1</var>, <var>zf2</var>, and
+<var>z3</var> as metavariables that range over the complex
+numbers, excluding NaNs, infinities, or complex numbers
+with NaN or infinite real or imaginary part,
+<var>xf</var>, <var>xf1</var>, <var>xf2</var>, and
+<var>xf3</var> as metavariables that range over the real
+numbers excluding NaNs and infinities,
+<var>q</var>, <var>q1</var>, <var>q2</var>, and
+<var>q3</var> as metavariables that range over the rational
+numbers,
+and
+<var>n</var>, <var>n1</var>, <var>n2</var>, and
+<var>n3</var> as metavariables that range over the integers.
+</p>
+
+<p>
+If an argument to the following procedures that corresponds to one
+of the above metavariables is not actually a rational or complex number with
+rational real and imaginary part, these procedures signal an
+error, even in unsafe mode.
+</p>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>=</CODE> <var>zf1</var> <var>zf2</var> <var>zf3</var> ...
+<DT><U>procedure:</U> <CODE>&gt;</CODE> <var>xf1</var> <var>xf2</var> <var>xf3</var> ...
+<DT><U>procedure:</U> <CODE>&lt;</CODE> <var>xf1</var> <var>xf2</var> <var>xf3</var> ...
+<DT><U>procedure:</U> <CODE>&gt;=</CODE> <var>xf1</var> <var>xf2</var> <var>xf3</var> ...
+<DT><U>procedure:</U> <CODE>&lt;=</CODE> <var>xf1</var> <var>xf2</var> <var>xf3</var> ...
+<DD>
+
+<P>
+These procedures return <TT>#t</TT> if their arguments are (respectively):
+equal, monotonically increasing, monotonically decreasing,
+monotonically nondecreasing, or monotonically nonincreasing.
+</P>
+</DD>
+</DL>
+
+<P>
+<DL>
+<DD>
+<DT><U>library procedure:</U> <CODE>zero?</CODE> <var>zf</var>
+<DT><U>library procedure:</U> <CODE>positive?</CODE> <var>xf</VAR>
+<DT><U>library procedure:</U> <CODE>negative?</CODE> <var>xf</VAR>
+<DT><U>library procedure:</U> <CODE>odd?</CODE> <var>n</VAR>
+<DT><U>library procedure:</U> <CODE>even?</CODE> <var>n</VAR>
+<DD>
+
+<P>
+These numerical predicates test an exact number for a particular property,
+returning <TT>#t</TT> or <TT>#f</TT>.
+<CODE>Zero?</code> tests if
+the number is <code>=</code> to zero, <code>positive?</code> tests if it is greater
+than zero, <code>negative?</code> tests if it is less
+than zero, <code>odd?</code> tests if it is odd, 
+<code>even?</code> tests if it is even.
+
+</P>
+</DL>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>max</CODE> <var>xf1</var> <var>xf2</var> ...
+<DT><U>library procedure:</U> <CODE>min</CODE> <var>xf1</var> <var>xf2</var> ...
+<DD>
+
+<P>
+These procedures return the maximum or minimum of their arguments.
+</P>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>+</CODE> <var>zf1</var> <var>zf2</var> ...
+<DT><U>procedure:</U> <CODE>*</CODE> <var>zf1</var> <var>zf2</var> ...
+<DD>
+
+<P>
+These procedures return the sum or product of their arguments.
+</p>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>-</CODE> <var>zf1</var> <var>zf2</var> ...
+<DT><U>procedure:</U> <CODE>-</CODE> <var>zf</var>
+<DT><U>procedure:</U> <CODE>/</CODE> <var>zf1</var> <var>zf2</var> ...
+<DT><U>procedure:</U> <CODE>/</CODE> <var>zf</var>
+<DD>
+
+<P>
+With two or more arguments, these procedures return the difference or
+quotient of their arguments, associating to the left.  With one
+argument, however, they return the additive or multiplicative inverse
+of their argument. <CODE>/</CODE> signals an error
+if a divisor is 0.
+</p>
+
+</dl>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>abs</CODE> <var>xf</VAR>
+<DD>
+
+<P>
+This procedure returns the absolute value of its argument.
+
+</P>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>div+mod</CODE> <var>xf1</var> <var>xf2</var>
+<DT><U>library procedure:</U> <CODE>div</CODE> <var>xf1</var> <var>xf2</var>
+<DT><U>library procedure:</U> <CODE>mod</CODE> <var>xf1</var> <var>xf2</var>
+<DT><U>library procedure:</U> <CODE>quotient</CODE> <var>n1</var> <var>n2</var>
+<DT><U>library procedure:</U> <CODE>modulo+remainder</CODE> <var>n1</var> <var>n2</var>
+<DT><U>library procedure:</U> <CODE>modulo</CODE> <var>n1</var> <var>n2</var>
+<DT><U>library procedure:</U> <CODE>remainder</CODE> <var>n1</var> <var>n2</var>
+<DD>
+
+<P>
+These procedures implement number-theoretic integer division.  See the
+section on <a href="#integer-division">Integer Division</a>.
+</p>
+</dl>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>gcd</CODE> <var>n1</var> <var>n2</var> ...
+<DT><U>library procedure:</U> <CODE>lcm</CODE> <var>n1</var> <var>n2</var> ...
+<DD>
+<P>
+These procedures return the greatest common divisor or least common
+multiple of their arguments.
+</DD>
+</DL>
+
+<P>
+<DL>
+<DT><U>library procedure:</U> <CODE>numerator</CODE> <var>q</var>
+<DT><U>library procedure:</U> <CODE>denominator</CODE> <var>q</var>
+<DD>
+<P>
+These procedures return the numerator or denominator of their argument.
+The result is computed as if the argument was represented as a
+fraction in lowest terms.  The denominator is always positive.  The
+denominator of 0 is defined to be 1.
+</DD>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>floor</CODE> <var>xf</var>
+<DT><U>procedure:</U> <CODE>ceiling</CODE> <var>xf</var>
+<DT><U>procedure:</U> <CODE>truncate</CODE> <var>xf</var>
+<DT><U>procedure:</U> <CODE>round</CODE> <var>xf</var>
+<DD>
+<P>
+These procedures return exact integers.
+<CODE>Floor</CODE> returns the largest integer not larger than <var>xf</VAR>.
+<CODE>Ceiling</CODE> returns the smallest integer not smaller than <var>xf</VAR>.
+<CODE>Truncate</CODE> returns the integer closest to <var>xf</VAR> whose absolute
+value is not larger than the absolute value of <var>xf</VAR>.  <CODE>Round</CODE> returns the
+closest integer to <var>xf</VAR>, rounding to even when <var>xf</VAR> is halfway between two
+integers.
+</DL>
+
+<p>
+<DL>
+<DT><U>procedure:</U> <CODE>expt</CODE> <var>q</var> <var>n</var>
+<DD>
+<p>
+Returns <var>q</VAR> raised to the power <var>n</VAR>.
+0<SUP><var>n</VAR></SUP> is 1 if <var>n</VAR> = 0 and 0 if
+<var>n</VAR> is positive.
+Otherwise, this procedure signals an error.
+</DL>
+
+<p>
+<DL>
+<DT><U>procedure:</U> <CODE>make-rectangular</CODE> <var>xf1</var> <var>xf2</var>
+<DT><U>procedure:</U> <CODE>real-part</CODE> <var>zf</var>
+<DT><U>procedure:</U> <CODE>imag-part</CODE> <var>zf</var>
+<DD>
+<p>
+Suppose <VAR>zf</VAR> is a complex number such that
+<VAR>zf</VAR> = <var>x1</VAR> + <var>xf2</VAR>*i.  Then:
+<PRE>
+(make-rectangular <var>xf1</VAR> <var>xf2</VAR>) ==&gt; <VAR>zf</VAR>
+(real-part <VAR>zf</VAR>)            ==&gt; <var>xf1</VAR>
+(imag-part <VAR>zf</VAR>)            ==&gt; <var>xf2</VAR>
+</PRE>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>bitwise-not</CODE> <var>n</var>
+<DD>
+<P>
+Returns the one's-complement of its argument.
+</DD>
+</DL>
+
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>bitwise-and</CODE> <var>n1</var> <var>n2</var> ...
+<DT><U>procedure:</U> <CODE>bitwise-ior</CODE> <var>n1</var> <var>n2</var> ...
+<DT><U>procedure:</U> <CODE>bitwise-xor</CODE> <var>n1</var> <var>n2</var> ...
+<DD>
+<P>
+The <code>bitwise-and</code> procedure returns the exact integer which is the bit-wise "and" of the
+two's complement representations of its
+arguments.
+The <code>bitwise-ior</code> procedure returns the exact integer which
+is the bit-wise inclusive
+"or" of the two's
+complement representations of its
+arguments.
+The <code>bitwise-xor</code> procedure returns the exact integer which is the
+bit-wise "exclusive or" of the two's complement representations of its arguments.
+</DD>
+</DL>
+
+<P>
+<DL>
+<DT><U>procedure:</U> <CODE>arithmetic-shift</CODE> <var>n1</var> <var>n2</var>
+<DD>
+<P>
+This conceptually shifts the two's complement representation of
+<var>n1</VAR> <var>n2</VAR> bits left when <var>n2</VAR> &gt; 0,
+and -<var>n2</VAR> bits right when <var>n2</VAR> &lt; 0, extending
+the sign.  It returns <var>n1</VAR> when <var>n2</VAR> = 0.
+</DD>
+</DL>
+
+<h1><a name="design-rationale">Design Rationale</a></h1>
+
+<p>
+Background and Rationale
+concerning two issues of R6RS arithmetic
+(written by William D Clinger, 29 July 2005)
+
+<p>
+(Most experts who read this note will want to start with the section
+<a href="#ComplexIssuesFlowAnalysisProblems">Problems With Flow
+Analysis</a>, thereby skipping the history and background information
+that is intended to make this note more self-contained and
+accessible.)
+
+
+<h2><a name="LuciersProposal">Lucier's Proposal</a></h2>
+
+<P>
+In 1998, for the Scheme workshop before ICFP '98 in Baltimore,
+Brad Lucier proposed several changes that were intended to
+bring Scheme's inexact arithmetic into line with the IEEE
+floating point standards and with other recommended practice
+for transcendental functions and complex arithmetic.  Most of
+Lucier's proposals would have applied only to implementations
+that use IEEE floating point for inexact arithmetic, and would
+thus act as recommendations, much like the appendices on inexact
+arithmetic that were published with the IEEE standard for Scheme.
+A few of Lucier's proposals would have required changes to the
+Scheme standards themselves, however.
+</P>
+
+<P>
+Few of the workshop attendees knew enough about the IEEE floating
+point standards to discuss Lucier's proposal.  A straw poll was
+taken, and came out 31-0 in favor of bringing Scheme into line
+with IEEE floating point and with current practice, trusting
+experts to work out the details.
+</P>
+
+<P>
+Here are the highlights of Lucier's proposal, taken verbatim from
+my notes on the 1998 workshop:
+</P>
+
+<blockquote>
+<P>
+    The behavior of <code>eqv?</code> on inexact numbers would change.
+    If <var>x</var> and <var>y</var> are inexact reals represented as IEEE floating
+    point numbers, then <code>`(eqv? <var>x</var> <var>y</var>)'</code> would be true if and only if
+    <var>x</var> and <var>y</var> are equal <em>and</em> have the same base, sign, number of
+    bits in the exponent, number of bits in the significand,
+    and the same biased exponents and significands.  For
+    example, <code>`(eqv? +0. -0.)</code> would be false, as would
+    <code>`(eqv? 1e8 1d8)'</code> in an implementation for which <code>1d8</code> has more
+    precision than <code>1e8</code>.  In most implementations <code>`(eqv? <var>x</var> <var>y</var>)'</code>
+    would be computed by a bit-level comparison of the floating
+    point representations for <var>x</var> and <var>y</var>.
+</P>
+
+<P>
+    <code>`(real? 4.3+0.i)'</code> and <code>`(real? 4.3-0.i)'</code> would be false, although
+    <code>`(real? 4.3+0i)'</code> and <code>`(real? 4.3-0i)'</code> would remain true (assuming
+    an implementation allows the real and imaginary parts of a
+    complex number to have a different exactness, which is not
+    required by the Scheme standards and would not be required
+    by Lucier's proposal).
+</P>
+
+<P>
+    <code>Truncate</code>, <code>round</code>, <code>ceiling</code>, and <code>floor</code> would be defined only on
+    rationals, not on all reals.  The motivation for this is that
+    infinities and NaNs would be reals but not rationals, and
+    there is no meaningful integer value that these procedures
+    could return for infinities and NaNs.  Similarly the first
+    argument to <code>rationalize</code> would be required to be a rational.
+</P>
+
+<P>
+    The branch cuts for certain transcendental functions would
+    change to conform to current practice.
+</P>
+
+<P>
+    Kahan reportedly would like for <code>`(max 1 +nan.0 2)'</code> to return 2
+    instead of <code>+nan.0</code>, but this would conflict with the guiding
+    principle of Scheme's inexact arithmetic so I oppose this.
+    Returning an inexact <code>2.0</code> would be consistent with Scheme's
+    arithmetic, and would not require any changes to the Scheme
+    standards.
+</P>
+</blockquote>
+
+
+<h2><a name="ComplexIssues">The Issues</a></h2>
+
+<P>
+The purpose of this note is to explain why it is desirable for
+Scheme's reals to have an exact zero as their imaginary part.
+
+<P>
+This note also discusses whether the proposed "flonum" type
+should be a synonym for "inexact real", or merely a subset
+of the inexact reals.
+
+<h3><a name="ComplexIssuesNumericalTypes">Numerical Types</a></h3>
+
+<P>
+Scheme's numerical types are the exactness types { exact, inexact },
+the tower types { integer, rational, real, complex, number }, and
+the Cartesian product of the exactness types with the tower types,
+where &lt; t1, t2 &gt; is regarded as a subtype of both t1 and t2.
+
+<P>
+These types have an aesthetic symmetry to them, but they are not
+equally important.  Judging by the number of R5RS procedures whose
+domain is restricted to values of some numerical type, the most
+important numerical types are the exact integers, the integers,
+the rationals, the reals, and the complex numbers.
+
+<P>
+Many programmers and implementors regard R5RS's focus on those
+particular numerical types as something of a mistake.  In practice,
+there is reason to believe that the most important numerical types
+are the exact integers, the exact rationals, the inexact reals, and
+the inexact complex numbers.  The following section explores one of
+the reasons those four types are so important in practice.
+
+
+<h3><a name="ComplexIssuesClosureProperties">Closure Properties</a></h3>
+
+<P>
+Scheme's types are not completely arbitrary.  Each type corresponds
+to a set of values that turns up repeatedly as the natural domain
+or range of the functions that are computed by Scheme's standard
+procedures.  The reason these types turn up so often is that they
+are closed under certain sets of operations.
+
+<P>
+The exact integers, for example, are closed under the integral
+operations of addition, subtraction, and multiplication.  The
+exact rationals are closed under the rational operations, which
+consist of the integral operations plus division (although we
+must make a special case for division by zero).  The reals (and
+inexact reals) are closed under some (often inexact) interpretation
+of rational and irrational operations such as exp and sin, but are
+not closed under operations such as <code>log</code>, <code>sqrt</code>, and <code>expt</code>.  The complex
+(and inexact complex) numbers are closed under the largest set
+of operations.
+
+<h3><a name="ComplexIssuesRepresentationTypes">Representation Types</a></h3>
+
+<P>
+The Scheme standards give implementations considerable freedom
+with respect to the representation of expressed values, but the
+usual approach is to represent the numerical types as unions of
+the representation types that appear on the right hand sides of
+the following domain equations:
+
+<P>
+<table>
+<tr>
+    <td>exact integer</td>  <td>=</td> <td>fixnum + bignum</td>
+</tr>
+<tr>
+    <td>exact rational</td> <td>=</td><td> fixnum + bignum + ratnum</td>
+</tr>
+<tr>
+    <td>inexact real</td>    <td>=</td>  <td>flonum</td>
+</tr>
+<tr>
+    <td>inexact complex</td> <td>=</td>  <td>flonum + compnum</td>
+</tr>
+<tr>
+
+    <td>integer</td>         <td>=</td>  <td>fixnum + bignum + subset of flonum</td>
+</tr>
+<tr>
+    <td>rational</td>        <td>=</td>  <td>fixnum + bignum + ratnum + subset of flonum</td>
+</tr>
+<tr>
+    <td>real</td>            <td>=</td>  <td>fixnum + bignum + ratnum + flonum</td>
+</tr>
+<tr>
+    <td>complex</td>         <td>=</td>  <td>rectangular + compnum</td>
+</tr>
+</table>
+
+<P>
+These domain equations are typical of most implementations, but
+many variations are possible.  The flonum representation type,
+for example, is often divided into several distinct precisions.
+
+<h3><a name="ComplexIssuesRepresentationSpecificOperations">Representation-specific Operations</a></h3>
+
+<P>
+A naive implementation of Scheme's arithmetic operations is slow
+compared to the arithmetic operations of most other languages,
+mainly because most operations must perform some sort of case
+dispatch on the representation types of their arguments.  The
+potential for this case dispatch arises when the type of an
+operation's argument is represented by a union of two or more
+representation types, or because the operation is required to
+signal an error when given an argument of an incorrect type.
+(The second reason can be regarded as a special case of the
+first.)
+
+<P>
+To make Scheme's arithmetic more efficient, many implementations
+provide sets of operations whose domain is restricted to a single
+representation type, and which are not expected to signal an error
+when given arguments of incorrect type.
+
+<P>
+Alternatively, or in addition, several compilers perform some
+kind of flow analysis that attempts to infer the representation
+types of expressions.  When a single representation type can be
+inferred for each argument of an operation, and those types
+match the types expected by some representation-specific version
+of the operation, then the compiler can substitute the specific
+version for the more general version that was specified in the
+source code.
+
+
+<h3><a name="ComplexIssuesFlowAnalysis">Flow Analysis</a></h3>
+
+<P>
+Flow analysis is performed by solving the type and interval
+constraints that arise from such things as:
+</P>
+
+<ul>
+<li> the types of literal constants, e.g. 2 is an exact integer
+    that is known to be within the interval [2,2]
+</li>
+
+<li> conditional control flow that is predicated on known
+    inequalities, e.g. <code>`(if (< i n) E1 E2)'</code>
+</li>
+
+<li> conditional control flow that is predicated on known type
+    predicates, e.g. <code>`(if (real? x) &lt;real_case&gt; &lt;unreal_case&gt;)'</code>
+
+<li> the closure properties of known operations (for example,
+    <code>`(+ &lt;flonum&gt; &lt;flonum&gt;)'</code> always evaluates to a flonum)
+</li>
+</ul>
+
+<P>
+The purpose of flow analysis (as motivated in this note) is to
+infer a single representation type for each argument of an
+operation.  That places a premium on predicates and closure
+properties from which a single representation type can be
+inferred.
+</P>
+
+<h3><a name="ComplexIssuesFlowAnalysisProblems">Problems With Flow Analysis</a></h3>
+
+<P>
+In practice, the most important single representation types are
+fixnum, flonum, and compnum.  These are the representation types
+for which a short sequence of machine code can be generated when
+the representation type is known, but for which considerably less
+efficient code will probably have to be generated when the
+representation type cannot be inferred.
+
+<P>
+The fixnum representation type is not closed under any R5RS
+operations, so it is hard for flow analysis to infer the fixnum
+type from portable R5RS code.  Sometimes the combination of a
+more general type (e.g. exact integer) and an interval (e.g.
+[0,n), where n is known to be a fixnum) can imply the fixnum
+representation type.  Adding fixnum-specific operations that
+map fixnums to fixnums (by computing modulo 2^n, say) greatly
+increases the number of fixnum representation types that a
+compiler can infer.
+
+<P>
+The flonum representation type is not closed under operations
+such as <code>sqrt</code> and <code>expt</code>, so flow analysis tends to break down in
+the presence of those operations.  This is unfortunate, because
+those operations are normally used only with arguments for which
+the result is expected to be a flonum.  Adding flonum-specific
+versions such as <code>flsqrt</code> and <code>flexpt</code> improves the effectiveness
+of flow analysis.
+
+<P>
+The R5RS creates a more insidious problem by defining <code>`(real? <var>z</var>)'</code>
+to be true if and only if <code>`(zero? (imag-part <var>z</var>))'</code> is true.  This
+means, for example, that <code>-2.5+0.0i</code> is real.  If <code>-2.5+0.0i</code> is
+represented as a compnum, then the compiler cannot rely on x
+being a flonum during the &lt;real_case&gt; of
+<code>`(if (real? x) &lt;real_case&gt; &lt;unreal_case&gt;)'</code>.  This problem could
+be fixed by writing all of the arithmetic operations so that
+any compnum with a zero imaginary part is converted to a flonum
+before it is returned, but that merely creates an analogous
+problem for compnum arithmetic, as explained below.  A better
+way to fix the problem is as Lucier recommended: change the
+definition of Scheme's real numbers by defining <code>`(real? <var>z</var>)'</code> to
+be true if and only if <code>`(imag-part <var>z</var>)'</code> is an exact zero.
+
+<P>
+The compnum representation type is closed under virtually all
+operations, provided no operation that accepts two compnums as
+its argument ever returns a flonum.  To work around the problem
+described in the paragraph above, several implementations
+automatically convert compnums with a zero imaginary part to
+the flonum representation.  This practice virtually destroys
+the effectiveness of flow analysis for inferring the compnum
+representation, so it is not a good workaround.  To improve
+the effectiveness of flow analysis, it is better to change
+the definition of Scheme's real numbers as described in the
+paragraph above.
+
+
+<h2><a name="Recommendations">Recommendations</a></h2>
+
+<P>
+To improve the effectiveness of flow analysis and to improve
+the efficiency of arithmetic, I recommend that the R6RS:
+
+<ul>
+<li> add fixnum-specific operations, e.g. <code>fx+</code></li>
+<li> add flonum-specific operations, e.g. <code>fl+</code></li>
+<li> change the definition of real numbers so that a complex
+    number is real if and only if its imaginary part is an
+    exact zero</li>
+<li> change the interpretation of literals accordingly, e.g.
+    so <code>`(imag-part 2.0)'</code> is an exact zero
+</ul>
+
+<h2><a name="FlonumsReals">Flonums</a></h2>
+
+<P>
+When flonum-specific operations are added to Scheme, should
+they take any inexact real as arguments?  Or should their
+arguments be restricted to some subtype of the inexact reals?
+
+<P>
+Another way to describe this issue is to specify that the
+flonum-specific operations take flonums as arguments and
+return flonums as results.  Then the question becomes:
+Are the flonums coextensive with the inexact reals?  Or
+are the flonums allowed to be a proper subset of the
+inexact reals?
+
+<P>
+I do not think this question is terribly important.  Most
+current implementations have only one representation for
+inexact reals, and having only one representation for the
+inexact reals improves the effectiveness of flow analysis,
+so implementations that try to provide efficient arithmetic
+on inexact reals are likely to make "flonum" synonymous with
+"inexact real" even if the R6RS allows otherwise.
+
+<P>
+One reason for allowing "flonum" to be a proper subtype of
+"inexact real" is to give implementations freedom to
+experiment with unusual representation strategies.
+Another possibility is that an implementation might take
+"flonum" to mean the representation that is supported most
+efficiently by the hardware, e.g. IEEE double precision,
+while providing other precisions that might be more
+space-efficient for certain applications.
+
+<P>
+On the other hand, defining "flonum" to be a synonym for
+"inexact real" would simplify the presentation of flonum
+arithmetic, and would eliminate a couple of procedures that
+would otherwise have to be provided and somehow specified
+(e.g. <code>real-&gt;flonum</code> and <code>flonum?</code>).
+
+<P>
+I recommend that the R6RS define "flonum" as a synonym for
+"inexact real", but this is not a strong recommendation.
+It doesn't matter very much.
+
+<H1><a name="ReferenceImplementation">Reference Implementation</a></H1>
+
+<P>
+The <a href="arithmetic-reference.tar.gz">reference implementation</a>
+contains a reference implementation for the procedures described here,
+written in mostly R5RS Scheme, and based purely on integer and flonum
+arithmetic of the underlying Scheme implementation.  It builds the
+entire numeric tower on fixnums and flonums.  The code is set up to
+run under Scheme 48, but should be easy to adapt to other Scheme
+systems.
+</P>
+
+
+<h1><a name="References">References</a></h1>
+
+    <ul>
+      <li><a name="burger-dybvig-1996">[Burger, Dybvig 1996]</a> Robert G. Burger and R. Kent Dybvig. Printing floating-point numbers quickly and accurately. In Proceedings of the ACM SIGPLAN '96 Conference on Programming Language Design and Implementation, pages 108-116.
+	Available <a href="http://www.cs.indiana.edu/~burger/">here</a>.</li>
+      <li><a name="clinger-1990">[Clinger 1990]</a> William Clinger. How to read floating point numbers accurately. In Proceedings of the ACM SIGPLAN '90 Conference on Programming Language Design and Implementation, pages 92-101. Proceedings published as SIGPLAN Notices 25(6), June 1990. Available <a href="http://www.ccs.neu.edu/home/will/papers.html">here</a>.</li>
+      <li><a name="egner-at-al-2004">[Egner et al. 2004]</a>
+  Sebastian Egner, Richard Kelsey, Michael Sperber.
+  Cleaning up the tower: Numbers in Scheme.
+	  In <I>Proceedings of the Fifth ACM SIGPLAN
+   Workshop on Scheme and Functional Programming,</I>
+     pages 109--120,
+     September 22, 2004, Snowbird, Utah.
+  Technical report <a href="http://www.cs.indiana.edu/cgi-bin/techreports/TRNNN.cgi?trnum=TR600">TR600</A>,
+    Computer Science Department, Indiana University.
+      </li>
+      <li><a name="jaffer-2005">[Jaffer 2005]</a> Aubrey Jaffer.  Numerics with Infinities.  2005.  <a href="http://srfi.schemers.org/srfi-70/">SRFI 70</a>.</li>
+      <li><a name="penfield-1981">[Penfield 1981]</A> Paul Penfield, Jr. Principal values and branch cuts in complex APL. In APL '81 Conference Proceedings, pages 248-256. ACM SIGAPL, San Francisco, September 1981. Proceedings published as APL Quote Quad 12(1), ACM, September 1981. <a href="http://portal.acm.org/citation.cfm?id=800142.805368&amp;dl=GUIDE&amp;dl=ACM&amp;type=series&amp;idx=SERIES404&amp;part=Proceedings&amp;WantType=Proceedings&amp;title=International%20Conference%20on%20APL">ACM Digital Library Entry</a>.</li>
+      <li><a name="steele-1990">[Steele 1990]</A> Guy Lewis Steele Jr. Common Lisp: The Language, second edition. Digital Press, Burlington MA, 1990.  Available electronically <a href="http://www-2.cs.cmu.edu/Groups/AI/html/cltl/cltl2.html">here</a>.</li>
+      <li><a name="pitman-1996">[Pitman 1996]</A>Kent Pitman: Common
+      Lisp HyperSpec, 1996.  Available electronically <a href="http://www.lispworks.com/documentation/HyperSpec/">here</a>.</li>
+    </ul>
+
+
+<h1><a name="Acknowledgements">Acknowledgements</a></h1>
+
+We thank Anton van Straaten, Kent Dybvig, Sebastian Egner, Bradley
+Lucier, Mike Ashley, Marc Feeley, Matthew Flatt, Manuel Serrano for
+direct and indirect assistance producing this draft.  Special thanks
+to Aubrey Jaffer for his work on SRFI 70.  We also thank David Van
+Horn, who did an very thorough job editing the original draft.  All
+remaining errors (of which there probably are many) are our own.
+
+
+<h1><a name="Copyright">Copyright</a></h1>
+
+Copyright (C) William D Clinger and Michael Sperber (2005). All Rights Reserved. 
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+<p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+    </p><hr>
+    <address>Editor: <a
+    href="mailto:srfi-editors@srfi.schemers.org">David Van Horn</a></address>
+
+</body></html>
+
