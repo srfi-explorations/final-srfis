@@ -1,0 +1,1746 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>SRFI 148: Eager syntax-rules</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/srfi.css" type="text/css" />
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png" />
+  </head>
+
+  <body>
+
+<h1>Title</h1>
+
+Eager <code>syntax-rules</code>
+
+<h1>Author</h1>
+
+Marc Nieper-Wi&szlig;kirchen
+
+<h1>Status</h1>
+
+<p>This SRFI is currently in <em>final</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+148+at+srfi+dotschemers+dot+org">srfi-148@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-148">archive</a>.</p>
+<ul>
+  <li>Received: 2016/12/31</li>
+  <li>Draft #1 published: 2017/1/1</li>
+  <li>Draft #2 published: 2017/7/3</li>
+  <li>Draft #3 published: 2017/7/25</li>
+  <li>Draft #4 published: 2017/8/3</li>
+  <li>Finalized: 2017/8/8</li>
+</ul>
+
+<h1>Abstract</h1>
+
+Writing powerful <code>syntax-rules</code> macros is hard because they
+do not compose well: The arguments of a macro expansion are not
+expanded.  This SRFI defines an easy to comprehend high-level system
+for writing powerful, composable (or <em>eager</em>) macros, two of whose defining
+features are that its macro arguments are (in general) eagerly expanded and that it can
+be portably implemented in any Scheme implementation conforming to the
+R7RS.
+
+<h1>Rationale</h1>
+
+<p>
+  One defining aspect of the contemporary Scheme programming language
+  is the provision of a high-level hygienic macro system, which is
+  known as the <code>syntax-rules</code> macro system.
+  While <code>syntax-rules</code> makes it easy and very natural to
+  write simple macros &mdash; see, for example, the definition of the <code>and</code> form
+  in the R7RS &mdash;  writing more powerful macros, <em>e.g.</em> a portable hygienic
+  pattern matcher, soon looks like black art to many Scheme users.
+</p>
+
+<p>
+  The main reason for this is that
+  <code>syntax-rules</code>-macros do not compose well
+  due to the head-first rewriting system on which they are based: The
+  arguments of each macro use remain essentially unexpanded.
+</p>
+
+<p>
+  In order to discourage people from refraining from the beauty
+  of <code>syntax-rules</code> by employing unhygienic low-level macro
+  systems (or building on run-time evaluation when expansion at
+  compile time would be beneficial to running time), this SRFI
+  defines a custom macro transformer
+  <code>em-syntax-rules</code>, which allows one to write eager
+  macros, while retaining the hygiene and beauty of <code>syntax-rules</code>.
+  This high-level system of eager macros is based on the idea of
+  CK-macros, which has
+  been <a href="http://okmij.org/ftp/Scheme/macros.html#ck-macros">popularized
+  by Oleg Kiselyov</a>.
+</p>
+
+<p>
+  There are at least three arguments in favor of standardizing a
+  system of eager macros based on <code>syntax-rules</code>.
+  Firstly, some standardization makes it simpler to understand and
+  share each other's (macro) code.  Secondly, by standardizing this
+  system, future additions to the standard in the form of primitive
+  eager macros (<em>e.g.</em> an eager macro keyword <code>em-number?</code>
+  that can discern whether some syntax is a number literal or not) are
+  made possible, and can be used to improve the expressiveness
+  of <code>syntax-rules</code> while retaining hygiene.  Thirdly, it
+  makes very much sense to implement this proposal not as a portable
+  library on top of <code>syntax-rules</code>, but natively by a
+  Scheme implementation.
+</p>
+
+<h1>Examples</h1>
+
+<p>
+One should get a good feeling about how the macro facility presented
+in this SRFI is to be used by studying the implementations of the
+various predefined eager macros (see below), which are contained
+in a <a href="srfi/148.macros.scm">file of the sample implementation</a>.
+</p>
+
+<h2>Factorial</h2>
+
+<p>
+  Of course, an example involving the factorial must not be forgotten.
+  The following example produces a vector literal whose elements are
+  all 3! = 6 permutations of the list <code>(1 2 3)</code> at macro expansion
+  time.
+</p>
+
+<pre>
+ (em (em-list-&gt;vector (em-fact '(1 2 3))))
+</pre>
+
+<h2>The <code>letrec</code>-binding construct</h2>
+
+<p>The definition of <code>letrec</code> as given in the appendix 7.3
+  of the R7RS can be rewritten as an eager macro as follows:</p>
+
+<pre>
+ (define-syntax letrec
+   (em-syntax-rules ()
+     ((letrec ((var1 init1) ...) body ...)
+      ((em-generate-temporaries '(var1 ...)) =&gt; '(temp1 ...))
+       (em '(let ((var1 &lt;undefined&gt;) ...)
+         (let ((temp1 init1) ...)
+             (set! var1 temp1)
+             ...
+             body ...))))))
+</pre>
+
+<h2>The <code>do</code>-iteration construct</h2>
+
+<p>The definition of <code>do</code> as given in the appendix 7.3
+  of the R7RS can be rewritten as an eager macro as follows without "using a trick":</p>
+
+<pre>
+ (define-syntax do
+   (em-syntax-rules ()
+     ((do ((var init . step*) ...)
+          (test expr ...)
+        command ...)
+      (em `(letrec
+           ((loop (lambda (var ...)
+              (if test
+                (begin
+                  (if #f #f)
+                  expr ...)
+                (begin
+                  command
+                  ...
+                  (loop ,(em-if (em-null? 'step*)
+                                'var
+                                (em-car 'step*)) 
+                        ...))))))
+         (loop init ...))))))
+</pre>
+
+<h2>Pattern matcher</h2>
+
+<p>
+  The following is a library implementing a very simple pattern patcher using the
+  macro facility described in this SRFI:
+</p>
+
+<pre>
+ (define-library (example simple-match)
+   (export simple-match)
+   (import (scheme base)
+           (srfi 2)
+           (srfi 148))
+   (begin
+     (define-syntax simple-match
+       (em-syntax-rules ()
+	 ((simple-match expr (pattern . body) ...)
+	  (em
+	   `(call-with-current-continuation
+	     (lambda (return)
+	       (let ((e expr))
+		 (or (and-let* 
+			 ,(compile-pattern 'pattern 'e)
+		       (call-with-values (lambda () . body) return))
+		     ...
+		     (error "does not match" expr)))))))))
+
+     (define-syntax compile-pattern
+       (em-syntax-rules ()
+	 ((compile-pattern '() 'e)
+	  '(((null? e))))
+	 ((compile-pattern '(pattern1 pattern2 ...) 'e)
+	  `(((not (null? e)))
+	    (e1 (car e))
+	    (e2 (cdr e))
+	    ,@(compile-pattern 'pattern1 'e1)
+	    ,@(compile-pattern '(pattern2 ...) 'e2)))
+	 ((compile-pattern 'x 'e)
+	  (em-if (em-symbol? 'x)
+	    '((x e))
+	    '(((equal? x e)))))))))
+</pre>
+
+<p>
+  The simple matcher can then be used in a program or at a REPL as follows:
+</p>
+
+<pre>
+ (import (scheme base)
+         (example simple-match))
+
+ (simple-match 10
+  (10 'ten)
+  ((11 x) x))     &#x27f9; 'ten
+
+ (simple-match '(11 eleven)
+  (10 'ten)
+  ((11 x) x))     &#x27f9; 'eleven
+</pre>
+
+<h1>Specification</h1>
+
+<h2>Overview</h2>
+
+<p>
+An eager macro is a (hygienic) macro whose keyword is bound to a
+transformer specified by an instance
+of <code>em-syntax-rules</code> instead of an instance
+of <code>syntax-rules</code>.  A transformer spec
+using <code>em-syntax-rules</code> is very similar to the
+well-known <code>syntax-rules</code>, namely of one of the two forms:
+</p>
+
+<pre>
+ (em-syntax-rules (&lt;literal&gt; ...) 
+   (&lt;eager macro-rule ...&gt;))
+ (em-syntax-rules &lt;ellipsis&gt; (&lt;literal&gt; ...) 
+   (&lt;eager macro-rule ...&gt;))
+</pre>
+
+<p>
+  Each <code>&lt;eager macro-rule&gt;</code> is also very similar to
+  a <code>&lt;syntax rule&gt;</code>, namely of one of the forms:
+</p>
+
+<pre>
+ ((&lt;pattern&gt; ...) &lt;pattern binding spec&gt; ... &lt;template&gt;)
+ ((&lt;pattern&gt; ... &lt;pattern&gt; &lt;ellipsis&gt; &lt;pattern&gt; ...) &lt;pattern binding spec&gt; ... &lt;template&gt;)
+</pre>
+
+<p>
+  When we forget about the <code>&lt;pattern binding spec&gt;</code>s
+  for a moment, the difference between an eager macro and
+  a <code>syntax-rules</code>-macro lies in how the input elements
+  corresponding to the <code>&lt;pattern&gt;</code>s above are
+  expanded before a macro use is expanded: <code>syntax-rules</code>
+  macros never expand their arguments before evaluation.  On the other
+  hand, <code>em-syntax-rules</code> macros expand those input
+  elements whose corresponding patterns are of the
+  form <code>'&lt;pattern&gt;</code>.  The output of an eager
+  macro is handled as follows: If the template is of the
+  form <code>'&lt;template&gt;</code>, the eager macro expands
+  into <code>&lt;template&gt;</code> (with the pattern variables
+  substituted); if the template is unquoted, the eager macro
+  expands into the expansion of the template.  This behavior is
+  analogous to how evaluation of quoted datums is handled in the core Scheme
+  language.
+</p>
+
+<p>
+  For example, the following expression evaluates to <code>42</code>:
+</p>
+
+<pre>
+ (letrec-syntax
+     ((foo (em-syntax-rules ()
+             ((foo 'a) (bar 'a))))
+      (bar (em-syntax-rules ()
+             ((bar 'a) '(define a 42))))
+      (baz (em-syntax-rules ()
+             ((baz ignore 'a) 'a))))
+   (foo (baz (not-expanded) 'a))
+   a)
+</pre>
+
+<p>One more extension is available when compared with
+  ordinary <code>syntax-rules</code> macros, namely the
+  <code>&lt;pattern binding spec&gt;</code>s, which are of the form:
+</p>
+
+<pre>
+ (&lt;template&gt; =&gt; &lt;pattern&gt;)
+</pre>
+
+<p>
+  These work as follows: Before the final template in an eager macro use
+  is expanded, the pattern variables in <code>&lt;pattern&gt;</code>
+  are bound according to the expansion
+  of <code>&lt;template&gt;</code> (which may contain pattern
+  variables introduced earlier) and are available in subsequent
+  templates.
+</p>
+
+<p>
+  The following example evaluates to the list <code>((1 x) (2 x) (3 x))</code>.
+</p>
+
+<pre>
+ (letrec-syntax
+     ((foo (em-syntax-rules ()
+             ((foo 'x) ((bar 'x) =&gt; '(b c)) '(define x '(b (2 x) c)))))
+      (bar (em-syntax-rules ()
+             ((bar 'x) '((1 x) (3 x))))))
+   (foo 'x)
+   x)
+</pre>
+
+<h2>Syntax</h2>
+
+<p>
+This SRFI extends 7.1 of the R7RS as follows:
+</p>
+
+<pre>
+ &lt;transformer spec&gt;
+   &xrarr; (em-syntax-rules (&lt;identifier&gt; ...) &lt;eager macro rule&gt; ...)
+   &xrarr; (em-syntax-rules &lt;ellipsis&gt; (&lt;identifier&gt; ...) &lt;eager macro rule&gt; ...)
+
+ &lt;eager macro rule&gt;
+   &xrarr; (&lt;top-level pattern&gt; &lt;pattern binding spec&gt; ... &lt;top-level template&gt;)
+
+ &lt;pattern binding spec&gt;
+   &xrarr; (&lt;top-level template&gt; =&gt; &lt;top-level pattern element&gt;)
+
+ &lt;top-level pattern&gt;
+   &xrarr; (&lt;identifier&gt; &lt;top-level pattern element&gt; ...)
+   &xrarr; (&lt;identifier&gt; &lt;top-level pattern element&gt; ... &lt;top-level pattern element&gt;
+      &lt;ellipsis&gt; &lt;top-level pattern element&gt;)
+
+ &lt;top-level template&gt;
+   &xrarr; &lt;quoted template&gt;
+   &xrarr; &lt;template&gt;
+
+ &lt;top-level pattern element&gt;
+   &xrarr; &lt;quoted pattern&gt;
+   &xrarr; &lt;quasiquoted pattern&gt;
+   &xrarr; &lt;pattern&gt;
+
+ &lt;quoted pattern&gt;
+   &xrarr; '&lt;pattern&gt;
+
+ &lt;quasiquoted pattern&gt;
+   &xrarr; `&lt;pattern&gt;
+ 
+ &lt;quoted template&gt;
+   &xrarr; '&lt;template&gt;
+
+ &lt;macro use&gt;
+   &xrarr; &lt;eager macro use&gt;
+
+ &lt;eager macro use&gt;
+   &xrarr; (&lt;keyword&gt; &lt;eager macro datum&gt; ...)
+   &xrarr; (em (&lt;keyword&gt; &lt;eager macro datum&gt; ...))
+ 
+ &lt;eager macro datum&gt;
+   &xrarr; &lt;quoted datum&gt;
+   &xrarr; &lt;quasiquoted datum&gt;
+   &xrarr; &lt;eager macro use&gt;
+   &xrarr; &lt;datum&gt;
+
+ &lt;quoted datum&gt;
+   &xrarr; '&lt;datum&gt;
+
+ &lt;quasiquoted datum&gt;
+   &xrarr; `&lt;datum&gt;
+
+ &lt;slot or eager macro datum&gt;
+   &xrarr; &lt;&gt;
+   &xrarr; &lt;eager macro datum&gt;
+</pre>
+
+<h2>Auxiliary syntax</h2>
+
+<p><code>=&gt;</code></p>
+<p><code>...</code></p>
+<p><code>&lt;&gt;</code></p>
+
+<p>
+The bindings of these three identifiers coincide with the bindings of
+these identifiers as exported
+from <code>(scheme base)</code> and <a href="https://srfi.schemers.org/srfi-26/srfi-26.html">SRFI
+  26</a>, respectively.
+</p>
+
+<p>
+  <i>Note: SRFI 26 was finalized long before the current standard,
+  R7RS, came into being.  By the way literal identifiers in
+  transformers are matched in R7RS and auxiliary syntax is handled in
+  R7RS, the identifier <code>&lt;&gt;</code>
+  (and <code>&lt;...&gt;</code>) should really be bound by SRFI 26 when
+  SRFI 26 is used in an R7RS system.  (The sample implementation of
+  this SRFI &mdash; see below &mdash; includes such an implementation
+  of SRFI 26.)
+  </i>
+</p>
+
+<h2>Semantics</h2>
+
+<p>
+  Keywords bound to a transformer specified by an
+  instance of <code>em-syntax-rules</code> define keywords
+  for <em>eager macros</em>.
+</p>
+ 
+<p>
+  Instances of an eager macro have one of the following forms:
+</p>
+
+<pre>
+(&lt;keyword&gt; &lt;eager macro datum&gt; ...)
+</pre>
+
+<pre>
+(em (&lt;keyword&gt; &lt;eager macro datum&gt; ...))
+</pre>
+
+<p>Here, &lt;keyword&gt; is a keyword for an eager macro.  The former form
+has to be used in definition contexts, the latter when the macro use
+expands into an expression (see also below).</p>
+
+<p>
+The syntax and semantics of the <code>&lt;eager macro rule&gt;</code>s
+together with the (optional) specification
+of <code>&lt;ellipsis&gt;</code> and the <code>&lt;literal&gt;</code>s
+are as in the case of a <code>syntax-rules</code> transformer spec with
+the following exceptions and additions:
+</p>
+
+<ul>
+  <li>
+    <p>
+    A top-level pattern must be a list pattern without a dotted
+    tail. (No expressive power is lost because at top-level, every
+    pattern with a dotted tail can be rewritten, together with the
+    corresponding template, into a proper list pattern by making use
+    of the <code>&lt;ellipsis&gt;</code>).
+    </p>
+  </li>
+  <li>
+    <p>
+    A <code>&lt;pattern&gt;</code> occurring in the list of top-level
+    patterns can also be a <em>quoted pattern</em>, that is a pattern
+    of the form <code>'&lt;pattern&gt;</code>.  A quoted pattern does
+    not count as a list pattern.
+    </p>
+  </li>
+  <li>
+    <p>
+      The identifier <code>quote</code> may appear amongst the list
+      of <code>&lt;literal&gt;</code>s.  (As a quoted pattern does not
+      count as a list pattern, the <code>quote</code> identifying
+      quoted patterns is never considered a literal identifier.)
+    </p>
+  </li>
+  <li>
+    <p>
+    It is an error if there are two rules such that there is a quoted
+    pattern in one rule and a list pattern at the same position in the
+    other rule.
+    </p>
+  </li>
+  <li>
+    <p>
+    A quoted pattern <code>'&lt;pattern&gt;</code> matches an input
+    element if and only if the input element is an eager macro use and the
+    corresponding pattern <code>&lt;pattern&gt;</code> matches the
+    result of the expansion of the eager macro use, or if it is a quoted
+    datum (or a self-quoting syntax element; see below) and the
+    pattern <code>&lt;pattern&gt;</code> matches the expression, or if
+    it is a quasiquoted datum and the
+    pattern <code>&lt;pattern&gt;</code> matches the expansion of the
+    quasiquoted datum (see below).  In other words, unquoted arguments
+    (or unquoted elements in quasiquoted arguments) to quoted patterns that
+    are eager macro uses are expanded before they are matched
+    (<em>call-by-value</em> semantics, different from
+    the <em>call-by-reference</em> semantics of
+    ordinary <code>syntax-rules</code>-macros).
+    </p>
+  </li>
+  <li>
+    <p>
+    A top-level <code>&lt;template&gt;</code> can also be a <em>quoted
+      template</em>, that is a template of the
+      form <code>'&lt;template&gt;</code>, or a <em>quasiquoted
+      template</em>, that is a template of the
+      form <code>`&lt;template&gt;</code>.  A quoted template or
+      quasiquoted template at top-level does not count as a list
+      template.
+    </p>
+  </li>
+  <li>
+    <p>
+    If the top-level template is a quoted
+    template <code>'&lt;template&gt;</code>, the macro use is expanded
+    as if it was a <code>syntax-rules</code> macro
+    with <code>&lt;template&gt;</code> as the top-level template.
+    </p>
+    <p>
+      If the top-level template is a quasiquoted
+      template <code>`&lt;template&gt;</code>, the macro use is
+      expanded as if it was a <code>syntax-rules</code> macro
+      with <code>&lt;template&gt;</code> as the top-level template.
+      However, unquoted template elements, that is template elements
+      of the form <code>,&lt;template element&gt;</code>, inside the
+      quasiquoted template are expanded first and are handled as if
+      they are an unquoted top-level template of an eager macro (see
+      below).  <code>Unquote-splicing</code> and nested
+      quasiquotations are handled analogously to quasiquotation in the
+      core Scheme language.
+    </p>
+  </li>
+  <li>
+    <p>
+      If the top-level template is an unquoted
+      template <code>&lt;template&gt;</code>, the macro use is
+      expanded as if it was a <code>syntax-rules</code> macro.  It is
+      an error if the expanded output is not an eager macro use
+      (or a self-quoting syntax element; see below).
+    </p>
+  </li>
+  <li>
+    <p>Syntax elements that are not proper lists are self-quoting.
+      Whenever they appear as input or output elements of eager macros where
+      a quoted syntax element is expected, they are implicitly quoted.
+    </p>
+  </li>
+  <li>
+    <p>
+      An eager macro use is only allowed in definition contexts, except when
+      the macro use or top-level template of the macro is wrapped
+      into <code>em</code> (see also below) and does expand in an
+      expression.
+    </p>
+  </li>
+  <li>
+    <p>
+      When <code>&lt;pattern binding spec&gt;</code>s appear in an
+      eager macro rule that is matched, the <code>&lt;pattern binding
+      spec&gt;</code>s are processed in left-to-right order before the final
+      template of the rule is expanded: For each pattern binding
+      spec <code>(&lt;template&gt; =&gt; &lt;top-level pattern
+      element&gt;)</code>, the <code>&lt;template&gt;</code> is
+      expanded according to the above rules and matched against
+      the <code>&lt;top-level pattern element&gt;</code>.  The pattern
+      variables introduced by the <code>&lt;top-level pattern
+      element&gt;</code> are available in subsequent templates.  It is
+      an error if the <code>&lt;top-level pattern element&gt;</code>
+      does not match or if a pattern variable is introduced more than once.
+    </p>
+  </li>
+</ul>
+
+<h2>Eager macros</h2>
+
+<p>
+  In this subsection, all predefined eager macros are listed.  It is
+  not specified whether these macros are able to deal with circular lists and vectors.
+</p>
+
+<h3>Index</h3>
+
+<ul>
+  <li><a href="#General">General</a>: <a href="#em">em</a>,
+    <a href="#em-cut">em-cut</a>, <a href="#em-cute">em-cute</a>,
+    <a href="#em-constant">em-constant</a>, <a href="#em-quote">em-quote</a>,
+    <a href="#em-eval">em-eval</a>, <a href="#em-apply">em-apply</a>, <a href="#em-call">em-call</a>,
+    <a href="#em-error">em-error</a>,
+    <a href="#em-gensym">em-gensym</a>,
+    <a href="#em-generate-temporaries">em-generate-temporaries</a>
+  </li>
+  <li><a href="#Booleanlogic">Boolean logic</a>:
+    <a href="#em-if">em-if</a>,
+    <a href="#em-not">em-not</a>,
+    <a href="#em-or">em-or</a>,
+    <a href="#em-and">em-and</a>,
+    <a href="#em-null?">em-null?</a>,
+    <a href="#em-pair?">em-pair?</a>,
+    <a href="#em-list?">em-list?</a>,
+    <a href="#em-boolean?">em-boolean?</a>,
+    <a href="#em-vector?">em-vector?</a>,
+    <a href="#em-symbol?">em-symbol?</a>,
+    <a href="#em-bound-identifier=?">em-bound-identifier=?</a>,
+    <a href="#em-free-identifier=?">em-free-identifier=?</a>,
+    <a href="#em-equal?">em-equal?</a>
+  </li>
+  <li><a href="#Listprocessing">List processing</a>:
+    <a href="#em-cons">em-cons</a>,
+    <a href="#em-cons*">em-cons*</a>,
+    <a href="#em-list">em-list</a>,
+    <a href="#em-make-list">em-make-list</a>,
+    <a href="#em-car">em-car</a>,
+    <a href="#em-cdr">em-cdr</a>,
+    <a href="#em-caar">em-caar</a>,
+    <a href="#em-cadr">em-cadr</a>,
+    <a href="#em-cdar">em-cdar</a>,
+    <a href="#em-cddr">em-cddr</a>,
+    <a href="#em-first">em-first</a>,
+    <a href="#em-second">em-second</a>,
+    <a href="#em-third">em-third</a>,
+    <a href="#em-fourth">em-fourth</a>,
+    <a href="#em-fifth">em-fifth</a>,
+    <a href="#em-sixth">em-sixth</a>,
+    <a href="#em-seventh">em-seventh</a>,
+    <a href="#em-eighth">em-eighth</a>,
+    <a href="#em-ninth">em-ninth</a>,
+    <a href="#em-tenth">em-tenth</a>,
+    <a href="#em-list-tail">em-list-tail</a>,
+    <a href="#em-list-ref">em-list-ref</a>,
+    <a href="#em-take">em-take</a>,
+    <a href="#em-drop">em-drop</a>,
+    <a href="#em-take-right">em-take-right</a>,
+    <a href="#em-drop-right">em-drop-right</a>,
+    <a href="#em-last">em-last</a>,
+    <a href="#em-last-pair">em-last-pair</a>,
+    <a href="#em-append">em-append</a>,
+    <a href="#em-reverse">em-reverse</a>,
+    <a href="#em-fold">em-fold</a>,
+    <a href="#em-fold-right">em-fold-right</a>,
+    <a href="#em-unfold">em-unfold</a>,
+    <a href="#em-unfold-right">em-unfold-right</a>,
+    <a href="#em-map">em-map</a>,
+    <a href="#em-append-map">em-append-map</a>,
+    <a href="#em-filter">em-filter</a>,
+    <a href="#em-remove">em-remove</a>,
+    <a href="#em-find">em-find</a>,
+    <a href="#em-find-tail">em-find-tail</a>,
+    <a href="#em-take-while">em-take-while</a>,
+    <a href="#em-drop-while">em-drop-while</a>,
+    <a href="#em-any">em-any</a>,
+    <a href="#em-every">em-every</a>,
+    <a href="#em-member">em-member</a>,
+    <a href="#em-assoc">em-assoc</a>,
+    <a href="#em-alist-delete">em-alist-delete</a>,
+    <a href="#em-set-le">em-set&lt;=</a>,
+    <a href="#em-set=">em-set=</a>,
+    <a href="#em-set-adjoin">em-set-adjoin</a>,
+    <a href="#em-set-union">em-set-union</a>,
+    <a href="#em-set-intersection">em-set-intersection</a>,
+    <a href="#em-set-difference">em-set-difference</a>,
+    <a href="#em-set-xor">em-set-xor</a>
+  </li>
+  <li>
+    <a href="#Vectorprocessing">Vector processing</a>:
+    <a href="#em-vector">em-vector</a>,
+    <a href="#em-list-to-vector">em-list-&gt;vector</a>,
+    <a href="#em-vector-to-list">em-vector-&gt;list</a>,
+    <a href="#em-vector-map">em-vector-map</a>,
+    <a href="#em-vector-ref">em-vector-ref</a>,
+  </li>
+  <li>
+    <a href="#Combinatorics">Combinatorics</a>:
+    <a href="#em-0">em-0</a>,
+    <a href="#em-1">em-1</a>,
+    <a href="#em-2">em-2</a>,
+    <a href="#em-3">em-3</a>,
+    <a href="#em-4">em-4</a>,
+    <a href="#em-5">em-5</a>,
+    <a href="#em-6">em-6</a>,
+    <a href="#em-7">em-7</a>,
+    <a href="#em-8">em-8</a>,
+    <a href="#em-9">em-9</a>,
+    <a href="#em-10">em-10</a>,
+    <a href="#em=">em=</a>,
+    <a href="#em-lt">em&lt;</a>,
+    <a href="#em-le">em&lt;=</a>,
+    <a href="#em-gt">em&gt;</a>,
+    <a href="#em-ge">em&gt;=</a>,
+    <a href="#em-zero?">em-zero?</a>,
+    <a href="#em-even?">em-even?</a>,
+    <a href="#em-odd?">em-odd?</a>,
+    <a href="#em+">em+</a>,
+    <a href="#em-">em-</a>,
+    <a href="#em*">em*</a>,
+    <a href="#em-quotient">em-quotient</a>,
+    <a href="#em-remainder">em-remainder</a>,
+    <a href="#em-fact">em-fact</a>,
+    <a href="#em-binom">em-binom</a>
+  </li>
+</ul>
+
+<h3 id="General">General</h3>
+
+<p id="em"><code>(em &lt;eager macro use&gt;)</code></p>
+
+<p>Expands into the expansion of &lt;eager macro use&gt; with the
+  additional property that it is allowed in an expression context.  It
+  is an error if &lt;eager macro use&gt; does not expand into an
+  expression.</p>
+
+<p><i>Rationale: That eager macro uses that expand into expressions have
+    to be wrapped in <code>em</code> forms to ensure
+    that this SRFI can be portably implemented.  If Scheme had
+    a <code>let(rec)-syntax</code> form that spliced its body into the
+    outer scope, this auxiliary <code>em</code> wouldn't be necessary.
+  </i>
+</p>
+
+<p>Schemes that provide a splicing <code>let(rec)-syntax</code> form
+  can implement <code>em</code> as a no-op so that it can be omitted
+  and eager macro uses can appear equally in definition or expression
+  context.  It is recommended to actually require that <code>em</code> becomes
+  a no-op in a future Scheme standard, which provides a
+  splicing <code>let(rec)-form</code> and which includes the specification
+  of this SRFI.  In that case, <code>em</code> should become deprecated.
+</p>
+
+<p id="em-cut"><code>(em-cut &lt;slot or eager macro datum&gt;<sub>1</sub> &lt;slot or
+eager macro datum&gt;<sub>2</sub> ...)</code></p>
+<p><code>(em-cut &lt;slot or eager macro datum&gt;<sub>1</sub> &lt;slot or
+eager macro datum&gt;<sub>2</sub> ... &lt;&gt; &lt;ellipsis&gt;)</code></p>
+
+<p>
+  Expands into an eager macro that accepts as many input elements as there are slots (elements of the form
+  <code>&lt;&gt;</code>) amongst the <code>&lt;eager macro
+    datum&gt;</code>s.  When this eager macro is used, it expands into the expansion of
+  <code>(&lt;slot or eager macro datum&gt;<sub>1</sub> &lt;slot or
+    eager macro datum&gt;<sub>2</sub>)</code> where the slots are
+    replaced by its input elements in order.  In case of the second
+    syntax with <code>(... &lt;&gt; &lt;ellipsis&gt;)</code>, the
+    resulting eager macro takes a variable number of extra input elements
+    that are spliced in place of the sequence <code>&lt;&gt;
+    &lt;ellipsis&gt;</code>.  (The semantics are analogous to the
+    semantics of the <code>cut</code> macro
+    of <a href="https://srfi.schemers.org/srfi-26/srfi-26.html">SRFI 26</a>,
+    except for the fact that <code>&lt;...&gt;</code> is replaced by the
+    sequence <code>&lt;&gt; &lt;ellipsis&gt;</code>, which would not
+    have been possible to implement when SRFI 26 was finalized).  It
+    is an error to use <code>em-cut</code> standalone, that is, not as
+    an input or output element of an eager macro.
+</p>
+
+<p id="em-cute"><code>(em-cute &lt;slot or eager macro datum&gt;<sub>1</sub> &lt;slot or
+eager macro datum&gt;<sub>2</sub> ...)</code></p>
+<p><code>(em-cute &lt;slot or eager macro datum&gt;<sub>1</sub> &lt;slot or
+eager macro datum&gt;<sub>2</sub> ... &lt;&gt; &lt;ellipsis&gt;)</code></p>
+
+<p>
+  Analogous to the <code>em-cut</code>-macro uses, except that the non-slot 
+  <code>&lt;slot or eager macro datum&gt;</code>s are expanded when
+  the <code>em-cute</code>-macro use is expanded, not when the
+  resulting eager macro is expanded.
+  (The semantics are analogous to the semantics of
+    the <code>cute</code> macro
+  of <a href="https://srfi.schemers.org/srfi-26/srfi-26.html">SRFI 26</a>).
+  It is an error to use <code>em-cute</code> standalone, that is, not
+  as an input or output element of an eager macro.
+</p>
+
+<p><i>Rationale: While the <code>cut</code> and <code>cute</code>
+    macros of SRFI 26 are not really essential for coding in Scheme
+    because Scheme has closures, there is no such thing as closures of
+    eager macros.  However, <code>em-cut</code>
+    and <code>em-cute</code> can be used to emulate closures.
+  </i>
+</p>
+
+<p id="em-constant"><code>(em-constant &lt;constant&gt;)</code></p>
+
+<p>
+  Expands into an eager macro that accepts an arbitrary number of input
+  elements and that always expands into the expansion of &lt;constant&gt;.
+
+  It
+  is an error to use <code>em-constant</code> standalone, that is, not as
+  an input or output element of an eager macro.
+</p>
+
+<p id="em-quote"><code>(em-quote &lt;eager macro datum&gt;)</code></p>
+
+<p>Expands into the quotation of the expansion of the <code>&lt;eager macro datum&gt;</code>.</p>
+
+<p id="em-eval"><code>(em-eval &lt;eager macro datum&gt;)</code></p>
+
+<p>Expands into the expansion of the expansion of &lt;eager macro datum&gt;.</p>
+
+<p><code>(em-apply &lt;eager macro datum&gt;<sub>1</sub> &lt;eager macro datum&gt;... &lt;eager macro datum&gt;<sub>2</sub>)</code></p>
+
+<p>Semantically equivalent to:</p>
+
+<pre>
+ (em-append (em-list &lt;eager macro datum&gt;<sub>1</sub> &lt;eager macro datum&gt; ...) &lt;eager macro datum&gt;<sub>2</sub>)
+</pre>
+
+<p>It is an error if <code>&lt;eager macro datum&gt;<sub>2</sub></code> does not expand into a list.</p>
+
+<p id="em-call"><code>(em-call &lt;macro&gt; &lt;input&gt; ...)</code></p>
+
+<p>Semantically equivalent to:</p>
+
+<pre>
+ (em-apply &lt;macro&gt; &lt;input&gt; ... '())
+</pre>
+
+<p id="em-error"><code>(em-error &lt;message&gt; &lt;argument&gt; ...)</code></p>
+
+<p>Expansion yields a syntax error whose message is the expansion
+  of <code>&lt;message&gt;</code> and whose
+  arguments are the expansions of the <code>&lt;argument&gt;</code>s.
+</p>
+
+<p id="em-gensym"><code>(em-gensym)</code></p>
+
+<p>Expands into a fresh identifier that is
+  not <code>em-bound-identifier=?</code> (see below) to any already
+  existing identifier.
+</p>
+
+<p id="em-generate-temporaries"><code>(em-generate-temporaries &lt;list&gt;)</code></p>
+
+<p>Expands into a list of pairwise different (in the sense of <code>bound-identifier=?</code>)
+  identifiers whose length is the number of elements in the expansion of <code>&lt;list&gt;</code>.
+  It is an error if <code>&lt;list&gt;</code> does not expand into a list.
+</p>
+
+<h3 id="Booleanlogic">Boolean logic</h3>
+
+<p id="em-if"><code>(em-if &lt;eager macro datum&gt;<sub>1</sub>
+&lt;eager macro datum&gt;<sub>2</sub> &lt;eager macro
+datum&gt;<sub>3</sub>)</code></p>
+
+<p>Expands into the expansion of <code>&lt;eager macro datum&gt;<sub>2</sub></code> if
+  <code>&lt;eager macro datum&gt;<sub>1</sub></code> does not expand
+  into <code>#f</code>, and into the expansion of <code>&lt;eager macro
+    datum&gt;<sub>3</sub></code> otherwise.
+</p>
+
+<p id="em-not"><code>(em-not &lt;eager macro datum&gt;)</code></p>
+
+<p>Expands into <code>#f</code> if <code>&lt;eager macro datum&gt;</code>
+does not expand into <code>#f</code>, and into <code>#t</code> otherwise.
+</p>
+
+<p id="em-or"><code>(em-or &lt;eager macro datum&gt; ...)</code></p>
+
+<p>Expands into the expansion of the first <code>&lt;eager macro
+    datum&gt;</code> (in left-to-right order) that does not expand
+    into <code>#f</code>, and does not expand any
+    later <code>&lt;eager macro datum&gt;</code>s; expands
+    into <code>#f</code> if all <code>&lt;eager macro datum&gt;</code>s
+    expand into <code>#f</code>.
+</p>
+
+<p id="em-and"><code>(em-and &lt;eager macro datum&gt; ...)</code></p>
+
+<p>Expands into the expansion of the last <code>&lt;eager macro
+    datum&gt;</code> (in left-to-right order) if all previous
+    <code>&lt;eager macro datum&gt;</code>s do not expand
+    into <code>#f</code>, and does not expand any <code>&lt;eager macro
+    datum&gt;</code>s after the first that expands
+    into <code>#f</code>; expands into <code>#f</code> otherwise.
+</p>
+
+<p id="em-null?"><code>(em-null? &lt;eager macro datum&gt;)</code></p>
+
+<p>Expands into <code>#t</code> if <code>&lt;eager macro datum&gt;</code>
+expands into the empty list, and into <code>#f</code> otherwise.
+</p>
+
+<p id="em-pair?"><code>(em-pair? &lt;eager macro datum&gt;)</code></p>
+
+<p>Expands into <code>#t</code> if <code>&lt;eager macro datum&gt;</code>
+expands into a pair, and into <code>#f</code> otherwise.
+</p>
+
+
+<p id="em-list?"><code>(em-list? &lt;eager macro datum&gt;)</code></p>
+
+<p>Expands into <code>#t</code> if <code>&lt;eager macro datum&gt;</code>
+expands into a (proper) list, and into <code>#f</code> otherwise.
+</p>
+
+<p id="em-boolean?"><code>(em-boolean? &lt;eager macro datum&gt;)</code></p>
+
+<p>Expands into <code>#t</code> if <code>&lt;eager macro datum&gt;</code>
+expands into a boolean literal, and into <code>#f</code> otherwise.
+</p>
+
+<p id="em-vector?"><code>(em-vector? &lt;eager macro datum&gt;)</code></p>
+
+<p>Expands into <code>#t</code> if <code>&lt;eager macro datum&gt;</code>
+expands into a vector literal, and into <code>#f</code> otherwise.
+</p>
+
+<p id="em-symbol?"><code>(em-symbol? &lt;eager macro datum&gt;)</code></p>
+
+<p>
+  Expands into <code>#t</code> if <code>&lt;eager macro datum&gt;</code>
+  expands into a symbol, and into <code>#f</code> otherwise.
+</p>
+
+<p id="em-bound-identifier=?"><code>(em-bound-identifier=? &lt;identifier&gt;
+    &lt;input&gt;)</code></p>
+
+<p>
+  Expands into <code>#t</code> if <code>&lt;identifier&gt;</code>
+  and <code>&lt;input&gt;</code> both expand into symbols
+  that denote the same identifier (in the expansion context), and
+  into <code>#f</code> otherwise.  It is an error
+  if <code>&lt;identifier&gt;</code> does not
+  expand into a symbol.
+</p>
+
+<p id="em-free-identifier=?"><code>(em-free-identifier=? &lt;identifier&gt;<sub>1</sub>
+    &lt;identifier&gt;<sub>1</sub>)</code></p>
+
+<p>
+  Expands into <code>#t</code>
+  if <code>&lt;identifier&gt;</code><sub>1</sub>
+  and <code>&lt;identifier&gt;</code><sub>2</sub> both expand into
+  symbols such that the identifiers denoted by them have the same
+  meaning (in the expansion context), and into <code>#f</code>
+  otherwise.  It is an error if <code>&lt;identifier&gt;<sub>1</sub></code>
+  and <code>&lt;identifier&gt;<sub>2</sub></code> do not expand into a
+  symbol.
+</p>
+
+<p id="em-equal?"><code>(em-equal? &lt;eager macro datum&gt;<sub>1</sub>
+    &lt;eager macro datum&gt;<sub>2</sub>)</code></p>
+
+<p>
+  Expands into <code>#t</code> if <code>&lt;eager macro
+    datum&gt;</code><sub>1</sub> and <code>&lt;eager macro
+    datum&gt;</code><sub>2</sub> are the same, and
+    into <code>#f</code> otherwise.  Pairs and vectors are compared
+    recursively, and symbols are compared
+  using <code>em-bound-identifier=?</code>.
+</p>
+
+<h3 id="Listprocessing">List processing</h3>
+
+<h4>Constructors</h4>
+
+<p id="em-cons"><code>(em-cons &lt;input&gt;<sub>1</sub> &lt;input&gt;<sub>2</sub>)</code></p>
+
+<p>
+  Expands into a pair whose car is the expansion
+  of <code>&lt;input&gt;<sub>1</sub></code> and whose cdr is
+  the expansion of <code>&lt;input&gt;<sub>2</sub></code>.
+</p>
+
+<p id="em-cons*"><code>(em-cons* &lt;element&gt; ... &lt;tail&gt;)</code></p>
+
+<p>Expands into the expansion of <code>`(,&lt;element&gt; ... . ,&lt;tail&gt;)</code></p>
+
+<p id="em-list"><code>(em-list &lt;element&gt; ...)</code></p>
+
+<p>
+  Expands into a list whose elements are the expansions of the 
+  <code>&lt;element&gt;</code>s.
+</p>
+
+<p id="em-make-list"><code>(em-make-list &lt;k&gt; &lt;element&gt;)</code></p>
+
+<p>
+  Expands into a list whose length is the length of the expansion of
+  <code>&lt;k&gt;</code>.  The elements of the list are the expansion
+  of <code>&lt;element&gt;</code>.  It is an error
+  if <code>&lt;k&gt;</code> does not expand into a list.
+</p>
+
+<h4>Selectors</h4>
+
+<p id="em-car"><code>(em-car &lt;pair&gt;)</code></p>
+
+<p>
+  Expands into the car of the expansion of  <code>&lt;pair&gt;</code>.  It is an error if
+  <code>&lt;pair&gt;</code> does not expand into a pair.
+</p>
+
+<p id="em-cdr"><code>(em-cdr &lt;pair&gt;)</code></p>
+
+<p>
+  Expands into the cdr of the expansion of  <code>&lt;pair&gt;</code>.  It is an error if
+  <code>&lt;pair&gt;</code> does not expand into a pair.
+</p>
+
+<p id="em-caar"><code>(em-caar &lt;pair&gt;)</code></p>
+<p id="em-cadr"><code>(em-cadr &lt;pair&gt;)</code></p>
+<p id="em-cdar"><code>(em-cdar &lt;pair&gt;)</code></p>
+<p id="em-cddr"><code>(em-cddr &lt;pair&gt;)</code></p>
+ 
+<p>
+  Semantically equivalent to <code>(em-car (em-car
+    &lt;pair&gt;))</code>, <code>(em-car (em-cdr
+    &lt;pair&gt;))</code>, <code>(em-cdr (em-car &lt;pair&gt;))</code>, 
+  <code>(em-cdr (em-cdr &lt;pair&gt;))</code>.
+</p>
+
+<p id="em-first"><code>(em-first &lt;list&gt; ...)</code></p>
+<p id="em-second"><code>(em-second &lt;list&gt; ...)</code></p>
+<p id="em-third"><code>(em-third &lt;list&gt; ...)</code></p>
+<p id="em-fourth"><code>(em-fourth &lt;list&gt; ...)</code></p>
+<p id="em-fifth"><code>(em-fifth &lt;list&gt; ...)</code></p>
+<p id="em-sixth"><code>(em-sixth &lt;list&gt; ...)</code></p>
+<p id="em-seventh"><code>(em-seventh &lt;list&gt; ...)</code></p>
+<p id="em-eighth"><code>(em-eighth &lt;list&gt; ...)</code></p>
+<p id="em-ninth"><code>(em-ninth &lt;list&gt; ...)</code></p>
+<p id="em-tenth"><code>(em-tenth &lt;list&gt; ...)</code></p>
+
+<p>
+  Expands into the first, second, third, ... element of the expansion
+  of <code>&lt;list&gt;</code>.  It is an error
+  if <code>&lt;list&gt;</code> does not expand into a list
+  of sufficient length.  (Analogous to <code>first</code>, ..., <code>tenth</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>).
+</p>
+
+<p id="em-list-tail"><code>(em-list-tail &lt;list&gt; &lt;k&gt;)</code></p>
+
+<p id="em-list-ref"><code>(em-list-ref &lt;list&gt; &lt;k&gt;)</code></p>
+
+<p>
+  Expands into the <em>k</em>th element of the expansion
+  of <code>&lt;list&gt;</code>, where <em>k</em> is the length of the
+  expansion of <code>&lt;k&gt;</code>.  It is an error
+  if <code>&lt;list&gt;</code>
+  and <code>&lt;k&gt;</code> do not expand into lists.
+</p>
+
+<p id="em-take"><code>(em-take &lt;list&gt; &lt;k&gt;)</code></p>
+
+<p>
+  Expands into the sublist consisting of the first <em>k</em> elements
+  (in left-to-right order) of the expansion
+  of <code>&lt;list&gt;</code>, where <em>k</em> is the length of the
+  expansion of <code>&lt;k&gt;</code>.  It is an error
+  if <code>&lt;list&gt;</code> and <code>&lt;k&gt;</code> do not
+  expand into lists.  (Analogous to <code>take</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+</p>
+
+<p id="em-drop"><code>(em-drop &lt;list&gt; &lt;k&gt;)</code></p>
+
+<p>
+  Expands into the sublist of the expansion
+  of <code>&lt;list&gt;</code> obtained by omitting as many elements
+  on the left as the expansion of <code>&lt;k&gt;</code>
+  has elements.  It is an error if <code>&lt;list&gt;</code>
+  and <code>&lt;k&gt;</code> do not expand into lists.
+  (<code>Em-drop</code> is an alternative name to <code>list-tail</code>, analogously
+  to <code>drop</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+</p>
+
+<p id="em-take-right"><code>(em-take-right &lt;list&gt;
+&lt;k&gt;)</code></p>
+
+<p>
+  Expands into the sublist consisting of the last <em>k</em> elements
+  (in left-to-right order) of the expansion
+  of <code>&lt;list&gt;</code>, where <em>k</em> is the length of the
+  expansion of <code>&lt;k&gt;</code>.  It is
+  an error if <code>&lt;list&gt;</code>
+  and <code>&lt;k&gt;</code> do not expand
+  into lists.  (Analogous to <code>take-right</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+</p>
+
+<p id="em-drop-right"><code>(em-drop-right &lt;list&gt; &lt;k&gt;)</code></p>
+
+<p>
+  Expands into the sublist consisting of all but the last <em>k</em>
+  elements (in left-to-right order) of the expansion
+  of <code>&lt;list&gt;</code>, where <em>k</em> is the length of the
+  expansion of <code>&lt;k&gt;</code>.  It is
+  an error if <code>&lt;list&gt;</code>
+  and <code>&lt;k&gt;</code> do not expand
+  into lists.  (Analogous to <code>drop-right</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+</p>
+
+<p id="em-last"><code>(em-last &lt;pair&gt;)</code></p>
+
+<p>Expands into the last element of the expansion
+  of <code>&lt;pair&gt;</code>.  It is an error
+  if <code>&lt;pair&gt;</code> does not expand into a (possibly
+  dotted) list.  (Analogous to <code>last</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+
+<p id="em-last-pair"><code>(em-last-pair &lt;pair&gt;)</code></p>
+
+<p>Expands into the last pair of the expansion
+  of <code>&lt;pair&gt;</code>.  It is an error
+  if <code>&lt;pair&gt;</code> does not expand into a (possibly
+  dotted) list.  (Analogous to <code>last-pair</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+
+<h4>Miscellaneous</h4>
+
+<p id="em-append"><code>(em-append &lt;list&gt; ...)</code></p>
+
+<p>
+  Expands into a (possibly improper) list that is the concatenation of the
+  expansions of the <code>&lt;list&gt;</code>s.  It is an error
+  if any of the <code>&lt;list&gt;</code>s but the last does not
+  expand into a proper list.
+</p>
+
+<p id="em-reverse"><code>(em-reverse &lt;list&gt;)</code></p>
+
+<p>Expands into a list whose elements are the elements of the
+  expansion of <code>&lt;list&gt;</code> in reverse order.  It is an
+  error if <code>&lt;list&gt;</code> does not expand into a list.
+</p>
+
+<h4>Folding, unfolding and mapping</h4>
+
+<p id="em-fold"><code>(em-fold &lt;proc&gt; &lt;nil&gt; &lt;list&gt; ...)</code></p>
+
+<p>
+  Expands into the expansion <code>&lt;nil&gt;</code> if at least one of
+  the <code>&lt;list&gt;</code>s expands into the empty list.  Expands
+  into the expansion of <code>(em-fold &lt;proc&gt; (em-call
+  &lt;proc&gt; (em-car &lt;list&gt;) ... &lt;nil&gt;) (em-cdr
+  &lt;list&gt;) ...)</code> otherwise.
+					      
+  It is an error if the <code>&lt;list&gt;</code>s do not expand into lists.
+
+  (Analogous to <code>fold</code>
+  from <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI
+  1</a>.)
+</p>
+
+<p id="em-fold-right"><code>(em-fold-right &lt;proc&gt; &lt;nil&gt; &lt;list&gt; ...)</code></p>
+
+<p>
+  Expands into the expansion <code>&lt;nil&gt;</code> if at least one of
+  the <code>&lt;list&gt;</code>s expands into the empty list.  Expands
+  into the expansion of <code>(em-call &lt;proc&gt;
+  (em-car &lt;list&gt;) ...  (em-fold-right &lt;proc&gt; &lt;nil&gt;
+  (em-cdr &lt;list&gt;) ...))</code> otherwise.  It is an error if
+  the <code>&lt;list&gt;</code>s do not expand into lists.
+  (Analogous to <code>fold-right</code>
+  from <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI
+  1</a>.)
+</p>
+
+<p id="em-unfold"><code>(em-unfold &lt;stop?&gt; &lt;mapper&gt; &lt;successor&gt;
+&lt;seed&gt; &lt;tail-mapper&gt;)</code></p>
+<p><code>(em-unfold &lt;stop?&gt; &lt;mapper&gt; &lt;successor&gt; &lt;seed&gt;)</code></p>
+
+<p>
+  Expands into the expansion of <code>(&lt;tail-mapper&gt;
+  &lt;seed&gt;)</code> if (<code>&lt;stop?&gt; &lt;seed&gt;</code>) does not expand
+  into <code>#f</code>.  Expands into the expansion of <code>(em-cons (&lt;mapper&gt; &lt;seed&gt;)
+    (em-unfold &lt;stop?&gt; &lt;mapper&gt; &lt;successor&gt; (&lt;successor&gt; &lt;seed&gt;)
+    &lt;tail-mapper&gt;)</code> otherwise.
+  If <code>&lt;tail-mapper&gt;</code> is omitted, it defaults to <code>(em-constant '())</code>.
+  (Analogous to <code>unfold</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+</p>
+
+<p id="em-unfold-right"><code>(em-unfold-right &lt;stop?&gt; &lt;mapper&gt; &lt;successor&gt;
+&lt;seed&gt; &lt;tail&gt;)</code></p>
+<p><code>(em-unfold-right &lt;stop?&gt; &lt;mapper&gt; &lt;successor&gt; &lt;seed&gt;)</code></p>
+
+<p>
+  Expands into the expansion of <code>&lt;tail&gt;</code>
+  if <code>(&lt;stop?&gt; &lt;seed&gt;)</code> does not expand
+  into <code>#f</code>.  Expands into the expansion
+  of <code>(em-unfold-right &lt;stop?&gt; &lt;mapper&gt;
+    &lt;successor&gt; (&lt;successor&gt; &lt;seed&gt;) (em-cons
+    (&lt;mapper&gt; &lt;seed&gt;) &lt;tail&gt;))</code> otherwise.  If
+  <code>&lt;tail&gt;</code> is omitted, it defaults to <code>'()</code>.
+  (Analogous to <code>unfold-right</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+</p>
+
+<p id="em-map"><code>(em-map &lt;proc&gt; &lt;list&gt; ...)</code></p>
+
+<p>
+  Expands into the empty list if at least one
+  the <code>&lt;list&gt;</code>s expands into the empty list.  Expands
+  into the expansion of <code>(em-cons (&lt;proc&gt; &lt;head&gt; ...)
+    (em-map &lt;proc&gt; &lt;tail&gt; ...))</code> if the <code>&lt;list&gt;</code>s expand into
+  <code>(&lt;head&gt; . &lt;tail&gt;)</code>.
+</p>
+
+<p id="em-append-map"><code>(em-append-map &lt;proc&gt; &lt;list&gt; ...)</code></p>
+
+<p>
+  Expands into the empty list if at least one
+  the <code>&lt;list&gt;</code>s expands into the empty list.  Expands
+  into the expansion of <code>(em-append (&lt;proc&gt; &lt;head&gt; ...)
+    (em-map &lt;proc&gt; &lt;tail&gt; ...))</code> if the <code>&lt;list&gt;</code>s expand into
+  <code>(&lt;head&gt; . &lt;tail&gt;)</code>.
+  (Analogous to <code>append-map</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+</p>
+
+<h4>Filtering</h4>
+
+<p id="em-filter"><code>(em-filter &lt;pred&gt; &lt;list&gt; ...)</code></p>
+
+<p>Expands into a list consisting of those elements <em>element</em>
+  of the expansion of <code>&lt;list&gt;</code>, in order, for
+  which <code>(em-call &lt;pred&gt; <em>element</em>)</code> does not expand
+  into <code>#f</code>.  It is an error if <code>&lt;list&gt;</code> does not expand into a list.
+ (Analogous to <code>filter</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)  
+</p>
+
+<p id="em-remove"><code>(em-remove &lt;pred&gt; &lt;list&gt; ...)</code></p>
+
+<p>Expands into a list consisting of those elements <em>element</em>
+  of the expansion of <code>&lt;list&gt;</code>, in order, for
+  which <code>(em-call &lt;pred&gt; <em>element</em>)</code> expands
+  into <code>#f</code>.  It is an error if <code>&lt;list&gt;</code> does not expand into a list.
+ (Analogous to <code>remove</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+</p>
+
+<h4>Searching</h4>
+
+<p id="em-find"><code>(em-find &lt;pred&gt; &lt;list&gt;)</code></p>
+
+<p>Expands into the first element <em>element</em> of the expansion
+  of <code>&lt;list&gt;</code> for
+  which <code>(em-call &lt;pred&gt; <em>element</em>)</code> does not expand
+  into <code>#f</code>.  Expands into <code>#f</code> if there is no such <em>element</em>.
+
+  It is an error if <code>&lt;list&gt;</code> does not expand into a list.
+
+  (Analogous to <code>find</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+</p>
+
+<p id="em-find-tail"><code>(em-find-tail &lt;pred&gt; &lt;list&gt;)</code></p>
+
+<p>Expands into the first pair <em>pair</em> of the expansion
+  of <code>&lt;list&gt;</code> for
+  which <code>(em-call &lt;pred&gt; (em-car <em>pair</em>))</code> does not expand
+  into <code>#f</code>.  Expands into <code>#f</code> if there is no such <em>pair</em>.
+
+  It is an error if <code>&lt;list&gt;</code> does not expand into a list.
+
+  (Analogous to <code>find-tail</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+</p>
+
+<p id="em-take-while"><code>(em-take-while &lt;pred&gt; &lt;list&gt;)</code></p>
+
+<p>Expands into the longest initial sublist consisting of
+  those <em>element</em>s of the expansion of <code>&lt;list&gt;</code>
+  for which <code>(em-call &lt;pred&gt; <em>element</em>)</code> does not expand
+  into <code>#f</code>.
+
+  It is an error if <code>&lt;list&gt;</code> does not expand into a list.
+
+  (Analogous to <code>take-while</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+</p>
+
+<p id="em-drop-while"><code>(em-drop-while &lt;pred&gt; &lt;list&gt;)</code></p>
+
+<p>Expands into the first pair <em>pair</em> of the expansion
+  of <code>&lt;list&gt;</code> for
+  which <code>(em-call &lt;pred&gt; (em-car <em>pair</em>))</code> expands
+  into <code>#f</code>.  Expands into <code>#f</code> if there is no such <em>pair</em>.
+
+  It is an error if <code>&lt;list&gt;</code> does not expand into a list.
+
+  (Analogous to <code>drop-while</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+</p>
+
+<p id="em-any"><code>(em-any &lt;pred&gt; &lt;list&gt; ...)</code></p>
+
+<p>Expands into <code>#f</code> if at least one of
+  the <code>&lt;list&gt;</code>s expands into the empty list.  Expands into the expansion of
+  <code>(em-or (em-call &lt;pred&gt; (em-car &lt;list&gt;) ...) (em-any
+  (em-cdr &lt;list&gt;) ...))</code> otherwise.
+
+  It is an error if <code>&lt;list&gt;</code> does not expand into a list.
+
+  (Analogous to <code>em-any</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+</p>
+
+<p id="em-every"><code>(em-every &lt;pred&gt; &lt;list&gt; ...)</code></p>
+
+<p>Expands into <code>#f</code> if at least one of
+  the <code>&lt;list&gt;</code>s expands into the empty list.  Expands into the expansion of
+  <code>(em-and (em-call &lt;pred&gt; (em-car &lt;list&gt;) ...) (em-any &lt;pred&gt;
+    (em-cdr &lt;list&gt;) ...))</code>  otherwise.
+
+  It is an error if <code>&lt;list&gt;</code> does not expand into a list.
+
+  (Analogous to <code>em-any</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+</p>
+
+<p id="em-member"><code>(em-member &lt;obj&gt; &lt;list&gt; &lt;compare&gt;)</code></p>
+<p><code>(em-member &lt;obj&gt; &lt;list&gt;)</code></p>
+
+<p>Expands into the expansion of <code>(em-find-tail (em-cut &lt;compare&gt; &lt;obj&gt; <>)
+      &lt;list&gt;)</code>.
+
+  If the input <code>&lt;compare&gt;</code> is omitted, it defaults to <code>em-equal?</code>.
+</p>
+
+<h4>Association lists</h4>
+
+<p id="em-assoc"><code>(em-assoc &lt;key&gt; &lt;alist&gt; &lt;compare&gt;)</code></p>
+<p><code>(em-assoc &lt;key&gt; &lt;alist&gt;)</code></p>
+
+<p>Expands into the first element <em>element</em> of the expansion
+  of <code>&lt;alist&gt;</code> for
+  which <code>(em-call &lt;compare&gt; &lt;key&gt; (em-car <em>element</em>))</code> does not expand
+  into <code>#f</code>.  Expands into <code>#f</code> if there is no such <em>pair</em>.
+
+  If the input <code>&lt;compare&gt;</code> is omitted, it defaults to <code>em-equal?</code>.
+
+  It is an error if <code>&lt;alist&gt;</code> does not expand into an
+  association list, a list of pairs.
+</p>
+
+<p id="em-alist-delete"><code>(em-alist-delete &lt;key&gt; &lt;alist&gt; &lt;compare&gt;)</code></p>
+<p><code>(em-alist-delete &lt;key&gt; &lt;alist&gt;)</code></p>
+
+<p>
+  Expands into an association list consisting of
+  those <em>association</em>s of the expansion
+  of <code>&lt;alist&gt;</code> in order such that <code>(em-call
+  &lt;compare&gt; &lt;key&gt; (em-car <em>element</em>))</code>
+  expands into <code>#f</code>.
+
+  If the input <code>&lt;compare&gt;</code> is omitted, it defaults to <code>em-equal?</code>.
+
+  It is an error if <code>&lt;alist&gt;</code> does not expand into an
+  association list, a list of pairs.
+
+  (Analogous to <code>em-alist-delete</code> from
+  <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.)
+</p>
+
+<h4>Set operations</h4>
+
+The following operations are analogous to the set operations on lists
+from <a href="https://srfi.schemers.org/srfi-1/srfi-1.html">SRFI 1</a>.
+
+<p id="em-set-le"><code>(em-set&lt;= &lt;compare&gt; &lt;list&gt; ...)</code></p>
+
+<p>Expands into <code>#t</code> if the elements of the expansion of
+  the <code>&lt;list&gt;</code>s form an increasing tower of sets,
+  where <em>element<sub>1</sub></em> and <em>element<sub>2</sub></em>
+  are considered equal
+  if <code>(em-call &lt;compare&gt; <em>element<sub>1</sub></em> <em>element<sub>2</sub></em>)</code>
+  does not expand into <code>#f</code>.  It is an error if any of
+  the <code>&lt;list&gt;</code>s do not expand into a list.
+</p>
+
+<p id="em-set="><code>(em-set= &lt;compare&gt; &lt;list&gt;<sub>1</sub> &lt;list&gt; ...)</code></p>
+
+<p>Expands into <code>#t</code> if the elements of the expansion of
+  the <code>&lt;list&gt;</code>s each form the same set as the
+  elements of the expansion of <code>&lt;list&gt;<sub>1</sub></code>,
+  where <em>element<sub>1</sub></em> and <em>element<sub>2</sub></em>
+  are considered equal
+  if <code>(em-call &lt;compare&gt; <em>element<sub>1</sub></em> <em>element<sub>2</sub></em>)</code>
+  does not expand into <code>#f</code>.  It is an error
+  if <code>&lt;list&gt;<sub>1</sub></code> or any of
+  the <code>&lt;list&gt;</code>s do not expand into a list.
+</p>
+
+<p id="em-set-adjoin"><code>(em-set-adjoin &lt;compare&gt;
+&lt;list&gt; &lt;element&gt; ...)</code></p>
+
+<p>Expands into a list consisting of the elements of the expansion
+  of <code>&lt;list&gt;</code> and the expansion of
+  those <code>&lt;element&gt;</code> added successively to the front,
+  that are not already elements of the list to which they are added.
+  Here, <em>element<sub>1</sub></em> and <em>element<sub>2</sub></em>
+  are considered equal
+  if <code>(em-compare <em>element<sub>1</sub></em> <em>element<sub>2</sub></em>)</code>
+  does not expand into <code>#f</code>.  It is an error
+  if <code>&lt;list&gt;</code> does not expand into a list.
+</p>
+
+<p id="em-set-union"><code>(em-set-union &lt;compare&gt; &lt;list&gt; ...)</code></p>
+
+<p>Expands into a list constructured by adjoining (as
+  in <code>em-set-adjoin</code>) the elements of the expansions of
+  the <code>&lt;list&gt;</code>s to the empty list.
+  It is an error
+  if the <code>&lt;list&gt;</code>s do not expand into a list.
+</p>
+
+<p id="em-set-intersection"><code>(em-set-intersection
+&lt;compare&gt; &lt;list&gt;<sub>1</sub> &lt;list&gt; ...)</code></p>
+
+<p>Expands into the sublist of the expansion
+  of <code>&lt;list&gt;<sub>1</sub></code> (as
+  in <code>em-filter</code>) consisting of those elements that also elements in the expansions of the
+  <code>&lt;list&gt;</code>s,
+  where <em>element<sub>1</sub></em> and <em>element<sub>2</sub></em>
+  are considered equal
+  if <code>(em-call &lt;compare&gt; <em>element<sub>1</sub></em> <em>element<sub>2</sub></em>)</code>
+  does not expand into <code>#f</code>.  It is an error
+  if <code>&lt;list&gt;<sub>1</sub></code> or any of
+  the <code>&lt;list&gt;</code>s do not expand into a list.
+</p>
+
+<p id="em-set-difference"><code>(em-set-difference &lt;compare&gt;
+&lt;list&gt;<sub>1</sub> &lt;list&gt; ...)</code></p>
+
+<p>Expands into the sublist of the expansion
+  of <code>&lt;list&gt;<sub>1</sub></code> (as
+  in <code>em-filter</code>) consisting of those elements that are not
+  elements in any of the expansions of the
+  <code>&lt;list&gt;</code>s,
+  where <em>element<sub>1</sub></em> and <em>element<sub>2</sub></em>
+  are considered equal
+  if <code>(em-call &lt;compare&gt; <em>element<sub>1</sub></em> <em>element<sub>2</sub></em>)</code>
+  does not expand into <code>#f</code>.  It is an error
+  if <code>&lt;list&gt;<sub>1</sub></code> or any of
+  the <code>&lt;list&gt;</code>s do not expand into a list.
+</p>
+
+<p id="em-set-xor"><code>(em-set-xor &lt;compare&gt; &lt;list&gt;<sub>1</sub> &lt;list&gt;<sub>2</sub>)</code></p>
+
+<p>
+  Expands into a list consisting of those elements of the expansion
+  of <code>&lt;list&gt;<sub>1</sub></code> that are not in the
+  expansion of <code>&lt;list&gt;<sub>2</sub></code> and those
+  elements of <code>&lt;list&gt;<sub>2</sub></code> that are not in
+  the expansion of <code>&lt;list&gt;<sub>1</sub></code>,
+  where <em>element<sub>1</sub></em> and <em>element<sub>2</sub></em>
+  are considered equal if <code>(em-call
+  &lt;compare&gt; <em>element<sub>1</sub></em> <em>element<sub>2</sub></em>)</code>
+  does not expand into <code>#f</code>.  It is an error
+  if <code>&lt;list&gt;<sub>1</sub></code> or
+  the <code>&lt;list&gt;<sub>2</sub></code>s do not expand into a
+  list.
+</p>
+
+<h3 id="Vectorprocessing">Vector processing</h3>
+
+<p id="em-vector"><code>(em-vector &lt;element&gt; ...)</code></p>
+
+<p>
+  Expands into a vector whose elements are the expansions of the <code>&lt;element&gt;</code>s.
+</p>
+
+<p id="em-list-to-vector"><code>(em-list-&gt;vector &lt;list&gt;)</code></p>
+
+<p>
+  Expands into a vector whose elements are the elements of the
+  expansion of <code>&lt;list&gt;</code>s.  It is an error
+  if <code>&lt;list&gt;</code> does not expand into a (proper) list.
+</p>
+
+<p id="em-vector-to-list"><code>(em-vector-&gt;list &lt;vector&gt;)</code></p>
+
+<p>
+  Expands into a list whose elements are the elements of the
+  expansion of <code>&lt;vector&gt;</code>s.  It is an error
+  if <code>&lt;vector&gt;</code> does not expand into a vector.
+</p>
+
+<p id="em-vector-map"><code>(em-vector-map &lt;proc&gt; &lt;vector&gt; ...)</code></p>
+
+<p>
+  Expands into the empty list if at least one
+  the <code>&lt;vectors&gt;</code>s expands into the empty vector.
+  Expands into the expansion of <code>`#(,(&lt;proc&gt; <em>head</em>
+  ...) ,@(em-vector->list (em-vector-map &lt;proc&gt; <em>tail</em> ...)))</code> if
+  the <code>&lt;vector&gt;</code>s expand into vectors of the form
+  <code>`#u(,<em>head</em> ,@<em>tail</em>)</code>.
+</p>
+
+<p id="em-vector-ref"><code>(em-vector-ref &lt;vector&gt; &lt;k&gt;)</code></p>
+
+<p>
+  Expands into the <em>k</em>th element of the expansion
+  of <code>&lt;vector&gt;</code>, where <em>k</em>
+  is the length of the expansion of <code>&lt;k&gt;</code>.
+  It is an error if <code>&lt;vector&gt;</code> does not expand into a vector,
+  or <code>&lt;k&gt;</code> do not expand into a list.
+</p>
+
+<h3 id="Combinatorics">Combinatorics</h3>
+
+<p id="em-0"><code>(em-0)</code></p>
+<p id="em-1"><code>(em-1)</code></p>
+<p id="em-2"><code>(em-2)</code></p>
+<p id="em-3"><code>(em-3)</code></p>
+<p id="em-4"><code>(em-4)</code></p>
+<p id="em-5"><code>(em-5)</code></p>
+<p id="em-6"><code>(em-6)</code></p>
+<p id="em-7"><code>(em-7)</code></p>
+<p id="em-8"><code>(em-8)</code></p>
+<p id="em-9"><code>(em-9)</code></p>
+<p id="em-10"><code>(em-10)</code></p>
+
+<p>Expands into a list of zero, one, two, ... ten pairwise different elements.</p>
+
+<p id="em="><code>(em= &lt;list&gt;<sub>1</sub> &lt;list&gt; ...)</code></p>
+
+<p>
+  Expands into <code>#t</code>
+  if <code>&lt;list&gt;<sub>1</sub></code> and each of the
+  <code>&lt;list&gt;</code>s expand into lists of the
+  same length, and into <code>#f</code> otherwise.  It is an error
+  if <code>&lt;list&gt;<sub>1</sub></code>
+  or any of the <code>&lt;list&gt;</code>s do not expand
+  into lists.
+</p>
+
+<p id="em-lt"><code>(em&lt; &lt;list&gt; ...)</code></p>
+
+<p>
+  Expands into <code>#t</code>
+  if the <code>&lt;list&gt;</code>s expand into lists of
+  strictly increasing length, and into <code>#f</code>
+  otherwise.  It is an error if any of the <code>&lt;list&gt;</code>s
+  do not expand into lists.
+</p>
+
+<p id="em-le"><code>(em&lt;= &lt;list&gt; ...)</code></p>
+
+<p>
+  Expands into <code>#t</code>
+  if the <code>&lt;list&gt;</code>s expand into lists of
+  (not necessarily strictly) increasing length, and into <code>#f</code>
+  otherwise.  It is an error if any of the <code>&lt;list&gt;</code>s
+  do not expand into lists.
+</p>
+
+<p id="em-gt"><code>(em&gt; &lt;list&gt; ...)</code></p>
+
+<p>
+  Expands into <code>#t</code>
+  if the <code>&lt;list&gt;</code>s expand into lists of
+  strictly decreasing length, and into <code>#f</code>
+  otherwise.  It is an error if any of the <code>&lt;list&gt;</code>s
+  do not expand into lists.
+</p>
+
+<p id="em-ge"><code>(em&gt;= &lt;list&gt; ...)</code></p>
+
+<p>
+  Expands into <code>#t</code>
+  if the <code>&lt;list&gt;</code>s expand into lists of
+  (not necessarily strictly) decreasing length, and into <code>#f</code>
+  otherwise.  It is an error if any of the <code>&lt;list&gt;</code>s
+  do not expand into lists.
+</p>
+
+<p id="em-zero?"><code>(em-zero? &lt;list&gt;)</code></p>
+
+<p>Expands into <code>#t</code> if <code>&lt;list&gt;</code> expands
+into the empty list, and into <code>#f</code> otherwise.  It is an
+  error if <code>&lt;list&gt;</code> does not expand into a list.
+</p>
+
+<p id="em-even?"><code>(em-even? &lt;list&gt;)</code></p>
+
+<p>Expands into <code>#t</code> if <code>&lt;list&gt;</code> expands
+into the list with an even number of elements, and into <code>#f</code> otherwise.  It is an
+  error if <code>&lt;list&gt;</code> does not expand into a list.
+</p>
+
+<p id="em-odd?"><code>(em-odd? &lt;list&gt;)</code></p>
+
+<p>Expands into <code>#t</code> if <code>&lt;list&gt;</code> expands
+into the list with an odd number of elements, and into <code>#f</code> otherwise.  It is an
+  error if <code>&lt;list&gt;</code> does not expand into a list.
+</p>
+
+<p id="em+"><code>(em+ &lt;list&gt; ...)</code></p>
+
+<p>Expands into a list whose elements are the elements of the expansions of the
+  <code>&lt;list&gt;</code>s in left-to-right order.  It is an
+  error if the <code>&lt;list&gt;</code>s do not expand into a list.
+</p>
+
+<p id="em-"><code>(em- &lt;list&gt;<sub>1</sub> &lt;list&gt; ...)</code></p>
+
+<p>Expands into a list whose elements are all but the last <em>k</em>
+  elements of the expansion of the
+  <code>&lt;list&gt;<sub>1</sub></code>, where <em>k</em> is total
+  number of elements of the expansion of
+  the <code>&lt;list&gt;</code>s.
+
+  It is an
+  error if the <code>&lt;list&gt;</code>s do not expand into lists.  It is likewise an error if
+  <code>&lt;list&gt;<sub>1</sub></code> does not expand into a list or
+  in a list with less then <em>k</em> elements.
+</p>
+
+<p id="em*"><code>(em* &lt;list&gt; ...)</code></p>
+
+<p>Expands into a list whose elements are the elements of the
+  cartesian product of the expansions of
+  the <code>&lt;list&gt;</code>s in lexicographic left-to-right order.
+
+  It is an
+  error if the <code>&lt;list&gt;</code>s do not expand into lists.
+</p>
+
+<p id="em-quotient"><code>(em-quotient &lt;list&gt; &lt;k&gt;)</code></p>
+
+<p>Expands into a list of each <em>k</em>th element in
+  left-to-right order of the expansion
+  of <code>&lt;list&gt;</code>, where <em>k</em> is the number of
+  elements of the expansion of <code>&lt;k&gt;</code>.
+
+  It is an error if <code>&lt;list&gt;</code>
+  or <code>&lt;k&gt;</code> do not expand into lists.
+</p>
+
+<p id="em-remainder"><code>(em-remainder &lt;list&gt; &lt;k&gt;)</code></p>
+
+<p>Expands into a smallest tail of the expansion
+  of <code>&lt;list&gt;</code> such that the number of elements before the tail
+  is divisible by <em>k</em>, where <em>k</em> is the number of
+  elements of the expansion of <code>&lt;k&gt;</code>.
+
+  It is an error if <code>&lt;list&gt;</code>
+  or <code>&lt;k&gt;</code> do not expand into lists.
+</p>
+
+<p id="em-fact"><code>(em-fact &lt;list&gt;)</code></p>
+
+<p>Expands into a list of all permutations of the expansion of <code>&lt;list&gt;</code> in
+  lexicographic left-to-right order.
+  
+  It is an error if <code>&lt;list&gt;</code>
+  does not expand into a list.
+</p>
+
+<p id="em-binom"><code>(em-binom &lt;list&gt; &lt;k&gt;)</code></p>
+
+<p>Expands into a list of all <em>k</em>-element (ordered) sublists in
+  lexicographic left-to-right order of the expansion
+  of <code>&lt;list&gt;</code>, where <em>k</em> is the number of
+  elements of the expansion of <code>&lt;k&gt;</code>.
+
+  It is an error if <code>&lt;list&gt;</code>
+  or <code>&lt;k&gt;</code> do not expand into lists.
+</p>
+
+<h1>Implementation</h1>
+
+<p>
+This SRFI comes with a <a href="https://srfi.schemers.org/srfi-148/srfi-148.tgz">complete portable sample
+implementation</a> of this specification as an R7RS library.  The
+sample implementation is based
+on <a href="https://srfi.schemers.org/srfi-147/srfi-147.html">SRFI
+147</a>, of which an implementation is included in this SRFI.
+Therefore, when using the sample implementation, one has to
+import <code>(srfi 147)</code> as well (as long as the Scheme system
+does not support SRFI 147 natively).
+</p>
+
+<p>
+  An implementation of SRFI 26, from which the identifier <code>&lt;&gt;</code> is
+  imported and re-exported, is also included.
+</p>
+
+<p>
+The
+test suite also depends
+on <a href="https://srfi.schemers.org/srfi-2/srfi-2.html">SRFI 2</a>
+and <a href="https://srfi.schemers.org/srfi-64/srfi-64.html">SRFI
+64</a>, for which suitable implementations are included as well.
+</p>
+
+<p>A Scheme system wishing to support this SRFI can either bundle the
+  provided sample implementation with its system libraries, or implement the interface natively,
+  mostly for the sake of expansion speed and for much improved error reporting. 
+</p>
+
+<h1>Acknowledgements</h1>
+
+<p>
+This SRFI is based on the ideas on CK-macros outlined by Oleg Kiselyov
+in <a href="http://okmij.org/ftp/Scheme/macros.html#ck-macros"><em>Applicative
+syntax-rules: macros that compose better</em></a>. 
+</p>
+
+<p>
+  The CK abstract machine, on which the macro system is based, has
+  been described by Matthias Felleisen and Daniel P. Friedman
+  in <a href="https://www.cs.indiana.edu/ftp/techreports/TR197.pdf"><em>Control
+  operators, the SECD machine, and the lambda-calculus</em></a>.
+</p>
+
+<p>
+  There is a simple implementation of Oleg Kiselyov's idea by John Croisant as a <a href="http://wiki.call-cc.org/eggref/4/ck-macros">Chicken egg</a>.
+</p>
+
+<p><a href="https://srfi.schemers.org/srfi-53/srfi-53.html">SRFI 53</a>
+  by Andre van Tonder was an earlier try to "provide a portable
+  framework for writing complex high-level macros that perform
+  nontrivial computations during expansion".  At that time, the
+  expressiveness of Scheme (in the form of the R5RS) wasn't sufficient
+  enough to build a usable framework of that sort on top
+  of <code>syntax-rules</code>
+  (see <a href="https://srfi-email.schemers.org/srfi-53/msg/2771559">this
+  message</a>).
+</p>
+
+<p>
+  Finally, I would like to thank William Clinger whose experiments
+  with his Larceny implementation of Scheme showed that a previous
+  version of the sample implementation of this SRFI (and of SRFI 147)
+  relied on an unpropitious assumption on the semantics of a corner
+  case of the R7RS macro system.
+</p>
+
+<h1>Copyright</h1> Copyright (C) Marc Nieper-Wi&szlig;kirchen (2016, 2017).
+All Rights Reserved.
+
+<p>
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
+
+<p>
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
+
+<p>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+  <hr>
+  <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>
