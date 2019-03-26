@@ -1,0 +1,585 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>SRFI 157: Continuation marks</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/srfi.css" type="text/css" />
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png" />
+  </head>
+
+  <body>
+
+    <h1>Title</h1>
+
+    Continuation marks
+
+    <h1>Author</h1>
+
+    Marc Nieper-Wi&szlig;kirchen
+
+    <h1>Status</h1>
+
+    <p>This SRFI is currently in <em>final</em> status.  Here
+    is <a href="http://srfi.schemers.org/srfi-process.html">an
+    explanation</a> of each status that a SRFI can hold.  To provide
+    input on this SRFI, please send email
+    to <code><a href="mailto:srfi+minus+157+at+srfi+dotschemers+dot+org">srfi-157@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.
+    To subscribe to the list,
+    follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these
+    instructions</a>.  You can access previous messages via the
+    mailing
+    list <a href="http://srfi-email.schemers.org/srfi-157">archive</a>.</p>
+    <ul>
+      <li>Received: 2017/7/17</li>
+      <li>Draft #1 published: 2017/7/17</li>
+      <li>Draft #2 published: 2017/7/29</li>
+      <li>Draft #3 published: 2018/1/12</li>
+      <li>Finalized: 2018/1/29</li>
+      <li>Revised to fix errata:
+	<ul>
+	  <li>2018/2/15 (Acknowledge inventors of continuation marks.)</li></ul></li>
+    </ul>
+
+    <h1>Abstract</h1>
+
+    <p>
+      Continuation marks are a programming language feature that
+      allows one to attach information to and retrieve information
+      from continuations, generalizing stack inspection.
+      Conceptually, a continuation consists of a number of frames
+      where each frame stands for an active procedure call that is not
+      a tail call.  A continuation mark is then a key-value pair
+      associated with a frame, with keys compared
+      using <code>eq?</code>.
+      At most one mark for a given key can be attached to a single frame.
+    </p>
+
+    <p>
+      Besides stack inspection, continuation marks can be used to
+      implement dynamic scope, delimited continuations, or delayed
+      evaluation that is able to handle iterative lazy algorithms.
+    </p>
+
+    <p>
+      This SRFI proposes to add continuation marks to the Scheme
+      programming language.  The interface defined here is modelled
+      after Racket's continuation marks.  It does not include all
+      forms and procedures provided by Racket but provides a
+      compatible subset.
+    </p>
+
+    <h1>Rationale</h1>
+
+    <p>One of the defining properties of the Scheme programming
+      language is that it is <em>properly tail-recursive</em>.  The R7RS defines
+      that <q>an implementation is properly tail-recursive if it
+	supports an unbounded number of active tail calls</q>, and goes on
+      to define which procedure calls occur in <em>tail context</em>
+      (see <a href="http://trac.sacrideo.us/wg/wiki/R7RSHomePage">R7RS, section 3.5</a>).
+    </p>
+
+    <p>
+      Being properly tail-recursive or, for a procedure call, to occur
+      in tail context with respect to a lambda expression, is,
+      however, a non-observable property.  A non-properly tail
+      recursive implementation of Scheme may be observably
+      indistinguishable from a proper implementation as long as
+      storage space is sufficient.  (This is the same argument which is used
+      in the implementation section
+      of <a href="https://srfi.schemers.org/srfi-124/srfi-124.html">SRFI
+	124</a>, where it is argued that there are no guarantees that
+      a garbage collection is run at all, or even exists.)
+    </p>
+
+    <p>
+      Continuation marks are a programming language feature that, in
+      particular, reifies the notion of proper tail calls.  More
+      generally, continuation marks allow one to attach values to the
+      control stack (or, in Scheme terms, to the current
+      continuation), and to retrieve these values later, and in such a
+      way that it does not interfere with Scheme's tail-calling requirement.
+    </p>
+
+    <p>Continuation marks can be used to implement stack inspection
+      useful for debuggers.  They can also be used to implement dynamic
+      scope in the form of parameter objects as in the R7RS.  Whereas
+      the reference implementation in the R7RS, which relies
+      on <code>dynamic-wind</code> instead, does not have the
+      desirable feature that the last expression within the body of
+      a <code>parameterize</code> expression occurs in tail context, a
+      simple implementation using continuation marks having this
+      feature is possible.  Another use case of continuation marks is
+      the proper implementation of delayed evaluation in a strict
+      programming language that allows for iterative lazy algorithms
+      without the need of the special <code>delay-force</code> form of
+      the R7RS; see <a href="https://srfi.schemers.org/srfi-155/srfi-155.html">SRFI
+	155: Promises</a>.
+    </p>
+
+    <h1>Examples</h1>
+
+    <p>In order to demonstrate the application range of continuations
+      and in order to introduce the syntactic forms and procedures
+      defined by this SRFI below, we start with a number of examples.
+    </p>
+
+    <h2>Some simple examples</h2>
+
+    <p>
+      Continuation marks can be attached with
+      <code>with-continuation-mark</code> and retrieved
+      with <code>current-continuation-marks</code> and the
+      accessors <code>continuation-mark-set->list</code>, <code>continuation-mark-set->list*</code>
+      and <code>continuation-mark-set-first</code>.
+    </p>
+
+    <pre>
+  (let ((key (vector 'key)))
+    (with-continuation-mark key 1
+      (continuation-mark-set-&gt;list (current-continuation-marks) key))) ; ⇒  (1)</pre>
+
+    <pre>
+  (let ((key (vector 'key)))
+    (with-continuation-mark key 1
+      (cons 'foo
+        (with-continuation-mark key 2
+          (continuation-mark-set-&gt;list (current-continuation-marks) key))))) ; ⇒ (foo 2 1)</pre>
+
+    <p>
+      We use the invocation of <code>cons</code> to ensure that the
+      inner <code>with-continuation-mark</code> form does not occur in
+      tail context with respect to the outer <code>with-continuation-mark</code> form.
+    </p>
+
+    <p>
+      Without, we would get:
+    </p>
+
+    <pre>
+  (let ((key (vector 'key)))
+    (with-continuation-mark key 1
+      (with-continuation-mark key 2
+        (continuation-mark-set-&gt;list (current-continuation-marks) key)))) ; ⇒ (2)</pre>
+
+    <h2>Recursive versus iterative algorithms</h2>
+
+    <p>Consider the following two definitions of a factorial procedure:</p>
+
+    <pre>
+  (define (fact1 n)
+    (let loop ((n n))
+      (if (zero? n)
+          1
+          (* n (loop (- n 1))))))
+
+  (define (fact2 n)
+    (let loop ((n n) (a 1))
+      (if (zero? n)
+          a
+          (loop (- n 1) (* n a)))))</pre>
+
+    <p>The first version is recursive.  The second version is iterative.
+      Using continuation marks, we can observe this behaviour:
+    </p>
+
+    <pre>
+  (define %key (vector 'key))
+
+  (define (ccm)
+    (continuation-mark-set-&gt;list (current-continuation-marks) %key))
+
+  (define (fact1 n)
+    (let loop ((n n))
+      (if (zero? n)
+          (begin
+            (display (ccm))
+            (newline)
+            1)
+          (with-continuation-mark %key n (* n (loop (- n 1)))))))
+
+  (define (fact2 n)
+    (let loop ((n n) (a 1))
+      (if (zero? n)
+          (begin
+            (display (ccm))
+            (newline)
+            a)
+          (with-continuation-mark %key n (loop (- n 1) (* n a))))))</pre>
+
+    <p>Calling <code>(fact1 3)</code> outputs <code>(1 2 3)</code> on
+    the console, while calling <code>(fact2 3)</code>
+    outputs <code>(1)</code> on the console.
+    </p>
+
+    <h2>Parameter objects</h2>
+
+    <p>
+      A version of <code>parameterize</code>, in which the last
+      expression of its body is in tail context, and which is thus
+      usable for iterative algorithms and thus in the spirit of the
+      Scheme programming language, can be obtained using
+      continuation marks as follows:
+    </p>
+
+    <pre>
+  (define %param-key (vector 'param-key))
+  (define %param-convert (vector 'param-convert))
+
+  (define make-parameter
+    (case-lambda
+      ((init)
+       (make-parameter init values))
+      ((init converter)
+       (let ((key (vector 'key))
+             (value (converter init)))
+         (case-lambda
+           (()
+            (let ((boxed-value (continuation-mark-set-first (current-continuation-marks)
+                                                             key)))
+             (if boxed-value
+                 (vector-ref boxed-value 0)
+                 value)))
+           ((secret)
+            (cond
+              ((eq? %param-convert secret)
+               converter)
+              ((eq? %param-key secret)
+               key))))))))
+
+  (define-syntax parameterize
+    (syntax-rules ()
+      ((parameterize
+           ((param init) ...) . body)
+       (%parameterize ((param init) ...) () body))))
+
+  (define-syntax %parameterize
+    (syntax-rules ()
+      ((_ () ((param init tmp) ...) body)
+       (let* ((tmp ((param %param-convert) init)) ...)
+         (%parameterize ((param tmp) ...) body)))
+      ((_ ((param1 init1) . rest) ((param2 init2 tmp2) ...) body)
+       (%parameterize rest ((param2 init2 tmp2) ... (param1 init1 tmp1)) body))
+      ((%parameterize () body)
+       (let () . body))
+      ((%parameterize ((param tmp) . rest) body)
+       (with-continuation-mark (param %param-key) (vector tmp)
+         (%parameterize rest body)))))</pre>
+
+    <h2>Test for tail position</h2>
+
+    <p>Some Scheme procedures are required to call certain procedures
+      in tail position, and some Scheme forms are required to have
+      certain expressions in tail context.
+    </p>
+
+    <p>
+      With only the primitives as defined by the R7RS, unit tests
+      (using
+      the <a href="https://srfi.schemers.org/srfi-64/srfi-64.html">SRFI
+	64</a> framework, for example) cannot check whether procedure
+      calls actually happen in tail position.  With continuation
+      marks, it is possible to implement such tests.
+    </p>
+
+    <pre>
+  (define-syntax test-tail-position
+    (syntax-rules
+      ((test-tail-position tail expression)
+       (test-assert
+         (call-with-current-continuation
+          (lambda (c)
+            (let ((key (vector 'key)))
+              (let-syntax
+                  ((tail
+                   (syntax-rules ()
+                     ((tail) (lambda args
+                               (call-with-immediate-continuation-mark key c))))))
+                (with-continuation-mark key #t expression)
+              #f))))))))
+
+  (test-tail-position tail
+    (apply (tail) 1 2))</pre>
+
+    <p>The last test should succeed for a correct implementation
+      of <code>apply</code>.</p>
+
+    <p><i>Note: </i> Using the syntax parameters
+	of <a href="https://srfi.schemers.org/srfi-139/srfi-139.html">SRFI
+        139</a> and defining <code>tail</code> as a syntax parameter would
+        eliminate the need for the unpleasant passing of the <code>tail</code>
+        datum to the <code>test-tail-position</code> macro.</p>
+
+    <h1>Specification</h1>
+
+    <h2>Continuation marks</h2>
+
+    <p>
+      We view a continuation as a list of frames where each frame
+      represents an active procedure call that is not a tail call.
+      Each non-tail call of a procedure adds a frame to the head of the
+      list of frames of the current continuation, while tail-calling a
+      procedure conceptually reuses the top (or first) frame.
+    </p>
+
+    <p>
+      Continuation marks associate values to keys to frames.  There
+      can be at most one value for a given frame and key.  Keys and
+      values can be arbitrary Scheme objects.  Keys are compared
+      using <code>eq?</code>.
+
+    <p>
+      The continuation marks for a given key in a continuation
+      conceptually form a list of all values associated with the given
+      key in the frames of the continuation, ordered by the ordering
+      of frames.
+    </p>
+
+    <h2>Requirements</h2>
+
+    <p>
+      An R7RS system that supports this SRFI shall make the identifiers
+      defined below available in the <code>(srfi 157)</code> library.
+    </p>
+
+    <p>
+      On any such system, the last expression within the body of
+      a <code>parameterize</code> expression shall occur in a tail context.
+    </p>
+
+    <h2>Syntax</h2>
+
+    <p><code>(with-continuation-mark &lt;key&gt; &lt;value&gt;
+	&lt;expression&gt;)</code></p>
+
+    <p>The <code>&lt;key&gt;</code> expression is evaluated to obtain
+      a key, the <code>&lt;value&gt;</code> expression is evaluated to
+      obtain a value, the key is mapped to the value as a continuation
+      mark in the current continuation's initial continuation (if the
+      frame already has a mark for the key, the mark is replaced), and,
+      finally, the <code>&lt;expression&gt;</code> is evaluated.  The
+      continuation for evaluating <code>&lt;expression&gt;</code> is the
+      continuation of the <code>with-continuation-mark</code> expression
+      (so the result of the <code>&lt;expression&gt;</code> is the
+      result of the <code>with-continuation-mark</code> expression, and
+      the <code>&lt;expression&gt;</code> is in tail context if
+      the <code>with-continuation-mark</code> expression is).
+    </p>
+
+    <h2>Procedures</h2>
+
+    <p>In the descriptions of the following
+    procedures, <code><em>default</em></code> stands for an optional
+    argument that defaults to <code>#f</code> if it is not provided.</p>
+
+    <p><code>(current-continuation-marks)</code></p>
+
+    <p>
+      Returns an object called a <em>set of continuations
+	marks</em>, which at some point in the future can be asked (by
+      the <code>continuation-mark-set-&gt;list</code>,
+      <code>continuation-mark-set-&gt;list*</code>
+      and <code>continuation-mark-set-first</code> procedures) to
+      deliver the set of continuation marks of the continuation of the
+      call to <code>current-continuation-marks</code> for a given key.
+    </p>
+
+    <p><code>(continuation-marks? <em>obj</em>)</code></p>
+
+    <p>
+      Returns <code>#t</code> if <code><em>obj</em></code> is a set
+      of continuation marks, and <code>#f</code> otherwise.  Note that
+      sets of continuation marks are not necessarily disjoint from other
+      Scheme types such as lists.
+    </p>
+
+    <p><code>(continuation-mark-set-&gt;list <em>marks</em> <em>key</em>)</code></p>
+
+    <p>Returns a newly allocated list containing the marks for
+      the <code><em>key</em></code> in the continuation mark
+      set <code><em>marks</em></code>.
+    </p>
+
+    <p><code>(continuation-mark-set-&gt;list* <em>marks</em> <em>list</em>)</code></p>
+    <p><code>(continuation-mark-set-&gt;list* <em>marks</em> <em>list</em> <em>default</em>)</code></p>
+
+    <p>Returns a newly allocated list containing vectors of marks in
+    the continuation mark set <code><em>marks</em></code>.  The length
+    of each vector in the result list is the same as the length of the
+    key <code><em>list</em></code>, and a value in a particular vector
+    position is the value for the corresponding key
+    in <code><em>list</em></code>.  Values for multiple keys appear in
+    a single vector only when the marks are for the same continuation
+    frame in the continuation mark set <code><em>marks</em></code>.
+    The object <code><em>default</em></code> is used for vector elements to indicate
+      the lack of a value.
+    </p>
+
+    <p><code>(continuation-mark-set-first <em>marks</em> <em>key</em>)</code></p>
+    <p><code>(continuation-mark-set-first <em>marks</em> <em>key</em> <em>default</em>)</code></p>
+
+    <p>
+      Returns the first element of the list that would be returned
+      by <code>(continuation-mark-set-&gt;list <em>marks</em> <em>key</em>)</code>,
+      or <code><em>default</em></code> if the result would be the empty list.
+    </p>
+
+    <p>
+      Semantically equivalent to, but may be more efficient than:
+    </p>
+
+    <pre>
+  (let ((lst (continuation-mark-set-&gt;list <em>marks</em> <em>key</em>))
+    (if (not (null? lst))
+        (car lst)
+        default)))</pre>
+
+    <p><code>(call-with-immediate-continuation-mark <em>key</em> <em>proc</em>)</code></p>
+    <p><code>(call-with-immediate-continuation-mark <em>key</em> <em>proc</em>
+    <em>default</em>)</code></p>
+
+    <p>
+      Tail-calls <code><em>proc</em></code> with the value associated
+      with <code><em>key</em></code> in the first frame of the current
+      continuation (<i>i.e.</i>, a value that would be replaced in the
+      set of current continuation marks if the call
+      to <code>call-with-immediate-continuation-mark</code> were
+      replaced with a <code>with-continuation-mark</code> form
+      using <code><em>key</em></code> as the key expression).  If no
+      such value exists in the first frame, <code><em>default</em></code> is passed
+      to <code><em>proc</em></code>.
+    </p>
+
+    <p>
+      Semantically equivalent to, but may be more efficient than:
+    </p>
+
+    <pre>
+  (let ((secret-key (vector #f)))
+    (with-continuation-mark secret-key #f
+      (let ((marks
+            (continuation-mark-set-&gt;list* (current-continuation-marks)
+                                          (list <em>key</em> secret-key)
+                                          <em>default</em>))
+        (<em>proc</em> (vector-ref (car marks) 0)))))</pre>
+
+    <h1>Implementation</h1>
+
+    <p>
+      An implementation of continuation marks as a portable R7RS library is not
+      possible.
+    </p>
+
+    <p>
+      This SRFI provides an <a href="https://srfi.schemers.org/srfi-157/srfi-157.tgz">implementation</a> in
+      the form of a meta-circular interpreter written in R7RS
+      dubbed <em>Inferior Scheme</em>.  Inferior Scheme is a REPL for
+      the Scheme IEEE 1178-1990 standard.  Outside of the standard
+      syntax and procedures, Inferior Scheme provides the syntax and
+      the procedures of this SRFI, and the <code>load</code> procedure
+      of the R4RS.
+    </p>
+
+    <p>
+      A mature implementation of continuation marks is available
+      in <a href="http://racket-lang.org/">Racket</a>.
+    </p>
+
+    <p>
+      The author
+      of <a href="http://synthcode.com/wiki/chibi-scheme">Chibi
+	Scheme</a> <a href="https://groups.google.com/d/msg/chibi-scheme/0V33GBeglkE/n6HVKOWCBgAJ">expressed plans to support continuation marks in his implementation</a>.
+    </p>
+
+    <h2>Implementation hints</h2>
+
+    <p>
+      A simple way for an implementation of Scheme to provide
+      continuation marks is to pass two implicit parameters
+      called <em>flag</em> and <em>marks</em> in each call.  The
+      parameter <em>flag</em> is <code>#t</code> in a call if the call
+      is a tail call that occurs in tail context with respect to the
+      form <code>with-continuation-mark</code>, and <code>#f</code>
+      otherwise.  The parameter <em>marks</em> holds the current
+      continuation marks.  The Inferior Scheme implementation bundled
+      with this SRFI uses this approach.  It is detailed in
+      R. Germane's master's thesis (see acknowledgements).
+    </p>
+
+    <p>
+      An implementation of Scheme that employs a global CPS-transform
+      to model continuations can implement continuation marks more
+      efficiently as follows: The current continuation marks are
+      stored in a thread-local mutable cell, which corresponds to the
+      implicit <em>marks</em> parameter from above.  The
+      form <code>with-continuation-marks</code> invokes
+      its <em>expression</em> with a specific special
+      continuation procedure <em>C*</em>.  The presence of that
+      specific continuation procedure as the current continuation
+      corresponds to the <em>flag</em> parameter from above
+      being <code>#t</code>.  (In order for
+      the <code>with-continuation-marks</code> form to be able to
+      return to its continuation, it has to push its continuation onto
+      the current continuation marks so that <em>C*</em> can access it
+      when it is invoked and pass control to it.)
+    </p>
+
+    <p>
+      A similar strategy is possible for Scheme implementations that
+      are stack-based.  Passing the special continuation procedure
+      from above is replaced by leaving a specific special return
+      value on the stack.
+    </p>
+
+    <h1>Acknowledgements</h1>
+
+    <p>
+      I would like to thank John Clements and Matthew Flatt for
+      inventing continuation marks.  See <em>Modeling an Algebraic
+      Stepper</em> (<a
+      href="https://www2.ccs.neu.edu/racket/pubs/esop2001-cff.pdf">PDF</a>)
+      and <em>Portable and high-level access to the stack with
+      Continuation Marks</em> (<a href="https://www2.ccs.neu.edu/racket/pubs/dissertation-clements.pdf">PDF</a>).
+
+    <p>
+      Also, thank you to the <a href="http://racket-lang.org/plt.html">PLT team</a> for
+      making continuation marks popular.  Parts of the wording of this
+      specification have been taken over from the Racket
+      documentation.
+
+    <p>I also want to
+      acknowledge Kimball
+      R. Germane's <a href="http://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=4435&amp;context=etd">master's
+      thesis</a>, where a simple global source code transformation for
+      implementing continuation marks in pure lambda calculus is
+      described in great detail.
+    </p>
+
+    <h1>Copyright</h1>
+    Copyright (C) Marc Nieper-Wi&szlig;kirchen (2017).  All Rights Reserved.
+
+    <p>
+      Permission is hereby granted, free of charge, to any person
+      obtaining a copy of this software and associated documentation files
+      (the "Software"), to deal in the Software without restriction,
+      including without limitation the rights to use, copy, modify, merge,
+      publish, distribute, sublicense, and/or sell copies of the Software,
+      and to permit persons to whom the Software is furnished to do so,
+      subject to the following conditions:
+
+    <p>
+      The above copyright notice and this permission notice shall be
+      included in all copies or substantial portions of the Software.
+
+    <p>
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+      EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+      MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+      NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+      BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+      ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+      CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+      SOFTWARE.
+
+      <hr>
+      <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>
