@@ -1,0 +1,12 @@
+;; -*- Hen -*-
+
+(define (dynld-name fn)
+  (make-pathname #f fn ##sys#load-dynamic-extension))
+
+(compile -O3 -d0 -s -J "generators/generators.scm" -o ,(dynld-name "srfi-121"))
+(compile -O2 -d0 -s "srfi-121.import.scm")
+
+(install-extension
+ 'srfi-121
+ `(,(dynld-name "srfi-121") ,(dynld-name "srfi-121.import"))
+ '((version "1.3")))
