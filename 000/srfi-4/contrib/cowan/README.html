@@ -1,0 +1,132 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>A Portable SRFI-4 Implementation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/srfi.css" type="text/css" />
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+    <body>
+
+<h1>A Portable SRFI-4 Implementation</h1>
+
+<p>by John Cowan</p>
+
+<p>The portable SRFI-4 implementation in this directory is constructed
+in two layers.  It should work on any R6RS or R7RS system, or any
+Scheme that provides even minimal bytevectors: it relies only on the primitives
+<code>make-bytevector</code>, <code>bytevector?</code>,
+<code>bytevector-length</code>,
+<code>bytevector-u8-ref</code>, and <code>bytevector-u8-set!</code>.
+The implementation also uses either SRFI 9, R6RS record types,
+or R7RS record types.
+However, it should not be used to replace a native SRFI 4
+implementation, as it is very likely to be much less efficient.</p>
+
+<p>The lexical syntax of SRFI 4 is not provided.</p>
+
+<p>Note that on R6RS systems the library is named <code>(srfi :4)</code>,
+whereas on R7RS systems it is named <code>(srfi 4)</code>.</p>
+
+<h2>Bytevector library layer</h2>
+
+<p> The lower layer is a portable
+implementation of the R6RS bytevector library.  So that it can be
+run and tested on R6RS systems, it is named <code>(r6rs bytevectors)</code>
+rather than <code>(rnrs bytevectors (6))</code>.
+It depends only on the five primitives.
+(In Chicken 5 these are simulated with u8vectors from the native SRFI 4
+implementation.)</p>
+
+<p>However, if a native R6RS library is available,
+it is likely to be much more
+performant and should be used instead.  In particular, the
+conversions between bytes and strings, and between bytes and
+inexact numbers, can be implemented much more efficiently in a
+low-level language such as C.</p>
+
+<p>The following files are provided for this layer:</p>
+
+<ul>
+<li><code>include.scm</code> - R6RS library for file inclusion </li>
+
+<li><code>r6rs.bytevectors.scm</code> - Chicken 5 library.</li>
+
+<li><code>r6rs/bytevectors.scm</code> - Guile library.
+Can be adapted to any R6RS system.</li>
+
+<li><code>r6rs/bytevectors.sld</code> - Chibi library.
+Can be adapted to any R7RS system.</li>
+
+<li><code>r6rs/bytevectors-impl.scm</code> - Shared implementation
+from <code>snow-fort.org</code> by Will Clinger, slightly modified for this SRFI.</li>
+
+<li><code>r6rs/chicken-ieee.scm</code> - Chicken 5 implementation
+of native IEEE procedures in mixed Scheme and C.</li>
+
+<li><code>r6rs/r7rs-shim.scm</code> - R7RS shim.
+Provides the non-primitive R7RS bytevector procedures.
+These can be used by any R5RS system that provides
+the primitives and bitwise operations.</li>
+
+<li><code>r6rs/shared-tests.scm</code> - Shared tests (no dependencies).</li>
+
+<li><code>r6rs/chicken-tests.scm</code> - Chicken 5 test script wrapper.</li>
+
+<li><code>r6rs/guile-tests.scm</code> - Guile test script wrapper.</li>
+
+<li><code>r6rs/chibi-tests.scm</code> - Chibi test script wrapper.</li>
+
+<li><code>r6rs/ypsilon-tests.scm</code> - Ypsilon test script wrapper.</li>
+
+<li><code>r6rs/guile-native-tests.scm</code> - Guile native test wrapper.</li>
+
+<li><code>r6rs/ypsilon-native-tests.scm</code> - Ypsilon native test wrapper.</li>
+
+</ul>
+
+<h2>SRFI-4 layer</h2>
+
+<p>The upper layer provides the procedures of SRFI 4.
+It can be layered over either the <code>(r6rs bytevectors)</code> library
+or a native <code>(rnrs bytevectors (6)</code> library.</p>
+
+<p>The following files are provided for this layer:</p>
+
+<ul>
+<li><code>srfi/4.sld</code> - Chibi library.  Should work in any R7RS system, </li>
+
+<li><code>srfi/%3a4.scm</code> - Ypsilon library.  Should work in any R6RS system.</li>
+
+<li><code>srfi/4/impl.scm</code> - Implementation of SRFI 4 procedures
+using a bytevector library.</li>
+
+<li><code>srfi/4/macros.scm</code> - Macros used by the implementation.</li>
+
+<li><code>srfi/4/r6rec.scm</code> - Record-type definitions for R6RS.</li>
+
+<li><code>srfi/4/r7rec.scm</code> - Record-type definitions for R7RS.</li>
+
+<li><code>srfi/4/shared-tests.scm</code> - Shared tests (no dependencies).</li>
+
+<li><code>srfi/4/chicken-native-tests.scm</code> - Chicken 5 native test script wrapper.</li>
+
+<li><code>srfi/4/chibi-tests.scm</code> - Chibi test script wrapper.</li>
+
+<li><code>srfi/4/ypsilon-tests.scm</code> - Ypsilon test script wrapper.</li>
+
+</ul>
+
+<h2>Running tests</h2>
+
+<p>All tests must be run from the directory containing this README file.
+The shell script <code>all-tests</code> will run all tests.  It assumes that
+the Chicken 5 compiler and interpreter are on the shell's search path
+as <code>csc</code> and <code>csi</code>,
+the Chibi interpreter as <code>chibi-scheme</code>,
+the Guile 2.x interpreter as <code>guile</code>
+and the Ypsilon interpreter as <code>ypsilon</code>.
+All lines ending in <code>OK</code> represent successful tests and
+are filtered out by default.
+Simply comment out runs of any Schemes you don't have.
+</p></body></html>

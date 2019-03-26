@@ -1,0 +1,29 @@
+#!/bin/sh
+
+CSI="csi -q -b"
+CHIBI="chibi-scheme"
+GUILE="guile -L ."
+YPSILON="ypsilon --sitelib=$PWD"
+
+echo "!!! Compiling Chicken (r6rs bytevectors) library"
+csc -J -s r6rs.bytevectors.scm
+
+echo "!!! Testing native (rnrs bytevectors) library with Guile"
+$GUILE r6rs/guile-native-tests.scm | grep -v OK
+echo "!!! Testing native (rnrs bytevectors) library with Ypsilon"
+$YPSILON r6rs/ypsilon-native-tests.scm | grep -v OK
+echo "!!! Testing (r6rs bytevectors) library with Chicken"
+$CSI r6rs/chicken-tests.scm | grep -v OK
+echo "!!! Testing (r6rs bytevectors) library with Guile"
+$GUILE r6rs/guile-tests.scm | grep -v OK
+echo "!!! Testing (r6rs bytevectors) library with Chibi"
+$CHIBI r6rs/r7rs-tests.scm | grep -v OK
+echo "!!! Testing (r6rs bytevectors) library with Ypsilon"
+$YPSILON r6rs/ypsilon-tests.scm | grep -v OK
+
+echo "!!! Testing native (srfi 4) library with Chicken"
+$CSI srfi/4/chicken-native-tests.scm | grep -v OK
+echo "!!! Testing (srfi 4) library with Chibi"
+$CHIBI srfi/4/chibi-tests.scm | grep -v OK
+echo "!!! Testing (srfi 4) library with Ypsilon"
+$YPSILON srfi/4/ypsilon-tests.scm | grep -v OK
