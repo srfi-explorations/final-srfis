@@ -1,0 +1,12 @@
+;; -*- Hen -*-
+
+(define (dynld-name fn)
+  (make-pathname #f fn ##sys#load-dynamic-extension))
+
+(compile -O3 -d0 -s -J list-queues/list-queues.scm -o ,(dynld-name "srfi-117"))
+(compile -O2 -d0 -s srfi-117.import.scm)
+
+(install-extension
+ 'srfi-117
+ `(,(dynld-name "srfi-117") ,(dynld-name "srfi-117.import"))
+ `((version "1.2")))
