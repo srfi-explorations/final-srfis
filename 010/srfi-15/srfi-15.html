@@ -1,0 +1,165 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 15: Syntax for dynamic scoping</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/srfi.css" type="text/css" />  </head>
+  <body>
+
+<H1>Title</H1>
+
+Syntax for dynamic scoping.
+
+<H1>Author</H1>
+
+Lars T Hansen
+
+<H1>Status</H1>
+This SRFI is currently in ``withdrawn'' status.  To see an explanation of each status that a SRFI can hold, see <A HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+You can access the discussion via <A HREF=mail-archive/maillist.html>the archive of the mailing list</A>.
+<P><UL>
+<LI>Received: 1999/11/01
+<LI>Draft: 1998/11/06-2000/01/07
+<LI>Withdrawn: 03/10/2000
+<H1>Abstract</H1>
+
+FLUID-LET, a binding syntax for dynamic scoping, is introduced.
+
+<H1>Issues</H1>
+
+None.
+
+<H1>Rationale</H1>
+
+FLUID-LET reduces the clutter of overriding the values of variables in a
+dynamic scope while allowing nonlocal exits from and re-entries to that
+scope.  Scheme systems have had FLUID-LET for years, though they do not
+agree on its meaning.
+
+
+<H1>Specification</H1>
+
+<dl>
+<dt>
+(FLUID-LET &lt;bindings&gt; &lt;body&gt;)
+<br> Syntax
+<dd>
+<p>&lt;Bindings&gt; should have the form ((&lt;variable1&gt; &lt;init1&gt;) ...) where
+   each &lt;init&gt; is an expression.  It is an error for a &lt;variable&gt;
+   to appear more than once in the list of variables.
+
+<p>The &lt;init&gt;s are evaluated in the current environment, the values 
+   of the &lt;variable&gt;s are saved, the results of the &lt;init&gt;s are 
+   assigned to the &lt;variable&gt;s, and the &lt;body&gt; is evaluated in the
+   current environment before the &lt;variable&gt;s are restored to their
+   saved values and the values returned by the last expression of &lt;body&gt;
+   are returned as the values of the entire expression.
+
+<p>It is an error for the &lt;variable&gt;s to be unbound at the time their
+   old values are saved.
+
+<p>If control leaves the dynamic scope of the &lt;body&gt; before the last 
+   expression of &lt;body&gt; has returned, then the current values of the 
+   &lt;variables&gt;s inside the scope are saved and the saved values from 
+   outside the scope are restored before control leaves the scope of 
+   the FLUID-LET.  If control subsequently re-enters the scope of the
+   &lt;body&gt;, then the current values of the &lt;variable&gt;s outside 
+   the scope
+   are saved and the saved values from inside the scope are restored 
+   before execution continues inside &lt;body&gt;.  In this case, it is the
+   last saved values from outside the scope that will be restored when 
+   the &lt;body&gt; finally returns.
+
+<pre>
+             (define v 1)
+             (define again #f)
+
+             (define (test1)
+               (display v)
+               (fluid-let ((v 2))
+                 (call-with-current-continuation
+                   (lambda (k)
+                     (set! again (lambda () 
+                                   (set! again #f)
+                                   (k #t)))))
+                 (test2)
+                 (set! v 3))
+               (display v)
+               (set! v 4)
+               (if again (again)))
+
+             (define (test2) (display v))       
+
+             (test1)                    --&gt; 12134
+</pre>
+</dl>
+
+<H1>Implementation</H1>
+
+The following implementation is written in R5RS Scheme.  It is not
+compatible with the IEEE Scheme standard because the IEEE standard does
+not contain the high-level macro system.
+
+<p>The implementation assumes that some top-level names defined by the
+R5RS are bound to their original values.
+
+<p>
+<pre>
+(define-syntax fluid-let
+  (syntax-rules ()
+    ((_ ((v1 e1) ...) b1 b2 ...)
+     (fluid-let "temps" () ((v1 e1) ...) b1 b2 ...))
+    ((_ "temps" (t ...) ((v1 e1) x ...) b1 b2 ...)
+     (let ((temp e1))
+       (fluid-let "temps" ((temp e1 v1) t ...) (x ...) b1 b2 ...)))
+    ((_ "temps" ((t e v) ...) () b1 b2 ...)
+     (let-syntax ((swap!
+                   (syntax-rules ()
+                     ((swap! a b)
+                      (let ((tmp a))
+                        (set! a b)
+                        (set! b tmp))))))
+       (dynamic-wind
+        (lambda ()
+          (swap! t v) ...)
+        (lambda ()
+          b1 b2 ...)
+        (lambda ()
+          (swap! t v) ...))))))
+</pre>
+
+<H1>Copyright</H1>
+<p>Copyright (C) Lars T Hansen (1999). All Rights Reserved.</p>
+
+<p>
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+</p>
+<p>
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+</p>
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+</p>
+
+    <hr>
+    <address>Editor: <a href="mailto:srfi minus editors at srfi dot schemers dot org">Mike Sperber</a></address>
+<!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
+<!-- hhmts start -->
+Last modified: Fri Sep 18 17:00:11 MST 2009
+<!-- hhmts end -->
+  </body>
+</html>
