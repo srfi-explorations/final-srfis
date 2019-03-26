@@ -1,0 +1,245 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>SRFI 139: Syntax parameters</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/srfi.css" type="text/css" />
+  </head>
+
+  <body>
+
+<h1>Title</h1>
+
+Syntax parameters
+
+<h1>Author</h1>
+
+Marc Nieper-Wi&szlig;kirchen
+
+<h1>Status</h1>
+
+<p>This SRFI is currently in <em>final</em> status.  Here is <a href="http://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+139+at+srfi+dotschemers+dot+org">srfi-139@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="http://srfi-email.schemers.org/srfi-139">archive</a>.</p>
+<ul>
+  <li>Received: 2016/7/7</li>
+  <li>60-day deadline: 2016/9/5</li>
+  <li>Draft #1 published: 2016/7/7</li>
+  <li>Draft #2 published: 2016/9/20</li>
+  <li>Finalized: 2015/10/2</li>
+</ul>
+
+<h1>Abstract</h1>
+
+<p>
+Syntax parameters are to the expansion process of a Scheme program
+what parameters are to the evaluation process of a Scheme program. They allow
+hygienic implementation of syntactic forms that would otherwise
+introduce implicit identifiers unhygienically.
+</p>
+
+<h1>Rationale</h1>
+
+<p>
+Syntax parameters are a mechanism for rebinding a macro definition
+within the dynamic extent of a macro expansion. This provides a
+convenient solution to one of the most common types of unhygienic
+macro: those that introduce a unhygienic binding each time the macro
+is used. Examples include a lambda form with a return keyword,
+class macros that introduce a special self binding, or a while loop form
+that provides an escape procedure as a binding for an auxiliary abort
+keyword.
+</p>
+
+<p>
+  With the syntax-rules macro system, it is not possible to introduce bindings
+  unhygienically. With low-level macro systems like the sc-macro-transformer or the
+  syntax-case macro system, one can break hygiene by constructing new identifiers
+  in an existing syntactic closure. While use cases of introducing identifiers
+  unhygienically like in SRFI 99 seem unproblematic, the use cases
+  given above where bindings are based on identifiers that are
+  completely independent of the arguments of the macro are often
+  <a href="http://scheme2011.ucombinator.org/papers/Barzilay2011.pdf">severely
+  broken</a>.
+</p>
+
+<p>
+  With syntax parameters, instead of introducing the binding
+  unhygienically each time, one instead creates one binding for the
+  keyword, which is then adjusted later when the keyword to supposed
+  to have a different meaning. As no new bindings are introduced, hygiene
+  is preserved. This is similar to the dynamic binding mechanisms available
+  at run-time (in the form of parameters), except that the dynamic
+  binding only occurs during macro expansion. The code after macro
+  expansion remains lexically scoped.
+</p>
+
+<h1>Examples</h1>
+
+<p>
+  The first example is certainly not an example of good functional
+  programming style but it easily demonstrates how syntax parameters
+  are used and why
+  <code>call-with-current-continuation</code> is known as the
+  fundamental control-flow construct.
+</p>
+
+<pre>
+ (import (scheme base)
+         (scheme write)  
+         (srfi 139))
+ 
+ (define-syntax-parameter abort
+   (syntax-rules ()
+     ((_ . _)
+      (syntax-error "abort used outside of a loop"))))
+
+ (define-syntax forever
+   (syntax-rules ()
+     ((forever body1 body2 ...)
+      (call-with-current-continuation
+       (lambda (escape) 
+  	 (syntax-parameterize
+	     ((abort
+	      (syntax-rules ()
+	        ((abort value (... ...))
+	 	 (escape value (... ...))))))
+	   (let loop ()
+ 	     body1 body2 ... (loop))))))))
+
+ (define i 0)
+ (forever
+   (display i)
+   (newline)
+   (set! i (+ 1 i))
+   (when (= i 10)
+     (abort)))
+</pre>
+
+<p>
+  The following example is derived from an example given in the Guile
+  reference manual.
+</p>
+
+<pre>
+ (import (scheme base)
+         (scheme write)
+         (srfi 1)
+         (srfi 139))
+
+ (define-syntax-parameter return
+   (syntax-rules ()
+     ((_ . _)
+      (syntax-error "return used outside of a lambda^"))))
+
+ (define-syntax lambda^
+   (syntax-rules ()
+     ((lambda^ formals body1 body2 ...)
+      (lambda formals
+        (call-with-current-continuation
+         (lambda (escape)
+          (syntax-parameterize
+              ((return
+                (syntax-rules ()
+                  ((return value (... ...))
+                   (escape value (... ...))))))
+            body1 body2 ...)))))))
+
+ (define product
+   (lambda^ (list)
+     (fold (lambda (n o)
+             (if (zero? n)
+                 (return 0)
+                 (* n o)))
+           1 list)))
+
+ ...
+</pre>
+
+<h1>Specification</h1>
+
+<h2>Syntax</h2>
+
+<pre>
+ (define-syntax-parameter &lt;keyword&gt; &lt;transformer spec&gt;)
+</pre>
+
+<p>
+Binds &lt;keyword&gt; to the transformer obtained by evaluating
+&lt;transformer spec&gt;. The
+transformer provides the default expansion for the syntax parameter,
+and in the absence of syntax-parameterize, is functionally equivalent
+to define-syntax. (For example, you may want to have the transformer
+throw a syntax error indicating that the keyword is supposed to be
+used in conjunction with another macro as in the examples above).
+</p>
+
+<pre>
+ (syntax-parameterize
+     ((&lt;keyword&gt; &lt;transformer spec&gt;) ...)
+   &lt;body&gt;)
+</pre>  
+
+<p>
+Adjusts the <code>&lt;keyword&gt;</code>s to use the transformer obtained
+by evaluating the corresponding <code>&lt;transformer&gt;</code>s in
+the expansion of the <code>&lt;body&gt;</code>. Each keyword must be bound to a
+syntax parameter. <code>syntax-parameterize</code> differs from
+<code>let-syntax</code> in that the binding is not shadowed, but
+adjusted, and so uses of the keyword in the expansion
+of <code>&lt;body&gt;</code> use the new transformers. This is
+somewhat similar to how parameterize adjusts the values of regular
+parameters, rather than creating new bindings.
+
+<h1>Implementation</h1>
+
+<p>
+A sample implementation for an implementation of the R7RS is provided in form
+of the <a href="https://gitlab.com/nieper/rapid-scheme">Rapid Scheme</a>
+implementation, which implements this SRFI in the
+<code>(rapid syntax-parameters)</code> library. This implementation will follow
+any future changes in this specification.
+</p>
+
+<p>
+Syntax parameters are also being implemented, at least, by Guile and Racket.
+</p>
+
+<h1>Acknowledgements</h1>
+
+This SRFI wouldn't probably exist if Eli Barzilay, Ryan Culpepper, and
+Matthew hadn't published their
+paper <em><a href="http://scheme2011.ucombinator.org/papers/Barzilay2011.pdf">Keeping
+it Clean with Syntax Parameters</a></em>, from which bits were
+shamelessly reused for this SRFI.
+
+Much of this specification is likewise derived from the Guile
+Reference Manual and the Racket documentation.
+
+<h1>Copyright</h1>
+Copyright (C) Marc Nieper-Wi&szlig;kirchen (2016).  All Rights Reserved. 
+
+<p>
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
+
+<p>
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
+
+<p>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+  <hr>
+  <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>
