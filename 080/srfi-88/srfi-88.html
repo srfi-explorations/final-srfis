@@ -1,0 +1,389 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+  <head>
+    <title>SRFI 88: Keyword objects</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/srfi.css" type="text/css" />
+  </head>
+
+  <body>
+
+<H1>Title</H1>
+
+Keyword objects
+
+<H1>Author</H1>
+
+Marc Feeley
+
+<H1>Status</H1>
+
+This SRFI is currently in ``final'' status.  To see an explanation of
+each status that a SRFI can hold, see <A
+HREF="http://srfi.schemers.org/srfi-process.html">here</A>.
+
+To provide input on this SRFI, please <A
+HREF="mailto:srfi minus 88 at srfi dot schemers dot org">mail to
+<code>&lt;srfi minus 88 at srfi dot schemers dot org&gt;</code></A>.  See <A
+HREF="../srfi-list-subscribe.html">instructions here</A> to subscribe to
+the list.  You can access previous messages via <A
+HREF="mail-archive/maillist.html">the archive of the mailing list</A>.
+
+
+<P><UL>
+<LI>Received: 2006/04/01</LI>
+<LI>Draft: 2006/04/11 - 2006/07/10</LI>
+<LI>Revised: 2007/03/28</LI>
+<LI>Final: 2007/07/03</LI>
+</UL>
+
+<H1>Abstract</H1>
+
+<P>
+This SRFI defines <I>keyword</I> objects, a data type similar to
+Scheme symbols.  Keyword objects have the same lexical syntax as
+symbols but they must end in a colon.  Moreover keyword objects
+are self-evaluating.
+Procedures for converting between strings and keyword objects
+(<TT>string-&gt;keyword</TT> and <TT>keyword-&gt;string</TT>)
+and a type predicate (<TT>keyword?</TT>) are defined.  Finally
+this SRFI specifies the changes to the Scheme lexical syntax required
+to accomodate keywords.
+</P>
+
+<H1>Rationale</H1>
+
+<P>
+The motivation for keyword objects stems from the need for markers to
+identify optional named parameters, such as in
+<a href="http://srfi.schemers.org/srfi-89/">SRFI 89 (Optional positional
+and named parameters)</a>.  Here we mean ``parameter'' in the general sense
+of an API parameter (whether it is a syntactic or procedural API).
+Nevertheless we will use the terminology of procedures, namely the
+caller and callee, to identify the two sides of the API.
+</P>
+
+<P>
+Optional named parameters are useful for APIs with many parameters,
+most of which have a reasonable default value.  Using optional
+positional parameters in this case is not appropriate because it is hard
+to remember the position of a particular parameter P and it forces the
+caller to supply the values of parameters that come before P, whether
+it is the default value or not.  Here are a few APIs where optional
+named parameters are particularly useful:
+</P>
+
+<OL>
+
+<LI> Constructors for documents with attributes, such as HTML code:
+
+<PRE>
+    (html-p align: 'center
+            (html-font face: "helvetica"
+                       size: "+3"
+                       "Title"))
+</PRE>
+
+<LI> Hash-table constructor with many parameters (such as the minimum
+     and maximum load factors, the initial size of the table, the key
+     hash function and the key equality testing function to use, etc):
+
+<PRE>
+    (make-table size: 100000
+                test: string=?
+                hash: string-length)
+</PRE>
+
+<LI> Widget constructors for GUIs:
+
+<PRE>
+    (tcltk-frame relief: 'ridge
+                 borderwidth: 4
+                 height: "50px"
+                 width: "100px")
+</PRE>
+
+<LI> A syntactic form for defining new record types and the
+     generated record constructors:
+
+<PRE>
+    (define-type point
+      id: _5c17ca1a-83e0-45eb-9c8e-74a03dfe89db
+      x  ; x, y, z are fields required by the constructor
+      y
+      z)
+
+    (define-type colored-point
+      inherits: point
+      id: _9d4ba977-2177-4650-8b96-2d781bfee771
+      sealed: #t
+      (color mutable: #f default: "black") ; color field is optional
+      (layer default: 0 type: int8))       ; layer field is optional
+
+    (define p1 (colored-point 1 2 3))
+    (define p2 (colored-point 0 0 0 layer: 5))
+</PRE>
+
+<LI> Port opening procedures that support several port options:
+
+<PRE>
+    (open-file (list path: "myfile"
+                     direction: 'output
+                     char-encoding: 'UTF-8
+                     eol-encoding: 'cr-lf
+                     append: #t))
+</PRE>
+
+</OL>
+
+<P>
+The specification of the syntax for expressing optional named
+parameter (such as an extension to the parameter list syntax) is left
+for another SRFI, such as <a href="http://srfi.schemers.org/srfi-89/">SRFI
+89 (Optional positional and named parameters)</a>.  This SRFI
+only specifies the keyword objects as a datatype.
+</P>
+
+<P>
+Several implementations of Scheme currently feature keyword objects,
+often modeled after the keyword objects specified in the DSSSL
+standard or Common Lisp.  Here is a partial list: Bigloo, Chicken,
+EdScheme, Gambit, Gauche, Guile, Jade (an implementation of DSSSL),
+Kawa, MzScheme, STKlos, and Sizzle.
+</P>
+
+<P>
+Unfortunately few of these implementations are compatible.  As far as
+lexical syntax is concerned, in some implementations the colon must
+come at the end (like in DSSSL), in some implementations it must come
+at the beginning (as in Common Lisp) possibly prefixed with a hash
+sign, and in other cases either at the beginning or end.  This SRFI
+uses the trailing colon syntax because it does not conflict with
+existing Scheme code which use identifiers with leading colon,
+such as <a href="http://srfi.schemers.org/srfi-42/">SRFI 42
+(Eager Comprehensions)</a>.  The main purpose of this SRFI is to help
+standardize keyword objects in these implementations and future
+implementations that support them.
+</P>
+
+<H1>Specification</H1>
+
+<P>
+Like symbols, keywords are objects whose usefulness rests on the fact
+that two keywords are identical (in the sense of <SAMP>eqv?</SAMP>)
+if and only if their names are spelled the same way.  However,
+keywords and symbols are distinct datatypes.  No keyword is identical
+to a symbol (in the sense of <SAMP>eqv?</SAMP>) or any object of
+another datatype.
+</P>
+
+<P>
+At the lexical syntax level, keywords look like symbols that end with
+a colon.  The R5RS lexical syntax category for symbols is
+<TT>&#60;identifier&#62;</TT>.  This category must be changed so that
+an identifier cannot end with a colon unless the symbol is <SAMP>:</SAMP> (a
+symbol consisting of only a colon).  The categories
+<TT>&#60;token&#62;</TT> and <TT>&#60;simple datum&#62;</TT> need to
+be extended and the category <TT>&#60;keyword object&#62;</TT> needs
+to be added as follows:
+</P>
+
+<PRE>
+&#60;token&#62; --&#62; &#60;identifier&#62; | &#60;boolean&#62; | &#60;number&#62;
+     | &#60;character&#62; | &#60;string&#62;
+     | ( | ) | #( | <TT>'</TT> | <TT>`</TT> | , | ,@ | <B>.</B> | &#60;keyword object&#62;
+
+&#60;simple datum&#62; --&#62; &#60;boolean&#62; | &#60;number&#62;
+     | &#60;character&#62; | &#60;string&#62; |  &#60;symbol&#62; | &#60;keyword object&#62;
+
+&#60;keyword object&#62; --&#62; &#60;identifier&#62; :
+</PRE>
+
+<P>
+Note that the rule for <TT>&#60;keyword object&#62;</TT> must be valid
+even in Scheme implementations that have extended the
+<TT>&#60;identifier&#62;</TT> syntax to support quoted symbols as
+specified in the original specification of
+<a href="http://srfi.schemers.org/srfi-75/">SRFI 75 (R6RS Unicode data)</a>.
+In other words, in such
+implementations, <SAMP>|foo|:</SAMP> and <SAMP>foo:</SAMP> are the
+same keyword, and <SAMP>|foo:|</SAMP> is a symbol, not a keyword,
+and <SAMP>||:</SAMP> is a keyword.  Using this quoted keyword
+lexical syntax all keyword objects produced by the
+<SAMP>string-&gt;keyword</SAMP> procedure and written with the
+<SAMP>write</SAMP> procedure will be read back in with the
+<SAMP>read</SAMP> procedure as the identical keyword (in the sense
+of <SAMP>eqv?</SAMP>).
+</P>
+
+<P>
+Keywords are self evaluating.  The syntax of expressions must be
+extended by modifying the category <TT>&#60;self-evaluating&#62;</TT>
+to include <TT>&#60;keyword object&#62;</TT>:
+</P>
+
+<PRE>
+&#60;self-evaluating&#62; --&#62; &#60;boolean&#62; | &#60;number&#62;
+     | &#60;character&#62; | &#60;string&#62; | &#60;keyword object&#62;
+</PRE>
+
+<DL>
+<DT><U>procedure:</U> <B>(keyword?</B> <I>obj</I><B>)</B>
+<DD>
+<P>
+Returns <TT>#t</TT> if <VAR>obj</VAR> is a keyword object, otherwise returns <TT>#f</TT>.
+</P>
+
+<PRE>
+(keyword? 'foo:)                    ==&#62;  #t
+(keyword? foo:)                     ==&#62;  #t
+(keyword? 'foo)                     ==&#62;  #f
+(keyword? ':)                       ==&#62;  #f
+(keyword? ||:)                      ==&#62;  #t  (if keyword quoting supported)
+(keyword? (car '(a: b:)))           ==&#62;  #t
+(keyword? "bar")                    ==&#62;  #f
+</PRE>
+
+</DL>
+
+<DL>
+<DT><U>procedure:</U> <B>(keyword-&#62;string</B> <I>keyword</I><B>)</B>
+<DD>
+
+<P>
+Returns the name of <VAR>keyword</VAR> as a string.  It is an error
+to apply mutation procedures like <CODE>string-set!</CODE> to strings returned
+by this procedure.
+</P>
+
+<PRE>
+(keyword-&#62;string foo:)              ==&#62;  "foo"
+(keyword-&#62;string ||:)               ==&#62;  ""  (if keyword quoting supported)
+(keyword-&#62;string
+   (string-&#62;keyword "a b c"))       ==&#62;  "a b c"
+</PRE>
+
+</DL>
+
+<DL>
+<DT><U>procedure:</U> <B>(string-&#62;keyword</B> <I>string</I><B>)</B>
+<DD>
+
+<P>
+Returns the keyword object whose name is <VAR>string</VAR>.
+</P>
+
+<PRE>
+(string-&#62;keyword "foo")             ==&#62;  foo:
+(string-&#62;keyword "")                ==&#62;  ||:  (if keyword quoting supported)
+</PRE>
+
+</DL>
+
+<H1>Implementation</H1>
+
+<P>
+The implementation of keyword objects requires changing the reader and
+the evaluator.  Although the changes are expected to be
+straightforward they are obviously highly system dependent.  Here we
+offer a simplistic `user-level' implementation (a.k.a. kludge) that
+will work in Scheme implementations that allow colons anywhere in the
+symbol.  The following implementation redefines the symbol related
+primitives so that symbols ending with a colon are considered to be
+keywords, not symbols.
+</P>
+
+<PRE>
+    (define real-symbol? symbol?)
+    (define real-symbol->string symbol->string)
+    (define real-string->symbol string->symbol)
+
+    (define looks-like-an-unquoted-keyword?
+      (lambda (s)
+        (let ((n (string-length s)))
+          (and (> n 1)
+               (char=? (string-ref s (- n 1)) #\:)))))
+
+    (set! symbol?
+      (lambda (obj)
+        (and (real-symbol? obj)
+             (not (looks-like-an-unquoted-keyword?
+                   (real-symbol->string obj))))))
+
+    (define keyword?
+      (lambda (obj)
+        (and (real-symbol? obj)
+             (looks-like-an-unquoted-keyword?
+              (real-symbol->string obj)))))
+
+    (set! symbol->string real-symbol->string)
+
+    (define keyword->string
+      (lambda (k)
+        (let* ((s (real-symbol->string k))
+               (n (string-length s)))
+          (substring s 0 (- n 1))))) ; remove the colon
+
+    (set! string->symbol
+      (lambda (s)
+        (if (looks-like-an-unquoted-keyword? s)
+            (error "sorry... the symbol would look like a keyword!")
+            (real-string->symbol s))))
+
+    (define string->keyword
+      (lambda (s)
+        (let ((s-colon (string-append s ":")))
+          (if (looks-like-an-unquoted-keyword? s-colon)
+              (real-string->symbol s-colon)
+              (error "sorry... the keyword would look like a symbol!")))))
+</PRE>
+
+<P>
+Note that this code does not implement the self-evaluation property of
+keyword objects.  If the set of keyword objects used by a program is
+known in advance, self-evaluation can be simulated with a set of
+top-level definitions such as:
+</P>
+
+<PRE>
+    (define foo: 'foo:)
+    (define bar: 'bar:)
+</PRE>
+
+<P>
+Although the implementation presented here is not generally
+applicable, it may be useful to bootstrap a complete implementation of
+keyword objects in a compiler.
+</P>
+
+<h1>Copyright</h1>
+
+Copyright (C) Marc Feeley (2006). All Rights Reserved.
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+<p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+<hr>
+
+<address>
+  Editor: <a href="mailto:srfi minus editors at srfi dot schemers dot org">Donovan Kolbly</a>
+</address>
+
+</body>
+</html>
