@@ -1,0 +1,135 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 3.2//EN">
+<html>
+  <head>
+    <title>Notation for Specializing Parameters without Currying</title>
+    <link href="/admin.css" rel="stylesheet">
+    <link href="/list.css" rel="stylesheet">
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script type="text/x-mathjax-config">
+     MathJax.Hub.Config({
+       tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+     });
+    </script>
+    <script crossorigin="anonymous" integrity=
+            "sha384-Ra6zh6uYMmH5ydwCqqMoykyf1T/+ZcnOQfFPhDrp2kI4OIxadnhsvvA2vv9A7xYv" src=
+            "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+            type="text/javascript"></script>
+  </head>
+
+  <body>
+    <h1>SRFI 26: Notation for Specializing Parameters without Currying</h1>
+    <p class="authors">by Sebastian Egner</p>
+    <p class="status">status: <em>final</em> (2002/2/14)</p><span class="see-also">See also <a href="/srfi-156/">SRFI 156: Syntactic combiners for binary predicates</a>.</span>
+
+    <ul class="info">
+      <li><a href="srfi-26.html">The SRFI Document</a></li>
+      <li><a href="https://srfi-email.schemers.org/srfi-26/">Discussion Archive</a></li>
+      <li><a href="https://github.com/scheme-requests-for-implementation/srfi-26">Git repo (on Github)</a></li>
+      <li>
+        <a href="mailto:srfi-26@srfi.schemers.org">srfi-26@<span class="antispam">nospam</span>srfi.schemers.org (subscribers only)</a></li>
+      <li>
+        <form method="POST" action="https://www.simplelists.com/subscribe.php">
+          <div class="title">Subscribe to srfi-26 mailing list</div>
+          <input name="email"
+                 placeholder="email address"
+                 tabindex="1"
+                 type="email" >
+          <input name="name"
+                 placeholder="full name"
+                 tabindex="2"
+                 type="text" >
+          <p>
+            <input id="sub-digest"
+                   name="digest"
+                   tabindex="3"
+                   type="checkbox"
+                   value="digest" >
+            <label for="sub-digest">daily digest?</label></p>
+          <input class="submit"
+                 name="submit"
+                 tabindex="4"
+                 type="submit"
+                 value="Subscribe to srfi-26" >
+          <input type="hidden" name="action" value="subscribe">
+          <input type="hidden" name="list" value="srfi-26@srfi.schemers.org"></form></li>
+      <li>
+        <form method="POST" action="https://www.simplelists.com/subscribe.php">
+          <p class="title">Unsubscribe from srfi-26 mailing list</p>
+          <input name="email"
+                 placeholder="email address"
+                 tabindex="5"
+                 type="email" >
+          <input class="submit"
+                 name="submit"
+                 tabindex="6"
+                 type="submit"
+                 value="Unsubscribe from srfi-26" >
+          <input name="action"
+                 type="hidden"
+                 value="unsubscribe" >
+          <input name="list"
+                 type="hidden"
+                 value="srfi-26@srfi.schemers.org"></form></li></ul>
+    <h2>Abstract</h2>      <p>When programming in functional style, it is
+      frequently necessary to specialize some of the parameters of a
+      multi-parameter procedure. For example, from the binary operation
+      <code>cons</code> one might want to obtain the unary operation
+      <code>(lambda (x) (cons 1 x))</code>. This specialization of parameters
+      is also known as "partial application", "operator section" or
+      "projection".
+      <p>The mechanism proposed here allows to write
+      this sort of specialization in a simple and compact way. The mechanism is
+      best explained by a few examples:
+      <table>
+        <tr>
+          <td><code>(cut cons (+ a 1) &lt;&gt;)</code>
+          <td>is the same as
+          <td><code>(lambda (x2) (cons (+ a 1) x2))</code>
+        <tr>
+          <td><code>(cut list 1 &lt;&gt; 3 &lt;&gt; 5)</code>
+          <td>is the same as
+          <td><code>(lambda (x2 x4) (list 1 x2 3 x4 5))</code>
+        <tr>
+          <td><code>(cut list)</code>
+          <td>is the same as
+          <td><code>(lambda () (list))</code>
+        <tr>
+          <td><code>(cut list 1 &lt;&gt; 3 &lt;...&gt;)</code>
+          <td>is the same as
+          <td><code>(lambda (x2 . xs) (apply list 1 x2 3 xs))</code>
+        <tr>
+          <td><code>(cut &lt;&gt; a b)</code>
+          <td>is the same as
+          <td><code>(lambda (f) (f a b))</code>
+      </table>
+      <p>As you see, the macro <code>cut</code>
+      specializes some of the parameters of its first argument. The parameters
+      that are to show up as formal variables of the result are indicated by
+      the symbol <code>&lt;&gt;</code>, pronouced as "slot". In addition, the
+      symbol <code>&lt;...&gt;</code>, pronounced as "rest-slot", matches all
+      residual arguments of a variable argument procedure. As you can see from
+      the last example above, the first argument can also be a slot, as one
+      should expect in Scheme.
+      <p>In addition to <code>cut</code>, there is a
+      variant called <code>cute</code> (a mnemonic for "<code>cut</code> with
+      evaluated non-slots") which evaluates the non-slot expressions at the
+      time the procedure is specialized, not at the time the specialized
+      procedure is called. For example,
+      <table>
+        <tr>
+          <td><code>(cute cons (+ a 1) &lt;&gt;)</code>
+          <td>is the same as
+          <td><code>(let ((a1 (+ a 1))) (lambda (x2) (cons a1 x2)))</code>
+      </table>
+      <p>As you see from comparing this example with the
+      first example above, the <code>cute</code>-variant will evaluate <code>(+
+      a 1)</code> once, while the <code>cut</code>-variant will evaluate it
+      during every invokation of the resulting procedure.
+      <p>The mechanism proposed in this SRFI allows
+      specializing any subset of the variables of a procedure. The result can
+      be of fixed arity or of variable arity. The mechanism does not allow
+      permutation, omission, duplication or any other processing of the
+      arguments; for this it is necessary to write to use a different mechanism
+      such as <code>lambda</code>.</body></html>
