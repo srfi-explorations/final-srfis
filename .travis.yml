@@ -3,5 +3,5 @@ script:
 - mkdir ~/chibi-scheme
 - travis_retry curl -L https://github.com/ashinn/chibi-scheme/archive/0.8.tar.gz |
   tar -xz --strip-components=1 -C ~/chibi-scheme
-- (cd ~/chibi-scheme && PREFIX=~ make install)
-- ~/chibi-scheme/chibi-scheme -e '(begin (display "Hello world") (newline))'
+- (cd ~/chibi-scheme && make && sudo make install)
+- chibi-scheme -e '(begin (display "Hello world") (newline))'
