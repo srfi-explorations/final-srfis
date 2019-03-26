@@ -1,0 +1,421 @@
+<!DOCTYPE html PUBLIC
+    "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>SRFI 104: Library Files Utilities</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/srfi.css" type="text/css" />
+<style type="text/css">
+.type {
+   margin-right: 20px;
+}
+</style>
+</head>
+<body>
+
+<!-- This commented out text is for the brittle SRFI tools -->
+<!--
+<H1>Title</H1>
+
+Library Files Utilities
+
+<H1>Author</H1>
+
+Derick Eddington
+
+<H1>Status</H1>
+
+This SRFI is currently in ``withdrawn'' status.
+-->
+
+<h1>Title</h1>
+
+<p>Library Files Utilities</p>
+
+<h1>Author</h1>
+
+<p>Derick Eddington</p>
+
+<!-- ======================================================================= -->
+
+<h1>Status</h1>
+
+<p>
+This SRFI is currently in ``withdrawn'' status.  To see an explanation of
+each status that a SRFI can hold, see <a
+href="http://srfi.schemers.org/srfi-process.html">here</a>.
+
+To provide input on this SRFI, please
+<a href="mailto:srfi minus 104 at srfi dot schemers dot org">mail to
+<code>&lt;srfi minus 104 at srfi dot schemers dot org&gt;</code></a>.  See
+<a href="../srfi-list-subscribe.html">instructions here</a> to
+subscribe to the list.  You can access previous messages via
+<a href="mail-archive/maillist.html">the archive of the mailing list</a>.
+You can access
+post-withdrawal messages via
+<a href="http://srfi.schemers.org/srfi-104/post-mail-archive/maillist.html">
+the archive of the mailing list</a>.
+<p>
+</p>
+
+<ul>
+  <li>
+    Received: <a href="http://srfi.schemers.org/srfi-104/srfi-104-1.1.html">2009/09/22</a></li>
+
+  <li>Draft: 2009/09/22-2009/11/22</li>
+  <li>Revised: 2009/10/16</li>
+  <li>Revised: 2009/12/11</li>
+  <li>Draft extended: 2009/12/11-2010/1/11</li>
+  <li>Revised: 2010/01/24</li>
+  <li>Draft extended: 2010/03/04-2010/04/04</li>
+  <li>Withdrawn: 2010/05/23</li>
+</ul>
+
+<!-- ======================================================================= -->
+
+<h1>Table of contents</h1>
+
+<ul>
+<li><a href="#abstract">Abstract</a></li>
+<li><a href="#rationale">Rationale</a></li>
+<li><a href="#specification">Specification</a>
+<ul>
+  <li><a href="#requirements">Requirements</a></li>
+  <li><a href="#bindings">Provided Bindings</a>
+  <ul>
+    <li><a href="#searched-directories-def">searched-directories</a></li>
+    <li><a href="#recognized-extensions-def">recognized-extensions</a></li>
+    <li><a href="#file-name-component-separator-def">file-name-component-separator</a></li>
+    <li><a href="#directories-from-env-var-def">directories-from-env-var</a></li>
+    <li><a href="#extensions-from-env-var-def">extensions-from-env-var</a></li>
+    <li><a href="#library-name-to-file-name-def">library-name-&gt;file-name</a></li>
+    <li><a href="#library-file-name-info-def">library-file-name-info</a></li>
+    <li><a href="#find-library-file-names-def">find-library-file-names</a></li>
+  </ul></li>
+</ul></li>
+<li><a href="#reference-implementation">Reference Implementation</a></li>
+<li><a href="#issues">Issues</a></li>
+<li><a href="#acknowledgements">Acknowledgments</a></li>
+<li><a href="#references">References</a></li>
+<li><a href="#copyright">Copyright</a></li>
+</ul>
+
+<!-- ======================================================================= -->
+
+<h1><a name="abstract">Abstract</a></h1>
+
+<p>This SRFI implements <a href="http://srfi.schemers.org/srfi-103/srfi-103.html">
+SRFI&nbsp;103: Library Files</a> as a library.  It is useful for working with
+library files.</p>
+
+<!-- ======================================================================= -->
+
+<h1><a name="rationale">Rationale</a></h1>
+
+<p>To assist at working with library files as defined by SRFI&nbsp;103, this
+SRFI provides an API for working with the aspects of SRFI&nbsp;103.  E.g., a
+library manager application can use this SRFI to work with library files, or a
+Scheme system can use this SRFI as its means of finding external libraries.</p>
+
+<!-- ======================================================================= -->
+
+<h1><a name="specification">Specification</a></h1>
+
+<p>Implementations of this SRFI as an R6RS library must be named
+<code>(srfi&nbsp;:104&nbsp;library-files-utilities)</code>, and there must also
+be an alias named <code>(srfi&nbsp;:104)</code>, following
+<a href="http://srfi.schemers.org/srfi-97/srfi-97.html">
+SRFI&nbsp;97: SRFI Libraries</a>.</p>
+
+<p>This specification refers to many aspects of
+<a href="http://srfi.schemers.org/srfi-103/srfi-103.html">SRFI&nbsp;103: Library
+Files</a>, and familiarity with it is assumed.</p>
+
+<h3><a name="requirements">Requirements</a></h3>
+
+<p><a href="http://srfi.schemers.org/srfi-39/srfi-39.html">
+SRFI 39: Parameter Objects</a></p>
+
+<h3><a name="bindings">Provided Bindings</a></h3>
+
+<dl>
+<dt><a name="searched-directories-def">
+    <span class="type">PARAMETER</span>
+    <b>searched-directories</b></a></dt>
+<dd><p>The sequence of names of directories to search for library files.  It
+must be a list, possibly empty, of non-empty strings.  If the host Scheme system
+implements SRFI&nbsp;103, the initial value is the system's sequence of
+searched-directory names, else it is the empty list.  Mutating this parameter
+may or may not affect the sequence used by the host system.  Mutating the
+sequence used by the host system may or may not affect this parameter.</p></dd>
+
+
+<dt><a name="recognized-extensions-def">
+    <span class="type">PARAMETER</span>
+    <b>recognized-extensions</b></a></dt>
+<dd><p>The sequence of file-name extensions to recognize when searching for
+library files.  It must be a list, possibly empty, of non-empty strings which do
+not contain the <code>#\.</code> character.  If the host Scheme system
+implements SRFI&nbsp;103, the initial value is the system's sequence of
+recognized file-name extensions, else it is the empty list.  Mutating this
+parameter may or may not affect the sequence used by the host system.  Mutating
+the sequence used by the host system may or may not affect this
+parameter.</p></dd>
+
+
+<dt><a name="file-name-component-separator-def">
+    <span class="type">PARAMETER</span>
+    <b>file-name-component-separator</b></a></dt>
+<dd><p>The separator of directory names in file names.  It must be the
+<code>#\/</code> or the <code>#\\</code> character.  The initial value is the
+host platform's file-name component separator.  Mutating this parameter may or
+may not affect the separator used by the host Scheme system.  Mutating the
+separator used by the host system may or may not affect this parameter.</p></dd>
+
+
+<dt><a name="directories-from-env-var-def">
+    <span class="type">PROCEDURE</span>
+    (<b>directories-from-env-var</b>)</a></dt>
+<dd><p>Returns a list, possibly empty, of strings extracted from the current
+value of the <code>SCHEME_LIB_PATH</code> environment variable in the same order
+they occur in the variable.  If the variable is not defined, <code>#F</code> is
+returned.</p></dd>
+
+
+<dt><a name="extensions-from-env-var-def">
+    <span class="type">PROCEDURE</span>
+    (<b>extensions-from-env-var</b>)</a></dt>
+<dd><p>Returns a list, possibly empty, of strings extracted from the current
+value of the <code>SCHEME_LIB_EXTENSIONS</code> environment variable in the same
+order they occur in the variable.  If the variable is not defined,
+<code>#F</code> is returned.</p></dd>
+
+
+<dt><a name="library-name-to-file-name-def">
+    <span class="type">PROCEDURE</span>
+    (<b>library-name-&gt;file-name</b>
+                    <i>library-name</i>
+                    <i>extension</i>)</a></dt>
+<dd><p>Given a library name, which must be a non-empty list of symbols, return a
+non-empty string which is the relative library-file name which represents the
+library name.  The file-name components are derived from the symbols, encoding
+characters as necessary.  The current value of the
+<code>file-name-component-separator</code> parameter is used to join the
+file-name components.  The second argument is the extension to use in the file
+name, and it must be a non-empty string which does not contain the
+<code>#\.</code> character.</p>
+
+<dl><dt>Examples:</dt>
+       <dd><table>
+           <tr><td><pre>
+(library-name-&gt;file-name '(foo) "ext")
+=&gt; "foo.ext"</pre></td></tr>
+           <tr><td><pre>
+(library-name-&gt;file-name '(foo bar zab) "acme-ext")
+=&gt; "foo/bar/zab.acme-ext"</pre></td></tr>
+           <tr><td><pre>
+(parameterize ((file-name-component-separator #\\))
+  (library-name-&gt;file-name '(:♥ λ*) "%"))
+=&gt; "%3A%♥\\λ%2A%.%"</pre></td></tr>
+           </table></dd></dl></dd>
+
+
+<dt><a name="library-file-name-info-def">
+    <span class="title">PROCEDURE</span>
+    (<b>library-file-name-info</b> <i>file-name</i>)</a></dt>
+<dd><p>Given a file name, which must be a non-empty string, if it is a correctly
+formed library-file name, return two values: (1) a non-empty list of symbols
+which is the library name derived from the file name, decoding characters as
+necessary; (2) a non-empty string which is the file-name extension, without
+the <code>#\.</code> character, from the file name.  The file name should be a
+relative library-file name, because each file-name component, ignoring the
+extension, is used to make a library-name symbol.  The current value of
+the <code>file-name-component-separator</code> parameter is used to recognize
+separate file-name components.  If the file name is not a correctly formed
+library-file name, <code>#F</code> and <code>#F</code> are returned.</p>
+
+<dl><dt>Examples:</dt>
+       <dd><table>
+           <tr><td><pre>
+(library-file-name-info "foo.ext")
+=&gt; (foo) "ext"</pre></td></tr>
+           <tr><td><pre>
+(library-file-name-info "f%3C%o%3A%o.ext")
+=&gt; (f&lt;o:o) "ext"</pre></td></tr>
+           <tr><td><pre>
+(library-file-name-info "♥/λ.%2A%%3A%")
+=&gt; (♥ λ) "%2A%%3A%"</pre></td></tr>
+           <tr><td><pre>
+(parameterize ((file-name-component-separator #\\))
+  (library-file-name-info "foo\\bar\\zab.ext"))
+=&gt; (foo bar zab) "ext"</pre></td></tr>
+           <tr><td><pre>
+(library-file-name-info "foo")
+=&gt; #F #F</pre></td></tr>
+           <tr><td><pre>
+(library-file-name-info "foo.")
+=&gt; #F #F</pre></td></tr>
+           <tr><td><pre>
+(library-file-name-info ".ext")
+=&gt; #F #F</pre></td></tr>
+           <tr><td><pre>
+(library-file-name-info "fo:o.ext")
+=&gt; #F #F</pre></td></tr>
+           <tr><td><pre>
+(library-file-name-info "fo%61%o.ext")
+=&gt; #F #F</pre></td></tr>
+           <tr><td><pre>
+(library-file-name-info "fo%03A%o.ext")
+=&gt; #F #F</pre></td></tr>
+           <tr><td><pre>
+(library-file-name-info "fo%3a%o.ext")
+=&gt; #F #F</pre></td></tr>
+           </table></dd></dl></dd>
+
+
+<dt><a name="find-library-file-names-def">
+    <span class="type">PROCEDURE</span>
+    (<b>find-library-file-names</b> <i>library-name</i>)</a></dt>
+<dd><p>Given a library name, which must be a non-empty list of symbols, find in
+the directories specified by the current value of the
+<code>searched-directories</code> parameter the file names which match the
+library name and have extensions specified by the current value of the
+<code>recognized-extensions</code> parameter, and return an association list
+describing the matching file names, their directories, and their ordering.  Each
+association represents a searched directory which contains at least one match.
+No association is present for a searched directory which does not contain a
+match.  The key of each association is a non-empty string which is the name of
+the directory the association represents.  The associations are ordered the same
+as their keys are in the <code>searched-directories</code> parameter.  The value
+of each association is a non-empty list of non-empty strings which are the
+matching file names from the association's directory, and these file names are
+relative to that directory, and they are ordered the same as their extensions
+are in the <code>recognized-extensions</code> parameter.  If no matches are
+found, <code>#F</code> is returned.</p>
+
+<dl><dt>Example:</dt>
+       <dd><dl><dt>Given this structure of directories and files:</dt>
+                  <dd><dl><dt><code>/sd/a/</code></dt>
+                          <dd><dl><dt><code>foo/</code></dt>
+                                  <dd><code>bar.acme-ext</code></dd>
+                                  <dd><code>bar.ext</code></dd>
+                                  <dd><code>bar.other-ext</code></dd>
+                                  <dd><code>zab.ext</code></dd>
+                              </dl></dd>
+                          <dt><code>sd/b/</code></dt>
+                          <dd><dl><dt><code>foo/</code></dt>
+                                  <dd><code>bar.png</code></dd>
+                              </dl></dd>
+                          <dt><code>sd/c/</code></dt>
+                          <dd><dl><dt><code>foo/</code></dt>
+                                  <dd><code>bar.ext</code></dd>
+                              </dl></dd>
+                      </dl></dd></dl>
+           <pre>
+(parameterize ((searched-directories '("sd/c" "sd/b" "/sd/a"))
+               (recognized-extensions '("acme-ext" "ext")))
+  (find-library-file-names '(foo bar)))
+=&gt;
+(("sd/c"
+  "foo/bar.ext")
+ ("/sd/a"
+  "foo/bar.acme-ext"
+  "foo/bar.ext"))</pre>
+       </dd></dl>
+</dd>
+</dl>
+
+<!-- ======================================================================= -->
+
+<h1><a name="reference-implementation">Reference Implementation</a></h1>
+
+<p>The reference implementation is provided as an R6RS library.  It requires
+some R6RS bindings, <a href="http://srfi.schemers.org/srfi-39/srfi-39.html">
+SRFI&nbsp;39: Parameter Objects</a>, and
+<a href="http://srfi.schemers.org/srfi-98/srfi-98.html">SRFI&nbsp;98: An
+Interface to Access Environment Variables</a>.  It can be a built-in library of
+a Scheme system, or it can be an externally-imported library.  As an
+externally-imported library, it uses system-specific library files.  As a
+built-in library, the system-specific library files are not used and the main
+library's source code should be changed to not use them.</p>
+
+<p>A test program is provided as an R6RS program.  It requires, in addition to
+the reference implementation, some R6RS bindings,
+<a href="http://srfi.schemers.org/srfi-39/srfi-39.html">
+SRFI&nbsp;39: Parameter Objects</a>, and
+<a href="http://srfi.schemers.org/srfi-78/srfi-78.html">
+SRFI&nbsp;78: Lightweight Testing</a>.</p>
+
+<p><a href="https://srfi.schemers.org/srfi-104/srfi-104.tgz">
+   The reference implementation and tests.</a></p>
+
+<!-- ======================================================================= -->
+
+<h1><a name="issues">Issues</a></h1>
+
+<p>(Section which points out things to be resolved.  This will not appear in the
+final SRFI.)</p>
+
+<ul>
+  <li><p>TODO: Anything?</p></li>
+</ul>
+
+<!-- ======================================================================= -->
+
+<h1><a name="acknowledgements">Acknowledgments</a></h1>
+
+<p>I thank everyone who influenced and commented on this SRFI.  I thank the
+editor for editing this SRFI.</p>
+
+<!-- ======================================================================= -->
+
+<h1><a name="references">References</a></h1>
+
+<dl>
+  <dt>SRFI 103: Library Files</dt>
+  <dd>Derick Eddington<br/>
+      <a href="http://srfi.schemers.org/srfi-103/srfi-103.html">
+      http://srfi.schemers.org/srfi-103/srfi-103.html</a></dd>
+
+  <dt>SRFI 39: Parameter Objects</dt>
+  <dd>Marc Feeley<br/>
+      <a href="http://srfi.schemers.org/srfi-39/srfi-39.html">
+      http://srfi.schemers.org/srfi-39/srfi-39.html</a></dd>
+
+  <dt>Revised<sup>6</sup> Report on the Algorithmic Language Scheme</dt>
+  <dd>Michael Sperber, <i>et al.</i> (Editors)<br/>
+    <a href="http://www.r6rs.org/">http://www.r6rs.org/</a></dd>
+</dl>
+
+<!-- ======================================================================= -->
+
+<h1><a name="copyright">Copyright</a></h1>
+<p>
+Copyright (C) Derick Eddington (2010). All Rights Reserved.
+</p>
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+</p><p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+</p><p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+</p>
+    <hr/>
+    <address>Editor: <a href="mailto:srfi-editors at srfi dot schemers dot org">
+             David Van Horn</a></address>
+  </body>
+</html>

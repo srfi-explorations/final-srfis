@@ -1,0 +1,105 @@
+#!r6rs
+
+;; There is a very small chance random collisions can happen.  If it does
+;; happen, run this program again and it probably won't.
+
+(import
+  (rnrs)
+  (only (srfi :39 parameters)
+        parameterize)
+  (only (srfi :104 library-files-utilities)
+        library-name->file-name)
+  (only (xitomatl match)
+        match)
+  (only (xitomatl file-system base)
+        current-directory make-directory make-path-to)
+  (only (xitomatl file-system paths)
+        path-join path-split))
+
+(define randomness-file "/dev/urandom")
+
+(define (no-last x) (reverse (cdr (reverse x))))
+
+(define (make-test-file x)
+  (call-with-output-file x
+    (lambda (fop) (display "testing" fop))))
+
+(define random-encoded-str
+  (let ((randomness
+         (open-file-input-port
+          randomness-file
+          (file-options)
+          'none
+          (make-transcoder (latin-1-codec) 'none 'raise))))
+    (lambda ()
+      (let* ((fake-lib-name
+              (list (string->symbol (get-string-n randomness 20))))
+             (encoded
+              (library-name->file-name fake-lib-name "e")))
+        (substring encoded 0 (- (string-length encoded) 2))))))
+
+(define-syntax do-count
+  (syntax-rules ()
+    ((_ count expr ...)
+     (do ((c (- count 1) (- c 1)))
+         ((negative? c))
+       expr ...))))
+
+(define (make-extras base lib-file-name amounts)
+  (parameterize ((current-directory base))
+    (if (null? lib-file-name)
+      (do-count (car amounts)
+        (make-test-file (string-append (random-encoded-str) ".ext")))
+      (begin
+        (do-count (car amounts)
+          (make-directory (random-encoded-str)))
+        (make-extras (car lib-file-name) (cdr lib-file-name) (cdr amounts))))))
+
+(define (random-library-file-names name-len amount)
+  (define (random-lib-file-name)
+    (let loop ((i (- name-len 1)) (a '()))
+      (if (negative? i)
+        (string-append (apply path-join a) ".ext")
+        (loop (- i 1) (cons (random-encoded-str) a)))))
+  (let loop ((i (- amount 1)) (a '()))
+    (if (negative? i)
+      a
+      (loop (- i 1) (cons (random-lib-file-name) a)))))
+
+(define (parse-command-line)
+  (match (cdr (command-line))
+    (("-sd" searched-dirs (... 1)
+      "-la" libs-amount
+      "-lf" libs-file
+      "-ea" extra-amounts (... 1))
+     (values searched-dirs
+             (string->number libs-amount)
+             libs-file
+             (map string->number extra-amounts)))
+    (x (apply assertion-violation (car (command-line))
+              "invalid command-line arguments" x))))
+
+(let-values (((bases libs-amount libs-file extra-amounts)
+              (parse-command-line)))
+  (let ((libs-file-names
+         (random-library-file-names (length extra-amounts) libs-amount)))
+    (call-with-output-file libs-file
+      (lambda (fop) (write libs-file-names fop)))
+    (for-each
+     (lambda (b)
+       (for-each
+        (lambda (lfn)
+          (let ((full (path-join b lfn)))
+            (make-path-to full)
+            (make-test-file full))
+          (let ((lfn (no-last (path-split lfn))))
+            (when (pair? lfn)
+              (make-extras (path-join b (car lfn))
+                           (cdr lfn)
+                           (cdr extra-amounts)))))
+        libs-file-names)
+       ;; Must make the top-level extras this way.
+       (parameterize ((current-directory b))
+         (do-count (car extra-amounts)
+           (make-directory (random-encoded-str)))))
+     bases)))
