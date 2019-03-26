@@ -1,0 +1,1733 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>Immutable Strings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/srfi.css" type="text/css" />
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+  div.title h1 { font-size: small; color: blue }
+  div.title { font-size: xx-large; color: blue; font-weight: bold }
+  h1 { font-size: x-large; color: blue }
+  h2 { font-size: large; color: blue }
+  /* So var inside pre gets same font as var in paragraphs. */
+  var { font-family: monospace; }
+  em.non-terminal { }
+  em.non-termina-def { }
+  code.literal { font-style: normal; }
+  code.literal:before { content: "“" }
+  code.literal:after { content: "”" }
+  span.proc-def { font-weight: bold }
+</style>
+  </head>
+
+<body>
+<div class="title">
+<h1>Title</h1>
+Immutable Strings
+</div>
+
+<h1>Author</h1>
+Per Bothner
+
+<h1>Status</h1>
+
+<p>This SRFI is currently in <em>final</em> status.  Here is <a href="http://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+140+at+srfi+dotschemers+dot+org">srfi-140@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="http://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="http://srfi-email.schemers.org/srfi-140">archive</a>.</p>
+<ul>
+  <li>Received: 2016/7/11</li>
+  <li>60-day deadline: 2016/9/9</li>
+  <li>Draft #1 published: 2016/7/11</li>
+  <li>Draft #2 published: 2016/7/31</li>
+  <li>Draft #3 published: 2016/8/15</li>
+  <li>Draft #4 published: 2017/2/1</li>
+  <li>Draft #5 published: 2017/4/16</li>
+  <li>Draft #6 published: 2017/4/25</li>
+  <li>Draft #7 published: 2017/5/9</li>
+  <li>Draft #8 published: 2017/5/19</li>
+  <li>Finalized: 2017/5/24</li>
+  <li>Revised to fix errata:
+    <ul>
+      <li>2018/11/28 (Fixed four typos ("(stri 140").)</li></ul></li>
+</ul>
+
+<h1>Abstract</h1>
+<p>This attempts to solve the same issues with R7RS strings raised by
+  <a href="http://srfi.schemers.org/srfi-135/srfi-135.html">SRFI-135</a>,
+  but with better integration with the Scheme language.</p>
+
+<p>
+We propose to retain the name <dfn>string</dfn> as
+the type of sequences of Unicode characters (scalar values).
+There are two standard subtypes of string:
+<ul>
+<li>Immutable strings, also called <dfn>istrings</dfn>, cannot be
+modified after they have been created.  Calling <code>string-set!</code>
+on an istring throws an error.
+On the other hand, the core operations <code>string-ref</code> and
+<code>string-length</code> are guaranteed to be O(1).
+<li>Mutable strings can be modified <q>in-place</q> using
+<code>string-set!</code> and other operations.
+However, <code>string-ref</code>, <code>string-set!</code>,
+or <code>string-length</code> have no performance guarantees.
+On many implementation they may take time proportional to the
+length of the string.
+</ul>
+An implementation may support other kinds of strings.
+For example on the Java platform it may be reasonable to
+consider any instance of <code>java.lang.CharSequence</code> to be a string.
+<p>
+The main part of the proposal specifies the default bindings of various procedure names,
+as might be pre-defined in a REPL.  Specifically, some procedures
+that traditionally return mutable strings are changed to return istrings.
+We later discuss compatibility and other library issues.
+<p>
+This combines
+<a href="http://srfi.schemers.org/srfi-13/srfi-13.html">SRFI-13</a>,
+<a href="http://srfi.schemers.org/srfi-135/srfi-135.html">SRFI-135</a>,
+and <a href="http://srfi.schemers.org/srfi-118/srfi-118.html">SRFI-118</a>.
+
+<h1>Rationale</h1>
+
+<p>This attempts to solve the same issues with R7RS strings raised by
+  <a href="http://srfi.schemers.org/srfi-135/srfi-135.html">SRFI-135</a>:
+  non-guaranteed O(1) indexing, limited sharing, in general the limited
+  usefulness of mutable strings, especially fixed-size ones.
+  Our solution is in concept the same, but the goal is better
+  integration with the Scheme language.  Specifically, SRFI-135
+  proposes new names for types and procedures in a way that is
+  not integrated with Scheme tradition and existing code.
+  It also adds a slew of new names for people to learn.
+  While the relationship between old procedures and SRFI-135 procedures
+  is natural and straightforward, it still adds a conceptual hurdle and wart
+  to the Scheme language, complicating teaching and migration.
+
+  This specification uses traditional RnRS and SRFI-13 names, but changes
+  procedures to return istrings, rather than mutable strings.
+  This may break some existing programs, but it seems worth it:
+<ul>
+<li>Programs that break seem to be rare.  They are also easy to fix:
+You can always use <code>string-copy</code> to convert an istring
+to a mutable string.</li>
+<li>Any breakage is obvious, sigalling an error, rather than subtle
+or producing an incorrect result.
+<li>Programs that depend on <code>string-set!</code> usually are old
+and don't support Unicode well, so could do with a review.
+<li>Preserving traditional procedure names means that existing code,
+documentation, and teaching materials are valid and automatically
+<q>ported</q> to using efficient istrings.  In contrast, porting code
+to use SRFI-135 texts would be a major pain.  
+</ul>
+
+<h1>Specification</h1>
+<p>
+<em>Note:</em> This specification provides very similar functionality
+as SRFI-135.
+However, what SRFI-135 calls <q>textual</q>, we call plain <q>string</q>.
+What SRFI-135 calls <q>text</q>, we call either <q>istring</q>
+(in type specifiers) or plain <q>string</q> (in most procedure names).
+Specifically,
+SRFI-135 procedures that start with <code>textual-</code>
+or <code>text-</code>, in this specification start with
+plain <code>string-</code>.
+Any argument or result type marked as <q>textual</q> is changed to
+<q>string</q>, while the type <q>text</q> is changed to <q>istring</q>.
+<p>
+For example:
+<dl><dd><dt class="proc-def">
+<code class="proc-def">string-map</code><var> proc string<sub>1</sub> string<sub>2</sub> ... → istring</var>
+</dt></dl>
+<p>
+One exception: <code>make-string</code> returns a
+mutable string, not an istring.
+
+<h3 id="Notation">Notation</h3>
+
+<p>
+In the following procedure specifications:
+<ul>
+    <li>An <var>istring</var> argument or result is an immutable string.</li>
+    <li>An <var>mstring</var> argument or result is a mutable string.</li>
+
+    <li>A <var>string</var> argument or result is any string (immutable or mutable).</li>
+</ul>
+<p>
+Some procedures are specified as executing in guaranteed O(1) time.
+Unless specified, the other procedures may execute in linear time,
+using time proportional to the length of the involved string(s).
+
+<h3>String literals</h3>
+String literals have type istring.
+They have the same syntax as in R7RS (small).
+In an implementation that supports <a href="http://srfi.schemers.org/srfi-109/srfi-109.html">SRFI-109</a> string quasi-literals also evaluate to istrings.
+
+<h3>Predicates</h3>
+
+<dl>
+<dt class="proc-def" id="string-p">
+<code>(<span class="proc-def">string?</span></code><var> obj<code>)</code> → boolean</var></dt>
+<dd class="proc-def">
+    Is <var>obj</var> a string?
+    Must return true if <code>istring?</code> returns true.
+    Must execute in O(1) time.
+</dd>
+</dl>
+
+<dl>
+<dt class="proc-def" id="istring-p">
+<code>(<span class="proc-def">istring?</span></code><var> obj<code>)</code> → boolean</var>
+</dt>
+<dd class="proc-def">
+  Is <var>obj</var> an immutable string, with guaranteed
+  O(1) performance for <code>string-ref</code> and <code>string-length?</code>
+    Must execute in O(1) time.
+</dd>
+</dl>
+
+<dl>
+<dt class="proc-def" id="string-null-p">
+  <code>(<span class="proc-def">string-null?</span></code> <var>string</var><code>)</code> → <var>boolean</var>
+<dd class="proc-def">
+Is <var>string</var> the empty string?
+Same result as <code>(= (string-length <var>string</var>) 0)</code> but
+must execute in O(1) time.
+</dd>
+</dl>
+<dl>
+<dt class="proc-def" id="string-every">
+<code>(<span class="proc-def">string-every</span></code><var> pred string [start end]</var><code>)</code><var> → value</var>
+<dt class="proc-def" id="string-any">
+<code>(<span class="proc-def">string-any</span></code><var> pred string [start end]</var><code>)</code><var> → value</var>
+<dd class="proc-def">
+  <p>
+    Checks to see if every/any character in <var>string</var>
+    satisfies <var>pred</var>,
+    proceeding from left (index <var>start</var>)
+    to right (index <var>end</var>).
+    These procedures are short-circuiting:
+    if <var>pred</var> returns false, <code>string-every</code>
+    does not call <var>pred</var> on subsequent characters;
+    if <var>pred</var> returns true, <code>string-any</code>
+    does not call <var>pred</var> on subsequent characters.
+    Both procedures are "witness-generating":
+  </p>
+
+    <ul>
+      <li> If <code>string-every</code> is given an empty interval
+        (with <var>start</var> = <var>end</var>),
+        it returns <code>#t</code>.</li>
+
+      <li> If <code>string-every</code> returns true for a non-empty
+        interval (with <var>start</var> &lt; <var>end</var>),
+        the returned true value is the one returned by the final call to the
+        predicate on
+        <code>(string-ref <var>string</var> (- <var>end</var> 1))</code>.</li>
+
+      <li> If <code>string-any</code> returns true,
+        the returned true value is the one returned by the predicate.</li>
+    </ul>
+
+  <p>
+    <i>Note:</i>
+    The names of these procedures do not end with a question mark.
+    This indicates a general value is returned instead of a simple boolean
+    (<code>#t</code> or <code>#f</code>).
+  </p>
+</dd>
+</dl>
+
+<h3>Conversions</h3>
+<dl>
+<dt class="proc-defi" id="string2vector">
+<dt class="proc-def1">
+<code>(<span class="proc-def">string-&gt;vector</span></code><var> string [start end]</var><code>)</code><var> → char-vector</var>
+</dt>
+<dt class="proc-defi" id="string2list">
+<code>(<span class="proc-def">string-&gt;list</span></code><var> string [start end]</var><code>)</code><var> → char-list</var>
+</dt>
+<dd class="proc-def">
+    <code>string-&gt;vector</code>,
+    and <code>string-&gt;list</code>
+    return a newly allocated (unless empty) vector, or list
+    of the characters that make up the given substring.
+</dd>
+
+<dt class="proc-defi" id="vector2string">
+<code>(<span class="proc-def">vector-&gt;string</span></code><var> char-vector [start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dt class="proc-defn" id="list2string">
+<code>(<span class="proc-def">list-&gt;string</span></code><var> char-list [start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dd class="proc-def">
+    These procedures return an istring containing the characters of the given
+    subvector or sublist.
+    The behavior of the result will not be affected by subsequent mutation
+    of the vector or list.
+</dd>
+<dt class="proc-def" id="reverse-list2string">
+<code>(<span class="proc-def">reverse-list-&gt;string</span></code><var> char-list</var><code>)</code><var> → istring</var>
+</dt>
+<dd class="proc-def">
+    An efficient implementation of <code>(compose list-&gt;string reverse)</code>:
+<pre class="code-example">
+(reverse-list-&gt;string '(#\a #\B #\c)) → "cBa"
+</pre>
+    This is a common idiom in the epilogue of string-processing loops
+    that accumulate their result using a list in reverse order.
+    (See also
+    <code>string-concatenate-reverse</code> for the "chunked" variant.)
+</dd>
+</dl>
+<dl>
+<dt class="proc-def1" id="string2utf8">
+<code>(<span class="proc-def">string-&gt;utf8&nbsp;&nbsp;&nbsp;</span></code><var> string [start end]</var><code>)</code><var> → bytevector</var>
+</dt>
+<dt class="proc-defi" id="string2utf16">
+<code>(<span class="proc-def">string-&gt;utf16&nbsp;&nbsp;</span></code><var> string [start end]</var><code>)</code><var> → bytevector</var>
+</dt>
+<dt class="proc-defi" id="string2utf16be">
+<code>(<span class="proc-def">string-&gt;utf16be</span></code><var> string [start end]</var><code>)</code><var> → bytevector</var>
+</dt>
+<dt class="proc-defn" id="string2utf16le">
+<code>(<span class="proc-def">string-&gt;utf16le</span></code><var> string [start end]</var><code>)</code><var> → bytevector</var>
+</dt>
+<dd class="proc-def">
+    These procedures return a newly allocated (unless empty)
+    bytevector containing
+    a UTF-8 or UTF-16 encoding of the given substring.
+<p>
+    The bytevectors returned by <code>string-&gt;utf8</code>,
+    <code>string-&gt;utf16be</code>, and <code>string-&gt;utf16le</code>
+    do not contain a byte-order mark (BOM).
+    <code>string-&gt;utf16be</code> returns a big-endian encoding,
+    while <code>string-&gt;utf16le</code> returns a little-endian
+    encoding.
+</p>
+<p>
+    The bytevectors returned by <code>string-&gt;utf16</code>
+    begin with a BOM that declares an implementation-dependent
+    endianness.
+    The latter <em>should</em> match the <code>big-endian</code>
+    or <code>little-endian</code> identifier returned by the R7RS <code>features</code> procedure.
+
+    The bytevector elements following that BOM
+    encode the given  substring using that endianness.
+</p>
+<p>
+    <i>Rationale:</i>
+    These procedures are consistent with the Unicode standard.
+    Unicode suggests UTF-16 should default to big-endian, but
+    Microsoft prefers little-endian.
+</p>
+
+<!-- Previous drafts were based on the R6RS semantics:
+
+    If no <var>endianness</var> argument is passed to
+    <code>string-&gt;utf16</code>, or if <var>endianness</var>
+    is the symbol <code>big</code>, then the result uses the UTF-16BE
+    encoding.
+    If <var>endianness</var> is the symbol <code>little</code>, then
+    the result uses the UTF-16LE encoding.
+    It is an error for any other values or symbols to be passed as a
+    second argument to <code>string-&gt;utf16</code> or
+    <code>utf16-&gt;string</code>.
+
+-->
+</dd>
+<dt class="proc-def1" id="utf82string">
+<code>(<span class="proc-def">utf8-&gt;string&nbsp;&nbsp;&nbsp;</span></code><var> bytevector [start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dt class="proc-defi" id="utf162string">
+<code>(<span class="proc-def">utf16-&gt;string&nbsp;&nbsp;</span></code><var> bytevector [start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dt class="proc-defi" id="utf16be2string">
+<code>(<span class="proc-def">utf16be-&gt;string</span></code><var> bytevector [start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dt class="proc-defn" id="utf16le2string">
+<code>(<span class="proc-def">utf16le-&gt;string</span></code><var> bytevector [start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dd class="proc-def">
+    These procedures interpret their <var>bytevector</var> argument as
+    a UTF-8 or UTF-16 encoding of a sequence of characters,
+    and return a string containing that sequence.
+<p>
+    The bytevector subrange given to <code>utf16-&gt;string</code>
+    may begin with a byte order mark (BOM); if so, that BOM
+    determines whether the rest of the subrange is to be
+    interpreted as big-endian or little-endian; in either case,
+    the BOM will not become a character in the returned string.
+    If the subrange does not begin with a BOM, it is decoded using
+    the same implementation-dependent endianness used by
+    <code>string-&gt;utf16</code>.
+</p>
+<p>
+    The <code>utf16be-&gt;string</code> and <code>utf16le-&gt;string</code>
+    procedures interpret their inputs as big-endian or little-endian,
+    respectively.  If a BOM is present, it is treated as a normal
+    character and will become part of the result.
+</p>
+<p>
+    It is an error if the bytevector subrange given to
+    <code>utf8-&gt;string</code> contains invalid UTF-8 byte sequences.
+    For the other three procedures, it is an error if
+    <code>(- <var>end</var> <var>start</var>)</code> is odd,
+    or if the bytevector subrange contains invalid UTF-16 byte sequences.
+</p>
+
+<!-- Previous drafts were based on the R6RS semantics:
+
+  <p>
+    If no <var>endianness</var> argument is passed to
+    <code>utf16-&gt;string</code>, then the <var>bytevector</var> is
+    decoded according to UTF-16, which means a UTF-16 byte order mark (BOM)
+    at the beginning of the <var>bytevector</var> will determine
+    the endianness, defaulting to big-endian if no BOM is present;
+    if a BOM is present at the beginning of the <var>bytevector</var>,
+    it will not be present in the string returned by <code>utf16-&gt;string</code>.
+    If an <var>endianness</var> argument is passed, it should be
+    the symbol <code>big</code> or the symbol <code>little</code>,
+    indicating whether the <var>bytevector</var> should be decoded
+    as UTF-16BE (<code>big</code>) or UTF-16LE (<code>little</code>);
+    if the <var>mandatory?</var> argument is absent or false, however,
+    a UTF-16 BOM at the beginning of the <var>bytevector</var> will
+    override the given <var>endianness</var> and that BOM will not
+    be present in the string returned by <code>utf16-&gt;string</code>.
+    If <var>mandatory?</var> is true, then a BOM at the beginning
+    of the <var>bytevector</var> will not override the given
+    <var>endianness</var>, and will instead be decoded as a regular
+    character and become the first character of the string returned
+    by <code>utf16-&gt;string</code>.
+  </p>
+  <p>
+    <i>Note:</i>
+    Passing the symbol <code>big</code> as a second argument to
+    <code>utf16-&gt;string</code>, with no third argument, is
+    equivalent to calling <code>utf16-&gt;string</code> with just
+    one argument.
+    Passing a true value as the third argument yields the official
+    Unicode semantics for UTF-16BE or UTF-16LE (as determined by
+    the second argument), but Microsoft's preferred semantics is
+    obtained by omitting the third argument and passing the symbol
+    <code>little</code> as second argument.
+  </p>
+
+-->
+</dd>
+</dl>
+
+<h3>Immutable string constructors</h3>
+<dl><dt class="proc-def" id="string">
+<code>(<span class="proc-def">string</span></code> <var>char ...</var><code>)</code><var> → istring</var>
+</dt>
+<dd class="proc-def">
+    Returns a string consisting of the given characters.
+</dd>
+</dl>
+<dl>
+<dt class="proc-def" id="string-tabulate">
+<code>(<span class="proc-def">string-tabulate</span></code><var> proc len</var><code>)</code><var> → istring</var>
+</dt>
+<dd class="proc-def">
+    <var>Proc</var> is a procedure that accepts an exact integer
+    as its argument and returns a character.
+    Constructs a string of size <var>len</var> by calling <var>proc</var>
+    on each value from 0 (inclusive) to <var>len</var> (exclusive)
+    to produce the corresponding element of the string.
+    The order in which <var>proc</var> is called on those indexes is not
+    specified.
+<p>
+    <i>Rationale:</i>
+    Although <code>string-unfold</code> is more general,
+    <code>string-tabulate</code> is likely to run faster
+    for the common special case it implements.
+</p>
+</dd>
+<dt class="proc-def" id="string-unfold">
+<code>(<span class="proc-def">string-unfold</span></code> <var> stop? mapper successor seed [base make-final]</var><code>)</code><var> → istring</var>
+</dt>
+<dt class="proc-def" id="string-unfold-right">
+<code>(<span class="proc-def">string-unfold-right</span></code> <var> stop? mapper successor seed [base make-final]</var><code>)</code><var> → istring</var>
+<dd class="proc-def">
+This is a fundamental constructor for strings. 
+<ul>
+<li> <var>successor</var> is used to generate a series of "seed"
+    values from the initial seed:
+<div class=inset>
+    <var>seed</var>, (<var>successor</var> <var>seed</var>),
+    (<var>successor<sup>2</sup></var> <var>seed</var>),
+    (<var>successor<sup>3</sup></var> <var>seed</var>), ...
+</div>
+</li>
+<li> <var>stop?</var> tells us when to stop — when it returns
+    true when applied to one of these seed values.</li>
+<li> <var>mapper</var> maps each seed value to the corresponding character(s)
+  in the result string, which are assembled into that string in left-to-right
+  order.
+  It is an error for <var>mapper</var> to return anything
+  other than a character or string.</li>
+<li> <var>base</var> is the optional initial/leftmost portion of
+    the constructed string, which defaults to the empty string <code>""</code>.
+    It is an error if <var>base</var> is anything other than a character or string.</li>
+<li> <var>make-final</var> is applied to the terminal seed value
+    (on which <var>stop?</var> returns
+    true) to produce the final/rightmost portion of the constructed string.
+    It defaults to <code>(lambda (x) (string))</code>.
+    It is an error for <var>make-final</var> to return anything other
+    than a character or string.</li>
+</ul>
+
+<p><code>string-unfold-right</code> is the same as <code>string-unfold</code>
+except the results of <var>mapper</var> are assembled into the string
+in right-to-left order,
+<var>base</var> is the optional rightmost portion of the constructed string,
+and <var>make-final</var> produces the leftmost portion
+of the constructed string
+<p>
+<code>string-unfold</code> is a fairly powerful string constructor.
+You can use it to
+convert a list to a string, read a port into a string, reverse a string,
+copy a string, and so forth. Examples:
+</p>
+<pre class="code-example">
+(port-&gt;string p) = (string-unfold eof-object?
+                           values
+                           (lambda (x) (read-char p))
+                           (read-char p))
+
+(list-&gt;string lis) = (string-unfold null? car cdr lis)
+
+(string-tabulate f size) = (string-unfold (lambda (i) (= i size)) f add1 0)
+</pre>
+<p>
+To map <var>f</var> over a list <var>lis</var>, producing a string:
+<pre class="code-example">
+(string-unfold null? (compose f car) cdr lis)
+</pre>
+<p>
+Interested functional programmers may enjoy noting that 
+<code>string-fold-right</code> 
+and <code>string-unfold</code> are in some sense inverses.
+That is, given operations 
+<var>knull?</var>, <var>kar</var><var>, kdr</var>, <var>kons</var>,
+and <var>knil</var> satisfying
+</p>
+<pre class="code-example">
+(<var>kons</var> (<var>kar</var> x) (<var>kdr</var> x)) = x  and  (<var>knull?</var> <var>knil</var>) = #t
+</pre>
+<p>
+then
+</p>
+<pre class="code-example">
+(string-fold-right <var>kons</var> <var>knil</var> (string-unfold <var>knull?</var> <var>kar</var> <var>kdr</var> <var>x</var>)) = <var>x</var>
+</pre>
+and
+<pre class="code-example">
+(string-unfold <var>knull?</var> <var>kar</var> <var>kdr</var> (string-fold-right <var>kons</var> <var>knil</var> <var>string</var>)) = <var>string</var>.
+</pre>
+
+<p>
+This combinator pattern is sometimes called an "anamorphism."
+</p>
+
+<p>
+<i>Note:</i> Implementations should not allow the size of strings created
+by <code>string-unfold</code> to be limited by limits on stack size.
+</p>
+</dd>
+</dl>
+<p>For functionality similar to <a href="#make-string"><code>make-string</code></a>,
+but returning an immutable string,
+you can use <a href="#string-repeat"><code>string-repeat</code></a>.
+
+<h3>Selection</h3>
+<dl>
+<dt class="proc-def" id="string-length">
+<code>(<span class="proc-def">string-length</span></code><var> string</var><code>)</code><var> → len</var>
+</dt>
+<dt class="proc-def" id="string-ref">
+<code>(<span class="proc-def">string-ref</span></code><var> string idx</var><code>)</code><var> → char</var>
+</dt>
+<dd>As in R7RS.
+However, if the <var>string</var> is an istring, both must execute
+in constant time; otherwise they may execute in time proportional to
+the length of <var>string</var>.
+</dd>
+<dt class="proc-def" id="substring">
+<code>(<span class="proc-def">substring</span></code><var> string start end</var><code>)</code><var> → istring</var>
+</dt>
+<dd class="proc-def">
+    This procedure returns a istring containing the characters of
+    <var>string</var> starting with index <var>start</var>
+    (inclusive) and ending with index <var>end</var> (exclusive).
+  <p>
+    If <var>string</var> is a mutable string, then that string does not
+    share any
+    storage with the result, so subsequent mutation of that string
+    will not affect the result returned by <code>substring</code>.
+    When the first argument is an istring, 
+    implementations are encouraged to return a result that shares storage with
+    that istring,
+    to whatever extent sharing is possible while maintaining some
+    small fixed bound on the ratio of storage used by the shared
+    representation divided by the storage that would be used by
+    an unshared representation.
+    In particular, these procedures should just return their first
+    argument when that argument is an istring, <var>start</var> is 0, and
+    <var>end</var> is the length of that string.
+  </p>
+<p>For the functionality of <code>substring</code> with guaranteed no sharing
+use <code>xsubstring</code> for an immutable result,
+or <code>string-copy</code> for a mutable result.
+</dd>
+<dt class="proc-def1" id="string-take">
+<code>(<span class="proc-def">string-take</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> string nchars</var><code>)</code><var> → istring</var>
+</dt>
+<dt class="proc-defi" id="string-drop">
+<code>(<span class="proc-def">string-drop</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> string nchars</var><code>)</code><var> → istring</var>
+</dt>
+<dt class="proc-defi" id="string-take-right">
+<code>(<span class="proc-def">string-take-right</span></code><var> string nchars</var><code>)</code><var> → istring</var>
+</dt>
+<dt class="proc-defn" id="string-drop-right">
+<code>(<span class="proc-def">string-drop-right</span></code><var> string nchars</var><code>)</code><var> → istring</var>
+</dt>
+<dd class="proc-def">
+    <code>string-take</code> returns an immutable string containing the first
+    <var>nchars</var> of <var>string</var>; 
+    <code>string-drop</code> returns a string containing all but the
+    first <var>nchars</var> of <var>string</var>.
+    <code>string-take-right</code> returns a string containing the
+    last <var>nchars</var> of <var>string</var>;
+    <code>string-drop-right</code> returns a string containing all
+    but the last <var>nchars</var> of <var>string</var>.
+  <p>
+    Subsequent mutation of the argument string
+    will not affect the istring returned by these procedures.
+    If <var>string</var> is an istring, implementations are
+    encouraged to return a result that shares storage with that string
+    (which is easily accomplished by using <code>substring</code> to
+    create the result).
+  </p>
+<pre class="code-example">
+(string-take "Pete Szilagyi" 6) =&gt; "Pete S"
+(string-drop "Pete Szilagyi" 6) =&gt; "zilagyi"
+
+(string-take-right "Beta rules" 5) =&gt; "rules"
+(string-drop-right "Beta rules" 5) =&gt; "Beta "
+</pre>
+<p>
+    It is an error to take or drop more characters than are in the string:
+</p>
+<pre class="code-example">
+(string-take "foo" 37) =&gt; <em>error</em>
+</pre>
+</dd>
+</dl>
+<dl>
+<dt class="proc-def1" id="string-pad">
+<code>(<span class="proc-def">string-pad&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></code><var> string len [char start end]</var><code>)</code><var> → text</var>
+</dt>
+<dt class="proc-defn" id="string-pad-right">
+<code>(<span class="proc-def">string-pad-right</span></code><var> string len [char start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dd class="proc-def">
+    Returns an istring of length <var>len</var> comprised of the characters
+    drawn from the given subrange of <var>string</var>.
+    The result is padded on the left (right) by as many occurrences
+    of the character <var>char</var> (which defaults to <code>#\space</code>) as needed.
+    If <var>string</var> has more
+    than <var>len</var> chars, it is truncated on the left (right)
+    to length <var>len</var>.
+<pre class="code-example">
+(string-pad     "325" 5) =&gt; "  325"
+(string-pad   "71325" 5) =&gt; "71325"
+(string-pad "8871325" 5) =&gt; "71325"
+</pre>
+</dd>
+</dl>
+<!--
+==== string-trim string-trim-right string-trim-both
+============================================================================-->
+<dl>
+<dt class="proc-def1">
+<code>(<span class="proc-def" id="string-trim">string-trim&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></code><var> string [pred start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dt class="proc-defi">
+<code>(<span class="proc-def" id="string-trim-right">string-trim-right</span></code><var> string [pred start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dt class="proc-defi">
+<code>(<span class="proc-def" id="string-trim-both">string-trim-both&nbsp;</span></code><var> string [pred start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dd class="proc-defn">
+    Returns a string obtained from the given subrange of <var>string</var>
+    by skipping
+    over all characters on the left / on the right /
+    on both sides that satisfy the second argument <var>pred</var>:
+    <var>pred</var> defaults to <code>char-whitespace?</code>.
+<pre class="code-example">
+(string-trim-both "  The outlook wasn't brilliant,  \n\r")
+    =&gt; "The outlook wasn't brilliant,"
+</pre>
+<p><i>Note:</i> It would be more natural to rename <code>string-trim</code> to <code>string-trim-left</code>,
+and possibly rename <code>string-trim-both</code> to <code>string-trim</code>,
+but SRFI-13 uses the specified names.
+</dd>
+
+</dl>
+
+
+<h3>Replacement</h3>
+<dl>
+<dt class="proc-def" id="string-replace">
+<code>(<span class="proc-def">string-replace</span></code><var> string<sub>1</sub> string<sub>2</sub> start<sub>1</sub> end<sub>1</sub> [start<sub>2</sub> end<sub>2</sub>]</var><code>)</code><var> → istring</var>
+</dt>
+<dd class="proc-def">
+    Returns
+<pre class="code-example">
+(string-append (substring <var>string<sub>1</sub></var> 0 <var>start<sub>1</sub></var>)
+               (substring <var>string<sub>2</sub></var> <var>start<sub>2</sub></var> <var>end<sub>2</sub></var>)
+               (substring <var>string<sub>1</sub></var> <var>end<sub>1</sub></var> (string-length <var>string<sub>1</sub></var>)))
+</pre>
+  <p>
+    That is, the segment of characters in <var>string<sub>1</sub></var>
+    from <var>start<sub>1</sub></var> to <var>end<sub>1</sub></var>
+    is replaced by the segment of characters in <var>string<sub>2</sub></var>
+    from <var>start<sub>2</sub></var> to <var>end<sub>2</sub></var>.
+    If <var>start<sub>1</sub></var>=<var>end<sub>1</sub></var>, this simply splices
+    the characters drawn from <var>string<sub>2</sub></var> into <var>string<sub>1</sub></var>
+    at that position.
+  </p>
+
+  <p>
+    Examples:
+  </p>
+<pre class="code-example">
+(string-replace "The TCL programmer endured daily ridicule."
+                 "another miserable perl drone" 4 7 8 22)
+    =&gt; "The miserable perl programmer endured daily ridicule."
+
+(string-replace "It's easy to code it up in Scheme." "lots of fun" 5 9)
+    =&gt; "It's lots of fun to code it up in Scheme."
+
+(define (string-insert s i t) (string-replace s t i i))
+
+(string-insert "It's easy to code it up in Scheme." 5 "really ")
+    =&gt; "It's really easy to code it up in Scheme."
+
+(define (string-set s i c) (string-replace s (string c) i (+ i 1)))
+
+(string-set "String-ref runs in O(n) time." 19 #\1)
+    =&gt; "String-ref runs in O(1) time."
+</pre>
+</dd>
+</dl>
+ 
+<h3>Comparison</h3>
+<dl><dt class="proc-def" id="string-equal-p">
+<code>(<span class="proc-def">string=?</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
+</dt>
+<dt class="proc-defi" id="string-less-p">
+<code>(<span class="proc-def">string&lt;?&nbsp;</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
+</dt>
+<dt class="proc-defi" id="string-greater-p">
+<code>(<span class="proc-def">string&gt;?&nbsp;</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
+</dt>
+<dt class="proc-def" id="string-leq-p">
+<code>(<span class="proc-def">string&lt;=?</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
+</dt>
+<dt class="proc-defn" id="string-geq-p">
+<code>(<span class="proc-def">string&gt;=?</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
+</dt>
+ <dt class="proc-def" id="string-ci-equal-p">
+<code>(<span class="proc-def">string-ci=?</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
+</dt>
+<dt class="proc-def1" id="string-ci-less-p">
+<code>(<span class="proc-def">string-ci&lt;?&nbsp;</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
+</dt>
+<dt class="proc-defi" id="string-ci-greater-p">
+<code>(<span class="proc-def">string-ci&gt;?&nbsp;</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
+</dt>
+<dt class="proc-defi" id="string-ci-leq-p">
+<code>(<span class="proc-def">string-ci&lt;=?</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ..<code>)</code>. → boolean</var>
+</dt>
+<dt class="proc-defn" id="string-ci-geq-p">
+<code>(<span class="proc-def">string-ci&gt;=?</span></code><var> string<sub>1</sub> string<sub>2</sub> string<sub>3</sub> ...<code>)</code> → boolean</var>
+</dt>
+ <dd>As in R7RS.</dd>
+</dl>
+
+<h3>Prefixes &amp; suffixes</h3>
+<dl>
+<!--
+==== string-prefix-length    string-suffix-length
+============================================================================-->
+<dt class="proc-def1" id="string-prefix-length">
+<code>(<span  class="proc-def">string-prefix-length</span></code><var> string<sub>1</sub> string<sub>2</sub> [start<sub>1</sub> end<sub>1</sub> start<sub>2</sub> end<sub>2</sub>]<code>)</code> → integer</var>
+</dt>
+<dt class="proc-defn" id="string-suffix-length">
+<code>(<span  class="proc-def">string-suffix-length</span></code><var> string<sub>1</sub> string<sub>2</sub> [start<sub>1</sub> end<sub>1</sub> start<sub>2</sub> end<sub>2</sub>]<code>)</code> → integer</var>
+</dt>
+<dd class="proc-def">
+Return the length of the longest common prefix/suffix of
+<var>string<sub>1</sub></var> and <var>string<sub>2</sub></var>.
+For prefixes, this is equivalent to their "mismatch index"
+(relative to the start indexes).
+
+<p>
+The optional start/end indexes restrict the comparison to the indicated
+substrings of <var>string<sub>1</sub></var> and <var>string<sub>2</sub></var>.
+</p>
+</dd>
+<!--
+==== string-prefix? string-suffix? 
+============================================================================-->
+<dt class="proc-def1" id="string-prefix-p">
+<code>(<span  class="proc-def">string-prefix?</span></code><var> string<sub>1</sub> string<sub>2</sub> [start<sub>1</sub> end<sub>1</sub> start<sub>2</sub> end<sub>2</sub>]<code>)</code> → boolean</var>
+</dt>
+<dt class="proc-defn" id="string-suffix-p">
+<code>(<span  class="proc-def">string-suffix?</span></code><var> string<sub>1</sub> string<sub>2</sub> [start<sub>1</sub> end<sub>1</sub> start<sub>2</sub> end<sub>2</sub>]<code>)</code> → boolean</var>
+</dt>
+<dd class="proc-def">
+Is <var>string<sub>1</sub></var> a prefix/suffix of <var>string<sub>2</sub></var>?
+<p>
+The optional start/end indexes restrict the comparison to the indicated
+substrings of <var>string<sub>1</sub></var> and <var>string<sub>2</sub></var>.
+</p>
+</dd>
+
+</dl>
+
+<h3>Searching</h3>
+<dl>
+<dt class="proc-def1" id="string-index">
+<code>(<span class="proc-def">string-index</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> string pred [start end]<code>)</code> → idx-or-false</var>
+</dt>
+<dt class="proc-defi" id="string-index-right">
+<code>(<span class="proc-def">string-index-right</span></code><var> string pred [start end]<code>)</code> → idx-or-false</var>
+</dt>
+<dt class="proc-defi" id="string-skip">
+<code>(<span class="proc-def">string-skip</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> string pred [start end]<code>)</code> → idx-or-false</var>
+</dt>
+<dt class="proc-defn" id="string-skip-right">
+<code>(<span class="proc-def">string-skip-right</span>&nbsp;</code><var> string pred [start end]<code>)</code> → idx-or-false</var>
+</dt>
+<dd class="proc-def">
+<code>string-index</code> searches through the given substring
+from the left, returning the index of the leftmost character
+satisfying the predicate <var>pred</var>.
+<code>string-index-right</code> searches from the 
+right, returning the index of the rightmost character 
+satisfying the predicate <var>pred</var>.
+If no match is found, these procedures return <code>#f</code>.
+<p>
+<i>Rationale:</i>
+The SRFI 130 analogues of these procedures return cursors,
+even when no match is found, and
+SRFI 130's <code>string-index-right</code> returns the <em>successor</em>
+of the cursor for the first character that satisfies the predicate.
+As there are no cursors in this SRFI, it seems best to follow the
+more intuitive and long-standing precedent set by SRFI 13.
+</p>
+
+<p>
+The <var>start</var> and <var>end</var> arguments specify the
+beginning and end of the search; the valid indexes relevant to
+the search include <var>start</var> but exclude <var>end</var>.
+Beware of "fencepost" errors: when searching right-to-left, 
+the first index considered is
+    <code>(- <var>end</var> 1)</code>,
+whereas when searching left-to-right, the first index considered is
+      <var>start</var>.
+That is, the start/end indexes describe the same half-open interval
+[<var>start</var>,<var>end</var>) in these procedures that they do
+in all other procedures specified by this SRFI.
+</p>
+
+<p>
+The skip functions are similar, but use the complement of the criterion:
+they search for the first char that <em>doesn't</em> satisfy
+<var>pred</var>. 
+To skip over initial whitespace, for example, say
+</p>
+<pre class="code-example">
+(substring string
+            (or (string-skip string char-whitespace?)
+                (string-length string))
+            (string-length string))
+</pre>
+<p>
+These functions can be trivially composed with <code>string-take</code> and
+<code>string-drop</code> to produce take-while, drop-while, span, and break
+procedures without loss of efficiency.
+</p>
+<p><em>Note:</em> SRFI-13 and Guile generalize <var>pred</var> to
+<var>char_pred</var>,
+which can be a predicate, a character, or a character set.
+This is an optional extension.
+</dd>
+</dl>
+
+<!--
+==== string-contains string-contains-right
+============================================================================-->
+<dl>
+<dt class="proc-def1" id="string-contains">
+<code>(<span class="proc-def">string-contains</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> string<sub>1</sub> string<sub>2</sub> [start<sub>1</sub> end<sub>1</sub> start<sub>2</sub> end<sub>2</sub>]<code>)</code> → idx-or-false</var>
+</dt>
+<dt class="proc-defn" id="string-contains-right">
+<code>(<span class="proc-def">string-contains-right</span></code><var> string<sub>1</sub> string<sub>2</sub> [start<sub>1</sub> end<sub>1</sub> start<sub>2</sub> end<sub>2</sub>]<code>)</code> → idx-or-false</var>
+</dt>
+<dd class="proc-def">
+Does the substring of <var>string<sub>1</sub></var>
+specified by <var>start<sub>1</sub></var> and <var>end<sub>1</sub></var>
+contain the sequence of characters given by the substring of <var>string<sub>2</sub></var>
+specified by <var>start<sub>2</sub></var> and <var>end<sub>2</sub></var>?
+
+<p>
+Returns <code>#f</code> if there is no match.
+If <var>start<sub>2</sub></var> = <var>end<sub>2</sub></var>,
+<code>string-contains</code> returns <var>start<sub>1</sub></var> but
+<code>string-contains-right</code> returns <var>end<sub>1</sub></var>.
+Otherwise returns the index in <var>string<sub>1</sub></var>
+for the first character of the first/last match;
+that index lies within the half-open interval
+[<var>start<sub>1</sub></var>,<var>end<sub>1</sub></var>),
+and the match lies entirely within the 
+[<var>start<sub>1</sub></var>,<var>end<sub>1</sub></var>) range of <var>string<sub>1</sub></var>.
+</p>
+<pre class="code-example">
+(string-contains "eek -- what a geek." "ee" 12 18) ; Searches "a geek"
+    =&gt; 15
+</pre>
+
+
+<p>
+<i>Note:</i>
+The names of these procedures do not end with a question mark.
+This indicates a useful value is returned when there is a match.
+</p>
+</dd>
+
+</dl>
+
+<h3>Case conversion</h3>
+<dl>
+<dt class="proc-def1" id="string-upcase">
+<code>(<span class="proc-def">string-upcase</span>&nbsp;&nbsp;</code><var> string<code>)</code> → istring</var>
+</dt>
+<dt class="proc-defi" id="string-downcase">
+<code>(<span class="proc-def">string-downcase</span></code><var> string<code>)</code> → istring</var>
+</dt>
+<dt class="proc-defi" id="string-foldcase">
+<code>(<span class="proc-def">string-foldcase</span></code><var> string<code>)</code> → istring</var>
+</dt>
+<dt class="proc-defn" id="string-titlecase">
+<code>(<span class="proc-def">string-titlecase</span></code><var> string<code>)</code> → istring</var>
+</dt>
+<dd class="proc-def">
+    These procedures return the string obtained by applying
+    Unicode's full uppercasing, lowercasing,  case-folding, or
+    title-casing algorithms
+    to their argument.  In some cases, the length of the result may
+    be different from the length of the argument.
+If the result is equal to the argument in the sense of <code>string=?</code>,
+<em>and</em> the argument is immutable, then that argument may be returned.
+    Note that language-sensitive mappings and foldings are not used.
+    <p>
+The results are the same as the R7RS procedures, but as immutable strings.
+</dd>
+</dl>
+
+<h3>Concatenation</h3>
+<dl>
+
+<!--
+==== string-append
+============================================================================-->
+<dt class="proc-def" id="string-append">
+<code>(<span class="proc-def">string-append</span></code><var> string ...<code>)</code> → istring</var>
+</dt>
+<dd class="proc-def">
+    Returns a string whose sequence of characters is the concatenation
+    of the sequences of characters in the given arguments.
+</dd>
+
+<!--
+==== string-concatenate
+============================================================================-->
+<dt class="proc-def" id="string-concatenate">
+<code>(<span class="proc-def">string-concatenate</span></code><var> string-list<code>)</code> → istring</var>
+</dt>
+<dd class="proc-def">
+    Concatenates the elements of <code>string-list</code> together
+    into a single string.
+  <p>
+    If any elements of <var>string-list</var> are mutable strings,
+    then those strings do not share any storage with the result,
+    so subsequent mutation of those string
+    will not affect the string returned by this procedure.
+    Implementations are
+    encouraged to return a result that shares storage with some of
+    the strings in the list if that sharing would be space-efficient.
+  </p>
+  <p>
+    <i>Rationale:</i>
+    Some implementations of Scheme
+    limit the number of arguments that may be passed to an n-ary procedure,
+    so the <code>(apply string-append <var>string-list</var>)</code> idiom,
+    which is otherwise equivalent to using this procedure, is not as
+    portable.
+  </p>
+</dd>
+
+<!--
+==== string-concatenate-reverse
+============================================================================-->
+<dt class="proc-def1" id="string-concatenate-reverse">
+<code>(<span class="proc-def">string-concatenate-reverse</span></code><var> string-list [final-string [end]]<code>)</code> → istring</var>
+</dt>
+<dd class="proc-def">
+With no optional arguments, calling this procedure is equivalent to
+<pre class="code-example">
+(string-concatenate (reverse <var>string-list</var>))
+</pre>
+
+<p>
+If the optional argument <var>final-string</var> is specified,
+it is effectively consed
+onto the beginning of <var>string-list</var>
+before performing the <code>list-reverse</code> and
+<code>string-concatenate</code> operations.
+</p>
+
+<p>
+If the optional argument <var>end</var> is given, 
+only the characters up to but not including <var>end</var>
+in <var>final-string</var> are added to the result, thus producing
+<pre class="code-example">
+(string-concatenate 
+  (reverse (cons (substring <var>final-string</var> 0 <var>end</var>)
+                 <var>string-list</var>)))
+</pre>
+For example:
+<pre class="code-example">
+(string-concatenate-reverse '(" must be" "Hello, I") " going.XXXX" 7)
+  =&gt; "Hello, I must be going."
+</pre>
+
+<p>
+<i>Rationale:</i>
+This procedure is useful when constructing procedures that 
+accumulate character data into lists of string buffers, and wish to
+convert the accumulated data into a single string when done.
+The optional <var>end</var> argument accommodates that use case
+when <var>final-string</var> is a mutable string, and is allowed
+(for uniformity) when <var>final-string</var> is an immutable string.
+</p>
+</dd>
+
+<!--
+==== string-join
+============================================================================-->
+<dt class="proc-def" id="string-join">
+<code>(<span class="proc-def">string-join</span></code><var> string-list [delimiter [grammar]]<code>)</code> → istring</var>
+</dt>
+<dd class="proc-def">
+    This procedure is a simple unparser; it pastes strings
+    together using the delimiter string. 
+
+<p>
+The <var>string-list</var> is a list of strings.
+The <var>delimiter</var> is the string used to delimit elements; it defaults to
+    a single space "&nbsp;".
+The <var>grammar</var> argument is a symbol that determines
+    how the delimiter is
+    used, and defaults to <code>'infix</code>.
+    It is an error for <var>grammar</var> to be any symbol other
+    than these four:
+    </p>
+    
+<ul>
+      <li> <code>'infix</code> means an infix or separator grammar: 
+        insert the delimiter
+        between list elements.  An empty list will produce an empty string.
+      </li>
+    
+      <li> <code>'strict-infix</code> means the same as <code>'infix</code>
+        if the <var>string-list</var> is non-empty,
+        but will signal an error if given an empty list.
+        (This avoids an ambiguity shown in the examples below.)
+      </li>
+    
+      <li> <code>'suffix</code> means a suffix or terminator grammar: 
+        insert the delimiter
+        after every list element.
+      </li>
+
+      <li> <code>'prefix</code> means a prefix grammar: insert the delimiter
+        before every list element.
+      </li>
+</ul>
+
+<pre class="code-example">
+(string-join '("foo" "bar" "baz"))
+         =&gt; "foo bar baz"
+(string-join '("foo" "bar" "baz") "")
+         =&gt; "foobarbaz"
+(string-join '("foo" "bar" "baz") ":")
+         =&gt; "foo:bar:baz"
+(string-join '("foo" "bar" "baz") ":" 'suffix)
+         =&gt; "foo:bar:baz:"
+
+;; Infix grammar is ambiguous wrt empty list vs. empty string:
+(string-join '()   ":") =&gt; ""
+(string-join '("") ":") =&gt; ""
+
+;; Suffix and prefix grammars are not:
+(string-join '()   ":" 'suffix)) =&gt; ""
+(string-join '("") ":" 'suffix)) =&gt; ":"
+</pre>
+</dd>
+
+</dl>
+
+<h3>Fold &amp; map &amp; friends</h3>
+<dl>
+<dt class="proc-def1" id="string-fold">
+<code>(<span class="proc-def">string-fold</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var> kons knil string [start end]<code>)</code> → value</var>
+</dt>
+<dt class="proc-defn" id="string-fold-right">
+<code>(<span class="proc-def">string-fold-right</span></code><var> kons knil string [start end]<code>)</code> → value</var>
+</dt>
+<dd class="proc-def">
+These are the fundamental iterators for strings.
+
+<p>
+The <code>string-fold</code> procedure maps the <var>kons</var> procedure
+across the given string from left to right:
+</p>
+<pre class="code-example">
+(... (<var>kons</var> <var>string</var>[<sub>2</sub>] (<var>kons</var> <var>string</var>[1] (<var>kons</var> <var>string</var>[0] <var>knil</var>))))
+</pre>
+<p>
+In other words, <code>string-fold</code> obeys the (tail) recursion
+</p>
+<pre class="code-example">
+  (string-fold <var>kons</var> <var>knil</var> <var>string</var> <var>start</var> <var>end</var>)
+= (string-fold <var>kons</var> (<var>kons</var> <var>string</var>[<var>start</var>] <var>knil</var>) <var>start+1</var> <var>end</var>)
+</pre>
+<p>
+The <code>string-fold-right</code> procedure maps <var>kons</var> across the
+given string or string from right to left:
+</p>
+<pre class="code-example">
+(<var>kons</var> <var>string</var>[0]
+      (... (<var>kons</var> <var>string</var>[<var>end-3</var>]
+                 (<var>kons</var> <var>string</var>[<var>end-<sub>2</sub></var>]
+                       (<var>kons</var> <var>string</var>[<var>end-1</var>]
+                             <var>knil</var>)))))
+</pre>
+<p>
+obeying the (tail) recursion
+</p>
+<pre class="code-example">
+  (string-fold-right <var>kons</var> <var>knil</var> <var>string</var> <var>start</var> <var>end</var>)
+= (string-fold-right <var>kons</var> (<var>kons</var> <var>string</var>[<var>end-1</var>] <var>knil</var>) <var>start</var> <var>end-1</var>)
+</pre>
+
+<p>
+Examples:
+</p>
+<pre class="code-example">
+;;; Convert a string or string to a list of chars.
+(string-fold-right cons '() string)
+
+;;; Count the number of lower-case characters in a string or string.
+(string-fold (lambda (c count)
+                (if (char-lower-case? c)
+                    (+ count 1)
+                    count))
+              0
+              string)
+</pre>
+
+<p>
+The <code>string-fold-right</code> combinator is sometimes called a "catamorphism."
+</p>
+</dd>
+</dl>
+
+<dl>
+
+<!--
+==== string-map
+============================================================================-->
+<dt class="proc-def" id="string-map">
+<code>(<span class="proc-def">string-map</span></code><var> proc string<sub>1</sub> string<sub>2</sub> ...<code>)</code> → istring</var>
+</dt>
+<dd>As in R7RS, except the result is an immutable string.
+As an extension, the result from <var>proc</var>
+may be a string (not just a character).</dd>
+<!--
+==== string-for-each
+============================================================================-->
+<dt class="proc-def" id="string-for-each">
+<code>(<span class="proc-def">string-for-each</span></code><var> proc string<sub>1</sub> string<sub>2</sub> ...<code>)</code> → unspecified</var>
+</dt>
+<dd>As in R7RS.</dd>
+</dl>
+<!--
+==== string-map-index
+============================================================================-->
+<dl>
+<dt class="proc-def" id="string-map-index">
+<code>(<span class="proc-def">string-map-index</span></code><var> proc string [start end]<code>)</code> → istring</var>
+</dt>
+<dd class="proc-def">
+Calls <var>proc</var> on each valid index of the specified substring,
+converts the results of those calls into strings,
+and returns the concatenation of those strings.
+It is an error for <var>proc</var> to return anything other than
+a character or string.
+The dynamic order in which <var>proc</var> is called on the indexes
+is unspecified, as is the dynamic
+order in which the coercions are performed.  If any strings returned
+by <var>proc</var> are mutated after they have been returned and before
+the call to <code>string-map-index</code> has returned, then
+<code>string-map-index</code> returns a string with unspecified contents; the
+<code>string-map-index</code> procedure itself does not mutate those strings.
+</dd>
+
+<!--
+==== string-for-each-index
+============================================================================-->
+<dt class="proc-def" id="string-for-each-index">
+<code>(<span class="proc-def">string-for-each-index</span></code><var> proc string [start end]<code>)</code> → unspecified</var>
+</dt>
+<dd class="proc-def">
+Calls <var>proc</var> on each valid index of the specified substring,
+in increasing order, discarding the results of those calls.
+This is simply a safe and correct
+way to loop over a substring.
+<p>
+Example:
+</p>
+<pre class="code-example">
+(let ((txt (string-&gt;string "abcde"))
+      (v '()))
+  (string-for-each-index
+    (lambda (cur) (set! v (cons (char-&gt;integer (string-ref txt cur)) v)))
+    txt)
+  v) =&gt; (101 100 99 98 97)
+</pre>
+</dd>
+</dl>
+<!--
+==== string-count
+============================================================================-->
+<dl>
+<dt class="proc-def" id="string-count">
+<code>(<span class="proc-def">string-count</span></code><var> string pred [start end]</var><code>)</code><var> → integer</var>
+</dt>
+<dd class="proc-def">
+    Returns a count of the number of characters in the specified substring
+    of <var>string</var> that satisfy the given predicate.
+</dd></dl>
+<!--
+==== string-filter string-remove
+============================================================================-->
+<dl>
+<dt class="proc-def1" id="string-filter">
+<code>(<span class="proc-def">string-filter</span></code><var> pred string [start end]</var><var><code>)</code> → istring</var>
+</dt>
+<dt class="proc-defn" id="string-remove">
+<code>(<span class="proc-def">string-remove</span></code><var> pred string [start end]</var><code>)</code><var> → istring</var>
+</dt>
+<dd class="proc-def">
+    Filter the given substring of <var>string</var>, retaining
+    only those characters that
+    satisfy / do not satisfy <var>pred</var>.
+
+  <p>
+    If <var>string</var> is a mutable string, then that string does not share any
+    storage with the result, so subsequent mutation of that string
+    will not affect the string returned by these procedures.
+    If <var>string</var> is an immutable string, implementations are
+    encouraged to return a result that shares storage with that string
+    whenever sharing would be space-efficient.
+  </p>
+</dd></dl>
+
+<!--
+==== string-reverse
+============================================================================-->
+<!--
+<dt class="proc-def"  id="string-reverse">
+<code class="proc-def">string-reverse</code><var> string [start end] → string</var>
+</dt>
+<dd class="proc-def">
+Reverses the specified substring.
+<pre class="code-example">
+(string-reverse "Able was I ere I saw elba.")
+    =&gt; ".able was I ere I saw elbA"
+(string-reverse "Who stole the spoons?" 14 20)
+    =&gt; "snoops"
+</pre>
+
+<p>
+<i>Unicode note:</i> Reversing a string simply reverses the sequence of
+code-points it contains. So a combining diacritic <var>a</var> 
+coming <em>after</em> a base character <var>b</var> in string <var>s</var> 
+would come out <em>before</em> <var>b</var> in the reversed result.
+</p>
+</dd>
+-->
+
+<h3>Replication &amp; splitting</h3>
+<dl><dt class="proc-def" id="string-repeat">
+<code>(<span class="proc-def">string-repeat</span></code> <var>string-or-character len</var><code>)</code><var> → istring</var>
+<dd>
+Create a string by repeating the first argument <var>len</var> times.
+If the first argument is a character, it is as if it were wrapped with
+the <code>string</code> constructor.
+We can define <code>string-repeat</code> in terms of the
+more general <code>xsubstring</code> procedure:
+<pre>
+(define (string-repeat S N)
+   (let ((T (if (char? S) (string S) S)))
+     (xsubstring T 0 (* N (string-length T))))
+</pre>
+</dd>
+<dt class="proc-def" id="xsubstring">
+<code>(<span class="proc-def">xsubstring</span></code><var> string [from to [start end]]</var><code>)</code><var> → istring</var>
+</dt>
+<dd class="proc-def">
+    This is an <q>extended substring</q> procedure that implements replicated
+    copying of a substring.
+
+    <p>
+    <var>string</var> is a string;
+    <var>start</var> and <var>end</var> are optional arguments that specify
+    a substring of <var>string</var>,
+    defaulting to 0 and the length of <var>string</var>.
+    This substring is conceptually replicated both up and down the index space,
+    in both the positive and negative directions.
+    For example, if <var>string</var> is <code>"abcdefg"</code>,
+    <var>start</var> is 3, 
+    and <var>end</var> is 6,
+    then we have the conceptual bidirectionally-infinite string
+<pre>
+    ...  d  e  f  d  e  f  d  e  f  d  e  f  d  e  f  d  e  f  d ...
+        -9 -8 -7 -6 -5 -4 -3 -2 -1  0 +1 +2 +3 +4 +5 +6 +7 +8 +9
+</pre>
+    <p>
+    <code>xsubstring</code> returns the substring of this string
+    beginning at index <var>from</var>,
+    and ending at <var>to</var>.
+    It is an error if <var>from</var> is greater than <var>to</var>.
+    </p>
+<p>
+If <var>from</var> and <var>to</var> are missing they default to 0
+and <code><var>from</var>+(<var>end</var>-<var>start</var>)</code>,
+respectively.
+This variant is a generalization of using <code>substring</code>,
+but unlike <code>substring</code> never shares substructures that would
+retain characters or sequences of characters that are substructures of
+its first argument or previously allocated objects.
+(Hence it is equivalent to SRFI-135's <code>string-copy</code>.)
+    <p>
+    You can use <code>xsubstring</code> to perform a variety of tasks:
+    </p>
+    <ul>
+    <li> To rotate a string left:
+        <code>(xsubstring "abcdef" 2 8)</code>
+        =&gt; <code>"cdefab"</code>
+    </li>
+    <li> To rotate a string right:
+        <code>(xsubstring "abcdef" -2 4)</code>
+        =&gt; <code>"efabcd"</code>
+    </li>
+    <li> To replicate a string:
+        <code>(xsubstring "abc" 0 7)</code>
+        =&gt; <code>"abcabca"</code>
+    </li>
+    </ul>
+
+    <p>
+    Note that 
+    </p>
+    <ul>
+      <li> The <var>from</var>/<var>to</var> arguments give a half-open range
+        containing the characters from
+        index <var>from</var> up to, but not including, index <var>to</var>.
+      </li>
+      <li> The <var>from</var>/<var>to</var> indexes are not expressed in
+        the index space of <var>string</var>.
+        They refer instead to the replicated index space of the substring
+        defined by <var>string</var>, <var>start</var>, and <var>end</var>.
+      </li>
+    </ul>
+
+    <p>
+    It is an error if <var>start</var>=<var>end</var>,
+    unless <var>from</var>=<var>to</var>,
+    which is allowed as a special case.
+    <p><i>Rationale:</i> SRFI-135 names the corresponding procedure <code>textual-replicate</code>.
+    The name <code>string-replicate</code> might be better in the abstract,
+    but following SRFI-13's <code>xsubstring</code> name seems preferable.</p>
+</dd>
+<dt class="proc-def" id="string-split">
+<code>(<span class="proc-def">string-split</span></code><var> string delimiter [grammar limit start end]</var><code>)</code><var> → list</var>
+</dt>
+<dd class="proc-def">
+Returns a list of strings representing the words contained in the
+substring of <var>string</var> from <var>start</var> (inclusive)
+to <var>end</var> (exclusive).
+The <var>delimiter</var> is a string to be used as the word separator.
+This will often be a single character, but multiple characters are allowed
+for use cases such as splitting on <code>"\r\n"</code>.
+The returned list will have one more item than the number of
+non-overlapping occurrences of the delimiter in the string.
+If <var>delimiter</var> is an empty string, then the returned list
+contains a list of strings, each of which contains a single character. 
+
+<p>The <var>grammar</var> is a symbol with the same meaning as
+in the <code>string-join</code> procedure.
+If it is <code>infix</code>, which is the default,
+processing is done as described above, except
+an empty <var>string</var> produces the empty list;
+if <var>grammar</var> is <code>strict-infix</code>,
+then an empty <var>string</var> signals an error.
+The values <code>prefix</code> and <code>suffix</code>
+cause a leading/trailing empty string in the result to be suppressed.
+</p>
+<p>
+If <var>limit</var> is a non-negative exact integer, at most that
+many splits occur, and the remainder of <var>string</var>
+is returned as the final element of the list
+(so the result will have at most <var>limit</var>+1 elements).
+If <var>limit</var> is not specified or is <code>#f</code>, then
+as many splits as possible are made.
+It is an error if <var>limit</var> is any other value.
+</p>
+<p>
+To split on a regular expression,
+you can use SRFI 115's <code>regexp-split</code> procedure.
+</dd>
+</dl>
+
+<h3>Mutable string constructors</h3>
+<dl>
+<dt class="proc-def" id="make-string">
+<code>(<span class="proc-def">make-string</span></code> <var>[k [char]]</var><code>)</code><var> → mstring</var>
+<dd>
+Return a new allocated mutable string of length <var>k</var>,
+where <var>k</var> defaults to 0.
+If <var>char</var> is given, then all the characters
+of the string are initialized to <var>char</var>, otherwise the contents
+of the string are unspecified.
+The 1-argument version is deprecated as poor style,
+except when <var>k</var> is 0.
+<p>
+To return an immutable string that repeats <var>k</var> times
+a character <var>char</var> use <code>string-repeat</code>.
+<p>
+This is as R7RS, except the result is variable-size and we allow
+leaving out <var>k</var> when it is zero.
+<p>
+<i>Rationale:</i> The most common pattern for mutable strings (at least
+in a language like Java) to allocate an empty string and incrementally append to it.
+It seems natural to initialize the string with <code>(make-string)</code>,
+rather than <code>(make-string 0)</code>.
+</dd>
+</dl>
+<dl>
+<dt class="proc-def" id="string-copy">
+<code>(<span class="proc-def">string-copy</span></code> <var>string [start [end]]</var><code>)</code> <var>→ mstring</var>
+<dd>As in R7RS.</dd>
+</dl>
+
+<h3>Procedures for mutating a string</h3>
+<dl>
+<dt class="proc-def" id="string-set!">
+<code>(<span class="proc-def">string-set!</span></code> <var>mstring k char</var><code>)</code> <var>→ unspecified</var>
+<dt class="proc-def" id="string-fill!">
+<code>(<span class="proc-def">string-fill!</span></code> <var>mstring fill [start [end]]</var><code>)</code> <var>→ unspecified</var>
+<dt class="proc-def" id="string-copy!">
+<code>(<span class="proc-def">string-copy!</span></code> <var>to at from [start [end]]</var><code>)</code> <var>→ unspecified</var>
+<dd>As in R7RS.</dd>
+</dl>
+<dl>
+<dt class="proc-def" id="string-append!">
+<code>(<span class="proc-def">string-append!</span></code> <var>mstring</var> <var>value</var> ...<code>)</code> <var>→ unspecified</var>
+<dt class="proc-def" id="string-replace!">
+<code>(<span class="proc-def">string-replace!</span></code> <var>mstring</var> <var>dst</var> <var>dst-start</var> <var>dst-end</var> <var>src</var> [<var>src-start</var> [<var>src-end</var>]] <var>→ unspecified</var>
+<dd>As in SRFI-118.</dd>
+</dl>
+
+<h3>Other string-returning procedures</h3>
+The R7RS procedures <code>symbol-&gt;string</code>,
+<code>number-&gt;string</code>, and  <code>get-output-string</code>
+all return <var>istring</var>.
+<p>
+R7RS specifies that it is an error to mutate the results of <code>command-line</code>,
+<code>get-environment-variable</code>, or <code>get-environment-variables</code>.
+These <em>should</em> return istrings.
+
+<h3>Libraries</h3>
+There is no reason - except backward compatibility - for a procedure
+such as <code>string-upcase</code> to return a mutable string.
+However, we need a mechanism to use the "old" immutable-string-returning
+<code>string-upcase</code> rather than the istring-returning version.
+<p>
+The following libraries are defined:
+<dl>
+<dt>
+<code>(srfi 140 base)</code>
+</dt>
+<dd>
+Same as R7RS's <code>(scheme base)</code> except that string
+procedure are as in this specification.
+</dd>
+<dt>
+<code>(srfi 140 char)</code>
+</dt>
+<dd>
+Same as R7RS's <code>(scheme char)</code> except that string
+procedures are as in this specification.
+</dd>
+<dt>
+<code>(srfi 140 mstrings)</code>
+</dt>
+<dd>
+Provides definition for all the procedures that this specification specifies
+to return an istring, but which in R7RS or SRFI-13 return mutable strings,
+such as <code>string-append</code>.
+This library provides versions that return mutable strings.
+<p>It could be implemented like this:
+<pre>
+(define-library (srfi 140 mstrings)
+  (import (rename (srfi 140 istrings) (string-upcase istring-upcase)))
+  (export string-upcase <i>etc ...</i>)
+  (begin
+    (define (string-upcase str)
+      (string-copy (istring-upcase str)))
+    <i>etc ...</i>))
+</pre>
+<dd>
+<dt>
+<code>(srfi 140 istrings)</code>
+</dt>
+<dd>
+This library exports the same names as <code>(string 140 mstrings)</code>,
+but the functions return an istring.
+<dd>
+<dt>
+<code>(srfi 135)</code>
+</dt>
+<dt>
+<code>(srfi 135 texts)</code>
+</dt>
+<dd>
+The SRFI-135 library, if provided, is naturally implemented
+by importing <code>(string 140 istrings)</code> and other libraries,
+and then using <code>export</code> with <code>rename</code>.
+<dd></dl>
+
+<h3>Default environment</h3>
+<p>
+An implementation <em>should</em> base its default environment on the bindings
+of <code>(srfi 140 istrings)</code>.  However, if there is a command-line switch
+or other way to select "R7RS standards mode", then that switch should cause it to use
+the <code>(srfi 140 mstrings)</code> bindings.
+
+<h1>Implementation</h1>
+<p>Since this specification changes core parts of Scheme,
+a portable library implementation is not possible.
+<p>
+<a href="http://www.gnu.org/software/kawa/">Kawa</a> version 3.0
+will include a complete implementation of this specification.
+At time of writing, Kawa 3.0 isn't released or quite finished yet,
+but the <a href="https://gitlab.com/kashell/Kawa">Kawa git repository</a>
+includes the functionality of this specification.
+
+<h3>Implementing istring - general notes</h3>
+<p>
+SRFI-135 provides 3 alternative implementations for <q>texts</q>,
+which can be used to implement istrings:
+<ul>
+<li><code>kernel16</code> uses an internal representation based on UTF-16,
+which performs well when strings can represent any Unicode
+text and non-ASCII characters are common.
+The data structure used is a vector of bytevectors,
+where each bytevector (except the last) stores 128 code points.
+(Kawa uses a simpler data structure, described below.)
+</li>
+<li><code>kernel8</code> uses an internal representation based on UTF-8,
+  which performs well when most (but not all) strings consist of
+  ASCII characters.
+</li>
+<li><code>kernel0</code> uses an internal representation based on Scheme
+    strings, which performs well if strings are acceptably
+    space-efficient and the <code>string-ref</code> procedure
+    runs in constant time.  It also performs well in interpreted
+    systems even when <code>string-ref</code> takes linear time,
+    because the built-in <code>string-ref</code> is likely to run
+    faster on short strings than any UTF-8 or UTF-16 scanner that
+    could be written in Scheme.
+</li>
+</ul>
+
+<h3>Kawa's implementation of istring</h3>
+<p>
+The Kawa implementation of istring uses one data array and one offset array.
+The data array is a native Java <code>String</code>, which internally
+is an array of 16-bit chars.
+(JDK 9 uses an array of 8-bit bytes when all the characters are Latin-1.)
+The offset array stores, for every 16th character,
+the start index within the data array of that character.
+Thus to find the position of character 37, we get element 2 in the index array,
+which gives us the position of character 32,
+and then we scan linearly 5 characters forwards.
+If there are no surrogate characters in the range 32 to 48 (the normal case)
+then the difference between the offsets is 16, so no scan is needed
+(just add 5 to the offset for character 32).
+<p>
+This data structure is simple, fast, and relatively compact.
+The overhead of the index array is 4 bytes for
+every 16 characters (32 bytes or more), thus at most 12.5% overhead
+for long strings.  In the common case of only BMP characters,
+no index array is needed.
+<p>
+The implementation of istrings uses the  <code>IString</code> class.
+The following is simplified - see <code>gnu/lists/IString.java</code>
+for the complete class.
+<pre>
+public class IString implements CharSequence {
+    String str; // Contains actual char (code unit) values
+    int cplength; // number of codepoints
+
+    /* Index of every 16-th character.
+     * Null if all characters are in the basic plane. */
+    int[] offsets;
+
+    /** used for substring etc */
+    public int offsetByCodePoints(int i) {
+        if (offsets == null)
+            return i;
+        int pos = offsets[i&gt;&gt;4];
+        // Optimize if all characters between (i &amp; 15)
+        // and (i &amp; 15) + 16 are all in the basic plane:
+        if (pos + 16 == offsets[(i&gt;&gt;4) + 1])
+            return pos + (i &amp; 15);
+        // scan linearly from pos, at most 15 characters forward:
+        return str.offsetByCodePoints(str, pos, i &amp; 15);
+    }
+
+    /** used for string-ref */
+    public int indexByCodePoints(int index) {
+        return str.codePointAt(offsetByCodePoints(index));
+    }
+
+    /* used for string-length */
+    public int lengthByCodePoints() { return cplength; }
+
+    /** To implement CharSequence */
+    public char charAt(int i) { return str.charAt(i); }
+    public String toString() { return str; }
+    public int length() { return str.length(); }
+}
+</pre>
+<p>
+The actual implementation supports shared substrings.
+<p>(<em>Detail:</em> Instead of using a <code>String</code> for the data array,
+it would be slightly more efficient to use a native Java char array
+(one object fewer and one indirection less).  However,
+using a <code>String</code> has the advantage that the <code>toString</code>
+method is trivial.)
+
+<h3>Linear-time procedures and non-istrings</h3>
+<p>Many implementations (including Kawa) support mutable strings
+or kinds of strings that do <em>not</em> have constant-time indexing.
+Many of the procedures in this specification perform a linear
+scan of a substring.  It is important that these procedures
+<em>not</em> be implemented using <code>string-ref</code> (unless <code>string-ref</code> is O(1)
+even for non-istrings), since that could lead to quadratic run-time.
+<p>
+In Kawa, any object that implements the (standard Java) interface
+<code>java.lang.CharSequence</code> is a <q>string</q>.
+This includes the standard Java classes <code>java.lang.String</code>
+(immutable strings) and <code>java.lang.StringBuilder</code>.
+These are implemented using arrays of <code>char</code> values,
+which are 16-bit code units.
+Indexing in terms of <code>char</code> units (using the <code>charAt</code>
+method) is efficient (constant-time), as is determining the number of <code>char</code>s.
+(Since <code>CharSequence</code> is an interface, rather than a concrete
+implementation, we cannot be guaranteed of this, but it is true of all
+standard or Kawa classes that implement <code>CharSequence</code>.)
+<p>
+To implement a procedure like <code>string-count</code>
+we first map <var>start</var> and <var>end</var> to offsets
+in the <code>CharSequence</code>.
+(This is constant-time if the string is an istring, or
+if <var>start</var>/<var>end</var> have default values;
+otherwise linear-time.)
+Then we call <code>charAt</code> with increasing indexes.
+If a surrogate pair is seen, then we combine them, before
+calling the <var>pred</var>.
+This is quite efficient regardless of whether or not the
+string is an istring.
+<p>
+The Kawa implementation uses helper macros
+<code>string-for-each-forwards</code>
+(<code>string-for-each</code> with start/end indexes),
+and <code>string-for-each-backwards</code>.
+These make many of the specified procedures trivial.
+
+<h3>Mutable strings</h3>
+<p>This specification requires that mutable strings have adjustable size.
+That means there needs to be some indirection between string object
+and the buffer containing the actual characters, so the
+latter can be re-allocated when needed.
+Using a <a href="https://en.wikipedia.org/wiki/Gap_buffer">gap-buffer</a>
+is a reasonable approach, but not required.
+<p>
+Kawa uses the <code>gnu.lists.FString</code> class for mutable strings.
+
+<h3>Testsuite</h3>
+There is a testsuite, derived from William Clinger's SRFI-135 testsuite.
+See <a href="strings-test.scm"><code>strings-test.scm</code></a>.
+(It is also available in the 
+<a href="https://gitlab.com/kashell/Kawa/blob/master/testsuite/strings-test.scm">Kawa git repository</a>.)
+
+<h1>Acknowledgements</h1>
+<p>Thank you to Olin Shivers, author of
+  <a href="http://srfi.schemers.org/srfi-13/srfi-13.html">SRFI-13</a> String
+  Libraries; and William D Clinger, author of
+  <a href="http://srfi.schemers.org/srfi-135/srfi-135.html">SRFI-135</a>
+  Immutable Texts.
+
+<h1>Copyright</h1>
+<p>
+Copyright (C) Per Bothner 2017</p>
+<p>
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:</p>
+<p>
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.</p>
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
+<hr>
+<address>Author: <a href="mailto:per@bothner.com">Per Bothner</a></address>
