@@ -1,0 +1,245 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+  <HEAD>
+    <title>SRFI 58: Array Notation</title>
+  </HEAD>
+
+  <BODY>
+
+<H1>Title</H1>
+
+Array Notation
+
+<H1>Authors</H1>
+
+Aubrey Jaffer and Radey Shouman
+
+<H1>Status</H1> 
+
+This SRFI is currently in ``draft'' status. To see an explanation of each
+status that a SRFI can hold, see <A
+href="http://srfi.schemers.org/srfi-process.html">here</A>. It will remain
+in draft status until 2005/01/26, or as amended. To provide input on this
+SRFI, please <CODE><A
+href="mailto:srfi-58@srfi.schemers.org">mailto:srfi-58@srfi.schemers.org</A></CODE>.
+See <A
+href="../../srfi-list-subscribe.html">instructions
+here</A> to subscribe to the list. You can access previous messages via <A
+href="http://srfi.schemers.org/srfi-58/mail-archive/maillist.html">the
+archive of the mailing list</A>.  
+<P> 
+<UL>
+  <LI>Received: 2004/11/26</LI>
+  <LI>Draft: 2004/11/26 - 2005/01/26</LI>
+</UL>
+
+<H1>Abstract</H1>
+
+SRFI-47 provides both uniform-typed and heterogeneous multidimensional
+arrays which subsume Scheme vectors and strings.  The notation
+presented here builds upon Common-Lisp array sytnax, incorporating
+type abbreviations from SRFI-4, to represent heterogeneous and
+uniform-typed arrays.
+<P>
+
+<H1>Issues</H1>
+
+Common Lisp has a compact notation for rank 1 boolean arrays:
+<CODE>#*</CODE> followed by a string of ones and zeros; <CODE>1</CODE>
+for <CODE>#t</CODE>, <CODE>0</CODE> for <CODE>#f</CODE>
+
+<H1>Rationale</H1>
+
+<UL>
+  <LI>
+  Strings and vectors, which are rank-one arrays, have notations
+  allowing them to be read and written by the procedures read and
+  write.  Strings and vectors which are written, then read are EQUAL?
+  to the originals.<P>
+
+  <LI>
+  A write-read invariant notation for other arrays would allow them to
+  be easily saved and restored by programs.<P>
+
+  <LI>
+  A write-read invariant notation for arrays would allow them to be
+  coded directly in programs.<P>
+
+  <LI>
+  The syntax for heterogeneous array constants,
+  <CODE>#<VAR>n</VAR>A</CODE> followed by the list-decomposition of
+  the array, is the same as the Common-Lisp array read-syntax.<P>
+
+</UL>
+
+<P>
+SRFI-47, "Array", incorporates all the uniform vector types from
+SFRI-4 "Homogeneous numeric vector datatypes", and adds complex types
+composed of two 32-bit or two 64-bit floating-point numbers, and a
+uniform boolean array type.  Multi-dimensional arrays subsume
+homogeneous vectors as the one-dimensional case, obviating the need
+for SRFI-4.
+<P>
+Implementations are required to accept all of the type denotations.
+Those which the platform supports will have platform-dependent
+representations; the others will be represented as the next larger
+uniform-type implemented; defaulting to <CODE>vector</CODE> if there
+are none.  All implementations must support the character array type,
+the rank-1 character arrays being strings.
+<P>
+This arrangement has platforms supporting uniform array types using
+them, with less capable platforms using vectors; both from the same
+source code.
+<P>
+
+<H1>Specification</H1>
+
+<H2>Syntax</H2>
+
+A syntax for arrays is the list-decomposition of an array with a
+prefix according to the type of the array.  The rank digit `<I>n</I>'
+is optional for rank 1 arrays.  The case of characters is not
+significant in the prefix characters.
+<P>
+Rank 1 character arrays which are not subarrays are
+<CODE>write</CODE>n as Scheme strings; <CODE>display</CODE> treats
+rank-1 character arrays which are not subarrays identically with
+strings.
+<P>
+Rank 1 heterogeneous arrays which are not subarrays are
+<CODE>write</CODE>n and <CODE>display</CODE>ed as Scheme vectors.
+<P>
+<TABLE BORDER=1>
+<TR><TH>prototype<BR>procedure
+    <TH>element type
+    <TH>prefix<BR>rank = 1
+    <TH>prefix<BR>rank = <I>n</I>
+<TR><TD><CODE>vector</CODE><TD>conventional vector     <TD><CODE>#A</CODE><TD><CODE>#<i>n</i>A</CODE>
+<TR><TD><CODE>ac64  </CODE><TD>double-precision complex<TD><CODE>#Ac64</CODE><TD><CODE>#<i>n</i>Ac64</CODE>
+<TR><TD><CODE>ac32  </CODE><TD>single-precision complex<TD><CODE>#Ac32</CODE><TD><CODE>#<i>n</i>Ac32</CODE>
+<TR><TD><CODE>ar64  </CODE><TD>double-precision double <TD><CODE>#Ar64</CODE><TD><CODE>#<i>n</i>Ar64</CODE>
+<TR><TD><CODE>ar32  </CODE><TD>single-precision float  <TD><CODE>#Ar32</CODE><TD><CODE>#<i>n</i>Ar32</CODE>
+<TR><TD><CODE>as64  </CODE><TD>64-bit signed integer   <TD><CODE>#As64</CODE><TD><CODE>#<i>n</i>As64</CODE>
+<TR><TD><CODE>as32  </CODE><TD>32-bit signed integer   <TD><CODE>#As32</CODE><TD><CODE>#<i>n</i>As32</CODE>
+<TR><TD><CODE>as16  </CODE><TD>16-bit signed integer   <TD><CODE>#As16</CODE><TD><CODE>#<i>n</i>As16</CODE>
+<TR><TD><CODE>as8   </CODE><TD>8-bit signed integer    <TD><CODE>#As8</CODE><TD><CODE>#<i>n</i>As8</CODE>
+<TR><TD><CODE>au64  </CODE><TD>64-bit unsigned integer <TD><CODE>#Au64</CODE><TD><CODE>#<i>n</i>Au64</CODE>
+<TR><TD><CODE>au32  </CODE><TD>32-bit unsigned integer <TD><CODE>#Au32</CODE><TD><CODE>#<i>n</i>Au32</CODE>
+<TR><TD><CODE>au16  </CODE><TD>16-bit unsigned integer <TD><CODE>#Au16</CODE><TD><CODE>#<i>n</i>Au16</CODE>
+<TR><TD><CODE>au8   </CODE><TD>8-bit unsigned integer  <TD><CODE>#Au8</CODE><TD><CODE>#<i>n</i>Au8</CODE>
+<TR><TD><CODE>string</CODE><TD>char (string)           <TD><CODE>#A\</CODE><TD><CODE>#<i>n</i>A\</CODE>
+<TR><TD><CODE>at1   </CODE><TD>boolean (bit-vector)    <TD><CODE>#At</CODE><TD><CODE>#<i>n</i>At</CODE>
+</TABLE>
+<P>
+A two-by-two array of unsigned 16-bit integers is written:
+
+<PRE>
+#2au16((0 1) (2 3))
+</PRE>
+
+<H1>Implementation</H1>
+
+The following code from the
+
+<A HREF="http://swiss.csail.mit.edu/~jaffer/SCM">SCM</A>
+implementation ("Init5d9.scm") implements this array read-syntax.
+<CODE>read:sharp</CODE> is called from <CODE>read</CODE> when a
+<CODE>#\#</CODE> is read.  Its first argument is the character after
+<CODE>#\#</CODE>; the second argument is the input port; the third
+argument is the procedure to call for recursive reading.
+<P>
+<CODE>list-&gt;uniform-array</CODE> converts the list-decomposition
+returned by <CODE>read</CODE> into the uniform array of the specified
+type (or the next larger compatible type).
+<P>
+<PRE>
+(define (read:sharp c port read)
+  (case c
+    ((#\a #\A) (read:array 1 port read))
+    ((#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9)
+     (let* ((num (read:try-number port c))
+            (c (peek-char port)))
+       (cond ((memv c '(#\a #\A))
+              (read-char port)
+              (read:array num port read))
+             (else (error "syntax? #" num c)))))
+    (else (error "unknown # object" c))))
+
+(define (read:array rank port reader)   ;ignore reader
+  (define (bomb pc wid)
+    (error (string-append "array syntax? #"
+                          (number->string rank)
+                          "A" (string pc)
+                          (if wid (number->string wid) ""))))
+  (list->uniform-array
+   rank
+   (case (char-downcase (peek-char port))
+     ((#\\) (read-char port) #\a)
+     ((#\t) (read-char port) #t)
+     ((#\c #\r)
+      (let* ((pc (read-char port))
+             (wid (read:try-number port)))
+        (case wid
+          ((64 32) (case pc
+                     ((#\c) (* +i wid))
+                     (else (exact->inexact wid))))
+          (else (bomb pc wid)))))
+     ((#\s #\u)
+      (let* ((pc (read-char port))
+             (wid (read:try-number port)))
+        (case (or wid (peek-char port))
+          ((32 16 8) (case pc
+                       ((#\s) (- wid))
+                       (else wid)))
+          ((#\s #\f #\d #\l) (read-char port) 32)
+          (else (bomb pc wid)))))
+     (else #f))
+   (read port)))
+
+(define (read:try-number port . ic)
+  (define chr0 (char-&gt;integer #\0))
+  (let loop ((arg (and (not (null? ic)) (- (char-&gt;integer (car ic)) chr0))))
+    (let ((c (peek-char port)))
+      (cond ((eof-object? c) #f)
+            ((char-numeric? c)
+             (loop (+ (* 10 (or arg 0))
+                      (- (char-&gt;integer (read-char port)) chr0))))
+            (else arg)))))
+</PRE>
+<P>
+
+<H1>Copyright</H1>
+Copyright (C) Aubrey Jaffer (2004). All Rights Reserved.
+<P>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Scheme Request For
+Implementation process or editors, except as needed for the purpose of
+developing SRFIs in which case the procedures for copyrights defined
+in the SRFI process must be followed, or as required to translate it
+into languages other than English.
+<P>
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+<P>
+This document and the information contained herein is provided on an
+"AS IS" basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+
+    <HR>
+    <ADDRESS>Editor: <A HREF="mailto:srfi-editors@srfi.schemers.org">David Van Horn</A></ADDRESS>
+<!-- Created: Tue Sep 29 19:20:08 EDT 1998 -->
+<!-- hhmts start -->
+Last modified: Fri Nov 26 10:49:37 EST 2004
+<!-- hhmts end -->
+  </BODY>
+</HTML>
