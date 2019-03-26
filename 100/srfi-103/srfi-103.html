@@ -1,0 +1,372 @@
+<!DOCTYPE html PUBLIC
+    "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>SRFI 103: Library Files</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/srfi.css" type="text/css" /></head>
+<body>
+
+<!-- This commented out text is for the brittle SRFI tools -->
+<!--
+<H1>Title</H1>
+
+Library Files
+
+<H1>Author</H1>
+
+Derick Eddington
+
+<H1>Status</H1>
+
+This SRFI is currently in ``withdrawn'' status.
+-->
+
+<!-- This is the real, valid XHTML text -->
+<h1>Title</h1>
+
+<p>Library Files</p>
+
+<h1>Author</h1>
+
+<p>Derick Eddington</p>
+
+<!-- ======================================================================= -->
+
+<h1>Status</h1>
+
+<p>
+This SRFI is in ``withdrawn'' status.  To see an explanation of
+each status that a SRFI can hold, see <a
+href="http://srfi.schemers.org/srfi-process.html">here</a>.
+
+To provide input on this SRFI, please
+<a href="mailto:srfi minus 103 at srfi dot schemers dot org">mail to
+<code>&lt;srfi minus 103 at srfi dot schemers dot org&gt;</code></a>.  See
+<a href="../srfi-list-subscribe.html">instructions here</a> to
+subscribe to the list.  You can access previous messages via
+<a href="mail-archive/maillist.html">the archive of the mailing list</a>.
+You can access
+post-withdrawal messages via
+<a href="http://srfi.schemers.org/srfi-103/post-mail-archive/maillist.html">
+the archive of the mailing list</a>.
+</p>
+
+<ul>
+  <li>
+    Received: <a href="http://srfi.schemers.org/srfi-103/srfi-103-1.1.html">2009/09/22</a></li>
+
+  <li>Draft: 2009/09/22-2009/11/22</li>
+  <li>Revised: 2009/10/16</li>
+  <li>Revised: 2009/12/11</li>
+  <li>Draft extended: 2009/12/11-2010/1/11</li>
+  <li>Revised: 2010/01/24</li>
+  <li>Draft extended: 2010/03/04-2010/04/04</li>
+  <li>Revised: 2010/05/24</li>
+  <li>Withdrawn: 2013/05/08</li>
+</ul>
+
+<!-- ======================================================================= -->
+
+<h1>Table of contents</h1>
+
+<ul>
+<li><a href="#abstract">Abstract</a></li>
+<li><a href="#rationale">Rationale</a></li>
+<li><a href="#design">Design</a></li>
+<li><a href="#specification">Specification</a>
+<ul>
+  <li><a href="#library-files">Library Files</a></li>
+  <li><a href="#searched-directories">Searched Directories</a></li>
+  <li><a href="#file-name-extensions">File-Name Extensions</a></li>
+  <li><a href="#ordering-choosing">Ordering and Choosing</a></li>
+</ul></li>
+<li><a href="#r6rs-library-files">R6RS Library Files</a></li>
+<li><a href="#dialects-formats-extensions">Dialects, Formats, and Extensions</a></li>
+<li><a href="#reference-implementation">Reference Implementation</a></li>
+<li><a href="#issues">Issues</a></li>
+<li><a href="#acknowledgements">Acknowledgments</a></li>
+<li><a href="#references">References</a></li>
+<li><a href="#copyright">Copyright</a></li>
+</ul>
+
+<!-- ======================================================================= -->
+
+<h1><a name="abstract">Abstract</a></h1>
+
+<p>This SRFI defines a standard for locating files containing libraries with
+list-of-symbols library names, for unixes and Windows.  It defines a standard
+for files containing R6RS libraries.  It supports different Scheme dialects.</p>
+
+<!-- ======================================================================= -->
+
+<h1><a name="rationale">Rationale</a></h1>
+
+<p>For libraries to be portably organized, distributed, and available for
+importing, using prevalent file systems, a standard is needed for naming and
+finding the files containing libraries. The
+<a href="http://www.r6rs.org/">R6RS</a> does not specify how libraries are to be
+made available for importing, and this SRFI addresses that by providing a
+standard for R6RS library files.  Other dialects with list-of-symbols library
+names might need a standard for library files, and this SRFI addresses that by
+supporting such dialects.</p>
+
+<!-- ======================================================================= -->
+
+<h1><a name="design">Design</a></h1>
+
+<p>This SRFI provides a standard for locating files based on library names such
+that each symbol is used as a file-name component.  List-of-symbols library
+names allow hierarchical grouping of libraries by shared name prefixes, which is
+useful for avoiding name conflicts with others' libraries and for organizing
+related libraries.  Such library names are similar to file names which are a
+sequence of strings naming a file in a hierarchy of directories.  This
+similarity is exploited to hierarchically organize library files in the way
+which corresponds to hierarchical library names.</p>
+
+<p>This SRFI supports files which each contain only one library.  This supports
+one-to-one mapping library-file names to library names, which supports knowing
+what libraries are available and where they are located, from only file
+names.</p>
+
+<p>This SRFI provides a configurable sequence of searched directories and
+initializes it from a standard environment variable.  This supports variable and
+multiple locations of library files, overlaying library files, and having
+different Scheme systems use the same library files.</p>
+
+<p>This SRFI provides a configurable sequence of recognized file-name extensions
+and initializes it from a standard environment variable.  This supports
+Scheme-system-specific libraries, multiple Scheme dialects, and using arbitrary
+extensions.</p>
+
+<p>This SRFI specifies an ordering of multiple files matching a library name so
+the first-ordered file can be chosen.</p>
+
+<p>To support portability of R6RS library files, this SRFI specifies a standard
+file format and file-name extension for them and requires R6RS systems to
+implement this standard.</p>
+
+<!-- ======================================================================= -->
+
+<h1><a name="specification">Specification</a></h1>
+
+<h3><a name="library-files">Library Files</a></h3>
+
+<p>A <i>library file</i> is a file which contains a library and which has a name
+derived from the name of the contained library.  Files conforming to this SRFI
+have one library per file.</p>
+
+<p>A <i>library-file name</i> consists of, in order: possibly a
+searched-directory name, a sequence of components corresponding to the sequence
+of symbols in the contained library's name, and an extension.  A <i>relative
+library-file name</i> is a library-file name without a searched-directory name.
+An <i>absolute library-file name</i> is a library-file name with a
+searched-directory name.</p>
+
+<h3><a name="searched-directories">Searched Directories</a></h3>
+
+<p>The <i>sequence of searched-directory names</i> is used to find library files
+such that each directory name is prepended to each relative library-file name to
+make the set of file names of possible library files.</p>
+
+<p>The operating-system environment variable <code>SCHEME_LIB_PATH</code>, if it
+is defined, is used to initialize the sequence.  Its value is a string
+containing a sequence of directory names separated by the <code>#\:</code>
+character for unixes or the <code>#\;</code> character for Windows.  Scheme
+systems may initialize the sequence to include additional directory names.
+Systems may have mechanisms to cause the variable to be ignored.  Systems may
+have mechanisms to reconfigure the sequence after it is initialized.</p>
+
+<h3><a name="file-name-extensions">File-Name Extensions</a></h3>
+
+<p>The <i>sequence of recognized file-name extensions</i> is used to find
+library files such that each extension is appended to each incomplete
+library-file name to make the set of file names of possible library files.
+Extensions need to have <code>#\.</code> as their first character if it is
+desired that extensions be separated from the file-name prefix by it.</p>
+
+<p>The operating-system environment variable <code>SCHEME_LIB_EXTENSIONS</code>,
+if it is defined, is used to initialize the sequence.  Its value is a string
+containing a sequence of extensions separated by the <code>#\:</code> character
+for unixes or the <code>#\;</code> character for Windows.  Scheme systems may
+initialize the sequence to include additional extensions.  Systems may have
+mechanisms to cause the variable to be ignored.  Systems may have mechanisms to
+reconfigure the sequence after it is initialized.</p>
+
+<h3><a name="ordering-choosing">Ordering and Choosing</a></h3>
+
+<p>The <i>ordering of matching files</i> is used to choose a file from a set of
+available files matching a library name.  Multiple files might match a library
+name because of multiple searched directories or multiple recognized file-name
+extensions.  Scheme systems may have other mechanisms to choose auxiliary files
+instead (e.g., compiled-code files) or different mechanisms to locate files for
+libraries with names considered special (e.g., <code>(~ ---)</code> located in
+users' home directory).  If, for a system, no such auxiliary file is available
+and a library name is not considered special, the system must choose the
+first-ordered file according to this SRFI.</p>
+
+<p>Matches in a directory which is ordered before another directory are ordered
+before matches in the other directory.  For matches in the same directory, a
+match with an extension which is ordered before another extension is ordered
+before a match with the other extension.</p>
+
+<dl><dt>Example:</dt>
+       <dd><dl><dt>Given this sequence of searched-directory names:</dt>
+                  <dd><code>sd/c</code></dd>
+                  <dd><code>sd/b</code></dd>
+                  <dd><code>/sd/a</code></dd></dl></dd>
+       <dd><dl><dt>Given this sequence of recognized file-name extensions:</dt>
+                  <dd><code>.acme-ext</code></dd>
+                  <dd><code>.ext</code></dd></dl></dd>
+       <dd><dl><dt>Given this structure of directories and files:</dt>
+                  <dd><dl><dt><code>/sd/a/</code></dt>
+                          <dd><dl><dt><code>foo/</code></dt>
+                                  <dd><code>bar.acme-ext</code></dd>
+                                  <dd><code>bar.ext</code></dd>
+                                  <dd><code>bar.other-ext</code></dd>
+                                  <dd><code>zab.ext</code></dd>
+                              </dl></dd>
+                          <dt><code>sd/b/</code></dt>
+                          <dd><dl><dt><code>foo/</code></dt>
+                                  <dd><code>bar.png</code></dd>
+                              </dl></dd>
+                          <dt><code>sd/c/</code></dt>
+                          <dd><dl><dt><code>foo/</code></dt>
+                                  <dd><code>bar.ext</code></dd>
+                              </dl></dd>
+                      </dl></dd></dl></dd>
+       <dd><dl><dt>The order of files matching library name
+                   <code>(foo&nbsp;bar)</code> is:</dt>
+                   <dd><code>sd/c/foo/bar.ext</code></dd>
+                   <dd><code>/sd/a/foo/bar.acme-ext</code></dd>
+                   <dd><code>/sd/a/foo/bar.ext</code></dd>
+               <dt>The first-ordered is:</dt>
+                   <dd><code>sd/c/foo/bar.ext</code></dd>
+           </dl></dd>
+</dl>
+
+<!-- ======================================================================= -->
+
+<h1><a name="r6rs-library-files">R6RS Library Files</a></h1>
+
+<p>R6RS systems which implement this SRFI must conform to the following
+requirements.  Files with name extension <code>".s6l"</code>, which each
+contain one library as an
+<a href="http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-10.html#node_sec_7.1">
+R6RS library form</a> as the first syntactic datum which the R6RS
+<code>get-datum</code> procedure will read, must be supported.  The
+<code>".s6l"</code> extension must be implicitly included in the sequence of
+recognized file-name extensions, when the <code>SCHEME_LIB_EXTENSIONS</code>
+environment variable is not defined.</p>
+
+<p>R6RS systems which desire to support system-specific libraries are encouraged
+to implicitly include, when <code>SCHEME_LIB_EXTENSIONS</code> is not defined, a
+file-name extension of the form <code>".acme-s6l"</code>, substituting the
+system's name for <code>"acme"</code>, and to order such extension before
+<code>".s6l"</code>.</p>
+
+<!-- ======================================================================= -->
+
+<h1><a name="dialects-formats-extensions">Dialects, Formats, and Extensions</a></h1>
+
+<p>Scheme is a family of dialects which use different file formats.  File-name
+extensions which denote only that files are Scheme-related are not sufficient to
+distinguish library-file types.  Extensions used for library-file names are
+encouraged to precisely and unambiguously denote file types; i.e., distinct
+dialects and formats are encouraged to have distinct extensions.  Such
+extensions allow knowing the dialect/format/type of a file from its extension,
+and they allow different types of same-library-name files to coexist.</p>
+
+<p>Precise extensions may be utilized by Scheme systems which support multiple
+dialects or file formats, to know how to handle different types of library files
+which are simultaneously used.</p>
+
+<p>Precise extensions assist users and applications working with library files,
+by allowing them to know library-file types from library-file names.</p>
+
+<p>Distinct extensions allow same-library-name files for different dialects to
+be in the same directory.</p>
+
+<p>Distinct extensions allow avoiding having same-library-name files for another
+dialect shadow those for the desired dialect, when multiple dialects share the
+searched directories.</p>
+
+<!-- ======================================================================= -->
+
+<h1><a name="reference-implementation">Reference Implementation</a></h1>
+
+<p><a href="library-files.s6l">The reference implementation</a> is provided as
+an R6RS library.  It requires some R6RS bindings,
+<a href="http://srfi.schemers.org/srfi-39/srfi-39.html">SRFI&nbsp;39: Parameter
+Objects</a>, and <a href="http://srfi.schemers.org/srfi-98/srfi-98.html">
+SRFI&nbsp;98: An Interface to Access Environment Variables</a>.</p>
+
+<p><a href="tests.s6p">A test program</a> is provided as an R6RS program.  It
+requires, in addition to the reference implementation, some R6RS bindings,
+<a href="http://srfi.schemers.org/srfi-39/srfi-39.html">SRFI&nbsp;39: Parameter
+Objects</a>, and <a href="http://srfi.schemers.org/srfi-78/srfi-78.html">
+SRFI&nbsp;78: Lightweight Testing</a>.</p>
+
+<!-- ======================================================================= -->
+
+<h1><a name="issues">Issues</a></h1>
+
+<p>
+(Section which points out things to be resolved.  This will not appear in the
+final SRFI.)
+</p>
+
+<ul>
+  <li><p>TODO: Anything?</p></li>
+</ul>
+
+<!-- ======================================================================= -->
+
+<h1><a name="acknowledgements">Acknowledgments</a></h1>
+
+<p>I thank everyone who influenced and commented on this SRFI.  I thank the
+editor for editing this SRFI.</p>
+
+<!-- ======================================================================= -->
+
+<h1><a name="references">References</a></h1>
+
+<dl>
+  <dt>Revised<sup>6</sup> Report on the Algorithmic Language Scheme</dt>
+  <dd>Michael Sperber, <i>et al.</i> (Editors)<br/>
+    <a href="http://www.r6rs.org/">http://www.r6rs.org/</a></dd>
+</dl>
+
+<!-- ======================================================================= -->
+
+<h1><a name="copyright">Copyright</a></h1>
+
+<p>
+Copyright (C) Derick Eddington (2010). All Rights Reserved.
+</p>
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+</p><p>
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+</p><p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+</p>
+    <hr/>
+    <address>Editor: <a href="mailto:srfi-editors at srfi dot schemers dot org">
+             David Van Horn</a></address>
+  </body>
+</html>
